@@ -17,6 +17,7 @@ from infrastructure.embeddings.deps import init_embedding_provider
 from infrastructure.llm.deps import init_llm_provider
 from interfaces.api.routers import (
     agents_router,
+    assessments_benchmark_router,
     assessments_compliance_router,
     assessments_router,
     audit_router,
@@ -30,6 +31,7 @@ from interfaces.api.routers import (
     recommendations_router,
     reports_router,
     risks_router,
+    sector_intelligence_router,
     sectors_router,
     workflows_router,
 )
@@ -110,4 +112,6 @@ app.include_router(workflows_router, prefix=API_V1)
 app.include_router(audit_router, prefix=API_V1)
 app.include_router(frameworks_router, prefix=API_V1)
 app.include_router(assessments_compliance_router, prefix=API_V1)
+app.include_router(assessments_benchmark_router, prefix=API_V1)
 app.include_router(reports_router, prefix=API_V1)
+app.include_router(sector_intelligence_router, prefix=API_V1)

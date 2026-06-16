@@ -18,6 +18,7 @@ import { listRisks } from "@/lib/api/risks";
 import { listRecommendations } from "@/lib/api/recommendations";
 import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
+import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
 import {
   formatDateTime,
   severityColor,
@@ -92,6 +93,12 @@ export default function AssessmentDetailPage({
   } = useQuery({
     queryKey: ["reports", id],
     queryFn: () => listReports(id),
+    enabled: !!id,
+  });
+
+  const { data: benchmark, isLoading: loadingBenchmark } = useQuery({
+    queryKey: ["benchmark", id],
+    queryFn: () => getAssessmentBenchmark(id),
     enabled: !!id,
   });
 
@@ -196,6 +203,7 @@ export default function AssessmentDetailPage({
             Actions {recs ? `(${recs.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="compliance">Compliance</TabsTrigger>
+          <TabsTrigger value="benchmark">Benchmark</TabsTrigger>
           <TabsTrigger value="reports">
             Reports {reports ? `(${reports.length})` : ""}
           </TabsTrigger>
@@ -540,6 +548,218 @@ export default function AssessmentDetailPage({
             </div>
           )}
         </TabsContent>
+        {/* ── BENCHMARK ── */}
+        <TabsContent value="benchmark" className="mt-6">
+          {loadingBenchmark ? (
+            <div className="flex justify-center py-12"><Spinner /></div>
+          ) : !benchmark ? (
+            <p className="py-12 text-center text-muted-foreground">
+              Benchmark data unavailable. Ensure the assessment has a sector assigned.
+            </p>
+          ) : (
+            <div className="space-y-5">
+              {/* Overall rating */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-base">Sector Benchmark</CardTitle>
+                      <CardDescription>
+                        {benchmark.sector_name} ({benchmark.sector_nace_code})
+                      </CardDescription>
+                    </div>
+                    <span className={`flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+                      benchmark.benchmark_rating === "above_sector_baseline"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : benchmark.benchmark_rating === "meets_sector_baseline"
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-red-100 text-red-800"
+                    }`}>
+                      {benchmark.benchmark_rating.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{benchmark.benchmark_explanation}</p>
+                </CardContent>
+              </Card>
+
+              {/* Sector inherent risk */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Inherent Sector ESG Risk</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                      { label: "Environmental", level: benchmark.environmental_risk },
+                      { label: "Social", level: benchmark.social_risk },
+                      { label: "Governance", level: benchmark.governance_risk },
+                      { label: "Overall", level: benchmark.overall_sector_risk },
+                    ].map(({ label, level }) => {
+                      const c = severityColor(level);
+                      return (
+                        <div key={label} className={`rounded-lg p-3 text-center ${c.bg}`}>
+                          <p className={`text-xs font-medium ${c.text}`}>{label}</p>
+                          <p className={`text-sm font-bold mt-1 ${c.text}`}>{level}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-4 space-y-1">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Applicable Frameworks</p>
+                    <div className="flex flex-wrap gap-2">
+                      {benchmark.applicable_frameworks.map((fw) => (
+                        <span key={fw} className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-xs font-medium">
+                          {fw}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Coverage vs baseline */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Compliance Coverage vs Sector Baseline</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Sector Baseline</p>
+                      <p className="text-xl font-bold mt-1">
+                        {Math.round(benchmark.baseline_mandatory_coverage * 100)}%
+                      </p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">This Assessment</p>
+                      <p className={`text-xl font-bold mt-1 ${
+                        benchmark.mandatory_coverage == null
+                          ? "text-muted-foreground"
+                          : benchmark.coverage_vs_baseline != null && benchmark.coverage_vs_baseline >= 0
+                          ? "text-emerald-600"
+                          : "text-red-600"
+                      }`}>
+                        {benchmark.mandatory_coverage != null
+                          ? `${Math.round(benchmark.mandatory_coverage * 100)}%`
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{benchmark.coverage_explanation}</p>
+                </CardContent>
+              </Card>
+
+              {/* Finding adequacy */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Finding Adequacy</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Critical</p>
+                      <p className="text-xl font-bold text-red-600">{benchmark.finding_distribution.critical}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">High</p>
+                      <p className="text-xl font-bold text-orange-600">{benchmark.finding_distribution.high}</p>
+                    </div>
+                    <div className="rounded-lg bg-muted/50 p-3 text-center">
+                      <p className="text-xs text-muted-foreground">Medium + Low</p>
+                      <p className="text-xl font-bold">{benchmark.finding_distribution.medium + benchmark.finding_distribution.low}</p>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{benchmark.finding_explanation}</p>
+                </CardContent>
+              </Card>
+
+              {/* Key sector risk themes */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Key Sector Risk Themes</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {benchmark.key_risk_themes.map((theme) => {
+                    const identified = benchmark.key_themes_identified.includes(theme);
+                    return (
+                      <div
+                        key={theme}
+                        className={`flex items-center gap-2 rounded-md px-3 py-2 text-xs ${
+                          identified
+                            ? "bg-emerald-50 text-emerald-800"
+                            : "bg-red-50 text-red-700"
+                        }`}
+                      >
+                        {identified ? (
+                          <CheckCircle2 className="h-3 w-3 flex-shrink-0" />
+                        ) : (
+                          <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+                        )}
+                        <span>{theme}</span>
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+
+              {/* Regulatory exposure */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm font-semibold">Regulatory Exposure</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{benchmark.regulatory_exposure_notes}</p>
+                </CardContent>
+              </Card>
+
+              {/* Peer comparison */}
+              {benchmark.peer_count > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm font-semibold">
+                      Organisational Peer Comparison ({benchmark.peer_count} peer{benchmark.peer_count !== 1 ? "s" : ""})
+                    </CardTitle>
+                    <CardDescription>
+                      Other assessments in the same sector within your organisation
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {benchmark.org_avg_quality_score != null && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="rounded-lg bg-muted/50 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Org avg quality score</p>
+                          <p className="text-xl font-bold">{Math.round(benchmark.org_avg_quality_score * 100)}%</p>
+                        </div>
+                        <div className="rounded-lg bg-muted/50 p-3 text-center">
+                          <p className="text-xs text-muted-foreground">Org avg findings</p>
+                          <p className="text-xl font-bold">{benchmark.org_avg_finding_count}</p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="space-y-2">
+                      {benchmark.peers.map((peer) => (
+                        <div key={peer.assessment_id} className="rounded-lg border border-border px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                          <span className="truncate text-foreground">{peer.title}</span>
+                          <div className="flex-shrink-0 flex gap-2 text-xs text-muted-foreground">
+                            <span>{peer.finding_count} findings</span>
+                            {peer.quality_score != null && (
+                              <span className="font-medium text-foreground">
+                                {Math.round(peer.quality_score * 100)}%
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+        </TabsContent>
+
         {/* ── REPORTS ── */}
         <TabsContent value="reports" className="mt-6">
           <div className="space-y-4">

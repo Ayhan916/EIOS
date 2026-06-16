@@ -262,6 +262,77 @@ export interface OrganizationResponse {
   updated_at: string;
 }
 
+export interface SectorESGProfileResponse {
+  nace_section: string;
+  section_name: string;
+  environmental_risk: string;
+  social_risk: string;
+  governance_risk: string;
+  overall_risk: string;
+  key_risk_themes: string[];
+  applicable_frameworks: string[];
+  baseline_mandatory_coverage: number;
+  expected_min_findings: number;
+  expected_min_risks: number;
+  regulatory_exposure_notes: string;
+  esg_priority_categories: string[];
+}
+
+export interface SeverityDistributionResponse {
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+  total: number;
+  high_or_critical_count: number;
+}
+
+export interface PeerSummaryResponse {
+  assessment_id: string;
+  title: string;
+  quality_score: number | null;
+  finding_count: number;
+  risk_count: number;
+  high_critical_finding_count: number;
+}
+
+export interface SectorBenchmarkResponse {
+  assessment_id: string;
+  assessment_title: string;
+  sector_id: string | null;
+  sector_nace_code: string;
+  sector_name: string;
+  profile_nace_section: string;
+  finding_distribution: SeverityDistributionResponse;
+  risk_distribution: SeverityDistributionResponse;
+  quality_score: number | null;
+  baseline_mandatory_coverage: number;
+  expected_min_findings: number;
+  expected_min_risks: number;
+  environmental_risk: string;
+  social_risk: string;
+  governance_risk: string;
+  overall_sector_risk: string;
+  key_risk_themes: string[];
+  applicable_frameworks: string[];
+  esg_priority_categories: string[];
+  regulatory_exposure_notes: string;
+  mandatory_coverage: number | null;
+  coverage_vs_baseline: number | null;
+  coverage_rating: string;
+  coverage_explanation: string;
+  finding_adequacy: string;
+  finding_explanation: string;
+  key_themes_identified: string[];
+  key_themes_not_addressed: string[];
+  peer_count: number;
+  peers: PeerSummaryResponse[];
+  org_avg_quality_score: number | null;
+  org_avg_finding_count: number | null;
+  benchmark_rating: string;
+  benchmark_explanation: string;
+}
+
 export interface ReportResponse extends EntityResponse {
   assessment_id: string;
   title: string;
