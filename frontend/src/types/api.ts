@@ -1,0 +1,284 @@
+// TypeScript types mirroring EIOS backend Pydantic schemas
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  display_name: string;
+  role: string;
+  organization_id: string | null;
+  status: string;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TokenResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  user: UserResponse;
+}
+
+export interface AccessTokenResponse {
+  access_token: string;
+  token_type: string;
+}
+
+export interface RegisterRequest {
+  email: string;
+  display_name: string;
+  password: string;
+  organization_name: string;
+}
+
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface EntityResponse {
+  id: string;
+  status: string;
+  version: number;
+  owner: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AssessmentResponse extends EntityResponse {
+  title: string;
+  description: string;
+  assessment_type: string;
+  scope: string;
+  sector_id: string | null;
+  methodology: string | null;
+  confidence: string;
+  approved_by: string | null;
+  quality_score: number | null;
+}
+
+export interface FindingResponse extends EntityResponse {
+  title: string;
+  description: string;
+  assessment_id: string;
+  category: string;
+  severity: string;
+  confidence: string;
+  reasoning: string | null;
+  uncertainty: string | null;
+}
+
+export interface RiskResponse extends EntityResponse {
+  title: string;
+  description: string;
+  risk_level: string;
+  category: string;
+  assessment_id: string | null;
+  sector_id: string | null;
+  probability: number | null;
+  impact: number | null;
+  confidence: string;
+  reasoning: string | null;
+  uncertainty: string | null;
+}
+
+export interface RecommendationResponse extends EntityResponse {
+  title: string;
+  description: string;
+  priority: string;
+  confidence: string;
+  reasoning: string | null;
+  action_required: boolean;
+  due_date: string | null;
+  approved_by: string | null;
+}
+
+export interface Page<T> {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+  has_next: boolean;
+  has_prev: boolean;
+}
+
+export interface WorkflowRunRequest {
+  workflow_type: string;
+  query: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface WorkflowJobResponse {
+  id: string;
+  workflow_type: string;
+  query: string;
+  job_status: string;
+  workflow_run_id: string | null;
+  error: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AgentStepSummary {
+  agent_run_id: string;
+  agent_type: string;
+  step_index: number;
+  status: string;
+  input_tokens: number;
+  output_tokens: number;
+  error: string | null;
+}
+
+export interface WorkflowRunResponse {
+  id: string;
+  workflow_type: string;
+  query: string;
+  verdict: string | null;
+  verdict_reasoning: string | null;
+  overall_risk_level: string | null;
+  steps_completed: number;
+  total_steps: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  error: string | null;
+  assessment_id: string | null;
+  finding_count: number;
+  risk_count: number;
+  recommendation_count: number;
+  run_metadata: Record<string, unknown>;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  steps: AgentStepSummary[];
+}
+
+export interface EvidenceResponse extends EntityResponse {
+  title: string;
+  source: string;
+  description: string;
+  evidence_type: string;
+  confidence: string;
+  url: string | null;
+  language: string;
+  published_at: string | null;
+  retrieved_at: string | null;
+  reliability_score: number | null;
+  organization_id: string | null;
+  ingestion_status: string;
+  chunk_count: number;
+  file_name: string | null;
+  file_size_bytes: number | null;
+  file_mime_type: string | null;
+}
+
+export interface EvidenceCreate {
+  title: string;
+  source: string;
+  description: string;
+  evidence_type?: string;
+  language?: string;
+}
+
+export interface DocumentUploadResponse {
+  evidence_id: string;
+  file_name: string;
+  file_size_bytes: number;
+  mime_type: string;
+  ingestion_status: string;
+  chunks_created: number;
+  warnings: string[];
+  parser_used: string;
+}
+
+export interface ArticleCoverageResponse {
+  code: string;
+  framework: string;
+  article: string;
+  title: string;
+  obligation_type: string;
+  esg_categories: string[];
+  covered: boolean;
+}
+
+export interface FrameworkCoverageResponse {
+  framework: string;
+  total_articles: number;
+  covered_count: number;
+  coverage_ratio: number;
+  articles: ArticleCoverageResponse[];
+}
+
+export interface GapResponse {
+  article_code: string;
+  framework: string;
+  article: string;
+  title: string;
+  obligation_type: string;
+  esg_categories: string[];
+  regulatory_exposure: number;
+  gap_severity: string;
+  explanation: string;
+  remediation_hint: string;
+}
+
+export interface ComplianceVerdictResponse {
+  status: string;
+  mandatory_coverage_ratio: number;
+  total_mandatory_articles: number;
+  covered_mandatory_count: number;
+  mandatory_gap_count: number;
+  critical_gap_count: number;
+  high_gap_count: number;
+  weighted_gap_score: number;
+  explanation: string;
+  top_gap_codes: string[];
+}
+
+export interface ComplianceCoverageResponse {
+  assessment_id: string;
+  covered_article_codes: string[];
+  framework_coverage: FrameworkCoverageResponse[];
+  overall_coverage_ratio: number;
+  mandatory_coverage_ratio: number;
+  quality_score: number | null;
+  gaps: GapResponse[];
+  verdict: ComplianceVerdictResponse;
+}
+
+export interface OrganizationResponse {
+  id: string;
+  name: string;
+  description: string | null;
+  organization_type: string;
+  country: string | null;
+  industry: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportResponse extends EntityResponse {
+  assessment_id: string;
+  title: string;
+  generated_by: string;
+  organization_id: string | null;
+  format: string;
+  finding_count: number;
+  risk_count: number;
+  recommendation_count: number;
+  evidence_count: number;
+  content_snapshot: Record<string, unknown> | null;
+}
+
+export interface ReportGenerateRequest {
+  assessment_id: string;
+}
+
+export interface ApiError {
+  detail: string | { msg: string; type: string }[];
+}
