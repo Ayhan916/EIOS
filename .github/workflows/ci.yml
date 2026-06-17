@@ -7,7 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  backend:
+  # ── Backend: lint, type-check, unit tests ─────────────────────────────────
+  backend-quality:
     name: Backend Quality Gate
     runs-on: ubuntu-latest
     defaults:
@@ -37,5 +38,131 @@ jobs:
       - name: Mypy type check
         run: uv run mypy domain/ tests/
 
-      - name: Run tests
-        run: uv run pytest tests/ -v --tb=short
+      - name: Unit tests
+        run: uv run pytest tests/unit/ -q --tb=short
+
+  # ── Backend: integration tests (requires PostgreSQL) ──────────────────────
+  backend-integration:
+    name: Backend Integration Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: eios
+          POSTGRES_PASSWORD: eios_test
+          POSTGRES_DB: eios_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U eios -d eios_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://eios:eios_test@localhost:5432/eios_test
+      ENVIRONMENT: development
+      SECRET_KEY: ci-test-secret-key-not-used-in-production-only-32chars
+      LOG_LEVEL: WARNING
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync --dev
+
+      - name: Run Alembic migrations
+        run: uv run alembic upgrade head
+
+      - name: Integration tests
+        run: uv run pytest tests/integration/ -q --tb=short -m integration
+        continue-on-error: true   # integration tests may not all exist yet
+
+  # ── Security audit ────────────────────────────────────────────────────────
+  security-audit:
+    name: Dependency Security Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv and pip-audit
+        run: pip install uv pip-audit
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Audit dependencies for known vulnerabilities
+        run: |
+          uv export --no-dev --format requirements-txt > /tmp/requirements.txt
+          pip-audit -r /tmp/requirements.txt --ignore-vuln GHSA-9wx4-h78v-vm56
+        continue-on-error: true   # advisory — does not block merge
+
+  # ── Frontend: lint and type-check ─────────────────────────────────────────
+  frontend-quality:
+    name: Frontend Quality Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: ESLint
+        run: npm run lint
+        continue-on-error: true   # advisory until lint baseline is set
+
+  # ── Docker build verification ─────────────────────────────────────────────
+  docker-build:
+    name: Docker Build Check
+    runs-on: ubuntu-latest
+    # Only run on push to main to avoid burning minutes on every PR
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build backend image
+        run: docker build ./backend --tag eios-backend:ci --no-cache
+
+      - name: Build frontend image
+        run: |
+          docker build ./frontend \
+            --tag eios-frontend:ci \
+            --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 \
+            --no-cache

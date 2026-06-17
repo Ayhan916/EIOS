@@ -20,6 +20,7 @@ from interfaces.api.deps import (
     get_workflow_run_repo,
     require_analyst,
 )
+from shared.rate_limit import rate_limit_llm
 from interfaces.api.schemas.pagination import Page, PaginationParams
 from interfaces.api.schemas.workflow import (
     AgentStepSummary,
@@ -103,6 +104,7 @@ async def list_workflow_types() -> list[WorkflowTypeInfo]:
 async def run_workflow(
     body: WorkflowRunRequest,
     background_tasks: BackgroundTasks,
+    _rl: None = Depends(rate_limit_llm),
     current_user: User = Depends(get_current_user),
     job_repo: SQLWorkflowJobRepository = Depends(get_workflow_job_repo),
 ) -> WorkflowJobResponse:

@@ -9,6 +9,7 @@ from domain.organization import Organization
 from domain.user import User
 from infrastructure.persistence.repositories import SQLOrganizationRepository, SQLUserRepository
 from interfaces.api.deps import get_current_user, get_organization_repo, get_user_repo
+from shared.rate_limit import rate_limit_auth
 from interfaces.api.schemas.auth import (
     AccessTokenResponse,
     LoginRequest,
@@ -33,6 +34,7 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
 async def register(
     body: RegisterRequest,
+    _rl: None = Depends(rate_limit_auth),
     user_repo: SQLUserRepository = Depends(get_user_repo),
     org_repo: SQLOrganizationRepository = Depends(get_organization_repo),
 ) -> TokenResponse:
@@ -78,6 +80,7 @@ async def register(
 @router.post("/login", response_model=TokenResponse)
 async def login(
     body: LoginRequest,
+    _rl: None = Depends(rate_limit_auth),
     repo: SQLUserRepository = Depends(get_user_repo),
 ) -> TokenResponse:
     user = await repo.get_by_email(body.email)

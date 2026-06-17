@@ -12,6 +12,7 @@ from infrastructure.llm.deps import get_llm_provider
 from infrastructure.persistence.repositories.agent_run import SQLAgentRunRepository
 from interfaces.api.deps import get_agent_run_repo, get_current_user
 from interfaces.api.schemas.agent import AgentRunRequest, AgentRunResponse
+from shared.rate_limit import rate_limit_llm
 
 logger = structlog.get_logger(__name__)
 
@@ -45,6 +46,7 @@ def _run_to_response(run: AgentRun) -> AgentRunResponse:
 @router.post("/run", response_model=AgentRunResponse, status_code=status.HTTP_201_CREATED)
 async def run_agent(
     body: AgentRunRequest,
+    _rl: None = Depends(rate_limit_llm),
     current_user: User = Depends(get_current_user),
     repo: SQLAgentRunRepository = Depends(get_agent_run_repo),
 ) -> AgentRunResponse:
