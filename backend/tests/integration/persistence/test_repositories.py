@@ -8,8 +8,11 @@ To run only these tests: pytest tests/integration/ -v
 To skip in CI without PostgreSQL: pytest tests/unit/ -v
 """
 
+import os
+
 import pytest
 import pytest_asyncio
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from domain.assessment import Assessment
@@ -24,7 +27,8 @@ from infrastructure.persistence.repositories import (
     SQLRiskRepository,
 )
 
-TEST_DATABASE_URL = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
+_DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
+TEST_DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
 
 pytestmark = pytest.mark.integration
 
@@ -33,6 +37,7 @@ pytestmark = pytest.mark.integration
 async def engine():  # type: ignore[no-untyped-def]
     eng = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with eng.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.create_all)
     yield eng
     async with eng.begin() as conn:
@@ -43,7 +48,7 @@ async def engine():  # type: ignore[no-untyped-def]
 @pytest_asyncio.fixture
 async def session(engine):  # type: ignore[no-untyped-def]
     factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
-    async with factory() as s, s.begin():
+    async with factory() as s:
         yield s
         await s.rollback()
 

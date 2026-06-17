@@ -3,7 +3,7 @@ from __future__ import annotations
 from sqlalchemy import ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from .associations import finding_evidence, risk_finding
+from .associations import finding_evidence, recommendation_finding, risk_finding
 from .base import BaseModel
 
 
@@ -26,3 +26,6 @@ class FindingModel(BaseModel):
         secondary=finding_evidence, back_populates="findings"
     )
     risks: Mapped[list[RiskModel]] = relationship(secondary=risk_finding, back_populates="findings")
+    recommendations: Mapped[list[RecommendationModel]] = relationship(
+        secondary=recommendation_finding, back_populates="findings"
+    )

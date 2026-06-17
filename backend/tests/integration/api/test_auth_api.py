@@ -7,6 +7,8 @@ pytestmark = pytest.mark.integration
 
 BASE = "/api/v1/auth"
 
+_DEFAULT_ORG = "EIOS Test Org"
+
 
 async def test_register_new_user(setup_test_schema: None) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
@@ -16,6 +18,7 @@ async def test_register_new_user(setup_test_schema: None) -> None:
                 "email": "newuser@eios.dev",
                 "display_name": "New User",
                 "password": "secure-password-123",
+                "organization_name": _DEFAULT_ORG,
             },
         )
     assert response.status_code == 201
@@ -35,6 +38,7 @@ async def test_register_duplicate_email_returns_409(setup_test_schema: None) -> 
                 "email": "dup@eios.dev",
                 "display_name": "Dup User",
                 "password": "secure-password-123",
+                "organization_name": _DEFAULT_ORG,
             },
         )
         response = await c.post(
@@ -43,6 +47,7 @@ async def test_register_duplicate_email_returns_409(setup_test_schema: None) -> 
                 "email": "dup@eios.dev",
                 "display_name": "Dup User",
                 "password": "secure-password-123",
+                "organization_name": _DEFAULT_ORG,
             },
         )
     assert response.status_code == 409
@@ -52,7 +57,12 @@ async def test_register_weak_password_returns_422(setup_test_schema: None) -> No
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.post(
             BASE + "/register",
-            json={"email": "weak@eios.dev", "display_name": "W", "password": "short"},
+            json={
+                "email": "weak@eios.dev",
+                "display_name": "W",
+                "password": "short",
+                "organization_name": _DEFAULT_ORG,
+            },
         )
     assert response.status_code == 422
 
@@ -65,6 +75,7 @@ async def test_login_valid_credentials(setup_test_schema: None) -> None:
                 "email": "login@eios.dev",
                 "display_name": "Login User",
                 "password": "my-login-password",
+                "organization_name": _DEFAULT_ORG,
             },
         )
         response = await c.post(
@@ -86,6 +97,7 @@ async def test_login_wrong_password_returns_401(setup_test_schema: None) -> None
                 "email": "wrongpw@eios.dev",
                 "display_name": "W",
                 "password": "correct-password",
+                "organization_name": _DEFAULT_ORG,
             },
         )
         response = await c.post(
@@ -143,6 +155,7 @@ async def test_token_refresh(setup_test_schema: None) -> None:
                 "email": "refresh@eios.dev",
                 "display_name": "R",
                 "password": "refresh-password-ok",
+                "organization_name": _DEFAULT_ORG,
             },
         )
         if reg.status_code == 409:

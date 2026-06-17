@@ -8,15 +8,19 @@ Run with:
   pytest tests/integration/ -v -m integration
 """
 
+import os
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.main import app
 from infrastructure.persistence.models import Base
 
-TEST_DATABASE_URL = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
+_DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
+TEST_DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
 
 pytestmark = pytest.mark.integration
 
@@ -25,6 +29,7 @@ pytestmark = pytest.mark.integration
 async def setup_test_schema() -> None:  # type: ignore[misc]
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     yield
@@ -44,6 +49,7 @@ async def auth_token(setup_test_schema: None) -> str:  # type: ignore[misc]
                 "display_name": "Test User",
                 "password": "test-password-secure",
                 "role": "admin",
+                "organization_name": "EIOS Test Org",
             },
         )
         # 201 on first run, 409 on subsequent runs (user already exists)
