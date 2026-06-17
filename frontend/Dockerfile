@@ -36,7 +36,6 @@ ENV PORT=3000
 
 COPY --from=builder --chown=eios:eios /app/.next/standalone ./
 COPY --from=builder --chown=eios:eios /app/.next/static ./.next/static
-COPY --from=builder --chown=eios:eios /app/public ./public
 
 USER eios
 
