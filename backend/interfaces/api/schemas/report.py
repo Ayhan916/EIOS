@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel
 
@@ -13,10 +13,10 @@ class ReportResponse(EntityResponse):
     assessment_id: str
     title: str
     generated_by: str
-    organization_id: Optional[str] = None
+    organization_id: str | None = None
     format: str
     finding_count: int
     risk_count: int
     recommendation_count: int
     evidence_count: int
-    content_snapshot: Optional[dict[str, Any]] = None
+    content_snapshot: dict[str, Any] | None = None

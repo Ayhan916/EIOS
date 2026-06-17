@@ -12,7 +12,7 @@ Verdict thresholds:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from .coverage import ComplianceCoverageReport
 from .gaps import ComplianceGap
@@ -20,16 +20,16 @@ from .gaps import ComplianceGap
 
 @dataclass
 class ComplianceVerdict:
-    status: str                  # "compliant" | "partial" | "non_compliant"
+    status: str  # "compliant" | "partial" | "non_compliant"
     mandatory_coverage_ratio: float
     total_mandatory_articles: int
     covered_mandatory_count: int
     mandatory_gap_count: int
     critical_gap_count: int
     high_gap_count: int
-    weighted_gap_score: float    # sum of exposures of uncovered mandatory articles, normalized 0-1
+    weighted_gap_score: float  # sum of exposures of uncovered mandatory articles, normalized 0-1
     explanation: str
-    top_gap_codes: list[str]     # top 3 gap article codes by exposure
+    top_gap_codes: list[str]  # top 3 gap article codes by exposure
 
 
 def compute_verdict(
@@ -49,10 +49,7 @@ def compute_verdict(
     total_mandatory = sum(
         fc.total_articles
         for fc in coverage_report.framework_coverage
-        if any(
-            ac.obligation_type == "mandatory"
-            for ac in fc.articles
-        )
+        if any(ac.obligation_type == "mandatory" for ac in fc.articles)
     )
     mandatory_articles_all = [
         ac
@@ -83,8 +80,13 @@ def compute_verdict(
         status = "partial"
 
     explanation = _build_explanation(
-        status, ratio, covered_mandatory, total_mandatory,
-        crit_count, len(high_gaps), critical_gaps[:3],
+        status,
+        ratio,
+        covered_mandatory,
+        total_mandatory,
+        crit_count,
+        len(high_gaps),
+        critical_gaps[:3],
     )
 
     top_gap_codes = [g.article_code for g in mandatory_gaps[:3]]
@@ -105,6 +107,7 @@ def compute_verdict(
 
 def _get_exposure_for_code(code: str) -> float:
     from .weights import exposure
+
     return exposure(code)
 
 

@@ -67,9 +67,7 @@ async def test_ingest_force_replaces_chunks(client: AsyncClient) -> None:
     r1 = await client.post(KNOWLEDGE_BASE + "/ingest", json={"evidence_id": eid})
     assert r1.status_code == 200
 
-    r2 = await client.post(
-        KNOWLEDGE_BASE + "/ingest", json={"evidence_id": eid, "force": True}
-    )
+    r2 = await client.post(KNOWLEDGE_BASE + "/ingest", json={"evidence_id": eid, "force": True})
     assert r2.status_code == 200
     assert r2.json()["chunks_created"] >= 1
 
@@ -166,10 +164,9 @@ async def test_search_validates_query_length(client: AsyncClient) -> None:
 async def test_knowledge_routes_require_auth(setup_test_schema: None) -> None:
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
-    async with httpx.AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.post(KNOWLEDGE_BASE + "/ingest", json={"evidence_id": "x"})
         assert r.status_code == 403

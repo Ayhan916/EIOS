@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
@@ -20,7 +18,6 @@ from interfaces.api.deps import (
     get_workflow_run_repo,
     require_analyst,
 )
-from shared.rate_limit import rate_limit_llm
 from interfaces.api.schemas.pagination import Page, PaginationParams
 from interfaces.api.schemas.workflow import (
     AgentStepSummary,
@@ -29,6 +26,7 @@ from interfaces.api.schemas.workflow import (
     WorkflowTypeInfo,
 )
 from interfaces.api.schemas.workflow_job import WorkflowJobResponse
+from shared.rate_limit import rate_limit_llm
 
 logger = structlog.get_logger(__name__)
 
@@ -83,15 +81,18 @@ def _build_job_response(job: WorkflowJob) -> WorkflowJobResponse:
 async def list_workflow_types() -> list[WorkflowTypeInfo]:
     """Return all available workflow types with their agent sequences."""
     from application.workflows.registry import _REGISTRY
+
     result = []
     for wt in WORKFLOW_TYPES:
         defn = _REGISTRY[wt]
-        result.append(WorkflowTypeInfo(
-            workflow_type=wt,
-            description=defn.description,
-            step_count=len(defn.steps),
-            agent_sequence=[s.agent_type for s in defn.steps],
-        ))
+        result.append(
+            WorkflowTypeInfo(
+                workflow_type=wt,
+                description=defn.description,
+                step_count=len(defn.steps),
+                agent_sequence=[s.agent_type for s in defn.steps],
+            )
+        )
     return result
 
 
@@ -152,7 +153,7 @@ async def run_workflow(
 @router.get("/jobs", response_model=Page[WorkflowJobResponse])
 async def list_workflow_jobs(
     pagination: PaginationParams = Depends(),
-    job_status: Optional[str] = Query(default=None),
+    job_status: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     job_repo: SQLWorkflowJobRepository = Depends(get_workflow_job_repo),
 ) -> Page[WorkflowJobResponse]:
@@ -197,8 +198,8 @@ async def get_workflow_job(
 @router.get("/runs", response_model=Page[WorkflowRunResponse])
 async def list_workflow_runs(
     pagination: PaginationParams = Depends(),
-    workflow_type: Optional[str] = Query(default=None),
-    verdict: Optional[str] = Query(default=None),
+    workflow_type: str | None = Query(default=None),
+    verdict: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     workflow_run_repo: SQLWorkflowRunRepository = Depends(get_workflow_run_repo),
 ) -> Page[WorkflowRunResponse]:

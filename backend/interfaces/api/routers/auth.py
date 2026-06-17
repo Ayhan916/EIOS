@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import jwt
 import structlog
@@ -9,7 +9,6 @@ from domain.organization import Organization
 from domain.user import User
 from infrastructure.persistence.repositories import SQLOrganizationRepository, SQLUserRepository
 from interfaces.api.deps import get_current_user, get_organization_repo, get_user_repo
-from shared.rate_limit import rate_limit_auth
 from interfaces.api.schemas.auth import (
     AccessTokenResponse,
     LoginRequest,
@@ -18,6 +17,7 @@ from interfaces.api.schemas.auth import (
     TokenResponse,
 )
 from interfaces.api.schemas.user import UserResponse
+from shared.rate_limit import rate_limit_auth
 from shared.security import (
     create_access_token,
     create_refresh_token,
@@ -116,9 +116,9 @@ async def login(
         created_by=user.created_by,
         updated_by=user.updated_by,
         created_at=user.created_at,
-        updated_at=datetime.now(timezone.utc),
+        updated_at=datetime.now(UTC),
         password_hash=user.password_hash,
-        last_login_at=datetime.now(timezone.utc),
+        last_login_at=datetime.now(UTC),
     )
     saved = await repo.save(updated)
 
@@ -138,16 +138,16 @@ async def refresh_token(
 ) -> AccessTokenResponse:
     try:
         payload = decode_token(body.refresh_token)
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token expired",
-        )
-    except jwt.InvalidTokenError:
+        ) from exc
+    except jwt.InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token",
-        )
+        ) from exc
 
     if payload.get("type") != "refresh":
         raise HTTPException(

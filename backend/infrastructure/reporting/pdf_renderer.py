@@ -18,7 +18,6 @@ from typing import Any
 from fpdf import FPDF
 from fpdf.enums import XPos, YPos
 
-
 # ── Colour palette ─────────────────────────────────────────────────────────────
 _DARK = (30, 40, 55)
 _MID = (80, 95, 110)
@@ -28,28 +27,30 @@ _WHITE = (255, 255, 255)
 
 _LEVEL_COLOURS: dict[str, tuple[int, int, int]] = {
     "Critical": (180, 30, 30),
-    "High":     (210, 80,  0),
-    "Medium":   (180, 130,  0),
-    "Low":      (40, 130, 60),
+    "High": (210, 80, 0),
+    "Medium": (180, 130, 0),
+    "Low": (40, 130, 60),
 }
 
 # ── Latin-1 safe text conversion ───────────────────────────────────────────────
-_UNICODE_MAP = str.maketrans({
-    "—": " - ",   # em dash
-    "–": "-",     # en dash
-    "‘": "'",     # left single quote
-    "’": "'",     # right single quote
-    "“": '"',     # left double quote
-    "”": '"',     # right double quote
-    "…": "...",   # ellipsis
-    "•": "*",     # bullet
-    " ": " ",     # non-breaking space
-    "→": "->",    # arrow
-    "°": "deg",   # degree sign
-    "®": "(R)",   # registered
-    "©": "(C)",   # copyright
-    "™": "(TM)",  # trademark
-})
+_UNICODE_MAP = str.maketrans(
+    {
+        "—": " - ",  # em dash
+        "–": "-",  # en dash
+        "‘": "'",  # left single quote
+        "’": "'",  # right single quote
+        "“": '"',  # left double quote
+        "”": '"',  # right double quote
+        "…": "...",  # ellipsis
+        "•": "*",  # bullet
+        " ": " ",  # non-breaking space
+        "→": "->",  # arrow
+        "°": "deg",  # degree sign
+        "®": "(R)",  # registered
+        "©": "(C)",  # copyright
+        "™": "(TM)",  # trademark
+    }
+)
 
 
 def _latin1(text: str) -> str:
@@ -60,6 +61,7 @@ def _latin1(text: str) -> str:
 
 
 # ── FPDF subclass ─────────────────────────────────────────────────────────────
+
 
 class _EIOSReport(FPDF):
     def __init__(self, title: str, generated_by_name: str, generated_at: str) -> None:
@@ -103,8 +105,7 @@ class _EIOSReport(FPDF):
         self.set_fill_color(*_ACCENT)
         self.set_text_color(*_WHITE)
         self.set_font("Helvetica", "B", 11)
-        self.cell(0, 8, f"  {_latin1(text)}", fill=True,
-                  new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.cell(0, 8, f"  {_latin1(text)}", fill=True, new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.ln(2)
         self.set_text_color(*_DARK)
 
@@ -122,8 +123,7 @@ class _EIOSReport(FPDF):
     def _kv(self, key: str, value: str) -> None:
         self.set_font("Helvetica", "B", 9)
         self.set_text_color(*_MID)
-        self.cell(45, 5, _latin1(key) + ":",
-                  new_x=XPos.RIGHT, new_y=YPos.TOP)
+        self.cell(45, 5, _latin1(key) + ":", new_x=XPos.RIGHT, new_y=YPos.TOP)
         self.set_font("Helvetica", "", 9)
         self.set_text_color(*_DARK)
         self.multi_cell(0, 5, _latin1(value))
@@ -161,6 +161,7 @@ class _EIOSReport(FPDF):
 
 # ── Public API ─────────────────────────────────────────────────────────────────
 
+
 def render_report_pdf(snapshot: dict[str, Any]) -> bytes:
     """Render a PDF from the frozen content snapshot and return raw bytes."""
     assessment = snapshot.get("assessment", {})
@@ -194,6 +195,7 @@ def render_report_pdf(snapshot: dict[str, Any]) -> bytes:
 
 # ── Sections ──────────────────────────────────────────────────────────────────
 
+
 def _cover_page(pdf: _EIOSReport, assessment: dict, meta: dict) -> None:
     pdf.add_page()
     pdf.set_fill_color(*_ACCENT)
@@ -202,11 +204,16 @@ def _cover_page(pdf: _EIOSReport, assessment: dict, meta: dict) -> None:
     pdf.set_y(18)
     pdf.set_font("Helvetica", "B", 22)
     pdf.set_text_color(*_WHITE)
-    pdf.cell(0, 10, "ESG Due Diligence Report", align="C",
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 10, "ESG Due Diligence Report", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, "Enterprise Intelligence Operating System", align="C",
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(
+        0,
+        8,
+        "Enterprise Intelligence Operating System",
+        align="C",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
 
     pdf.set_y(75)
     pdf.set_text_color(*_DARK)
@@ -220,9 +227,9 @@ def _cover_page(pdf: _EIOSReport, assessment: dict, meta: dict) -> None:
 
     rows = [
         ("Assessment Type", assessment.get("assessment_type", "-")),
-        ("Scope",           assessment.get("scope", "-")),
-        ("Methodology",     assessment.get("methodology") or "-"),
-        ("Confidence",      assessment.get("confidence", "-")),
+        ("Scope", assessment.get("scope", "-")),
+        ("Methodology", assessment.get("methodology") or "-"),
+        ("Confidence", assessment.get("confidence", "-")),
     ]
     for label, value in rows:
         pdf._kv(label, str(value))
@@ -250,14 +257,22 @@ def _cover_page(pdf: _EIOSReport, assessment: dict, meta: dict) -> None:
     pdf.set_y(pdf.get_y() + 3)
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(120, 80, 0)
-    pdf.cell(0, 4, "CONFIDENTIAL - FOR AUTHORISED RECIPIENTS ONLY", align="C",
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(
+        0,
+        4,
+        "CONFIDENTIAL - FOR AUTHORISED RECIPIENTS ONLY",
+        align="C",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.set_font("Helvetica", "", 7)
     pdf.cell(
-        0, 4,
+        0,
+        4,
         "This document contains commercially sensitive information. Do not distribute without authorisation.",
         align="C",
-        new_x=XPos.LMARGIN, new_y=YPos.NEXT,
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
     )
     pdf.set_text_color(*_DARK)
 
@@ -284,14 +299,14 @@ def _executive_summary(
     pdf.ln(1)
 
     stats = [
-        ("Material Findings",   len(findings)),
-        ("Identified Risks",    len(risks)),
-        ("Recommendations",     len(recommendations)),
-        ("Evidence Sources",    len(evidence)),
+        ("Material Findings", len(findings)),
+        ("Identified Risks", len(risks)),
+        ("Recommendations", len(recommendations)),
+        ("Evidence Sources", len(evidence)),
     ]
 
     col_w = (pdf.w - pdf.l_margin - pdf.r_margin) / len(stats)
-    for label, count in stats:
+    for _label, count in stats:
         pdf.set_font("Helvetica", "B", 18)
         pdf.set_text_color(*_WHITE)
         pdf.set_fill_color(*_ACCENT)
@@ -397,7 +412,8 @@ def _findings_section(pdf: _EIOSReport, findings: list) -> None:
             pdf.set_text_color(*_MID)
             pdf.set_x(pdf.l_margin + cols[0][1])
             pdf.multi_cell(
-                usable_w - cols[0][1], 4,
+                usable_w - cols[0][1],
+                4,
                 "Reasoning: " + pdf._safe(f["reasoning"], 200),
                 fill=False,
             )
@@ -462,7 +478,9 @@ def _risks_section(pdf: _EIOSReport, risks: list) -> None:
 
         prob = r.get("probability")
         imp = r.get("impact")
-        pdf.cell(cols[3][1], row_h, f"{prob:.1f}" if prob is not None else "-", fill=True, align="C")
+        pdf.cell(
+            cols[3][1], row_h, f"{prob:.1f}" if prob is not None else "-", fill=True, align="C"
+        )
         pdf.cell(cols[4][1], row_h, f"{imp:.1f}" if imp is not None else "-", fill=True, align="C")
         pdf.set_xy(pdf.l_margin, row_end_y)
         pdf.ln(1)
@@ -576,7 +594,9 @@ def _evidence_index(pdf: _EIOSReport, evidence: list) -> None:
         pdf.set_fill_color(*fill_col)
         pdf.set_font("Helvetica", "", 8)
         pdf.set_text_color(*_DARK)
-        pdf.cell(cols[2][1], row_h, pdf._safe(ev.get("evidence_type", ""), 15), fill=True, align="C")
+        pdf.cell(
+            cols[2][1], row_h, pdf._safe(ev.get("evidence_type", ""), 15), fill=True, align="C"
+        )
         pdf.cell(cols[3][1], row_h, _latin1(ev.get("confidence", "-")), fill=True, align="C")
         pdf.cell(cols[4][1], row_h, pdf._safe(ev.get("source", ""), 20), fill=True, align="C")
         pdf.set_xy(pdf.l_margin, row_end_y)
@@ -592,15 +612,15 @@ def _audit_trail(pdf: _EIOSReport, meta: dict, report_id: str, assessment: dict)
 
     pdf.ln(2)
     pdf._sub_header("Report Provenance")
-    pdf._kv("Report ID",     report_id)
+    pdf._kv("Report ID", report_id)
     pdf.ln(1)
     pdf._kv("Assessment ID", assessment.get("id", "-"))
     pdf.ln(1)
-    pdf._kv("Generated at",  meta.get("generated_at", "-"))
+    pdf._kv("Generated at", meta.get("generated_at", "-"))
     pdf.ln(1)
-    pdf._kv("Generated by",  meta.get("generated_by_name", "-"))
+    pdf._kv("Generated by", meta.get("generated_by_name", "-"))
     pdf.ln(1)
-    pdf._kv("Generator",     "EIOS Report Service v1 (M18)")
+    pdf._kv("Generator", "EIOS Report Service v1 (M18)")
     pdf.ln(6)
 
     pdf._sub_header("Data Snapshot Integrity")
@@ -616,10 +636,10 @@ def _audit_trail(pdf: _EIOSReport, meta: dict, report_id: str, assessment: dict)
     pdf._sub_header("Data Counts at Generation Time")
     counts = meta.get("counts", {})
     for label, key in [
-        ("Findings",        "findings"),
-        ("Risks",           "risks"),
+        ("Findings", "findings"),
+        ("Risks", "risks"),
         ("Recommendations", "recommendations"),
-        ("Evidence",        "evidence"),
+        ("Evidence", "evidence"),
     ]:
         pdf._kv(label, str(counts.get(key, "-")))
         pdf.ln(1)

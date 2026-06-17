@@ -14,8 +14,9 @@ Session strategy (avoids long-lived transactions during 60-180s LLM execution):
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import structlog
-from datetime import datetime, timezone
 
 import application.audit as audit_factory
 from application.extraction.service import StructuredExtractionService
@@ -56,12 +57,11 @@ async def execute_workflow_background(
     log.info("workflow_job_started")
 
     # Phase 1: mark running
-    async with AsyncSessionFactory() as session:
-        async with session.begin():
-            job_repo = SQLWorkflowJobRepository(session)
-            job.job_status = "running"
-            job.started_at = datetime.now(timezone.utc)
-            await job_repo.save(job)
+    async with AsyncSessionFactory() as session, session.begin():
+        job_repo = SQLWorkflowJobRepository(session)
+        job.job_status = "running"
+        job.started_at = datetime.now(UTC)
+        await job_repo.save(job)
 
     # Phase 2: execute workflow (LLM calls — no DB transaction held open)
     try:
@@ -84,115 +84,116 @@ async def execute_workflow_background(
 
     except Exception as exc:
         log.error("workflow_job_engine_failed", error=str(exc))
-        async with AsyncSessionFactory() as session:
-            async with session.begin():
-                job_repo = SQLWorkflowJobRepository(session)
-                job.job_status = "failed"
-                job.error = str(exc)
-                job.completed_at = datetime.now(timezone.utc)
-                await job_repo.save(job)
+        async with AsyncSessionFactory() as session, session.begin():
+            job_repo = SQLWorkflowJobRepository(session)
+            job.job_status = "failed"
+            job.error = str(exc)
+            job.completed_at = datetime.now(UTC)
+            await job_repo.save(job)
         return
 
     # Phase 3: persist all results
     try:
-        async with AsyncSessionFactory() as session:
-            async with session.begin():
-                wf_run_repo = SQLWorkflowRunRepository(session)
-                agent_run_repo = SQLAgentRunRepository(session)
-                audit_repo = SQLAuditEventRepository(session)
-                job_repo = SQLWorkflowJobRepository(session)
+        async with AsyncSessionFactory() as session, session.begin():
+            wf_run_repo = SQLWorkflowRunRepository(session)
+            agent_run_repo = SQLAgentRunRepository(session)
+            audit_repo = SQLAuditEventRepository(session)
+            job_repo = SQLWorkflowJobRepository(session)
 
-                saved_run = await wf_run_repo.save(workflow_run)
+            saved_run = await wf_run_repo.save(workflow_run)
 
-                for ar in agent_runs:
-                    await agent_run_repo.save(ar)
+            for ar in agent_runs:
+                await agent_run_repo.save(ar)
 
-                step_outputs: dict[str, str] = {
-                    ar.agent_type: (ar.result_content or "")
-                    for ar in agent_runs
-                    if not ar.error and ar.result_content
-                }
+            step_outputs: dict[str, str] = {
+                ar.agent_type: (ar.result_content or "")
+                for ar in agent_runs
+                if not ar.error and ar.result_content
+            }
 
-                assessment_id: str | None = None
-                finding_count = 0
-                risk_count = 0
-                recommendation_count = 0
+            assessment_id: str | None = None
+            finding_count = 0
+            risk_count = 0
+            recommendation_count = 0
 
-                if step_outputs:
-                    try:
-                        assessment, findings, risks, recommendations = _extractor.extract(
-                            workflow_run=saved_run,
-                            step_outputs=step_outputs,
-                            created_by=user_id,
-                            organization_id=organization_id,
-                        )
+            if step_outputs:
+                try:
+                    assessment, findings, risks, recommendations = _extractor.extract(
+                        workflow_run=saved_run,
+                        step_outputs=step_outputs,
+                        created_by=user_id,
+                        organization_id=organization_id,
+                    )
 
-                        assess_repo = SQLAssessmentRepository(session)
-                        finding_repo = SQLFindingRepository(session)
-                        risk_repo = SQLRiskRepository(session)
-                        rec_repo = SQLRecommendationRepository(session)
+                    assess_repo = SQLAssessmentRepository(session)
+                    finding_repo = SQLFindingRepository(session)
+                    risk_repo = SQLRiskRepository(session)
+                    rec_repo = SQLRecommendationRepository(session)
 
-                        saved_assessment = await assess_repo.save(assessment)
-                        assessment_id = saved_assessment.id
+                    saved_assessment = await assess_repo.save(assessment)
+                    assessment_id = saved_assessment.id
 
-                        for f in findings:
-                            await finding_repo.save(f)
-                        for r in risks:
-                            await risk_repo.save(r)
-                        for rec in recommendations:
-                            await rec_repo.save(rec)
+                    for f in findings:
+                        await finding_repo.save(f)
+                    for r in risks:
+                        await risk_repo.save(r)
+                    for rec in recommendations:
+                        await rec_repo.save(rec)
 
-                        finding_count = len(findings)
-                        risk_count = len(risks)
-                        recommendation_count = len(recommendations)
+                    finding_count = len(findings)
+                    risk_count = len(risks)
+                    recommendation_count = len(recommendations)
 
-                        saved_run.assessment_id = assessment_id
-                        saved_run.finding_count = finding_count
-                        saved_run.risk_count = risk_count
-                        saved_run.recommendation_count = recommendation_count
-                        saved_run = await wf_run_repo.save(saved_run)
+                    saved_run.assessment_id = assessment_id
+                    saved_run.finding_count = finding_count
+                    saved_run.risk_count = risk_count
+                    saved_run.recommendation_count = recommendation_count
+                    saved_run = await wf_run_repo.save(saved_run)
 
-                        await audit_repo.save(audit_factory.assessment_created(
+                    await audit_repo.save(
+                        audit_factory.assessment_created(
                             assessment_id=assessment_id,
                             workflow_run_id=saved_run.id,
                             finding_count=finding_count,
                             risk_count=risk_count,
                             recommendation_count=recommendation_count,
                             actor_id=user_id,
-                        ))
-
-                        log.info(
-                            "workflow_extraction_complete",
-                            assessment_id=assessment_id,
-                            findings=finding_count,
-                            risks=risk_count,
-                            recommendations=recommendation_count,
                         )
+                    )
 
-                    except Exception as exc:
-                        log.warning("workflow_extraction_failed", error=str(exc))
+                    log.info(
+                        "workflow_extraction_complete",
+                        assessment_id=assessment_id,
+                        findings=finding_count,
+                        risks=risk_count,
+                        recommendations=recommendation_count,
+                    )
 
-                await audit_repo.save(audit_factory.workflow_completed(
+                except Exception as exc:
+                    log.warning("workflow_extraction_failed", error=str(exc))
+
+            await audit_repo.save(
+                audit_factory.workflow_completed(
                     workflow_run_id=saved_run.id,
                     workflow_type=job.workflow_type,
                     verdict=saved_run.verdict,
                     actor_id=user_id,
                     assessment_id=assessment_id,
-                ))
+                )
+            )
 
-                job.job_status = "completed"
-                job.workflow_run_id = saved_run.id
-                job.completed_at = datetime.now(timezone.utc)
-                await job_repo.save(job)
+            job.job_status = "completed"
+            job.workflow_run_id = saved_run.id
+            job.completed_at = datetime.now(UTC)
+            await job_repo.save(job)
 
         log.info("workflow_job_completed", workflow_run_id=saved_run.id)
 
     except Exception as exc:
         log.error("workflow_job_persist_failed", error=str(exc))
-        async with AsyncSessionFactory() as session:
-            async with session.begin():
-                job_repo = SQLWorkflowJobRepository(session)
-                job.job_status = "failed"
-                job.error = str(exc)
-                job.completed_at = datetime.now(timezone.utc)
-                await job_repo.save(job)
+        async with AsyncSessionFactory() as session, session.begin():
+            job_repo = SQLWorkflowJobRepository(session)
+            job.job_status = "failed"
+            job.error = str(exc)
+            job.completed_at = datetime.now(UTC)
+            await job_repo.save(job)

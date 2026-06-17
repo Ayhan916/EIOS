@@ -7,8 +7,6 @@ Requires: pip install openai>=1.0.0 and OPENAI_API_KEY in environment.
 To activate: set LLM_PROVIDER=openai and OPENAI_API_KEY in .env
 """
 
-from typing import Optional
-
 from application.ports.llm import LLMResponse, Message
 
 PROVIDER_NAME = "openai"
@@ -20,12 +18,12 @@ class OpenAILLMProvider:
     def __init__(self, api_key: str, model: str = "gpt-4o") -> None:
         try:
             from openai import AsyncOpenAI  # type: ignore[import]
+
             self._client = AsyncOpenAI(api_key=api_key)
-        except ImportError:
+        except ImportError as exc:
             raise ImportError(
-                "OpenAI provider requires the 'openai' package. "
-                "Install it with: uv add openai"
-            )
+                "OpenAI provider requires the 'openai' package. Install it with: uv add openai"
+            ) from exc
         self._model = model
 
     def model_name(self) -> str:
@@ -38,18 +36,15 @@ class OpenAILLMProvider:
         self,
         messages: list[Message],
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.0,
     ) -> LLMResponse:
-        from openai import AsyncOpenAI  # type: ignore[import]
 
         openai_messages = []
         if system:
             openai_messages.append({"role": "system", "content": system})
-        openai_messages.extend(
-            [{"role": m.role, "content": m.content} for m in messages]
-        )
+        openai_messages.extend([{"role": m.role, "content": m.content} for m in messages])
 
         response = await self._client.chat.completions.create(
             model=self._model,

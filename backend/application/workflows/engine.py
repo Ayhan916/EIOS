@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import structlog
-from typing import Optional
 
 from application.agents.base import AgentContext
 from application.agents.registry import get_agent
@@ -28,7 +27,7 @@ class WorkflowEngine:
     def __init__(
         self,
         llm_provider: LLMProvider,
-        knowledge_search: Optional[KnowledgeSearchPort] = None,
+        knowledge_search: KnowledgeSearchPort | None = None,
     ) -> None:
         self._llm = llm_provider
         self._knowledge = knowledge_search
@@ -38,7 +37,7 @@ class WorkflowEngine:
         definition: WorkflowDefinition,
         query: str,
         metadata: dict,
-        created_by: Optional[str] = None,
+        created_by: str | None = None,
     ) -> tuple[WorkflowRun, list[AgentRun]]:
         """Execute the workflow and return (WorkflowRun, [AgentRun, ...]).
 
@@ -80,9 +79,7 @@ class WorkflowEngine:
                     knowledge_chunks = []
 
             prior_outputs = (
-                [r.content for r in step_results if not r.error]
-                if step.pass_prior_outputs
-                else []
+                [r.content for r in step_results if not r.error] if step.pass_prior_outputs else []
             )
 
             context = AgentContext(
@@ -162,14 +159,14 @@ class WorkflowEngine:
         workflow_run.overall_risk_level = risk_level
 
         # Build verdict reasoning from reporting agent if available
-        reporting = next((r for r in step_results if r.agent_type == "reporting" and not r.error), None)
+        reporting = next(
+            (r for r in step_results if r.agent_type == "reporting" and not r.error), None
+        )
         if reporting:
             lines = reporting.content.strip().split("\n")
             workflow_run.verdict_reasoning = "\n".join(lines[:5])
         elif step_results:
-            last_success = next(
-                (r for r in reversed(step_results) if not r.error), None
-            )
+            last_success = next((r for r in reversed(step_results) if not r.error), None)
             if last_success:
                 lines = last_success.content.strip().split("\n")
                 workflow_run.verdict_reasoning = "\n".join(lines[:3])

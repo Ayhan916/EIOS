@@ -70,6 +70,7 @@ API_V1 = "/api/v1"
 
 # ── Application lifespan ───────────────────────────────────────────────────────
 
+
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Fail fast on production misconfiguration before accepting any traffic
@@ -132,6 +133,7 @@ app.add_middleware(
 
 
 # ── Global exception handler ───────────────────────────────────────────────────
+
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:

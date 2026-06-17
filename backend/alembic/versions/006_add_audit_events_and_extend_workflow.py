@@ -19,16 +19,17 @@ Traceability chain after this migration:
                                                       → AuditEvent (assessment.created)
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSONB
 
+from alembic import op
+
 revision: str = "006"
-down_revision: Union[str, None] = "005"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "005"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
@@ -53,9 +54,16 @@ def upgrade() -> None:
     )
 
     op.add_column("workflow_runs", sa.Column("assessment_id", sa.String(36), nullable=True))
-    op.add_column("workflow_runs", sa.Column("finding_count", sa.Integer, nullable=False, server_default="0"))
-    op.add_column("workflow_runs", sa.Column("risk_count", sa.Integer, nullable=False, server_default="0"))
-    op.add_column("workflow_runs", sa.Column("recommendation_count", sa.Integer, nullable=False, server_default="0"))
+    op.add_column(
+        "workflow_runs", sa.Column("finding_count", sa.Integer, nullable=False, server_default="0")
+    )
+    op.add_column(
+        "workflow_runs", sa.Column("risk_count", sa.Integer, nullable=False, server_default="0")
+    )
+    op.add_column(
+        "workflow_runs",
+        sa.Column("recommendation_count", sa.Integer, nullable=False, server_default="0"),
+    )
 
 
 def downgrade() -> None:

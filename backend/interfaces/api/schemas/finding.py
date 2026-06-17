@@ -1,8 +1,7 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 from domain.enums import ConfidenceLevel, RiskLevel
+
 from .base import EntityResponse
 
 
@@ -13,8 +12,8 @@ class FindingCreate(BaseModel):
     category: str = ""
     severity: RiskLevel = RiskLevel.MEDIUM
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
-    reasoning: Optional[str] = None
-    uncertainty: Optional[str] = None
+    reasoning: str | None = None
+    uncertainty: str | None = None
 
 
 class FindingResponse(EntityResponse):
@@ -24,5 +23,5 @@ class FindingResponse(EntityResponse):
     category: str
     severity: str
     confidence: str
-    reasoning: Optional[str] = None
-    uncertainty: Optional[str] = None
+    reasoning: str | None = None
+    uncertainty: str | None = None

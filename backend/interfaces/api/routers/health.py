@@ -72,7 +72,9 @@ async def readiness() -> ReadinessResponse:
     Readiness probe — checks DB connectivity and provider configuration.
     Returns 503 if any critical component is unavailable.
     """
-    from infrastructure.llm.deps import _provider as llm_provider_singleton  # lazy to avoid circular
+    from infrastructure.llm.deps import (
+        _provider as llm_provider_singleton,  # lazy to avoid circular
+    )
 
     components: dict[str, ComponentStatus] = {}
     overall_ok = True
@@ -84,9 +86,7 @@ async def readiness() -> ReadinessResponse:
         components["database"] = ComponentStatus(status="ok")
     except Exception as exc:
         logger.warning("health_db_check_failed", error=str(exc))
-        components["database"] = ComponentStatus(
-            status="degraded", detail=str(exc)[:120]
-        )
+        components["database"] = ComponentStatus(status="degraded", detail=str(exc)[:120])
         overall_ok = False
 
     # LLM provider

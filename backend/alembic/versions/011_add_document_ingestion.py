@@ -17,8 +17,9 @@ Changes:
     - source_section    VARCHAR(500) NULLABLE  (worksheet name / DOCX heading)
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "011"
 down_revision = "010"
@@ -28,8 +29,13 @@ depends_on = None
 
 def upgrade() -> None:
     # evidences — document ingestion tracking
-    op.add_column("evidences", sa.Column("ingestion_status", sa.String(20), nullable=False, server_default="none"))
-    op.add_column("evidences", sa.Column("chunk_count", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "evidences",
+        sa.Column("ingestion_status", sa.String(20), nullable=False, server_default="none"),
+    )
+    op.add_column(
+        "evidences", sa.Column("chunk_count", sa.Integer(), nullable=False, server_default="0")
+    )
     op.add_column("evidences", sa.Column("file_name", sa.String(500), nullable=True))
     op.add_column("evidences", sa.Column("file_size_bytes", sa.Integer(), nullable=True))
     op.add_column("evidences", sa.Column("file_mime_type", sa.String(200), nullable=True))

@@ -43,10 +43,9 @@ async def engine():  # type: ignore[no-untyped-def]
 @pytest_asyncio.fixture
 async def session(engine):  # type: ignore[no-untyped-def]
     factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
-    async with factory() as s:
-        async with s.begin():
-            yield s
-            await s.rollback()
+    async with factory() as s, s.begin():
+        yield s
+        await s.rollback()
 
 
 class TestAssessmentRepository:
@@ -146,9 +145,9 @@ class TestFindingRepository:
 
         assessment = await a_repo.save(Assessment(title="Test Assessment", description="D"))
         for i in range(3):
-            await f_repo.save(Finding(
-                title=f"Finding {i}", description="D", assessment_id=assessment.id
-            ))
+            await f_repo.save(
+                Finding(title=f"Finding {i}", description="D", assessment_id=assessment.id)
+            )
 
         results = await f_repo.list_by_assessment(assessment.id)
         assert len(results) == 3

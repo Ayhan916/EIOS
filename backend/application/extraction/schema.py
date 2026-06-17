@@ -11,8 +11,6 @@ Normalization never raises: unknown values map to sensible defaults.
 
 from __future__ import annotations
 
-from typing import Optional
-
 # ---------------------------------------------------------------------------
 # Canonical enum values (string form used in ORM / domain)
 # ---------------------------------------------------------------------------
@@ -68,6 +66,7 @@ _PRIORITY_MAP = _SEVERITY_MAP.copy()
 # Normalization functions
 # ---------------------------------------------------------------------------
 
+
 def normalize_severity(raw: str) -> str:
     """Map arbitrary severity string to canonical value, defaulting to 'Medium'."""
     return _SEVERITY_MAP.get(raw.strip().lower(), "Medium")
@@ -88,7 +87,7 @@ def normalize_priority(raw: str) -> str:
     return _PRIORITY_MAP.get(raw.strip().lower(), "Medium")
 
 
-def normalize_probability(raw: object) -> Optional[float]:
+def normalize_probability(raw: object) -> float | None:
     """Parse and clamp a probability value to [0.0, 1.0]."""
     if raw is None:
         return None
@@ -101,7 +100,7 @@ def normalize_probability(raw: object) -> Optional[float]:
         return None
 
 
-def normalize_impact(raw: object) -> Optional[float]:
+def normalize_impact(raw: object) -> float | None:
     """Parse and clamp an impact value to [0.0, 1.0]."""
     return normalize_probability(raw)  # same logic
 
@@ -121,6 +120,7 @@ def is_valid_risk_level(value: str) -> bool:
 def strip_markdown(text: str) -> str:
     """Remove bold/italic/code markdown markers from a string."""
     import re
+
     text = re.sub(r"\*{1,3}", "", text)
     text = re.sub(r"_{1,2}", "", text)
     text = re.sub(r"`", "", text)

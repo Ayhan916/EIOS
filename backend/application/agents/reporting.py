@@ -1,4 +1,5 @@
 from application.ports.llm import Message
+
 from .base import AgentContext, AgentResult, BaseAgent
 
 _SYSTEM = """You are the EIOS Reporting Agent — responsible for compiling audit-ready ESG due diligence reports.

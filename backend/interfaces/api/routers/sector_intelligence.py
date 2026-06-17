@@ -10,8 +10,6 @@ Endpoints:
 
 from __future__ import annotations
 
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from application.compliance.coverage import compute_coverage
@@ -20,7 +18,6 @@ from application.sector_intelligence.profiles import (
     SectorESGProfile,
     all_profiles,
     get_profile,
-    get_profile_by_section,
 )
 from domain.user import User
 from infrastructure.persistence.repositories import (
@@ -37,10 +34,10 @@ from interfaces.api.deps import (
     get_sector_repo,
 )
 from interfaces.api.schemas.sector_intelligence import (
+    PeerSummaryResponse,
     SectorBenchmarkResponse,
     SectorESGProfileResponse,
     SeverityDistributionResponse,
-    PeerSummaryResponse,
 )
 
 sector_intelligence_router = APIRouter(

@@ -9,9 +9,7 @@ BASE = "/api/v1/auth"
 
 
 async def test_register_new_user(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.post(
             BASE + "/register",
             json={
@@ -30,9 +28,7 @@ async def test_register_new_user(setup_test_schema: None) -> None:
 
 
 async def test_register_duplicate_email_returns_409(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         await c.post(
             BASE + "/register",
             json={
@@ -53,9 +49,7 @@ async def test_register_duplicate_email_returns_409(setup_test_schema: None) -> 
 
 
 async def test_register_weak_password_returns_422(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.post(
             BASE + "/register",
             json={"email": "weak@eios.dev", "display_name": "W", "password": "short"},
@@ -64,9 +58,7 @@ async def test_register_weak_password_returns_422(setup_test_schema: None) -> No
 
 
 async def test_login_valid_credentials(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         await c.post(
             BASE + "/register",
             json={
@@ -87,9 +79,7 @@ async def test_login_valid_credentials(setup_test_schema: None) -> None:
 
 
 async def test_login_wrong_password_returns_401(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         await c.post(
             BASE + "/register",
             json={
@@ -106,9 +96,7 @@ async def test_login_wrong_password_returns_401(setup_test_schema: None) -> None
 
 
 async def test_login_unknown_email_returns_401(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.post(
             BASE + "/login",
             json={"email": "nobody@eios.dev", "password": "whatever"},
@@ -125,18 +113,14 @@ async def test_get_me_with_valid_token(client: AsyncClient) -> None:
 
 
 async def test_get_me_without_token_returns_403(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.get(BASE + "/me")
     # FastAPI HTTPBearer returns 403 when no Authorization header is present
     assert response.status_code == 403
 
 
 async def test_protected_route_without_token_returns_403(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.get("/api/v1/sectors/some-id")
     assert response.status_code == 403
 
@@ -152,9 +136,7 @@ async def test_protected_route_with_invalid_token_returns_401(setup_test_schema:
 
 
 async def test_token_refresh(setup_test_schema: None) -> None:
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         reg = await c.post(
             BASE + "/register",
             json={

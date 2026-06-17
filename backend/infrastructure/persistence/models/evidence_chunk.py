@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+from pgvector.sqlalchemy import Vector
 from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional
-from pgvector.sqlalchemy import Vector
 
 from shared.config import settings
+
 from .base import BaseModel
 
 
@@ -21,7 +21,7 @@ class EvidenceChunkModel(BaseModel):
     # Vector column: dimension set from config to support model swaps via migration
     embedding = mapped_column(Vector(settings.embedding_dim), nullable=True)
     # Traceability (M15)
-    page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    source_section: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source_section: Mapped[str | None] = mapped_column(String(500), nullable=True)
 
     evidence: Mapped[EvidenceModel] = relationship(back_populates="chunks")

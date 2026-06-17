@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC, datetime
 
 from domain.workflow_job import WorkflowJob
 
@@ -85,7 +83,7 @@ class TestWorkflowJobDomain:
         assert job.error == "LLM provider unavailable"
 
     def test_timestamps_on_completed_job(self) -> None:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         job = WorkflowJob(
             workflow_type="quick_scan",
             query="q",
@@ -111,17 +109,17 @@ class TestWorkflowJobLifecycle:
         job = self._pending()
         assert job.job_status == "pending"
         job.job_status = "running"
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = datetime.now(UTC)
         assert job.job_status == "running"
         assert job.started_at is not None
 
     def test_transition_running_to_completed(self) -> None:
         job = self._pending()
         job.job_status = "running"
-        job.started_at = datetime.now(timezone.utc)
+        job.started_at = datetime.now(UTC)
         job.job_status = "completed"
         job.workflow_run_id = "run-xyz"
-        job.completed_at = datetime.now(timezone.utc)
+        job.completed_at = datetime.now(UTC)
         assert job.job_status == "completed"
         assert job.workflow_run_id == "run-xyz"
         assert job.completed_at is not None
@@ -131,7 +129,7 @@ class TestWorkflowJobLifecycle:
         job.job_status = "running"
         job.job_status = "failed"
         job.error = "Network timeout during LLM call"
-        job.completed_at = datetime.now(timezone.utc)
+        job.completed_at = datetime.now(UTC)
         assert job.job_status == "failed"
         assert job.error
         assert job.workflow_run_id is None  # not set on failure

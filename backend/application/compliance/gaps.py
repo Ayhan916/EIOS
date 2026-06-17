@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .coverage import ComplianceCoverageReport
-from .frameworks import ALL_ARTICLES, FrameworkArticle
+from .frameworks import ALL_ARTICLES
 from .weights import exposure
 
 
@@ -29,9 +29,9 @@ class ComplianceGap:
     obligation_type: str
     esg_categories: tuple[str, ...]
     regulatory_exposure: float
-    gap_severity: str        # "critical" | "high" | "medium"
-    explanation: str         # why this gap is significant
-    remediation_hint: str    # concrete action to address it
+    gap_severity: str  # "critical" | "high" | "medium"
+    explanation: str  # why this gap is significant
+    remediation_hint: str  # concrete action to address it
 
 
 # ---------------------------------------------------------------------------
@@ -311,8 +311,7 @@ _REMEDIATION_HINTS: dict[str, str] = {
         "approach and remuneration link to sustainability performance per GRI 2."
     ),
     "GRI-303": (
-        "Report water withdrawal by source, recycling rates and quality of "
-        "discharges per GRI 303."
+        "Report water withdrawal by source, recycling rates and quality of discharges per GRI 303."
     ),
     "GRI-304": (
         "Report IUCN Red List species interactions and operational footprint near "

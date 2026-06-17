@@ -8,7 +8,6 @@ Governed object: requires approval before activation (ASTATE-0001).
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 from .base_entity import BaseEntity
 
@@ -18,8 +17,8 @@ class Policy(BaseEntity):
     title: str
     description: str
     policy_type: str = ""
-    effective_date: Optional[datetime] = None
-    expiry_date: Optional[datetime] = None
-    approved_by: Optional[str] = None
+    effective_date: datetime | None = None
+    expiry_date: datetime | None = None
+    approved_by: str | None = None
     requirement_ids: list[str] = field(default_factory=list)
     control_ids: list[str] = field(default_factory=list)

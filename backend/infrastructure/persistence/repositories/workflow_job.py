@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
-from sqlalchemy import or_, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.workflow_job import WorkflowJob
@@ -48,14 +47,14 @@ class SQLWorkflowJobRepository:
             updated_at=model.updated_at,
         )
 
-    async def get_by_id(self, job_id: str) -> Optional[WorkflowJob]:
+    async def get_by_id(self, job_id: str) -> WorkflowJob | None:
         result = await self._session.get(WorkflowJobModel, job_id)
         if result is None:
             return None
         return self._to_domain(result)
 
     async def save(self, job: WorkflowJob) -> WorkflowJob:
-        job.updated_at = datetime.now(timezone.utc)
+        job.updated_at = datetime.now(UTC)
         model = self._to_model(job)
         merged = await self._session.merge(model)
         await self._session.flush()
@@ -84,9 +83,10 @@ class SQLWorkflowJobRepository:
         organization_id: str,
         page: int,
         page_size: int,
-        job_status: Optional[str] = None,
+        job_status: str | None = None,
     ) -> tuple[list[WorkflowJob], int]:
         from sqlalchemy import func
+
         stmt = (
             select(WorkflowJobModel)
             .where(WorkflowJobModel.organization_id == organization_id)

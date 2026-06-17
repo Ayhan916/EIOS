@@ -8,8 +8,9 @@ Changes:
     - extraction_metadata  JSON  NULLABLE  (ExtractionReport stored as JSON dict)
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "012"
 down_revision = "011"

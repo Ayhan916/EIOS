@@ -1,5 +1,3 @@
-from typing import Optional
-
 from pydantic import BaseModel
 
 
@@ -31,7 +29,7 @@ class SeverityDistributionResponse(BaseModel):
 class PeerSummaryResponse(BaseModel):
     assessment_id: str
     title: str
-    quality_score: Optional[float] = None
+    quality_score: float | None = None
     finding_count: int
     risk_count: int
     high_critical_finding_count: int
@@ -42,7 +40,7 @@ class SectorBenchmarkResponse(BaseModel):
     assessment_title: str
 
     # Sector context
-    sector_id: Optional[str] = None
+    sector_id: str | None = None
     sector_nace_code: str
     sector_name: str
     profile_nace_section: str
@@ -50,7 +48,7 @@ class SectorBenchmarkResponse(BaseModel):
     # Assessment metrics
     finding_distribution: SeverityDistributionResponse
     risk_distribution: SeverityDistributionResponse
-    quality_score: Optional[float] = None
+    quality_score: float | None = None
 
     # Sector baseline
     baseline_mandatory_coverage: float
@@ -66,8 +64,8 @@ class SectorBenchmarkResponse(BaseModel):
     regulatory_exposure_notes: str
 
     # Compliance comparison
-    mandatory_coverage: Optional[float] = None
-    coverage_vs_baseline: Optional[float] = None
+    mandatory_coverage: float | None = None
+    coverage_vs_baseline: float | None = None
     coverage_rating: str
     coverage_explanation: str
 
@@ -82,8 +80,8 @@ class SectorBenchmarkResponse(BaseModel):
     # Peers
     peer_count: int
     peers: list[PeerSummaryResponse]
-    org_avg_quality_score: Optional[float] = None
-    org_avg_finding_count: Optional[float] = None
+    org_avg_quality_score: float | None = None
+    org_avg_finding_count: float | None = None
 
     # Overall
     benchmark_rating: str

@@ -10,8 +10,7 @@ accurate and auditable regardless of future changes to the underlying entities.
 
 from __future__ import annotations
 
-from dataclasses import asdict
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from domain.assessment import Assessment
@@ -69,9 +68,11 @@ class ReportService:
         findings = await self._finding_repo.list_by_assessment(assessment_id)
         risks = await self._risk_repo.list_by_assessment(assessment_id)
         recommendations = await self._recommendation_repo.list_by_assessment(assessment_id)
-        evidence = await self._evidence_repo.list_by_organization(
-            assessment.organization_id or ""
-        ) if assessment.organization_id else []
+        evidence = (
+            await self._evidence_repo.list_by_organization(assessment.organization_id or "")
+            if assessment.organization_id
+            else []
+        )
 
         snapshot = _build_snapshot(
             assessment=assessment,
@@ -107,6 +108,7 @@ class ReportService:
 
 # ── Snapshot builder ───────────────────────────────────────────────────────────
 
+
 def _build_snapshot(
     assessment: Assessment,
     findings: list[Finding],
@@ -115,25 +117,25 @@ def _build_snapshot(
     evidence: list[Evidence],
     current_user: User,
 ) -> dict[str, Any]:
-    generated_at = datetime.now(timezone.utc).isoformat()
+    generated_at = datetime.now(UTC).isoformat()
     generated_by_name = getattr(current_user, "display_name", None) or current_user.email
 
     return {
         "assessment": _assessment_dict(assessment),
-        "findings":        [_finding_dict(f) for f in findings],
-        "risks":           [_risk_dict(r) for r in risks],
+        "findings": [_finding_dict(f) for f in findings],
+        "risks": [_risk_dict(r) for r in risks],
         "recommendations": [_rec_dict(r) for r in recommendations],
-        "evidence":        [_evidence_dict(e) for e in evidence],
+        "evidence": [_evidence_dict(e) for e in evidence],
         "meta": {
-            "generated_at":       generated_at,
-            "generated_by":       current_user.id,
-            "generated_by_name":  generated_by_name,
-            "report_id":          "",  # filled in after Report entity is created
+            "generated_at": generated_at,
+            "generated_by": current_user.id,
+            "generated_by_name": generated_by_name,
+            "report_id": "",  # filled in after Report entity is created
             "counts": {
-                "findings":        len(findings),
-                "risks":           len(risks),
+                "findings": len(findings),
+                "risks": len(risks),
                 "recommendations": len(recommendations),
-                "evidence":        len(evidence),
+                "evidence": len(evidence),
             },
         },
     }
@@ -141,15 +143,15 @@ def _build_snapshot(
 
 def _assessment_dict(a: Assessment) -> dict[str, Any]:
     return {
-        "id":              a.id,
-        "title":           a.title,
-        "description":     a.description,
+        "id": a.id,
+        "title": a.title,
+        "description": a.description,
         "assessment_type": a.assessment_type,
-        "scope":           a.scope,
-        "methodology":     a.methodology,
-        "confidence":      a.confidence.value,
-        "status":          a.status.value,
-        "created_at":      a.created_at.isoformat(),
+        "scope": a.scope,
+        "methodology": a.methodology,
+        "confidence": a.confidence.value,
+        "status": a.status.value,
+        "created_at": a.created_at.isoformat(),
         "organization_id": a.organization_id,
     }
 
@@ -161,53 +163,53 @@ def _enum_val(v: Any) -> str:
 
 def _finding_dict(f: Finding) -> dict[str, Any]:
     return {
-        "id":          f.id,
-        "title":       f.title,
+        "id": f.id,
+        "title": f.title,
         "description": f.description,
-        "category":    f.category,
-        "severity":    _enum_val(f.severity),
-        "confidence":  _enum_val(f.confidence),
-        "reasoning":   f.reasoning,
+        "category": f.category,
+        "severity": _enum_val(f.severity),
+        "confidence": _enum_val(f.confidence),
+        "reasoning": f.reasoning,
         "uncertainty": f.uncertainty,
     }
 
 
 def _risk_dict(r: Risk) -> dict[str, Any]:
     return {
-        "id":          r.id,
-        "title":       r.title,
+        "id": r.id,
+        "title": r.title,
         "description": r.description,
-        "category":    r.category,
-        "risk_level":  _enum_val(r.risk_level),
+        "category": r.category,
+        "risk_level": _enum_val(r.risk_level),
         "probability": r.probability,
-        "impact":      r.impact,
-        "confidence":  _enum_val(r.confidence),
-        "reasoning":   r.reasoning,
+        "impact": r.impact,
+        "confidence": _enum_val(r.confidence),
+        "reasoning": r.reasoning,
         "uncertainty": r.uncertainty,
     }
 
 
 def _rec_dict(r: Recommendation) -> dict[str, Any]:
     return {
-        "id":              r.id,
-        "title":           r.title,
-        "description":     r.description,
-        "priority":        _enum_val(r.priority),
-        "confidence":      _enum_val(r.confidence),
+        "id": r.id,
+        "title": r.title,
+        "description": r.description,
+        "priority": _enum_val(r.priority),
+        "confidence": _enum_val(r.confidence),
         "action_required": r.action_required,
-        "due_date":        r.due_date.isoformat() if r.due_date else None,
-        "reasoning":       r.reasoning,
+        "due_date": r.due_date.isoformat() if r.due_date else None,
+        "reasoning": r.reasoning,
     }
 
 
 def _evidence_dict(e: Evidence) -> dict[str, Any]:
     return {
-        "id":            e.id,
-        "title":         e.title,
-        "description":   e.description,
+        "id": e.id,
+        "title": e.title,
+        "description": e.description,
         "evidence_type": e.evidence_type.value,
-        "source":        e.source,
-        "confidence":    e.confidence.value,
+        "source": e.source,
+        "confidence": e.confidence.value,
         "reliability_score": e.reliability_score,
-        "published_at":  e.published_at.isoformat() if e.published_at else None,
+        "published_at": e.published_at.isoformat() if e.published_at else None,
     }

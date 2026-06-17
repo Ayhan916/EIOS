@@ -24,7 +24,9 @@ AUDIT_BASE = "/api/v1/audit"
 WORKFLOWS_BASE = "/api/v1/workflows"
 
 
-def _make_mock_provider(content: str = "## Mock output\n\n### Finding 1: Test Finding\n- Severity: High\n- Confidence: Medium\n") -> MagicMock:
+def _make_mock_provider(
+    content: str = "## Mock output\n\n### Finding 1: Test Finding\n- Severity: High\n- Confidence: Medium\n",
+) -> MagicMock:
     resp = LLMResponse(
         content=content,
         model="mock-model",
@@ -41,9 +43,15 @@ def _make_mock_provider(content: str = "## Mock output\n\n### Finding 1: Test Fi
 
 
 async def _run_workflow(client: AsyncClient, query: str = "ESG audit test") -> dict:
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 resp = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": query},
@@ -125,11 +133,10 @@ async def test_audit_trail_for_workflow_run(client: AsyncClient) -> None:
 async def test_audit_events_require_auth(setup_test_schema: None) -> None:
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
-    async with httpx.AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.get(AUDIT_BASE + "/events")
         assert r.status_code == 403
 

@@ -16,9 +16,7 @@ class ControlModel(BaseModel):
     effectiveness: Mapped[float | None] = mapped_column(Float, nullable=True)
     automated: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    risks: Mapped[list[RiskModel]] = relationship(
-        secondary=control_risk, back_populates="controls"
-    )
+    risks: Mapped[list[RiskModel]] = relationship(secondary=control_risk, back_populates="controls")
     requirements: Mapped[list[RequirementModel]] = relationship(
         secondary=control_requirement, back_populates="controls"
     )

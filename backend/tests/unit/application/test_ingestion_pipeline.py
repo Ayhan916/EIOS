@@ -12,7 +12,6 @@ logic by calling the pipeline with mocked dependencies.
 
 from __future__ import annotations
 
-from typing import Optional
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,10 +19,10 @@ import pytest
 from application.ingestion.parsers import ParsedPage, ParseResult
 from application.ingestion.pipeline import IngestionResult, ingest_document
 
-
 # ---------------------------------------------------------------------------
 # IngestionResult dataclass
 # ---------------------------------------------------------------------------
+
 
 class TestIngestionResult:
     def test_ingested_status(self) -> None:
@@ -70,6 +69,7 @@ class TestIngestionResult:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_evidence(org_id: str = "org-1") -> MagicMock:
     ev = MagicMock()
     ev.id = "evidence-abc"
@@ -105,6 +105,7 @@ class _FakeChunkRepo:
 # Pipeline: OCR required
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineOcrRequired:
     @pytest.mark.asyncio
     async def test_ocr_required_result(self) -> None:
@@ -135,6 +136,7 @@ class TestPipelineOcrRequired:
 # Pipeline: empty document
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineEmptyDocument:
     @pytest.mark.asyncio
     async def test_empty_text_returns_failed(self) -> None:
@@ -164,13 +166,21 @@ class TestPipelineEmptyDocument:
 # Pipeline: successful ingestion with traceability
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineSuccessfulIngestion:
     @pytest.mark.asyncio
     async def test_chunks_created(self) -> None:
         parse_result = ParseResult(
             pages=[
-                ParsedPage(page_number=1, text="Supply chain labor rights assessment. Workers rights are fundamental."),
-                ParsedPage(page_number=2, text="Environmental impact assessment. Carbon emissions exceeded targets.", source_section="Environment"),
+                ParsedPage(
+                    page_number=1,
+                    text="Supply chain labor rights assessment. Workers rights are fundamental.",
+                ),
+                ParsedPage(
+                    page_number=2,
+                    text="Environmental impact assessment. Carbon emissions exceeded targets.",
+                    source_section="Environment",
+                ),
             ],
             warnings=[],
             requires_ocr=False,
@@ -197,7 +207,10 @@ class TestPipelineSuccessfulIngestion:
     async def test_chunks_carry_page_number(self) -> None:
         parse_result = ParseResult(
             pages=[
-                ParsedPage(page_number=3, text="This is page three content with enough text to form a chunk."),
+                ParsedPage(
+                    page_number=3,
+                    text="This is page three content with enough text to form a chunk.",
+                ),
             ],
             warnings=[],
             requires_ocr=False,
@@ -222,7 +235,11 @@ class TestPipelineSuccessfulIngestion:
     async def test_chunks_carry_source_section(self) -> None:
         parse_result = ParseResult(
             pages=[
-                ParsedPage(page_number=1, text="Governance data for board composition metrics.", source_section="Governance"),
+                ParsedPage(
+                    page_number=1,
+                    text="Governance data for board composition metrics.",
+                    source_section="Governance",
+                ),
             ],
             warnings=[],
             requires_ocr=False,
@@ -247,8 +264,13 @@ class TestPipelineSuccessfulIngestion:
     async def test_chunk_indices_are_sequential(self) -> None:
         parse_result = ParseResult(
             pages=[
-                ParsedPage(page_number=1, text="First page with substantial content for chunking purposes."),
-                ParsedPage(page_number=2, text="Second page with different content for the knowledge pipeline."),
+                ParsedPage(
+                    page_number=1, text="First page with substantial content for chunking purposes."
+                ),
+                ParsedPage(
+                    page_number=2,
+                    text="Second page with different content for the knowledge pipeline.",
+                ),
             ],
             warnings=[],
             requires_ocr=False,
@@ -275,6 +297,7 @@ class TestPipelineSuccessfulIngestion:
 # Pipeline: force re-ingestion
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineForceReingestion:
     @pytest.mark.asyncio
     async def test_force_deletes_existing_chunks(self) -> None:
@@ -283,7 +306,9 @@ class TestPipelineForceReingestion:
                 return [MagicMock(), MagicMock()]  # 2 existing chunks
 
         parse_result = ParseResult(
-            pages=[ParsedPage(page_number=1, text="Fresh content after re-ingestion of the document.")],
+            pages=[
+                ParsedPage(page_number=1, text="Fresh content after re-ingestion of the document.")
+            ],
             warnings=[],
             requires_ocr=False,
             parser_used="pypdf",
@@ -309,6 +334,7 @@ class TestPipelineForceReingestion:
 # Pipeline: embedding failure handled gracefully
 # ---------------------------------------------------------------------------
 
+
 class TestPipelineEmbeddingFailure:
     @pytest.mark.asyncio
     async def test_embedding_error_returns_failed(self) -> None:
@@ -317,7 +343,11 @@ class TestPipelineEmbeddingFailure:
                 raise RuntimeError("embedding model unavailable")
 
         parse_result = ParseResult(
-            pages=[ParsedPage(page_number=1, text="Valid content that would produce chunks for embedding.")],
+            pages=[
+                ParsedPage(
+                    page_number=1, text="Valid content that would produce chunks for embedding."
+                )
+            ],
             warnings=[],
             requires_ocr=False,
             parser_used="pypdf",

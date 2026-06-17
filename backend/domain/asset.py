@@ -6,7 +6,6 @@ Represents an enterprise asset (Data, Document, System, Knowledge).
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .base_entity import BaseEntity
 
@@ -16,6 +15,6 @@ class Asset(BaseEntity):
     title: str
     description: str
     asset_type: str = ""
-    asset_class: Optional[str] = None
-    location: Optional[str] = None
-    organization_id: Optional[str] = None
+    asset_class: str | None = None
+    location: str | None = None
+    organization_id: str | None = None

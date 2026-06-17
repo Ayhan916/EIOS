@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -72,10 +70,10 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
         organization_id: str,
         page: int,
         page_size: int,
-        status: Optional[str] = None,
-        assessment_type: Optional[str] = None,
-        sector_id: Optional[str] = None,
-        search: Optional[str] = None,
+        status: str | None = None,
+        assessment_type: str | None = None,
+        sector_id: str | None = None,
+        search: str | None = None,
     ) -> tuple[list[Assessment], int]:
         stmt = (
             select(AssessmentModel)

@@ -8,7 +8,6 @@ Governed: requires Founder or authorized authority sign-off.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 from .base_entity import BaseEntity
 
@@ -19,8 +18,8 @@ class Decision(BaseEntity):
     description: str
     rationale: str
     decided_by: str
-    decided_at: Optional[datetime] = None
+    decided_at: datetime | None = None
     decision_type: str = ""
-    context: Optional[str] = None
+    context: str | None = None
     recommendation_ids: list[str] = field(default_factory=list)
     affected_object_ids: list[str] = field(default_factory=list)

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from application.reporting.service import ReportService
@@ -67,8 +65,12 @@ async def generate_report(
     report_repo: SQLReportRepository = Depends(get_report_repo),
 ) -> ReportResponse:
     service = _build_service(
-        assessment_repo, finding_repo, risk_repo,
-        recommendation_repo, evidence_repo, report_repo,
+        assessment_repo,
+        finding_repo,
+        risk_repo,
+        recommendation_repo,
+        evidence_repo,
+        report_repo,
     )
     try:
         report = await service.generate(
@@ -76,7 +78,7 @@ async def generate_report(
             current_user=current_user,
         )
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
     return ReportResponse.model_validate(report)
 
 
@@ -86,7 +88,7 @@ async def generate_report(
     summary="List reports for an assessment",
 )
 async def list_reports(
-    assessment_id: Optional[str] = Query(default=None),
+    assessment_id: str | None = Query(default=None),
     report_repo: SQLReportRepository = Depends(get_report_repo),
 ) -> list[ReportResponse]:
     if not assessment_id:

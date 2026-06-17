@@ -67,9 +67,7 @@ async def test_list_assessments_by_sector(client: AsyncClient) -> None:
 
 
 async def test_list_assessment_findings(client: AsyncClient) -> None:
-    assessment = await client.post(
-        BASE + "/", json={"title": "Finding Source", "description": "D"}
-    )
+    assessment = await client.post(BASE + "/", json={"title": "Finding Source", "description": "D"})
     aid = assessment.json()["id"]
 
     f1 = await client.post(
@@ -91,9 +89,7 @@ async def test_list_assessment_findings(client: AsyncClient) -> None:
 
 
 async def test_list_assessment_risks(client: AsyncClient) -> None:
-    assessment = await client.post(
-        BASE + "/", json={"title": "Risk Source", "description": "D"}
-    )
+    assessment = await client.post(BASE + "/", json={"title": "Risk Source", "description": "D"})
     aid = assessment.json()["id"]
 
     r1 = await client.post(

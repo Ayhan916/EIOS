@@ -8,7 +8,6 @@ Flow: AgentContext → BaseAgent.run() → LLMProvider.complete() → AgentResul
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from application.ports.llm import LLMProvider, LLMResponse, Message
 
@@ -16,6 +15,7 @@ from application.ports.llm import LLMProvider, LLMResponse, Message
 @dataclass
 class AgentContext:
     """Inputs provided to an agent at invocation time."""
+
     query: str
     knowledge_chunks: list[str] = field(default_factory=list)
     prior_outputs: list[str] = field(default_factory=list)
@@ -25,12 +25,13 @@ class AgentContext:
 @dataclass
 class AgentResult:
     """Structured output from an agent run."""
+
     content: str
     agent_type: str
     confidence: float = 1.0
-    reasoning: Optional[str] = None
+    reasoning: str | None = None
     metadata: dict = field(default_factory=dict)  # type: ignore[type-arg]
-    llm_response: Optional[LLMResponse] = None
+    llm_response: LLMResponse | None = None
 
 
 class BaseAgent:

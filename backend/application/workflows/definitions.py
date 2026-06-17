@@ -22,8 +22,7 @@ DUE_DILIGENCE = WorkflowDefinition(
 QUICK_SCAN = WorkflowDefinition(
     workflow_type="quick_scan",
     description=(
-        "Fast ESG scan: knowledge retrieval → ESG assessment → "
-        "risk register → recommendations"
+        "Fast ESG scan: knowledge retrieval → ESG assessment → risk register → recommendations"
     ),
     steps=[
         WorkflowStep("retrieval", retrieve_knowledge=True, knowledge_limit=10),

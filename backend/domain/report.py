@@ -7,7 +7,7 @@ accurate even if underlying findings, risks, or recommendations change later.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -17,7 +17,7 @@ class Report(BaseEntity):
     assessment_id: str
     title: str
     generated_by: str  # user_id
-    organization_id: Optional[str] = None
+    organization_id: str | None = None
     format: str = "pdf"
     # Counts captured at generation time
     finding_count: int = 0
@@ -25,4 +25,4 @@ class Report(BaseEntity):
     recommendation_count: int = 0
     evidence_count: int = 0
     # Frozen snapshot of the full report payload (for auditability and re-render)
-    content_snapshot: dict = field(default_factory=dict)
+    content_snapshot: dict[str, Any] = field(default_factory=dict)

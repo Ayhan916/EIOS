@@ -6,9 +6,9 @@ All objects inherit from BaseEntity per architecture/006 (AENT-0001).
 """
 
 from .agent_run import AgentRun
-from .audit_event import AuditEvent
-from .asset import Asset
 from .assessment import Assessment
+from .asset import Asset
+from .audit_event import AuditEvent
 from .base_entity import BaseEntity
 from .control import Control
 from .decision import Decision

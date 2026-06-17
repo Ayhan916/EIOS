@@ -6,13 +6,11 @@ and reused across all requests. Model loading can take 5-30 seconds on first run
 as weights are downloaded from HuggingFace; subsequent startups use the local cache.
 """
 
-from typing import Optional
-
 from shared.config import settings
 
 from .sentence_transformer import SentenceTransformerEmbeddingProvider
 
-_provider: Optional[SentenceTransformerEmbeddingProvider] = None
+_provider: SentenceTransformerEmbeddingProvider | None = None
 
 
 def init_embedding_provider() -> SentenceTransformerEmbeddingProvider:
@@ -26,5 +24,7 @@ def init_embedding_provider() -> SentenceTransformerEmbeddingProvider:
 def get_embedding_provider() -> SentenceTransformerEmbeddingProvider:
     """FastAPI dependency — returns the pre-initialised singleton."""
     if _provider is None:
-        raise RuntimeError("Embedding provider not initialised. Call init_embedding_provider() at startup.")
+        raise RuntimeError(
+            "Embedding provider not initialised. Call init_embedding_provider() at startup."
+        )
     return _provider

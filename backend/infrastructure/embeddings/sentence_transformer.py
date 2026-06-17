@@ -13,7 +13,6 @@ Prefix behaviour is detected automatically from the model name.
 """
 
 import asyncio
-from functools import partial
 
 import structlog
 from sentence_transformers import SentenceTransformer
@@ -32,9 +31,7 @@ class SentenceTransformerEmbeddingProvider:
         logger.info("embedding_provider_loading", model=model_name)
         self._model = SentenceTransformer(model_name)
         self._dim = self._model.get_sentence_embedding_dimension()
-        logger.info(
-            "embedding_provider_ready", model=model_name, dim=self._dim
-        )
+        logger.info("embedding_provider_ready", model=model_name, dim=self._dim)
 
     def dim(self) -> int:
         return int(self._dim)

@@ -1,4 +1,5 @@
 from application.ports.llm import Message
+
 from .base import AgentContext, AgentResult, BaseAgent
 
 _SYSTEM = """You are the EIOS Governance Agent — an expert in corporate governance and ESG compliance oversight.

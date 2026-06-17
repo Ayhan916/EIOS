@@ -1,16 +1,17 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from domain.recommendation import Recommendation
 from domain.user import User
-from infrastructure.persistence.repositories import SQLAssessmentRepository, SQLRecommendationRepository
+from infrastructure.persistence.repositories import (
+    SQLAssessmentRepository,
+    SQLRecommendationRepository,
+)
 from interfaces.api.deps import (
     get_assessment_repo,
     get_current_user,
     get_recommendation_repo,
-    require_analyst,
     require_admin,
+    require_analyst,
 )
 from interfaces.api.schemas.recommendation import RecommendationCreate, RecommendationResponse
 
@@ -23,7 +24,7 @@ router = APIRouter(
 
 async def _assert_rec_org_access(
     rec: Recommendation,
-    user_org_id: Optional[str],
+    user_org_id: str | None,
     assessment_repo: SQLAssessmentRepository,
 ) -> None:
     """Verify the recommendation's parent assessment belongs to the user's org."""
@@ -31,14 +32,18 @@ async def _assert_rec_org_access(
         return
     assessment = await assessment_repo.get_by_id(rec.assessment_id)
     if assessment is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found"
+        )
     if assessment.organization_id and assessment.organization_id != user_org_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found"
+        )
 
 
 @router.get("/", response_model=list[RecommendationResponse])
 async def list_recommendations(
-    assessment_id: Optional[str] = Query(default=None),
+    assessment_id: str | None = Query(default=None),
     repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
 ) -> list[RecommendationResponse]:
     if not assessment_id:
@@ -81,7 +86,9 @@ async def get_recommendation(
 ) -> RecommendationResponse:
     recommendation = await repo.get_by_id(recommendation_id)
     if recommendation is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found"
+        )
     await _assert_rec_org_access(recommendation, current_user.organization_id, assessment_repo)
     return RecommendationResponse.model_validate(recommendation)
 
@@ -99,6 +106,8 @@ async def delete_recommendation(
 ) -> None:
     existing = await repo.get_by_id(recommendation_id)
     if existing is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Recommendation not found"
+        )
     await _assert_rec_org_access(existing, current_user.organization_id, assessment_repo)
     await repo.delete(recommendation_id)

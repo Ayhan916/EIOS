@@ -7,7 +7,6 @@ Represents a discrete unit of work within a Project.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
 
 from .base_entity import BaseEntity
 from .enums import RiskLevel
@@ -18,8 +17,8 @@ class Task(BaseEntity):
     title: str
     description: str
     task_type: str = ""
-    project_id: Optional[str] = None
-    assignee_id: Optional[str] = None
+    project_id: str | None = None
+    assignee_id: str | None = None
     priority: RiskLevel = field(default=RiskLevel.MEDIUM)
-    due_date: Optional[datetime] = None
+    due_date: datetime | None = None
     completed: bool = False

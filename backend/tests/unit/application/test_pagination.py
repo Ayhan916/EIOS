@@ -10,12 +10,10 @@ from __future__ import annotations
 
 import math
 
-import pytest
-
-
 # ---------------------------------------------------------------------------
 # Offset calculation (mirrors PaginationParams.offset)
 # ---------------------------------------------------------------------------
+
 
 def offset(page: int, page_size: int) -> int:
     return (page - 1) * page_size
@@ -45,6 +43,7 @@ class TestOffsetCalculation:
 # ---------------------------------------------------------------------------
 # total_pages formula (mirrors Page.total_pages computed_field)
 # ---------------------------------------------------------------------------
+
 
 def total_pages(total: int, page_size: int) -> int:
     return max(1, math.ceil(total / page_size)) if page_size else 1
@@ -76,6 +75,7 @@ class TestTotalPagesFormula:
 # ---------------------------------------------------------------------------
 # has_next / has_prev formulas (mirrors Page computed_fields)
 # ---------------------------------------------------------------------------
+
 
 def has_next(page: int, total: int, page_size: int) -> bool:
     return page < total_pages(total, page_size)
@@ -114,6 +114,7 @@ class TestHasNextHasPrev:
 # ---------------------------------------------------------------------------
 # End-to-end pagination scenario
 # ---------------------------------------------------------------------------
+
 
 class TestPaginationScenarios:
     """Verify offset + metadata combinations for common query patterns."""

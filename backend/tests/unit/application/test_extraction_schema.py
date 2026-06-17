@@ -24,28 +24,29 @@ from application.extraction.schema import (
     strip_markdown,
 )
 
-
 # ---------------------------------------------------------------------------
 # Canonical value sets
 # ---------------------------------------------------------------------------
 
+
 class TestCanonicalSets:
     def test_severity_has_four_values(self):
-        assert SEVERITY_VALUES == {"Critical", "High", "Medium", "Low"}
+        assert {"Critical", "High", "Medium", "Low"} == SEVERITY_VALUES
 
     def test_confidence_has_three_values(self):
-        assert CONFIDENCE_VALUES == {"High", "Medium", "Low"}
+        assert {"High", "Medium", "Low"} == CONFIDENCE_VALUES
 
     def test_risk_level_has_four_values(self):
-        assert RISK_LEVEL_VALUES == {"Critical", "High", "Medium", "Low"}
+        assert {"Critical", "High", "Medium", "Low"} == RISK_LEVEL_VALUES
 
     def test_priority_has_four_values(self):
-        assert PRIORITY_VALUES == {"Critical", "High", "Medium", "Low"}
+        assert {"Critical", "High", "Medium", "Low"} == PRIORITY_VALUES
 
 
 # ---------------------------------------------------------------------------
 # is_valid_* guards
 # ---------------------------------------------------------------------------
+
 
 class TestIsValidGuards:
     @pytest.mark.parametrize("val", ["Critical", "High", "Medium", "Low"])
@@ -54,7 +55,7 @@ class TestIsValidGuards:
 
     def test_invalid_severity(self):
         assert not is_valid_severity("moderate")
-        assert not is_valid_severity("CRITICAL")   # case-sensitive sentinel check
+        assert not is_valid_severity("CRITICAL")  # case-sensitive sentinel check
         assert not is_valid_severity("")
 
     @pytest.mark.parametrize("val", ["High", "Medium", "Low"])
@@ -77,27 +78,31 @@ class TestIsValidGuards:
 # normalize_severity
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeSeverity:
-    @pytest.mark.parametrize("raw,expected", [
-        ("Critical", "Critical"),
-        ("critical", "Critical"),
-        ("CRITICAL", "Critical"),
-        ("High", "High"),
-        ("high", "High"),
-        ("Medium", "Medium"),
-        ("medium", "Medium"),
-        ("Low", "Low"),
-        ("low", "Low"),
-        # Variant forms
-        ("crit", "Critical"),
-        ("severe", "High"),
-        ("very high", "Critical"),
-        ("elevated", "High"),
-        ("significant", "High"),
-        ("moderate", "Medium"),
-        ("minor", "Low"),
-        ("minimal", "Low"),
-    ])
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("Critical", "Critical"),
+            ("critical", "Critical"),
+            ("CRITICAL", "Critical"),
+            ("High", "High"),
+            ("high", "High"),
+            ("Medium", "Medium"),
+            ("medium", "Medium"),
+            ("Low", "Low"),
+            ("low", "Low"),
+            # Variant forms
+            ("crit", "Critical"),
+            ("severe", "High"),
+            ("very high", "Critical"),
+            ("elevated", "High"),
+            ("significant", "High"),
+            ("moderate", "Medium"),
+            ("minor", "Low"),
+            ("minimal", "Low"),
+        ],
+    )
     def test_known_variants(self, raw, expected):
         assert normalize_severity(raw) == expected
 
@@ -114,24 +119,28 @@ class TestNormalizeSeverity:
 # normalize_confidence
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeConfidence:
-    @pytest.mark.parametrize("raw,expected", [
-        ("High", "High"),
-        ("high", "High"),
-        ("Medium", "Medium"),
-        ("medium", "Medium"),
-        ("Low", "Low"),
-        ("low", "Low"),
-        # Variants
-        ("strong", "High"),
-        ("confident", "High"),
-        ("certain", "High"),
-        ("probable", "Medium"),
-        ("moderate", "Medium"),
-        ("uncertain", "Low"),
-        ("weak", "Low"),
-        ("limited", "Low"),
-    ])
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("High", "High"),
+            ("high", "High"),
+            ("Medium", "Medium"),
+            ("medium", "Medium"),
+            ("Low", "Low"),
+            ("low", "Low"),
+            # Variants
+            ("strong", "High"),
+            ("confident", "High"),
+            ("certain", "High"),
+            ("probable", "Medium"),
+            ("moderate", "Medium"),
+            ("uncertain", "Low"),
+            ("weak", "Low"),
+            ("limited", "Low"),
+        ],
+    )
     def test_known_variants(self, raw, expected):
         assert normalize_confidence(raw) == expected
 
@@ -143,17 +152,21 @@ class TestNormalizeConfidence:
 # normalize_risk_level
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizeRiskLevel:
-    @pytest.mark.parametrize("raw,expected", [
-        ("critical", "Critical"),
-        ("high", "High"),
-        ("medium", "Medium"),
-        ("low", "Low"),
-        ("crit", "Critical"),
-        ("severe", "High"),
-        ("moderate", "Medium"),
-        ("minimal", "Low"),
-    ])
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("critical", "Critical"),
+            ("high", "High"),
+            ("medium", "Medium"),
+            ("low", "Low"),
+            ("crit", "Critical"),
+            ("severe", "High"),
+            ("moderate", "Medium"),
+            ("minimal", "Low"),
+        ],
+    )
     def test_known_variants(self, raw, expected):
         assert normalize_risk_level(raw) == expected
 
@@ -165,15 +178,19 @@ class TestNormalizeRiskLevel:
 # normalize_priority
 # ---------------------------------------------------------------------------
 
+
 class TestNormalizePriority:
-    @pytest.mark.parametrize("raw,expected", [
-        ("critical", "Critical"),
-        ("high", "High"),
-        ("medium", "Medium"),
-        ("low", "Low"),
-        ("elevated", "High"),
-        ("minor", "Low"),
-    ])
+    @pytest.mark.parametrize(
+        "raw,expected",
+        [
+            ("critical", "Critical"),
+            ("high", "High"),
+            ("medium", "Medium"),
+            ("low", "Low"),
+            ("elevated", "High"),
+            ("minor", "Low"),
+        ],
+    )
     def test_known_variants(self, raw, expected):
         assert normalize_priority(raw) == expected
 
@@ -184,6 +201,7 @@ class TestNormalizePriority:
 # ---------------------------------------------------------------------------
 # normalize_probability / normalize_impact
 # ---------------------------------------------------------------------------
+
 
 class TestNormalizeProbability:
     def test_already_fraction(self):
@@ -226,6 +244,7 @@ class TestNormalizeImpact:
 # ---------------------------------------------------------------------------
 # strip_markdown
 # ---------------------------------------------------------------------------
+
 
 class TestStripMarkdown:
     def test_removes_bold(self):

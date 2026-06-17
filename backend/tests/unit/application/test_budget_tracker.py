@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import UTC
 from unittest.mock import patch
 
 import pytest
@@ -92,7 +93,7 @@ class TestBudgetTrackerEnforced:
             assert summary["remaining"] == -1  # sentinel for unlimited
 
     def test_calendar_month_reset(self) -> None:
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         tracker = LLMBudgetTracker()
         with patch("application.budget.tracker.settings") as mock_settings:
@@ -101,7 +102,7 @@ class TestBudgetTrackerEnforced:
             assert tracker._usage["org-1"].tokens_used == 900
 
             # Simulate time advancing to next month
-            next_month = datetime(2026, 7, 1, tzinfo=timezone.utc)
+            next_month = datetime(2026, 7, 1, tzinfo=UTC)
             with patch("application.budget.tracker.datetime") as mock_dt:
                 mock_dt.now.return_value = next_month
                 # _get_usage should reset the counter

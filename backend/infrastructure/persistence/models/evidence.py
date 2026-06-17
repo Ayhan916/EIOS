@@ -22,12 +22,8 @@ class EvidenceModel(BaseModel):
     confidence: Mapped[str] = mapped_column(String(20), nullable=False, default="High")
     url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
     language: Mapped[str] = mapped_column(String(10), nullable=False, default="en")
-    published_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    retrieved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    retrieved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     reliability_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Document ingestion tracking (M15)
     ingestion_status: Mapped[str] = mapped_column(String(20), nullable=False, default="none")

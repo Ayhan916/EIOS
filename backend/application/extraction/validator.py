@@ -18,19 +18,18 @@ Design contract:
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Optional
 
-from application.extraction.parsers import ParsedFinding, ParsedRisk, ParsedRecommendation
+from application.extraction.parsers import ParsedFinding, ParsedRecommendation, ParsedRisk
 from application.extraction.schema import (
+    is_valid_confidence,
+    is_valid_risk_level,
+    is_valid_severity,
     normalize_confidence,
     normalize_impact,
     normalize_priority,
     normalize_probability,
     normalize_risk_level,
     normalize_severity,
-    is_valid_severity,
-    is_valid_confidence,
-    is_valid_risk_level,
 )
 
 
@@ -73,6 +72,7 @@ class ExtractionReport:
 # ---------------------------------------------------------------------------
 # Finding validation
 # ---------------------------------------------------------------------------
+
 
 def validate_findings(
     parsed: list[ParsedFinding],
@@ -120,6 +120,7 @@ def validate_findings(
 # Risk validation
 # ---------------------------------------------------------------------------
 
+
 def validate_risks(
     parsed: list[ParsedRisk],
 ) -> tuple[list[ParsedRisk], list[str]]:
@@ -146,17 +147,13 @@ def validate_risks(
         if pr.probability is not None:
             clamped = normalize_probability(pr.probability)
             if clamped != pr.probability:
-                warnings.append(
-                    f"{label}: probability {pr.probability} clamped to {clamped}"
-                )
+                warnings.append(f"{label}: probability {pr.probability} clamped to {clamped}")
             pr.probability = clamped
 
         if pr.impact is not None:
             clamped = normalize_impact(pr.impact)
             if clamped != pr.impact:
-                warnings.append(
-                    f"{label}: impact {pr.impact} clamped to {clamped}"
-                )
+                warnings.append(f"{label}: impact {pr.impact} clamped to {clamped}")
             pr.impact = clamped
 
         # Description fallback
@@ -172,6 +169,7 @@ def validate_risks(
 # ---------------------------------------------------------------------------
 # Recommendation validation
 # ---------------------------------------------------------------------------
+
 
 def validate_recommendations(
     parsed: list[ParsedRecommendation],
@@ -190,9 +188,7 @@ def validate_recommendations(
         # Priority normalisation
         if not is_valid_risk_level(pr.priority):
             normalised_prio = normalize_priority(pr.priority)
-            warnings.append(
-                f"{label}: priority '{pr.priority}' normalised to '{normalised_prio}'"
-            )
+            warnings.append(f"{label}: priority '{pr.priority}' normalised to '{normalised_prio}'")
             pr.priority = normalised_prio
 
         # Description fallback
@@ -209,6 +205,7 @@ def validate_recommendations(
 # Report builder
 # ---------------------------------------------------------------------------
 
+
 def build_extraction_report(
     *,
     raw_findings: list[ParsedFinding],
@@ -224,15 +221,12 @@ def build_extraction_report(
     source_agent_types = [k for k, v in step_outputs.items() if v and v.strip()]
 
     normalization_count = sum(
-        1 for w in all_warnings
-        if "normalised to" in w or "clamped to" in w or "fallback" in w
+        1 for w in all_warnings if "normalised to" in w or "clamped to" in w or "fallback" in w
     )
 
     # Detect yield-zero: agent produced output but we extracted nothing
     extraction_yield_zero = bool(source_agent_types) and (
-        len(valid_findings) == 0
-        and len(valid_risks) == 0
-        and len(valid_recommendations) == 0
+        len(valid_findings) == 0 and len(valid_risks) == 0 and len(valid_recommendations) == 0
     )
 
     if extraction_yield_zero:

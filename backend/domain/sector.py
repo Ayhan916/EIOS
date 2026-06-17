@@ -7,7 +7,6 @@ Company and Supplier are sub-entities of Sector.
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 from .base_entity import BaseEntity
 
@@ -16,7 +15,7 @@ from .base_entity import BaseEntity
 class Sector(BaseEntity):
     name: str
     nace_code: str
-    nace_description: Optional[str] = None
-    risk_profile: Optional[str] = None
-    parent_sector_id: Optional[str] = None
-    organization_id: Optional[str] = None
+    nace_description: str | None = None
+    risk_profile: str | None = None
+    parent_sector_id: str | None = None
+    organization_id: str | None = None

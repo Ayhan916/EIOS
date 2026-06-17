@@ -12,7 +12,7 @@ Design principles (Founder decision, M6):
 """
 
 from dataclasses import dataclass, field
-from typing import Optional, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @dataclass
@@ -29,7 +29,7 @@ class LLMResponse:
     input_tokens: int
     output_tokens: int
     stop_reason: str
-    raw: Optional[object] = field(default=None, repr=False)
+    raw: object | None = field(default=None, repr=False)
 
 
 @runtime_checkable
@@ -38,7 +38,7 @@ class LLMProvider(Protocol):
         self,
         messages: list[Message],
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.0,
     ) -> LLMResponse: ...

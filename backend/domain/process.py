@@ -6,7 +6,6 @@ Represents an enterprise business process.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .base_entity import BaseEntity
 
@@ -17,5 +16,5 @@ class Process(BaseEntity):
     description: str
     process_type: str = ""
     steps: list[str] = field(default_factory=list)
-    owner_domain: Optional[str] = None
+    owner_domain: str | None = None
     automated: bool = False

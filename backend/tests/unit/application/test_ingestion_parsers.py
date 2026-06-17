@@ -12,24 +12,22 @@ simulated via import-guard logic.
 from __future__ import annotations
 
 import io
-import struct
-import zipfile
 
 import pytest
 
 from application.ingestion.parsers import (
-    ParseResult,
-    ParsedPage,
     MIME_BY_EXTENSION,
     SUPPORTED_MIME_TYPES,
+    ParsedPage,
+    ParseResult,
     parse_document,
     resolve_mime_type,
 )
 
-
 # ---------------------------------------------------------------------------
 # MIME type resolution
 # ---------------------------------------------------------------------------
+
 
 class TestResolveMimeType:
     def test_pdf_by_extension(self) -> None:
@@ -69,6 +67,7 @@ class TestResolveMimeType:
 # ParseResult dataclass
 # ---------------------------------------------------------------------------
 
+
 class TestParseResult:
     def test_is_empty_no_pages(self) -> None:
         r = ParseResult()
@@ -83,10 +82,12 @@ class TestParseResult:
         assert not r.is_empty
 
     def test_total_chars_sums_pages(self) -> None:
-        r = ParseResult(pages=[
-            ParsedPage(page_number=1, text="hello"),
-            ParsedPage(page_number=2, text="world!"),
-        ])
+        r = ParseResult(
+            pages=[
+                ParsedPage(page_number=1, text="hello"),
+                ParsedPage(page_number=2, text="world!"),
+            ]
+        )
         assert r.total_chars == 11
 
     def test_total_chars_empty(self) -> None:
@@ -106,6 +107,7 @@ class TestParseResult:
 # Unsupported format dispatch
 # ---------------------------------------------------------------------------
 
+
 class TestUnsupportedFormat:
     def test_unknown_mime_returns_warning(self) -> None:
         result = parse_document(b"data", "text/plain", "file.txt")
@@ -121,6 +123,7 @@ class TestUnsupportedFormat:
 # ---------------------------------------------------------------------------
 # XLSX parsing
 # ---------------------------------------------------------------------------
+
 
 def _make_xlsx(sheets: dict[str, list[list[str]]]) -> bytes:
     """Build a minimal valid XLSX in memory using openpyxl."""
@@ -148,18 +151,28 @@ def _make_xlsx(sheets: dict[str, list[list[str]]]) -> bytes:
 class TestXLSXParser:
     def test_single_sheet(self) -> None:
         content = _make_xlsx({"Sheet1": [["Company", "Score"], ["Acme", "85"]]})
-        result = parse_document(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xlsx")
+        result = parse_document(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "data.xlsx",
+        )
         assert not result.is_empty
         assert len(result.pages) == 1
         assert result.pages[0].source_section == "Sheet1"
         assert "Acme" in result.pages[0].text
 
     def test_multi_sheet(self) -> None:
-        content = _make_xlsx({
-            "Environment": [["CO2", "100"]],
-            "Social": [["Workers", "500"]],
-        })
-        result = parse_document(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xlsx")
+        content = _make_xlsx(
+            {
+                "Environment": [["CO2", "100"]],
+                "Social": [["Workers", "500"]],
+            }
+        )
+        result = parse_document(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "data.xlsx",
+        )
         assert len(result.pages) == 2
         sections = {p.source_section for p in result.pages}
         assert "Environment" in sections
@@ -167,18 +180,30 @@ class TestXLSXParser:
 
     def test_page_numbers_assigned(self) -> None:
         content = _make_xlsx({"A": [["x"]], "B": [["y"]]})
-        result = parse_document(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xlsx")
+        result = parse_document(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "data.xlsx",
+        )
         page_nums = {p.page_number for p in result.pages}
         assert 1 in page_nums
         assert 2 in page_nums
 
     def test_empty_sheet_produces_no_page(self) -> None:
         content = _make_xlsx({"Empty": []})
-        result = parse_document(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xlsx")
+        result = parse_document(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "data.xlsx",
+        )
         assert result.is_empty
 
     def test_malformed_bytes_returns_warning(self) -> None:
-        result = parse_document(b"not-an-xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "bad.xlsx")
+        result = parse_document(
+            b"not-an-xlsx",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "bad.xlsx",
+        )
         assert len(result.warnings) > 0
 
     def test_extension_dispatch(self) -> None:
@@ -188,13 +213,18 @@ class TestXLSXParser:
 
     def test_parser_used_is_openpyxl(self) -> None:
         content = _make_xlsx({"S": [["x"]]})
-        result = parse_document(content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "data.xlsx")
+        result = parse_document(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            "data.xlsx",
+        )
         assert result.parser_used == "openpyxl"
 
 
 # ---------------------------------------------------------------------------
 # DOCX parsing
 # ---------------------------------------------------------------------------
+
 
 def _make_docx(paragraphs: list[str], headings: list[str] | None = None) -> bytes:
     """Build a minimal valid DOCX in memory using python-docx."""
@@ -252,6 +282,7 @@ class TestDOCXParser:
 # PDF parsing edge cases (no real PDF needed for error paths)
 # ---------------------------------------------------------------------------
 
+
 class TestPDFParserEdgeCases:
     def test_malformed_pdf_bytes_handled_gracefully(self) -> None:
         result = parse_document(b"not-a-pdf", "application/pdf", "bad.pdf")
@@ -277,12 +308,19 @@ class TestPDFParserEdgeCases:
 # Supported formats constant
 # ---------------------------------------------------------------------------
 
+
 class TestSupportedFormats:
     def test_pdf_is_supported(self) -> None:
         assert "application/pdf" in SUPPORTED_MIME_TYPES
 
     def test_docx_is_supported(self) -> None:
-        assert "application/vnd.openxmlformats-officedocument.wordprocessingml.document" in SUPPORTED_MIME_TYPES
+        assert (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            in SUPPORTED_MIME_TYPES
+        )
 
     def test_xlsx_is_supported(self) -> None:
-        assert "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" in SUPPORTED_MIME_TYPES
+        assert (
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            in SUPPORTED_MIME_TYPES
+        )

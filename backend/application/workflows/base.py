@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Optional
+from dataclasses import dataclass
 
 
 @dataclass
@@ -27,9 +26,9 @@ class StepResult:
     content: str
     input_tokens: int = 0
     output_tokens: int = 0
-    llm_provider: Optional[str] = None
-    llm_model: Optional[str] = None
-    error: Optional[str] = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
+    error: str | None = None
 
 
 # ---------------------------------------------------------------------------

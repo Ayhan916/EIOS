@@ -13,7 +13,6 @@ from application.remediation.planner import RemediationPlan, compute_remediation
 from domain.enums import ConfidenceLevel, EntityStatus, RiskLevel
 from domain.recommendation import Recommendation
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -74,6 +73,7 @@ RECS = [
 # Matcher tests
 # ---------------------------------------------------------------------------
 
+
 class TestComputeMatches:
     def test_empty_inputs_returns_empty(self) -> None:
         assert compute_matches([], []) == []
@@ -131,6 +131,7 @@ class TestComputeMatches:
 # ---------------------------------------------------------------------------
 # Planner tests
 # ---------------------------------------------------------------------------
+
 
 class TestComputeRemediationPlan:
     def setup_method(self) -> None:
@@ -204,6 +205,7 @@ class TestComputeRemediationPlan:
 # ---------------------------------------------------------------------------
 # Decision Brief tests
 # ---------------------------------------------------------------------------
+
 
 class TestComputeBrief:
     def _build_brief(self, coverage_text: str = "") -> DecisionBrief:

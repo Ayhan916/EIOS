@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -18,14 +17,14 @@ class AgentRunResponse(BaseModel):
     id: str
     agent_type: str
     query: str
-    result_content: Optional[str]
+    result_content: str | None
     confidence: float
-    reasoning: Optional[str]
-    llm_provider: Optional[str]
-    llm_model: Optional[str]
+    reasoning: str | None
+    llm_provider: str | None
+    llm_model: str | None
     input_tokens: int
     output_tokens: int
-    error: Optional[str]
+    error: str | None
     run_metadata: dict
     status: str
     created_at: datetime

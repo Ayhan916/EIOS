@@ -6,8 +6,6 @@ Callers persist the returned AuditEvent via their injected repository.
 
 from __future__ import annotations
 
-from typing import Optional
-
 from domain.audit_event import AuditEvent
 from domain.enums import EntityStatus
 
@@ -15,9 +13,9 @@ from domain.enums import EntityStatus
 def workflow_completed(
     workflow_run_id: str,
     workflow_type: str,
-    verdict: Optional[str],
-    actor_id: Optional[str] = None,
-    assessment_id: Optional[str] = None,
+    verdict: str | None,
+    actor_id: str | None = None,
+    assessment_id: str | None = None,
 ) -> AuditEvent:
     return AuditEvent(
         action="workflow.completed",
@@ -41,7 +39,7 @@ def assessment_created(
     finding_count: int,
     risk_count: int,
     recommendation_count: int,
-    actor_id: Optional[str] = None,
+    actor_id: str | None = None,
 ) -> AuditEvent:
     return AuditEvent(
         action="assessment.created",
@@ -82,7 +80,7 @@ def user_authenticated(
 def assessment_approved(
     assessment_id: str,
     approved_by_id: str,
-    approved_by_email: Optional[str] = None,
+    approved_by_email: str | None = None,
 ) -> AuditEvent:
     return AuditEvent(
         action="assessment.approved",
@@ -108,7 +106,8 @@ def assessment_revised(
         entity_type="Assessment",
         entity_id=assessment_id,
         outcome="success",
-        detail=f"Assessment {assessment_id} returned for revision" + (f": {reason}" if reason else ""),
+        detail=f"Assessment {assessment_id} returned for revision"
+        + (f": {reason}" if reason else ""),
         status=EntityStatus.ACTIVE,
         event_metadata={"revised_by": revised_by_id, "reason": reason},
     )
@@ -120,7 +119,7 @@ def compliance_assessed(
     mandatory_coverage_ratio: float,
     mandatory_gap_count: int,
     critical_gap_count: int,
-    actor_id: Optional[str] = None,
+    actor_id: str | None = None,
 ) -> AuditEvent:
     return AuditEvent(
         action="compliance.assessed",
@@ -146,8 +145,8 @@ def compliance_assessed(
 def agent_run_completed(
     agent_run_id: str,
     agent_type: str,
-    workflow_run_id: Optional[str] = None,
-    actor_id: Optional[str] = None,
+    workflow_run_id: str | None = None,
+    actor_id: str | None = None,
     outcome: str = "success",
 ) -> AuditEvent:
     return AuditEvent(

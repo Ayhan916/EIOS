@@ -17,7 +17,9 @@ class WorkflowJobModel(Base):
     workflow_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
     query: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
-    job_status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending", index=True)
+    job_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pending", index=True
+    )
     workflow_run_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     error: Mapped[str | None] = mapped_column(Text, nullable=True)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

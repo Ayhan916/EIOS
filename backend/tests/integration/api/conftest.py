@@ -36,9 +36,7 @@ async def setup_test_schema() -> None:  # type: ignore[misc]
 @pytest_asyncio.fixture(scope="session")
 async def auth_token(setup_test_schema: None) -> str:  # type: ignore[misc]
     """Register a test user once per session and return a valid access token."""
-    async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.post(
             "/api/v1/auth/register",
             json={

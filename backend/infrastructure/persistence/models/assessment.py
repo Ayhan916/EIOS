@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, JSON, String
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional
 
 from .associations import assessment_evidence
 from .base import BaseModel
@@ -26,12 +25,10 @@ class AssessmentModel(BaseModel):
         String(36), ForeignKey("organizations.id"), nullable=True, index=True
     )
     approved_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    approval_date: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    approval_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Extraction audit trail (M16)
-    extraction_metadata: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True)
+    extraction_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     sector: Mapped[SectorModel | None] = relationship(back_populates="assessments")
     evidence: Mapped[list[EvidenceModel]] = relationship(

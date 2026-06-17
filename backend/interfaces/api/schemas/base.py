@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
@@ -12,8 +11,8 @@ class EntityResponse(BaseModel):
     id: str
     status: str
     version: int
-    owner: Optional[str] = None
-    created_by: Optional[str] = None
-    updated_by: Optional[str] = None
+    owner: str | None = None
+    created_by: str | None = None
+    updated_by: str | None = None
     created_at: datetime
     updated_at: datetime

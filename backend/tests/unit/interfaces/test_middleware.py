@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 import time
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from shared.rate_limit import _check, _windows
 
-
 # ── Rate limiter unit tests ───────────────────────────────────────────────────
+
 
 class TestRateLimiter:
     def setup_method(self) -> None:
@@ -60,6 +60,7 @@ class TestRateLimitDependencies:
     @pytest.mark.asyncio
     async def test_rate_limit_auth_passes_within_limit(self) -> None:
         from fastapi import Request
+
         from shared.rate_limit import rate_limit_auth
 
         mock_request = MagicMock(spec=Request)
@@ -74,6 +75,7 @@ class TestRateLimitDependencies:
     @pytest.mark.asyncio
     async def test_rate_limit_auth_raises_429_when_exceeded(self) -> None:
         from fastapi import HTTPException, Request
+
         from shared.rate_limit import rate_limit_auth
 
         mock_request = MagicMock(spec=Request)
@@ -92,6 +94,7 @@ class TestRateLimitDependencies:
     @pytest.mark.asyncio
     async def test_rate_limit_llm_raises_429_when_exceeded(self) -> None:
         from fastapi import HTTPException, Request
+
         from shared.rate_limit import rate_limit_llm
 
         mock_request = MagicMock(spec=Request)
@@ -110,6 +113,7 @@ class TestRateLimitDependencies:
     @pytest.mark.asyncio
     async def test_x_forwarded_for_used_as_client_ip(self) -> None:
         from fastapi import Request
+
         from shared.rate_limit import rate_limit_api
 
         mock_request = MagicMock(spec=Request)
@@ -124,15 +128,17 @@ class TestRateLimitDependencies:
 
 # ── Security headers middleware ───────────────────────────────────────────────
 
+
 class TestSecurityHeadersMiddleware:
     """Test that security headers are injected correctly."""
 
     @pytest.mark.asyncio
     async def test_security_headers_present_in_development(self) -> None:
-        from starlette.testclient import TestClient
         from starlette.applications import Starlette
-        from starlette.routing import Route
         from starlette.responses import PlainTextResponse
+        from starlette.routing import Route
+        from starlette.testclient import TestClient
+
         from app.middleware.security_headers import SecurityHeadersMiddleware
 
         async def homepage(request):  # type: ignore[no-untyped-def]
@@ -150,10 +156,11 @@ class TestSecurityHeadersMiddleware:
 
     @pytest.mark.asyncio
     async def test_hsts_only_in_production(self) -> None:
-        from starlette.testclient import TestClient
         from starlette.applications import Starlette
-        from starlette.routing import Route
         from starlette.responses import PlainTextResponse
+        from starlette.routing import Route
+        from starlette.testclient import TestClient
+
         from app.middleware.security_headers import SecurityHeadersMiddleware
 
         async def homepage(request):  # type: ignore[no-untyped-def]
@@ -170,10 +177,11 @@ class TestSecurityHeadersMiddleware:
 
     @pytest.mark.asyncio
     async def test_hsts_set_in_production(self) -> None:
-        from starlette.testclient import TestClient
         from starlette.applications import Starlette
-        from starlette.routing import Route
         from starlette.responses import PlainTextResponse
+        from starlette.routing import Route
+        from starlette.testclient import TestClient
+
         from app.middleware.security_headers import SecurityHeadersMiddleware
 
         async def homepage(request):  # type: ignore[no-untyped-def]
@@ -191,12 +199,14 @@ class TestSecurityHeadersMiddleware:
 
 # ── Request ID middleware ─────────────────────────────────────────────────────
 
+
 class TestRequestIDMiddleware:
     def test_request_id_injected_into_response(self) -> None:
-        from starlette.testclient import TestClient
         from starlette.applications import Starlette
-        from starlette.routing import Route
         from starlette.responses import PlainTextResponse
+        from starlette.routing import Route
+        from starlette.testclient import TestClient
+
         from app.middleware.request_id import RequestIDMiddleware
 
         async def homepage(request):  # type: ignore[no-untyped-def]
@@ -211,10 +221,11 @@ class TestRequestIDMiddleware:
         assert len(resp.headers["X-Request-ID"]) == 36  # UUID format
 
     def test_client_supplied_request_id_preserved(self) -> None:
-        from starlette.testclient import TestClient
         from starlette.applications import Starlette
-        from starlette.routing import Route
         from starlette.responses import PlainTextResponse
+        from starlette.routing import Route
+        from starlette.testclient import TestClient
+
         from app.middleware.request_id import RequestIDMiddleware
 
         async def homepage(request):  # type: ignore[no-untyped-def]

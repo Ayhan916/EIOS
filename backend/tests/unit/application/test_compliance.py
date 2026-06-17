@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from application.compliance.coverage import ArticleCoverage, FrameworkCoverage, compute_coverage
+from application.compliance.coverage import compute_coverage
 from application.compliance.frameworks import (
     ALL_ARTICLES,
     all_frameworks,
@@ -13,10 +11,10 @@ from application.compliance.frameworks import (
 )
 from application.compliance.scoring import compute_quality_score
 
-
 # ---------------------------------------------------------------------------
 # Framework catalog tests
 # ---------------------------------------------------------------------------
+
 
 class TestFrameworkCatalog:
     def test_all_articles_have_required_fields(self) -> None:
@@ -95,7 +93,9 @@ class TestCoverageComputation:
 
     def test_rich_text_covers_multiple_frameworks(self) -> None:
         report = compute_coverage([RICH_TEXT])
-        covered_frameworks = {fc.framework for fc in report.framework_coverage if fc.covered_count > 0}
+        covered_frameworks = {
+            fc.framework for fc in report.framework_coverage if fc.covered_count > 0
+        }
         assert "CSDDD" in covered_frameworks
         assert "ESRS" in covered_frameworks
         assert "GRI" in covered_frameworks
@@ -142,9 +142,11 @@ class TestCoverageComputation:
 # Quality scoring tests
 # ---------------------------------------------------------------------------
 
+
 class TestQualityScoring:
     def _zero_coverage(self):
-        from application.compliance.coverage import ComplianceCoverageReport, FrameworkCoverage
+        from application.compliance.coverage import ComplianceCoverageReport
+
         return ComplianceCoverageReport(
             covered_article_codes=[],
             framework_coverage=[],

@@ -5,7 +5,7 @@ Password hashing (bcrypt) and JWT encode/decode.
 All cryptographic operations are centralised here.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from passlib.context import CryptContext
@@ -26,7 +26,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(user_id: str, email: str, role: str) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": user_id,
         "email": email,
@@ -39,7 +39,7 @@ def create_access_token(user_id: str, email: str, role: str) -> str:
 
 
 def create_refresh_token(user_id: str) -> str:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     payload = {
         "sub": user_id,
         "type": "refresh",

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -65,7 +63,7 @@ class SQLReportRepository(BaseRepository[Report, ReportModel]):
         await self._session.flush()
         return self._to_domain(merged)
 
-    async def get_pdf_data(self, report_id: str) -> Optional[bytes]:
+    async def get_pdf_data(self, report_id: str) -> bytes | None:
         """Return raw PDF bytes for a report, or None if not found."""
         result = await self._session.get(ReportModel, report_id)
         if result is None:

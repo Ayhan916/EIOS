@@ -1,8 +1,7 @@
-from typing import Optional
-
 from pydantic import BaseModel, Field
 
 from domain.enums import ConfidenceLevel, RiskLevel
+
 from .base import EntityResponse
 
 
@@ -11,13 +10,13 @@ class RiskCreate(BaseModel):
     description: str = Field(min_length=1)
     risk_level: RiskLevel = RiskLevel.MEDIUM
     category: str = ""
-    assessment_id: Optional[str] = None
-    sector_id: Optional[str] = None
-    probability: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    impact: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    assessment_id: str | None = None
+    sector_id: str | None = None
+    probability: float | None = Field(default=None, ge=0.0, le=1.0)
+    impact: float | None = Field(default=None, ge=0.0, le=1.0)
     confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
-    reasoning: Optional[str] = None
-    uncertainty: Optional[str] = None
+    reasoning: str | None = None
+    uncertainty: str | None = None
 
 
 class RiskResponse(EntityResponse):
@@ -25,10 +24,10 @@ class RiskResponse(EntityResponse):
     description: str
     risk_level: str
     category: str
-    assessment_id: Optional[str] = None
-    sector_id: Optional[str] = None
-    probability: Optional[float] = None
-    impact: Optional[float] = None
+    assessment_id: str | None = None
+    sector_id: str | None = None
+    probability: float | None = None
+    impact: float | None = None
     confidence: str
-    reasoning: Optional[str] = None
-    uncertainty: Optional[str] = None
+    reasoning: str | None = None
+    uncertainty: str | None = None

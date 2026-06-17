@@ -6,18 +6,22 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from application.agents.base import AgentResult
 from application.ports.llm import LLMResponse
 from application.workflows.base import StepResult, WorkflowDefinition, WorkflowStep, extract_verdict
-from application.workflows.definitions import DUE_DILIGENCE, EVIDENCE_ANALYSIS, GOVERNANCE_REVIEW, QUICK_SCAN
+from application.workflows.definitions import (
+    DUE_DILIGENCE,
+    EVIDENCE_ANALYSIS,
+    GOVERNANCE_REVIEW,
+    QUICK_SCAN,
+)
 from application.workflows.engine import WorkflowEngine
 from application.workflows.registry import WORKFLOW_TYPES, get_workflow_definition
 from domain.enums import EntityStatus
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def make_mock_provider(content: str = "mock agent response") -> MagicMock:
     resp = LLMResponse(
@@ -45,9 +49,15 @@ def make_mock_knowledge(chunks: list[str] | None = None) -> MagicMock:
 # Registry
 # ---------------------------------------------------------------------------
 
+
 class TestWorkflowRegistry:
     def test_all_types_registered(self) -> None:
-        assert set(WORKFLOW_TYPES) == {"due_diligence", "quick_scan", "evidence_analysis", "governance_review"}
+        assert set(WORKFLOW_TYPES) == {
+            "due_diligence",
+            "quick_scan",
+            "evidence_analysis",
+            "governance_review",
+        }
 
     def test_get_due_diligence_definition(self) -> None:
         defn = get_workflow_definition("due_diligence")
@@ -66,6 +76,7 @@ class TestWorkflowRegistry:
 # ---------------------------------------------------------------------------
 # WorkflowDefinitions
 # ---------------------------------------------------------------------------
+
 
 class TestWorkflowDefinitions:
     def test_due_diligence_agent_sequence(self) -> None:
@@ -91,6 +102,7 @@ class TestWorkflowDefinitions:
 # ---------------------------------------------------------------------------
 # Verdict extraction
 # ---------------------------------------------------------------------------
+
 
 class TestExtractVerdict:
     def _make_step(self, agent_type: str, content: str) -> StepResult:
@@ -164,6 +176,7 @@ class TestExtractVerdict:
 # ---------------------------------------------------------------------------
 # WorkflowEngine
 # ---------------------------------------------------------------------------
+
 
 class TestWorkflowEngine:
     @pytest.mark.asyncio
@@ -248,9 +261,19 @@ class TestWorkflowEngine:
             steps=[WorkflowStep("research"), WorkflowStep("reasoning")],
         )
         provider = make_mock_provider()
-        provider.complete = AsyncMock(side_effect=[RuntimeError("API error"), LLMResponse(
-            content="ok", model="m", provider="p", input_tokens=1, output_tokens=1, stop_reason="end_turn"
-        )])
+        provider.complete = AsyncMock(
+            side_effect=[
+                RuntimeError("API error"),
+                LLMResponse(
+                    content="ok",
+                    model="m",
+                    provider="p",
+                    input_tokens=1,
+                    output_tokens=1,
+                    stop_reason="end_turn",
+                ),
+            ]
+        )
         engine = WorkflowEngine(llm_provider=provider)
         workflow_run, agent_runs = await engine.run(defn, "query", {})
         assert agent_runs[0].error is not None
@@ -279,7 +302,7 @@ class TestWorkflowEngine:
         )
         engine = WorkflowEngine(llm_provider=make_mock_provider())
         workflow_run, _ = await engine.run(defn, "query", {})
-        assert workflow_run.total_input_tokens == 20   # 10 * 2 steps
+        assert workflow_run.total_input_tokens == 20  # 10 * 2 steps
         assert workflow_run.total_output_tokens == 40  # 20 * 2 steps
 
     @pytest.mark.asyncio

@@ -7,7 +7,6 @@ Governed object per ASTATE-0001.
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .base_entity import BaseEntity
 
@@ -17,7 +16,7 @@ class Requirement(BaseEntity):
     title: str
     description: str
     source: str
-    article: Optional[str] = None
+    article: str | None = None
     mandatory: bool = True
     requirement_type: str = ""
     control_ids: list[str] = field(default_factory=list)

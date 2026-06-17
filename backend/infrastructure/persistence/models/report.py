@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Integer, JSON, LargeBinary, String
+from sqlalchemy import JSON, Integer, LargeBinary, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel

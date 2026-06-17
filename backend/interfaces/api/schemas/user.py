@@ -1,7 +1,6 @@
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict
 
 
 class UserResponse(BaseModel):
@@ -13,7 +12,7 @@ class UserResponse(BaseModel):
     email: str
     display_name: str
     role: str
-    organization_id: Optional[str] = None
+    organization_id: str | None = None
     is_active: bool
     status: str
     version: int

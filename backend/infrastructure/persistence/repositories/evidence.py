@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -78,9 +76,9 @@ class SQLEvidenceRepository(BaseRepository[Evidence, EvidenceModel]):
         organization_id: str,
         page: int,
         page_size: int,
-        evidence_type: Optional[str] = None,
-        language: Optional[str] = None,
-        search: Optional[str] = None,
+        evidence_type: str | None = None,
+        language: str | None = None,
+        search: str | None = None,
     ) -> tuple[list[Evidence], int]:
         stmt = (
             select(EvidenceModel)
@@ -93,8 +91,7 @@ class SQLEvidenceRepository(BaseRepository[Evidence, EvidenceModel]):
             stmt = stmt.where(EvidenceModel.language == language)
         if search:
             stmt = stmt.where(
-                EvidenceModel.title.ilike(f"%{search}%")
-                | EvidenceModel.source.ilike(f"%{search}%")
+                EvidenceModel.title.ilike(f"%{search}%") | EvidenceModel.source.ilike(f"%{search}%")
             )
         return await self._execute_paged(stmt, page, page_size)
 

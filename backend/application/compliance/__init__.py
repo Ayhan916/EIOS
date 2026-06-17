@@ -1,5 +1,11 @@
 from .coverage import ComplianceCoverageReport, compute_coverage
-from .frameworks import ALL_ARTICLES, FrameworkArticle, all_frameworks, get_article, get_by_framework
+from .frameworks import (
+    ALL_ARTICLES,
+    FrameworkArticle,
+    all_frameworks,
+    get_article,
+    get_by_framework,
+)
 from .gaps import ComplianceGap, compute_gaps
 from .scoring import compute_quality_score
 from .verdict import ComplianceVerdict, compute_verdict

@@ -55,12 +55,20 @@ def make_context(**kwargs: object) -> AgentContext:
 # Registry
 # ---------------------------------------------------------------------------
 
+
 class TestAgentRegistry:
     def test_all_ten_types_registered(self) -> None:
         expected = {
-            "research", "retrieval", "reasoning", "esg_assessment",
-            "risk_assessment", "recommendation", "evaluation",
-            "memory", "governance", "reporting",
+            "research",
+            "retrieval",
+            "reasoning",
+            "esg_assessment",
+            "risk_assessment",
+            "recommendation",
+            "evaluation",
+            "memory",
+            "governance",
+            "reporting",
         }
         assert set(AGENT_TYPES) == expected
 
@@ -80,6 +88,7 @@ class TestAgentRegistry:
 # ---------------------------------------------------------------------------
 # BaseAgent
 # ---------------------------------------------------------------------------
+
 
 class TestBaseAgent:
     def test_build_knowledge_block_empty(self) -> None:
@@ -109,6 +118,7 @@ class TestBaseAgent:
 # ---------------------------------------------------------------------------
 # Individual agents
 # ---------------------------------------------------------------------------
+
 
 class TestResearchAgent:
     @pytest.mark.asyncio
@@ -242,6 +252,7 @@ class TestReportingAgent:
 # ---------------------------------------------------------------------------
 # Token usage propagation
 # ---------------------------------------------------------------------------
+
 
 class TestTokenUsagePropagation:
     @pytest.mark.asyncio

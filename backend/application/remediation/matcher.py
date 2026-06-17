@@ -15,7 +15,7 @@ Match logic:
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from application.compliance.frameworks import get_article
 from application.compliance.gaps import ComplianceGap
@@ -29,12 +29,47 @@ def _tokenize(text: str) -> set[str]:
     """Lowercase word tokens, filtering short words and stop words."""
     words = re.findall(r"[a-zA-Z]+", text.lower())
     stop = {
-        "this", "that", "with", "from", "have", "been", "will", "shall",
-        "must", "should", "which", "their", "where", "when", "each",
-        "into", "also", "such", "more", "than", "they", "them", "these",
-        "those", "other", "some", "over", "under", "both", "only",
-        "upon", "used", "need", "make", "take", "give", "does", "done",
-        "relevant", "required", "applicable",
+        "this",
+        "that",
+        "with",
+        "from",
+        "have",
+        "been",
+        "will",
+        "shall",
+        "must",
+        "should",
+        "which",
+        "their",
+        "where",
+        "when",
+        "each",
+        "into",
+        "also",
+        "such",
+        "more",
+        "than",
+        "they",
+        "them",
+        "these",
+        "those",
+        "other",
+        "some",
+        "over",
+        "under",
+        "both",
+        "only",
+        "upon",
+        "used",
+        "need",
+        "make",
+        "take",
+        "give",
+        "does",
+        "done",
+        "relevant",
+        "required",
+        "applicable",
     }
     return {w for w in words if len(w) >= _MIN_TOKEN_LENGTH and w not in stop}
 
@@ -45,8 +80,8 @@ class GapRecommendationLink:
     gap_title: str
     recommendation_id: str
     recommendation_title: str
-    match_score: int          # count of overlapping terms
-    match_confidence: float   # normalised 0.0-1.0
+    match_score: int  # count of overlapping terms
+    match_confidence: float  # normalised 0.0-1.0
 
 
 def compute_matches(

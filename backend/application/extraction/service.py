@@ -13,8 +13,6 @@ Design principles:
 
 from __future__ import annotations
 
-from typing import Optional
-
 from application.compliance.coverage import compute_coverage
 from application.compliance.scoring import compute_quality_score
 from domain.assessment import Assessment
@@ -35,12 +33,21 @@ from .parsers import (
 from .validator import (
     build_extraction_report,
     validate_findings,
-    validate_risks,
     validate_recommendations,
+    validate_risks,
 )
 
-_CONFIDENCE_MAP = {"High": ConfidenceLevel.HIGH, "Medium": ConfidenceLevel.MEDIUM, "Low": ConfidenceLevel.LOW}
-_RISK_LEVEL_MAP = {"Critical": RiskLevel.CRITICAL, "High": RiskLevel.HIGH, "Medium": RiskLevel.MEDIUM, "Low": RiskLevel.LOW}
+_CONFIDENCE_MAP = {
+    "High": ConfidenceLevel.HIGH,
+    "Medium": ConfidenceLevel.MEDIUM,
+    "Low": ConfidenceLevel.LOW,
+}
+_RISK_LEVEL_MAP = {
+    "Critical": RiskLevel.CRITICAL,
+    "High": RiskLevel.HIGH,
+    "Medium": RiskLevel.MEDIUM,
+    "Low": RiskLevel.LOW,
+}
 
 
 class StructuredExtractionService:
@@ -50,8 +57,8 @@ class StructuredExtractionService:
         self,
         workflow_run: WorkflowRun,
         step_outputs: dict[str, str],
-        created_by: Optional[str] = None,
-        organization_id: Optional[str] = None,
+        created_by: str | None = None,
+        organization_id: str | None = None,
     ) -> tuple[Assessment, list[Finding], list[Risk], list[Recommendation]]:
         """Return (Assessment, findings, risks, recommendations).
 
@@ -107,8 +114,8 @@ class StructuredExtractionService:
         self,
         workflow_run: WorkflowRun,
         step_outputs: dict[str, str],
-        created_by: Optional[str],
-        organization_id: Optional[str] = None,
+        created_by: str | None,
+        organization_id: str | None = None,
     ) -> Assessment:
         query_title = workflow_run.query[:200]
         description = (
@@ -118,10 +125,12 @@ class StructuredExtractionService:
         )
 
         # Use first paragraph of reporting output as methodology if available
-        methodology: Optional[str] = None
+        methodology: str | None = None
         report = step_outputs.get("reporting", "")
         if report:
-            lines = [l.strip() for l in report.split("\n") if l.strip() and not l.startswith("#")]
+            lines = [
+                ln.strip() for ln in report.split("\n") if ln.strip() and not ln.startswith("#")
+            ]
             if lines:
                 methodology = lines[0][:500]
 
@@ -138,7 +147,7 @@ class StructuredExtractionService:
         )
 
     def _finding_to_domain(
-        self, pf: ParsedFinding, assessment_id: str, created_by: Optional[str]
+        self, pf: ParsedFinding, assessment_id: str, created_by: str | None
     ) -> Finding:
         return Finding(
             title=pf.title,
@@ -152,9 +161,7 @@ class StructuredExtractionService:
             created_by=created_by,
         )
 
-    def _risk_to_domain(
-        self, pr: ParsedRisk, assessment_id: str, created_by: Optional[str]
-    ) -> Risk:
+    def _risk_to_domain(self, pr: ParsedRisk, assessment_id: str, created_by: str | None) -> Risk:
         return Risk(
             title=pr.title,
             description=pr.description or pr.title,
@@ -170,7 +177,7 @@ class StructuredExtractionService:
         )
 
     def _rec_to_domain(
-        self, pr: ParsedRecommendation, assessment_id: str, created_by: Optional[str]
+        self, pr: ParsedRecommendation, assessment_id: str, created_by: str | None
     ) -> Recommendation:
         return Recommendation(
             title=pr.title,

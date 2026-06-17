@@ -6,7 +6,7 @@ Subclasses implement _to_model() and _to_domain() for type-safe conversion.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Generic, Optional, TypeVar
+from typing import Any, Generic, TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -28,7 +28,7 @@ class BaseRepository(ABC, Generic[DomainT, ModelT]):
     @abstractmethod
     def _to_domain(self, model: ModelT) -> DomainT: ...
 
-    async def get_by_id(self, id: str) -> Optional[DomainT]:
+    async def get_by_id(self, id: str) -> DomainT | None:
         result = await self._session.get(self._model_class, id)
         if result is None:
             return None

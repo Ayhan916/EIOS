@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -7,11 +6,11 @@ from pydantic import BaseModel
 class AuditEventResponse(BaseModel):
     id: str
     action: str
-    actor_id: Optional[str]
-    actor_email: Optional[str]
-    entity_type: Optional[str]
-    entity_id: Optional[str]
+    actor_id: str | None
+    actor_email: str | None
+    entity_type: str | None
+    entity_id: str | None
     outcome: str
-    detail: Optional[str]
+    detail: str | None
     event_metadata: dict
     created_at: datetime

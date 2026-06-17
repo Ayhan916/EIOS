@@ -11,11 +11,10 @@ from starlette.responses import Response
 
 
 class MetricsCounterMiddleware(BaseHTTPMiddleware):
-    async def dispatch(
-        self, request: Request, call_next: RequestResponseEndpoint
-    ) -> Response:
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response = await call_next(request)
         # Import lazily to avoid circular imports at module load time
         from interfaces.api.routers.metrics import counters
+
         counters.record_request(response.status_code)
         return response

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -10,14 +10,14 @@ from .base_entity import BaseEntity
 class AgentRun(BaseEntity):
     agent_type: str
     query: str
-    workflow_run_id: Optional[str] = None
+    workflow_run_id: str | None = None
     step_index: int = 0
-    result_content: Optional[str] = None
+    result_content: str | None = None
     confidence: float = 1.0
-    reasoning: Optional[str] = None
-    llm_provider: Optional[str] = None
-    llm_model: Optional[str] = None
+    reasoning: str | None = None
+    llm_provider: str | None = None
+    llm_model: str | None = None
     input_tokens: int = 0
     output_tokens: int = 0
-    error: Optional[str] = None
-    run_metadata: dict = field(default_factory=dict)
+    error: str | None = None
+    run_metadata: dict[str, Any] = field(default_factory=dict)

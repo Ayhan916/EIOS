@@ -7,7 +7,6 @@ AI-generated: carries reasoning and uncertainty per architecture/008 (AAM-0001).
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .base_entity import BaseEntity
 from .enums import ConfidenceLevel, RiskLevel
@@ -22,5 +21,5 @@ class Finding(BaseEntity):
     severity: RiskLevel = field(default=RiskLevel.MEDIUM)
     confidence: ConfidenceLevel = field(default=ConfidenceLevel.HIGH)
     evidence_ids: list[str] = field(default_factory=list)
-    reasoning: Optional[str] = None
-    uncertainty: Optional[str] = None
+    reasoning: str | None = None
+    uncertainty: str | None = None

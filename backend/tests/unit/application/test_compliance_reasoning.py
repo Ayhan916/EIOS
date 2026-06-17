@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.compliance.coverage import compute_coverage
-from application.compliance.gaps import ComplianceGap, compute_gaps
+from application.compliance.gaps import compute_gaps
 from application.compliance.verdict import compute_verdict
-from application.compliance.weights import REGULATORY_EXPOSURE, exposure
-
+from application.compliance.weights import exposure
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -61,9 +58,11 @@ COMPREHENSIVE_COVERAGE = compute_coverage([COMPREHENSIVE_TEXT])
 # Weights tests
 # ---------------------------------------------------------------------------
 
+
 class TestRegulatorExposureWeights:
     def test_all_articles_have_weight(self) -> None:
         from application.compliance.frameworks import ALL_ARTICLES
+
         for article in ALL_ARTICLES:
             w = exposure(article.code)
             assert 0.0 <= w <= 1.0, f"{article.code} weight out of bounds"
@@ -90,6 +89,7 @@ class TestRegulatorExposureWeights:
 # ---------------------------------------------------------------------------
 # Gap computation tests
 # ---------------------------------------------------------------------------
+
 
 class TestComputeGaps:
     def test_blank_coverage_yields_mandatory_gaps(self) -> None:
@@ -162,6 +162,7 @@ class TestComputeGaps:
 # Verdict computation tests
 # ---------------------------------------------------------------------------
 
+
 class TestComputeVerdict:
     def test_blank_coverage_yields_non_compliant(self) -> None:
         gaps = compute_gaps(BLANK_COVERAGE)
@@ -182,8 +183,7 @@ class TestComputeVerdict:
         gaps = compute_gaps(BLANK_COVERAGE)
         verdict = compute_verdict(BLANK_COVERAGE, gaps)
         assert any(
-            kw in verdict.explanation.lower()
-            for kw in ("non-compliant", "compliant", "partial")
+            kw in verdict.explanation.lower() for kw in ("non-compliant", "compliant", "partial")
         )
 
     def test_mandatory_coverage_ratio_matches_coverage_report(self) -> None:
@@ -194,7 +194,9 @@ class TestComputeVerdict:
     def test_critical_gap_count_matches_gap_list(self) -> None:
         gaps = compute_gaps(BLANK_COVERAGE)
         verdict = compute_verdict(BLANK_COVERAGE, gaps)
-        expected_critical = sum(1 for g in gaps if g.gap_severity == "critical" and g.obligation_type == "mandatory")
+        expected_critical = sum(
+            1 for g in gaps if g.gap_severity == "critical" and g.obligation_type == "mandatory"
+        )
         assert verdict.critical_gap_count == expected_critical
 
     def test_weighted_gap_score_bounded(self) -> None:

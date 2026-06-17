@@ -76,9 +76,7 @@ class SQLEvidenceChunkRepository(BaseRepository[EvidenceChunk, EvidenceChunkMode
         return await self._list_by_field("evidence_id", evidence_id)
 
     async def delete_by_evidence(self, evidence_id: str) -> None:
-        stmt = delete(EvidenceChunkModel).where(
-            EvidenceChunkModel.evidence_id == evidence_id
-        )
+        stmt = delete(EvidenceChunkModel).where(EvidenceChunkModel.evidence_id == evidence_id)
         await self._session.execute(stmt)
 
     async def search_similar(

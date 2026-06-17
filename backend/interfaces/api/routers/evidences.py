@@ -1,6 +1,4 @@
 import structlog
-from typing import Optional
-
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
 from application.ingestion.parsers import MIME_BY_EXTENSION, resolve_mime_type
@@ -8,15 +6,17 @@ from application.ingestion.pipeline import ingest_document
 from domain.evidence import Evidence
 from domain.user import User
 from infrastructure.embeddings.deps import get_embedding_provider
-from infrastructure.embeddings.sentence_transformer import SentenceTransformerEmbeddingProvider  # concrete type for DI
+from infrastructure.embeddings.sentence_transformer import (
+    SentenceTransformerEmbeddingProvider,  # concrete type for DI
+)
 from infrastructure.persistence.repositories import SQLEvidenceRepository
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
 from interfaces.api.deps import (
     get_chunk_repo,
     get_current_user,
     get_evidence_repo,
-    require_analyst,
     require_admin,
+    require_analyst,
 )
 from interfaces.api.schemas.evidence import DocumentUploadResponse, EvidenceCreate, EvidenceResponse
 from interfaces.api.schemas.pagination import Page, PaginationParams
@@ -64,9 +64,9 @@ async def create_evidence(
 @router.get("/", response_model=Page[EvidenceResponse])
 async def list_evidences(
     pagination: PaginationParams = Depends(),
-    evidence_type: Optional[str] = Query(default=None),
-    language: Optional[str] = Query(default=None),
-    search: Optional[str] = Query(default=None),
+    evidence_type: str | None = Query(default=None),
+    language: str | None = Query(default=None),
+    search: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     repo: SQLEvidenceRepository = Depends(get_evidence_repo),
 ) -> Page[EvidenceResponse]:

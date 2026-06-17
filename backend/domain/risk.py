@@ -7,7 +7,6 @@ AI-generated + governed: requires approval before activation (ASTATE-0001).
 """
 
 from dataclasses import dataclass, field
-from typing import Optional
 
 from .base_entity import BaseEntity
 from .enums import ConfidenceLevel, RiskLevel
@@ -19,11 +18,11 @@ class Risk(BaseEntity):
     description: str
     risk_level: RiskLevel = field(default=RiskLevel.MEDIUM)
     category: str = ""
-    assessment_id: Optional[str] = None
-    sector_id: Optional[str] = None
+    assessment_id: str | None = None
+    sector_id: str | None = None
     finding_ids: list[str] = field(default_factory=list)
-    probability: Optional[float] = None
-    impact: Optional[float] = None
+    probability: float | None = None
+    impact: float | None = None
     confidence: ConfidenceLevel = field(default=ConfidenceLevel.MEDIUM)
-    reasoning: Optional[str] = None
-    uncertainty: Optional[str] = None
+    reasoning: str | None = None
+    uncertainty: str | None = None

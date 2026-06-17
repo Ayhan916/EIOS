@@ -8,7 +8,6 @@ import pytest
 
 from application.sector_intelligence.benchmarking import (
     SectorBenchmark,
-    SeverityDistribution,
     _match_themes,
     _rate_coverage,
     _rate_finding_adequacy,
@@ -16,19 +15,18 @@ from application.sector_intelligence.benchmarking import (
     compute_benchmark,
 )
 from application.sector_intelligence.profiles import (
-    SectorESGProfile,
     all_profiles,
     get_profile,
     get_profile_by_section,
 )
 from domain.assessment import Assessment
-from domain.enums import ConfidenceLevel, EntityStatus, RiskLevel
+from domain.enums import ConfidenceLevel, RiskLevel
 from domain.finding import Finding
 from domain.risk import Risk
 from domain.sector import Sector
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 def _make_sector(**kwargs: Any) -> Sector:
     defaults: dict[str, Any] = dict(
@@ -81,6 +79,7 @@ def _make_risk(level: str = "High", **kwargs: Any) -> Risk:
 
 
 # ── Profile registry ──────────────────────────────────────────────────────────
+
 
 class TestSectorProfiles:
     def test_all_profiles_have_required_fields(self) -> None:
@@ -148,6 +147,7 @@ class TestSectorProfiles:
 
 # ── Severity distribution ─────────────────────────────────────────────────────
 
+
 class TestSeverityDistribution:
     def test_distribution_from_findings(self) -> None:
         findings = [
@@ -180,6 +180,7 @@ class TestSeverityDistribution:
 
 # ── Coverage rating ───────────────────────────────────────────────────────────
 
+
 class TestCoverageRating:
     def setup_method(self) -> None:
         self.profile = get_profile("B")
@@ -209,6 +210,7 @@ class TestCoverageRating:
 
 # ── Finding adequacy ──────────────────────────────────────────────────────────
 
+
 class TestFindingAdequacy:
     def setup_method(self) -> None:
         self.profile = get_profile("B")  # expects 4 min findings
@@ -231,6 +233,7 @@ class TestFindingAdequacy:
 
 
 # ── Theme matching ────────────────────────────────────────────────────────────
+
 
 class TestThemeMatching:
     def test_matches_keyword_in_text(self) -> None:
@@ -264,6 +267,7 @@ class TestThemeMatching:
 
 
 # ── Full benchmark computation ────────────────────────────────────────────────
+
 
 class TestComputeBenchmark:
     def test_benchmark_returns_correct_type(self) -> None:
@@ -328,11 +332,7 @@ class TestComputeBenchmark:
     def test_themes_identified_from_finding_text(self) -> None:
         assessment = _make_assessment()
         sector = _make_sector(nace_code="B")
-        findings = [
-            _make_finding(
-                description="Child labour was identified in artisanal mining."
-            )
-        ]
+        findings = [_make_finding(description="Child labour was identified in artisanal mining.")]
         result = compute_benchmark(assessment, sector, findings, [], None, [])
         # "Child and forced labour in supply chains" should match via "Child" keyword
         assert len(result.key_themes_identified) >= 1
@@ -365,9 +365,7 @@ class TestComputeBenchmark:
     def test_high_coverage_many_findings_rates_above_baseline(self) -> None:
         assessment = _make_assessment()
         sector = _make_sector(nace_code="C")  # Manufacturing, min 3 findings
-        findings = [
-            _make_finding("Critical", id=f"f{i}") for i in range(6)
-        ]
+        findings = [_make_finding("Critical", id=f"f{i}") for i in range(6)]
         # High coverage + many findings -> above or meets baseline
         result = compute_benchmark(assessment, sector, findings, [], 0.70, [])
         assert result.benchmark_rating in ("above_sector_baseline", "meets_sector_baseline")

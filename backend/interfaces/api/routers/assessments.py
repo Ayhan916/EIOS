@@ -1,5 +1,4 @@
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -30,9 +29,9 @@ from interfaces.api.deps import (
     get_recommendation_repo,
     get_risk_repo,
     get_workflow_run_repo,
+    require_admin,
     require_analyst,
     require_reviewer,
-    require_admin,
 )
 from interfaces.api.schemas.assessment import AssessmentCreate, AssessmentResponse
 from interfaces.api.schemas.finding import FindingResponse
@@ -49,6 +48,7 @@ from interfaces.api.schemas.risk import RiskResponse
 class AssessmentReviseRequest(BaseModel):
     reason: str = ""
 
+
 router = APIRouter(
     prefix="/assessments",
     tags=["assessments"],
@@ -56,7 +56,7 @@ router = APIRouter(
 )
 
 
-def _assert_org_access(item_org_id: Optional[str], user_org_id: Optional[str]) -> None:
+def _assert_org_access(item_org_id: str | None, user_org_id: str | None) -> None:
     """Raise 404 if item does not belong to user's organization (avoids info leakage)."""
     if item_org_id and user_org_id and item_org_id != user_org_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
@@ -91,10 +91,10 @@ async def create_assessment(
 @router.get("/", response_model=Page[AssessmentResponse])
 async def list_assessments(
     pagination: PaginationParams = Depends(),
-    filter_status: Optional[str] = Query(default=None, alias="status"),
-    assessment_type: Optional[str] = Query(default=None),
-    sector_id: Optional[str] = Query(default=None),
-    search: Optional[str] = Query(default=None),
+    filter_status: str | None = Query(default=None, alias="status"),
+    assessment_type: str | None = Query(default=None),
+    sector_id: str | None = Query(default=None),
+    search: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
 ) -> Page[AssessmentResponse]:
@@ -176,11 +176,13 @@ async def approve_assessment(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
     _assert_org_access(assessment.organization_id, current_user.organization_id)
     if assessment.status == EntityStatus.APPROVED:
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Assessment already approved")
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT, detail="Assessment already approved"
+        )
 
     assessment.status = EntityStatus.APPROVED
     assessment.approved_by = current_user.id
-    assessment.approval_date = datetime.now(timezone.utc)
+    assessment.approval_date = datetime.now(UTC)
     saved = await repo.save(assessment)
 
     event = audit_events.assessment_approved(

@@ -25,6 +25,4 @@ class FindingModel(BaseModel):
     evidence: Mapped[list[EvidenceModel]] = relationship(
         secondary=finding_evidence, back_populates="findings"
     )
-    risks: Mapped[list[RiskModel]] = relationship(
-        secondary=risk_finding, back_populates="findings"
-    )
+    risks: Mapped[list[RiskModel]] = relationship(secondary=risk_finding, back_populates="findings")

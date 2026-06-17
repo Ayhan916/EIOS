@@ -48,7 +48,9 @@ def _make_mock_provider() -> MagicMock:
 
 
 async def test_run_agent_returns_201(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()
+    ):
         response = await client.post(
             AGENTS_BASE + "/run",
             json={
@@ -70,7 +72,9 @@ async def test_run_agent_returns_201(client: AsyncClient) -> None:
 
 
 async def test_run_agent_with_knowledge_chunks(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()
+    ):
         response = await client.post(
             AGENTS_BASE + "/run",
             json={
@@ -87,7 +91,9 @@ async def test_run_agent_with_knowledge_chunks(client: AsyncClient) -> None:
 
 
 async def test_run_agent_with_metadata(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()
+    ):
         response = await client.post(
             AGENTS_BASE + "/run",
             json={
@@ -117,7 +123,9 @@ async def test_run_agent_empty_query_returns_422(client: AsyncClient) -> None:
 
 
 async def test_list_agent_runs_returns_200(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()
+    ):
         await client.post(
             AGENTS_BASE + "/run",
             json={"agent_type": "reasoning", "query": "Analyse ESG risk chain"},
@@ -130,7 +138,9 @@ async def test_list_agent_runs_returns_200(client: AsyncClient) -> None:
 
 
 async def test_get_agent_run_by_id(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.agents.get_llm_provider", return_value=_make_mock_provider()
+    ):
         create_resp = await client.post(
             AGENTS_BASE + "/run",
             json={"agent_type": "governance", "query": "Assess board governance structure"},
@@ -151,11 +161,10 @@ async def test_get_agent_run_not_found_returns_404(client: AsyncClient) -> None:
 async def test_agents_routes_require_auth(setup_test_schema: None) -> None:
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
-    async with httpx.AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.post(
             AGENTS_BASE + "/run",
             json={"agent_type": "research", "query": "test"},

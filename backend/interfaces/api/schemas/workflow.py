@@ -1,5 +1,4 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -19,23 +18,23 @@ class AgentStepSummary(BaseModel):
     status: str
     input_tokens: int
     output_tokens: int
-    error: Optional[str]
+    error: str | None
 
 
 class WorkflowRunResponse(BaseModel):
     id: str
     workflow_type: str
     query: str
-    verdict: Optional[str]
-    verdict_reasoning: Optional[str]
-    overall_risk_level: Optional[str]
+    verdict: str | None
+    verdict_reasoning: str | None
+    overall_risk_level: str | None
     steps_completed: int
     total_steps: int
     total_input_tokens: int
     total_output_tokens: int
-    error: Optional[str]
+    error: str | None
     # Structured extraction results
-    assessment_id: Optional[str] = None
+    assessment_id: str | None = None
     finding_count: int = 0
     risk_count: int = 0
     recommendation_count: int = 0

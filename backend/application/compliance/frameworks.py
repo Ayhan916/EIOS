@@ -13,7 +13,7 @@ Coverage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -48,7 +48,12 @@ CSDDD = [
         title="Identification of actual and potential adverse impacts",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social"),
-        keywords=("CSDDD Art. 6", "Art 6", "identification of adverse impacts", "adverse impact identification"),
+        keywords=(
+            "CSDDD Art. 6",
+            "Art 6",
+            "identification of adverse impacts",
+            "adverse impact identification",
+        ),
     ),
     FrameworkArticle(
         code="CSDDD-Art-7",
@@ -66,7 +71,13 @@ CSDDD = [
         title="Bringing actual adverse impacts to an end",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social"),
-        keywords=("CSDDD Art. 8", "Art 8", "remediation", "bringing to an end", "corrective action"),
+        keywords=(
+            "CSDDD Art. 8",
+            "Art 8",
+            "remediation",
+            "bringing to an end",
+            "corrective action",
+        ),
     ),
     FrameworkArticle(
         code="CSDDD-Art-9",
@@ -84,7 +95,13 @@ CSDDD = [
         title="Grievance mechanisms and procedures",
         obligation_type="mandatory",
         esg_categories=("Governance", "Social"),
-        keywords=("CSDDD Art. 10", "Art 10", "grievance mechanism", "complaint procedure", "grievance"),
+        keywords=(
+            "CSDDD Art. 10",
+            "Art 10",
+            "grievance mechanism",
+            "complaint procedure",
+            "grievance",
+        ),
     ),
     FrameworkArticle(
         code="CSDDD-Art-11",
@@ -251,7 +268,13 @@ ESRS = [
         title="Workers in the value chain",
         obligation_type="mandatory",
         esg_categories=("Social",),
-        keywords=("ESRS S2", "value chain workers", "supply chain workers", "forced labour", "child labour"),
+        keywords=(
+            "ESRS S2",
+            "value chain workers",
+            "supply chain workers",
+            "forced labour",
+            "child labour",
+        ),
     ),
     FrameworkArticle(
         code="ESRS-S3",

@@ -19,13 +19,12 @@ from the first non-empty paragraph of the agent output.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
-from typing import Optional
-
+from dataclasses import dataclass
 
 # ---------------------------------------------------------------------------
 # Data transfer objects (pure data, no domain imports)
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class ParsedFinding:
@@ -44,8 +43,8 @@ class ParsedRisk:
     description: str
     category: str = ""
     risk_level: str = "Medium"
-    probability: Optional[float] = None
-    impact: Optional[float] = None
+    probability: float | None = None
+    impact: float | None = None
     regulatory_exposure: str = ""
     reasoning: str = ""
 
@@ -66,6 +65,7 @@ class ParsedRecommendation:
 # Shared pre-processing helpers
 # ---------------------------------------------------------------------------
 
+
 def _strip_markdown(text: str) -> str:
     """Remove bold/italic markers so that patterns match regardless of formatting."""
     text = re.sub(r"\*{1,3}", "", text)
@@ -84,18 +84,23 @@ def _normalise_ws(text: str) -> str:
 # Separator pattern: colon, dash, em-dash, en-dash (with optional spaces)
 _SEP = r"[\s]*[:\-–—][\s]*"
 
-_SEVERITY_LINE   = re.compile(r"(?:severity|risk\s+level|level)"   + _SEP + r"\*{0,2}(\w[\w ]*)", re.IGNORECASE)
-_CONFIDENCE_LINE = re.compile(r"confidence"                         + _SEP + r"\*{0,2}(\w+)",        re.IGNORECASE)
-_CATEGORY_LINE   = re.compile(r"category"                          + _SEP + r"\*{0,2}([^\n,|]+)",   re.IGNORECASE)
-_REGULATORY_LINE = re.compile(r"regulatory\s+(?:basis|obligation|exposure)"
-                               + _SEP + r"([^\n]+)",                                                re.IGNORECASE)
-_REASONING_LINE  = re.compile(r"reasoning"                         + _SEP + r"([^\n]+)",             re.IGNORECASE)
+_SEVERITY_LINE = re.compile(
+    r"(?:severity|risk\s+level|level)" + _SEP + r"\*{0,2}(\w[\w ]*)", re.IGNORECASE
+)
+_CONFIDENCE_LINE = re.compile(r"confidence" + _SEP + r"\*{0,2}(\w+)", re.IGNORECASE)
+_CATEGORY_LINE = re.compile(r"category" + _SEP + r"\*{0,2}([^\n,|]+)", re.IGNORECASE)
+_REGULATORY_LINE = re.compile(
+    r"regulatory\s+(?:basis|obligation|exposure)" + _SEP + r"([^\n]+)", re.IGNORECASE
+)
+_REASONING_LINE = re.compile(r"reasoning" + _SEP + r"([^\n]+)", re.IGNORECASE)
 _PROBABILITY_LINE = re.compile(r"probability" + _SEP + r"([\d.]+)", re.IGNORECASE)
-_IMPACT_LINE      = re.compile(r"impact"      + _SEP + r"([\d.]+)", re.IGNORECASE)
-_PRIORITY_LINE    = re.compile(r"priority"    + _SEP + r"\*{0,2}(\w+)", re.IGNORECASE)
-_TIMELINE_LINE    = re.compile(r"timeline"    + _SEP + r"([^\n\|]+)", re.IGNORECASE)
+_IMPACT_LINE = re.compile(r"impact" + _SEP + r"([\d.]+)", re.IGNORECASE)
+_PRIORITY_LINE = re.compile(r"priority" + _SEP + r"\*{0,2}(\w+)", re.IGNORECASE)
+_TIMELINE_LINE = re.compile(r"timeline" + _SEP + r"([^\n\|]+)", re.IGNORECASE)
 _RESPONSIBLE_LINE = re.compile(r"responsible\s+party" + _SEP + r"([^\n]+)", re.IGNORECASE)
-_TYPE_LINE        = re.compile(r"(?:action\s+)?type" + _SEP + r"\*{0,2}(Required|Recommended)", re.IGNORECASE)
+_TYPE_LINE = re.compile(
+    r"(?:action\s+)?type" + _SEP + r"\*{0,2}(Required|Recommended)", re.IGNORECASE
+)
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +117,7 @@ _SEVERITY_MAP = {
     "moderate": "Medium",
     "minor": "Low",
 }
+
 
 def _normalise_level(raw: str) -> str:
     return _SEVERITY_MAP.get(raw.strip().lower(), "Medium")
@@ -174,27 +180,27 @@ def parse_findings(content: str) -> list[ParsedFinding]:
         if not title:
             continue
 
-        severity_m   = _SEVERITY_LINE.search(section)
+        severity_m = _SEVERITY_LINE.search(section)
         confidence_m = _CONFIDENCE_LINE.search(section)
-        category_m   = _CATEGORY_LINE.search(section)
+        category_m = _CATEGORY_LINE.search(section)
         regulatory_m = _REGULATORY_LINE.search(section)
-        reasoning_m  = _REASONING_LINE.search(section)
+        reasoning_m = _REASONING_LINE.search(section)
 
         # Description: first block of prose after the header line
-        desc_match = re.search(
-            r"#{2,4}[^\n]+\n([\s\S]+?)(?=\n\s*-|\n\d\.|\n#{2,4}|$)", section
-        )
+        desc_match = re.search(r"#{2,4}[^\n]+\n([\s\S]+?)(?=\n\s*-|\n\d\.|\n#{2,4}|$)", section)
         description = desc_match.group(1).strip()[:1000] if desc_match else title
 
-        findings.append(ParsedFinding(
-            title=title[:200],
-            description=description,
-            severity=_normalise_level(severity_m.group(1) if severity_m else "Medium"),
-            confidence=_normalise_level(confidence_m.group(1) if confidence_m else "Medium"),
-            category=(category_m.group(1).strip()[:100] if category_m else ""),
-            regulatory_basis=(regulatory_m.group(1).strip()[:500] if regulatory_m else ""),
-            reasoning=(reasoning_m.group(1).strip()[:500] if reasoning_m else ""),
-        ))
+        findings.append(
+            ParsedFinding(
+                title=title[:200],
+                description=description,
+                severity=_normalise_level(severity_m.group(1) if severity_m else "Medium"),
+                confidence=_normalise_level(confidence_m.group(1) if confidence_m else "Medium"),
+                category=(category_m.group(1).strip()[:100] if category_m else ""),
+                regulatory_basis=(regulatory_m.group(1).strip()[:500] if regulatory_m else ""),
+                reasoning=(reasoning_m.group(1).strip()[:500] if reasoning_m else ""),
+            )
+        )
 
     # Fallback: numbered list items inside a "Material Findings" section
     if not findings:
@@ -203,13 +209,15 @@ def parse_findings(content: str) -> list[ParsedFinding]:
             items = re.findall(r"^\d+\.\s+(.+)", mat_section.group(1), re.MULTILINE)
             for item in items[:10]:
                 title_part = re.split(r"[—\-]", item)[0].strip()
-                findings.append(ParsedFinding(
-                    title=title_part[:200],
-                    description=item.strip()[:500],
-                    severity=_normalise_level(
-                        next((w for w in _SEVERITY_MAP if w in item.lower()), "Medium")
-                    ),
-                ))
+                findings.append(
+                    ParsedFinding(
+                        title=title_part[:200],
+                        description=item.strip()[:500],
+                        severity=_normalise_level(
+                            next((w for w in _SEVERITY_MAP if w in item.lower()), "Medium")
+                        ),
+                    )
+                )
 
     return findings[:20]
 
@@ -252,15 +260,15 @@ def parse_risks(content: str) -> list[ParsedRisk]:
         if not title:
             continue
 
-        level_m      = _SEVERITY_LINE.search(section)
-        prob_m       = _PROBABILITY_LINE.search(section)
-        impact_m     = _IMPACT_LINE.search(section)
-        category_m   = _CATEGORY_LINE.search(section)
-        exposure_m   = _REGULATORY_LINE.search(section)
-        reasoning_m  = _REASONING_LINE.search(section)
+        level_m = _SEVERITY_LINE.search(section)
+        prob_m = _PROBABILITY_LINE.search(section)
+        impact_m = _IMPACT_LINE.search(section)
+        category_m = _CATEGORY_LINE.search(section)
+        exposure_m = _REGULATORY_LINE.search(section)
+        reasoning_m = _REASONING_LINE.search(section)
 
-        probability: Optional[float] = None
-        impact: Optional[float] = None
+        probability: float | None = None
+        impact: float | None = None
         try:
             if prob_m:
                 probability = float(prob_m.group(1))
@@ -272,16 +280,18 @@ def parse_risks(content: str) -> list[ParsedRisk]:
         except ValueError:
             pass
 
-        risks.append(ParsedRisk(
-            title=title[:200],
-            description=title,
-            risk_level=_normalise_level(level_m.group(1) if level_m else "Medium"),
-            probability=probability,
-            impact=impact,
-            category=(category_m.group(1).strip()[:100] if category_m else ""),
-            regulatory_exposure=(exposure_m.group(1).strip()[:500] if exposure_m else ""),
-            reasoning=(reasoning_m.group(1).strip()[:500] if reasoning_m else ""),
-        ))
+        risks.append(
+            ParsedRisk(
+                title=title[:200],
+                description=title,
+                risk_level=_normalise_level(level_m.group(1) if level_m else "Medium"),
+                probability=probability,
+                impact=impact,
+                category=(category_m.group(1).strip()[:100] if category_m else ""),
+                regulatory_exposure=(exposure_m.group(1).strip()[:500] if exposure_m else ""),
+                reasoning=(reasoning_m.group(1).strip()[:500] if reasoning_m else ""),
+            )
+        )
 
     return risks[:20]
 
@@ -324,26 +334,28 @@ def parse_recommendations(content: str) -> list[ParsedRecommendation]:
         if not title:
             continue
 
-        priority_m   = _PRIORITY_LINE.search(section)
-        type_m       = _TYPE_LINE.search(section)
+        priority_m = _PRIORITY_LINE.search(section)
+        type_m = _TYPE_LINE.search(section)
         regulatory_m = _REGULATORY_LINE.search(section)
         responsible_m = _RESPONSIBLE_LINE.search(section)
-        timeline_m   = _TIMELINE_LINE.search(section)
-        reasoning_m  = _REASONING_LINE.search(section)
+        timeline_m = _TIMELINE_LINE.search(section)
+        reasoning_m = _REASONING_LINE.search(section)
 
         action_required = True
         if type_m and type_m.group(1).lower() == "recommended":
             action_required = False
 
-        recs.append(ParsedRecommendation(
-            title=title[:200],
-            description=title,
-            priority=_normalise_level(priority_m.group(1) if priority_m else "Medium"),
-            action_required=action_required,
-            regulatory_basis=(regulatory_m.group(1).strip()[:500] if regulatory_m else ""),
-            responsible_party=(responsible_m.group(1).strip()[:200] if responsible_m else ""),
-            timeline=(timeline_m.group(1).strip()[:200] if timeline_m else ""),
-            reasoning=(reasoning_m.group(1).strip()[:500] if reasoning_m else ""),
-        ))
+        recs.append(
+            ParsedRecommendation(
+                title=title[:200],
+                description=title,
+                priority=_normalise_level(priority_m.group(1) if priority_m else "Medium"),
+                action_required=action_required,
+                regulatory_basis=(regulatory_m.group(1).strip()[:500] if regulatory_m else ""),
+                responsible_party=(responsible_m.group(1).strip()[:200] if responsible_m else ""),
+                timeline=(timeline_m.group(1).strip()[:200] if timeline_m else ""),
+                reasoning=(reasoning_m.group(1).strip()[:500] if reasoning_m else ""),
+            )
+        )
 
     return recs[:20]

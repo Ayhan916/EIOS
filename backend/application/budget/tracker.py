@@ -15,7 +15,7 @@ Design decisions:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from shared.config import settings
 
@@ -37,8 +37,8 @@ class BudgetExceededError(Exception):
 @dataclass
 class _OrgUsage:
     tokens_used: int = 0
-    period_month: int = field(default_factory=lambda: datetime.now(timezone.utc).month)
-    period_year: int = field(default_factory=lambda: datetime.now(timezone.utc).year)
+    period_month: int = field(default_factory=lambda: datetime.now(UTC).month)
+    period_year: int = field(default_factory=lambda: datetime.now(UTC).year)
 
 
 class LLMBudgetTracker:
@@ -48,7 +48,7 @@ class LLMBudgetTracker:
         self._usage: dict[str, _OrgUsage] = {}
 
     def _current_period(self) -> tuple[int, int]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         return now.year, now.month
 
     def _get_usage(self, org_id: str) -> _OrgUsage:

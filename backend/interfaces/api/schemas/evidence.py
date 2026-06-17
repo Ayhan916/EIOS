@@ -1,9 +1,9 @@
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
 from domain.enums import ConfidenceLevel, EvidenceType
+
 from .base import EntityResponse
 
 
@@ -13,10 +13,10 @@ class EvidenceCreate(BaseModel):
     description: str = Field(min_length=1)
     evidence_type: EvidenceType = EvidenceType.DOCUMENT
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
-    url: Optional[str] = None
+    url: str | None = None
     language: str = "en"
-    published_at: Optional[datetime] = None
-    reliability_score: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    published_at: datetime | None = None
+    reliability_score: float | None = Field(default=None, ge=0.0, le=1.0)
 
 
 class EvidenceResponse(EntityResponse):
@@ -25,18 +25,18 @@ class EvidenceResponse(EntityResponse):
     description: str
     evidence_type: str
     confidence: str
-    url: Optional[str] = None
+    url: str | None = None
     language: str
-    published_at: Optional[datetime] = None
-    retrieved_at: Optional[datetime] = None
-    reliability_score: Optional[float] = None
-    organization_id: Optional[str] = None
+    published_at: datetime | None = None
+    retrieved_at: datetime | None = None
+    reliability_score: float | None = None
+    organization_id: str | None = None
     # Document ingestion tracking (M15)
     ingestion_status: str = "none"
     chunk_count: int = 0
-    file_name: Optional[str] = None
-    file_size_bytes: Optional[int] = None
-    file_mime_type: Optional[str] = None
+    file_name: str | None = None
+    file_size_bytes: int | None = None
+    file_mime_type: str | None = None
 
 
 class DocumentUploadResponse(BaseModel):

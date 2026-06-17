@@ -5,8 +5,7 @@ Each dependency provides a repository scoped to the request's database transacti
 The transaction commits at request end (on success) and rolls back on exception.
 """
 
-from collections.abc import AsyncGenerator
-from typing import Callable
+from collections.abc import AsyncGenerator, Callable
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -38,9 +37,8 @@ _bearer = HTTPBearer(auto_error=True)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with AsyncSessionFactory() as session:
-        async with session.begin():
-            yield session
+    async with AsyncSessionFactory() as session, session.begin():
+        yield session
 
 
 async def get_assessment_repo(
@@ -133,18 +131,18 @@ async def get_current_user(
 ) -> User:
     try:
         payload = decode_token(credentials.credentials)
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Token expired",
             headers={"WWW-Authenticate": "Bearer"},
-        )
-    except jwt.InvalidTokenError:
+        ) from exc
+    except jwt.InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
             headers={"WWW-Authenticate": "Bearer"},
-        )
+        ) from exc
 
     if payload.get("type") != "access":
         raise HTTPException(
@@ -165,6 +163,7 @@ async def get_current_user(
 
 def require_role(min_role: UserRole) -> Callable:
     """Return a FastAPI dependency that enforces a minimum role."""
+
     async def _check(current_user: User = Depends(get_current_user)) -> User:
         if not has_min_role(current_user.role, min_role):
             raise HTTPException(
@@ -172,6 +171,7 @@ def require_role(min_role: UserRole) -> Callable:
                 detail=f"Role '{min_role.value}' or higher is required",
             )
         return current_user
+
     return _check
 
 

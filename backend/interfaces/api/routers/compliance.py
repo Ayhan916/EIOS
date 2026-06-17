@@ -9,20 +9,20 @@ Endpoints:
 
 from __future__ import annotations
 
-import application.audit as audit_events
 from fastapi import APIRouter, Depends, HTTPException, status
 
+import application.audit as audit_events
 from application.compliance.coverage import compute_coverage
 from application.compliance.frameworks import FrameworkArticle, all_frameworks, get_by_framework
 from application.compliance.gaps import compute_gaps
 from application.compliance.verdict import compute_verdict
+from domain.user import User
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLAuditEventRepository,
     SQLFindingRepository,
     SQLRiskRepository,
 )
-from domain.user import User
 from interfaces.api.deps import (
     get_assessment_repo,
     get_audit_event_repo,
@@ -52,7 +52,9 @@ assessments_compliance_router = APIRouter(
 )
 
 
-def _article_to_response(article: FrameworkArticle, covered: bool = False) -> ArticleCoverageResponse:
+def _article_to_response(
+    article: FrameworkArticle, covered: bool = False
+) -> ArticleCoverageResponse:
     return ArticleCoverageResponse(
         code=article.code,
         framework=article.framework,
@@ -77,11 +79,7 @@ async def _load_assessment_texts(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
 
     # Tenant isolation: treat cross-org access as 404 (no info leakage)
-    if (
-        assessment.organization_id
-        and user_org_id
-        and assessment.organization_id != user_org_id
-    ):
+    if assessment.organization_id and user_org_id and assessment.organization_id != user_org_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
 
     findings = await finding_repo.list_by_assessment(assessment_id)
@@ -130,7 +128,10 @@ async def get_assessment_compliance(
     current_user=Depends(get_current_user),
 ) -> ComplianceCoverageResponse:
     assessment, texts = await _load_assessment_texts(
-        assessment_id, assessment_repo, finding_repo, risk_repo,
+        assessment_id,
+        assessment_repo,
+        finding_repo,
+        risk_repo,
         user_org_id=current_user.organization_id,
     )
 
@@ -224,7 +225,10 @@ async def list_assessment_compliance_gaps(
     risk_repo: SQLRiskRepository = Depends(get_risk_repo),
 ) -> list[GapResponse]:
     _, texts = await _load_assessment_texts(
-        assessment_id, assessment_repo, finding_repo, risk_repo,
+        assessment_id,
+        assessment_repo,
+        finding_repo,
+        risk_repo,
         user_org_id=current_user.organization_id,
     )
     coverage = compute_coverage(texts)

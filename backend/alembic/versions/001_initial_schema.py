@@ -8,16 +8,17 @@ Creates all 17 entity tables and 11 association tables for the
 complete EIOS canonical object model per architecture/026.
 """
 
-from typing import Sequence, Union
+from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
 
+from alembic import op
+
 revision: str = "001"
-down_revision: Union[str, None] = None
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = None
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _COMMON = [
     sa.Column("id", sa.String(36), primary_key=True),
@@ -32,9 +33,12 @@ _COMMON = [
 
 
 def _common() -> list[sa.Column]:  # type: ignore[type-arg]
-    return [sa.Column(c.name, c.type, **{k: v for k, v in c._constructor_args[1].items()
-                                         if k != "name"})  # type: ignore[attr-defined]
-            for c in _COMMON]
+    return [
+        sa.Column(
+            c.name, c.type, **{k: v for k, v in c._constructor_args[1].items() if k != "name"}
+        )  # type: ignore[attr-defined]
+        for c in _COMMON
+    ]
 
 
 def upgrade() -> None:
@@ -70,7 +74,9 @@ def upgrade() -> None:
         sa.Column("email", sa.String(320), nullable=False),
         sa.Column("display_name", sa.String(255), nullable=False),
         sa.Column("role", sa.String(100), nullable=False, server_default=""),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
         sa.Column("last_login_at", sa.DateTime(timezone=True), nullable=True),
         sa.UniqueConstraint("email", name="uq_users_email"),
@@ -92,7 +98,9 @@ def upgrade() -> None:
         sa.Column("nace_description", sa.String(500), nullable=True),
         sa.Column("risk_profile", sa.String(2000), nullable=True),
         sa.Column("parent_sector_id", sa.String(36), sa.ForeignKey("sectors.id"), nullable=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
     )
     op.create_index("ix_sectors_nace_code", "sectors", ["nace_code"])
 
@@ -321,7 +329,9 @@ def upgrade() -> None:
         sa.Column("asset_type", sa.String(100), nullable=False, server_default=""),
         sa.Column("asset_class", sa.String(100), nullable=True),
         sa.Column("location", sa.String(500), nullable=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
     )
 
     # --- processes ---
@@ -360,7 +370,9 @@ def upgrade() -> None:
         sa.Column("priority", sa.String(20), nullable=False, server_default="Medium"),
         sa.Column("start_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("end_date", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
     )
 
     # --- tasks ---
@@ -388,7 +400,9 @@ def upgrade() -> None:
     # --- association tables ---
     op.create_table(
         "assessment_evidence",
-        sa.Column("assessment_id", sa.String(36), sa.ForeignKey("assessments.id"), primary_key=True),
+        sa.Column(
+            "assessment_id", sa.String(36), sa.ForeignKey("assessments.id"), primary_key=True
+        ),
         sa.Column("evidence_id", sa.String(36), sa.ForeignKey("evidences.id"), primary_key=True),
     )
     op.create_table(
@@ -403,12 +417,22 @@ def upgrade() -> None:
     )
     op.create_table(
         "recommendation_risk",
-        sa.Column("recommendation_id", sa.String(36), sa.ForeignKey("recommendations.id"), primary_key=True),
+        sa.Column(
+            "recommendation_id",
+            sa.String(36),
+            sa.ForeignKey("recommendations.id"),
+            primary_key=True,
+        ),
         sa.Column("risk_id", sa.String(36), sa.ForeignKey("risks.id"), primary_key=True),
     )
     op.create_table(
         "recommendation_finding",
-        sa.Column("recommendation_id", sa.String(36), sa.ForeignKey("recommendations.id"), primary_key=True),
+        sa.Column(
+            "recommendation_id",
+            sa.String(36),
+            sa.ForeignKey("recommendations.id"),
+            primary_key=True,
+        ),
         sa.Column("finding_id", sa.String(36), sa.ForeignKey("findings.id"), primary_key=True),
     )
     op.create_table(
@@ -419,12 +443,16 @@ def upgrade() -> None:
     op.create_table(
         "control_requirement",
         sa.Column("control_id", sa.String(36), sa.ForeignKey("controls.id"), primary_key=True),
-        sa.Column("requirement_id", sa.String(36), sa.ForeignKey("requirements.id"), primary_key=True),
+        sa.Column(
+            "requirement_id", sa.String(36), sa.ForeignKey("requirements.id"), primary_key=True
+        ),
     )
     op.create_table(
         "policy_requirement",
         sa.Column("policy_id", sa.String(36), sa.ForeignKey("policies.id"), primary_key=True),
-        sa.Column("requirement_id", sa.String(36), sa.ForeignKey("requirements.id"), primary_key=True),
+        sa.Column(
+            "requirement_id", sa.String(36), sa.ForeignKey("requirements.id"), primary_key=True
+        ),
     )
     op.create_table(
         "policy_control",
@@ -434,24 +462,51 @@ def upgrade() -> None:
     op.create_table(
         "standard_requirement",
         sa.Column("standard_id", sa.String(36), sa.ForeignKey("standards.id"), primary_key=True),
-        sa.Column("requirement_id", sa.String(36), sa.ForeignKey("requirements.id"), primary_key=True),
+        sa.Column(
+            "requirement_id", sa.String(36), sa.ForeignKey("requirements.id"), primary_key=True
+        ),
     )
     op.create_table(
         "decision_recommendation",
         sa.Column("decision_id", sa.String(36), sa.ForeignKey("decisions.id"), primary_key=True),
-        sa.Column("recommendation_id", sa.String(36), sa.ForeignKey("recommendations.id"), primary_key=True),
+        sa.Column(
+            "recommendation_id",
+            sa.String(36),
+            sa.ForeignKey("recommendations.id"),
+            primary_key=True,
+        ),
     )
 
 
 def downgrade() -> None:
     for table in [
-        "decision_recommendation", "standard_requirement", "policy_control",
-        "policy_requirement", "control_requirement", "control_risk",
-        "recommendation_finding", "recommendation_risk", "risk_finding",
-        "finding_evidence", "assessment_evidence",
-        "tasks", "projects", "processes", "assets", "standards",
-        "policies", "requirements", "controls", "decisions",
-        "recommendations", "risks", "findings", "evidences",
-        "assessments", "sectors", "users", "organizations",
+        "decision_recommendation",
+        "standard_requirement",
+        "policy_control",
+        "policy_requirement",
+        "control_requirement",
+        "control_risk",
+        "recommendation_finding",
+        "recommendation_risk",
+        "risk_finding",
+        "finding_evidence",
+        "assessment_evidence",
+        "tasks",
+        "projects",
+        "processes",
+        "assets",
+        "standards",
+        "policies",
+        "requirements",
+        "controls",
+        "decisions",
+        "recommendations",
+        "risks",
+        "findings",
+        "evidences",
+        "assessments",
+        "sectors",
+        "users",
+        "organizations",
     ]:
         op.drop_table(table)

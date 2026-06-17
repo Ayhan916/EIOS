@@ -13,23 +13,23 @@ Coverage: NACE sections A–S (most commercially significant sectors for ESG DD)
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
 class SectorESGProfile:
     """Static ESG risk profile for a NACE sector section."""
 
-    nace_section: str               # "A", "B", "C" …
-    section_name: str               # Human-readable name
-    environmental_risk: str         # Low | Medium | High | Critical
+    nace_section: str  # "A", "B", "C" …
+    section_name: str  # Human-readable name
+    environmental_risk: str  # Low | Medium | High | Critical
     social_risk: str
     governance_risk: str
-    overall_risk: str               # Derived: max of the three
+    overall_risk: str  # Derived: max of the three
     key_risk_themes: tuple[str, ...]
     applicable_frameworks: tuple[str, ...]
     # Minimum mandatory compliance coverage expected for a credible assessment
-    baseline_mandatory_coverage: float      # 0.0 – 1.0
+    baseline_mandatory_coverage: float  # 0.0 – 1.0
     # How many material findings a credible assessment should surface (lower bound)
     expected_min_findings: int
     expected_min_risks: int
@@ -42,7 +42,6 @@ class SectorESGProfile:
 # ---------------------------------------------------------------------------
 
 _PROFILES: list[SectorESGProfile] = [
-
     SectorESGProfile(
         nace_section="A",
         section_name="Agriculture, Forestry and Fishing",
@@ -69,7 +68,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Climate & Biodiversity", "Labour Rights", "Supply Chain"),
     ),
-
     SectorESGProfile(
         nace_section="B",
         section_name="Mining and Quarrying",
@@ -96,9 +94,13 @@ _PROFILES: list[SectorESGProfile] = [
             "Significant ESRS E2 (pollution), E4 (biodiversity), S3 (affected communities) exposure. "
             "OECD Due Diligence Guidance for Responsible Mineral Supply Chains applies."
         ),
-        esg_priority_categories=("Environmental Impact", "Human Rights", "Supply Chain", "Community"),
+        esg_priority_categories=(
+            "Environmental Impact",
+            "Human Rights",
+            "Supply Chain",
+            "Community",
+        ),
     ),
-
     SectorESGProfile(
         nace_section="C",
         section_name="Manufacturing",
@@ -125,7 +127,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Supply Chain", "Labour Rights", "Environmental Impact"),
     ),
-
     SectorESGProfile(
         nace_section="D",
         section_name="Electricity, Gas, Steam and Air Conditioning Supply",
@@ -150,9 +151,12 @@ _PROFILES: list[SectorESGProfile] = [
             "green finance. SFDR applies to institutional investors in this sector. "
             "Paris Agreement alignment and science-based targets expected by investors."
         ),
-        esg_priority_categories=("Climate & Energy Transition", "Environmental Impact", "Governance"),
+        esg_priority_categories=(
+            "Climate & Energy Transition",
+            "Environmental Impact",
+            "Governance",
+        ),
     ),
-
     SectorESGProfile(
         nace_section="F",
         section_name="Construction",
@@ -179,7 +183,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Labour Rights", "Supply Chain", "Environmental Impact"),
     ),
-
     SectorESGProfile(
         nace_section="G",
         section_name="Wholesale and Retail Trade",
@@ -207,7 +210,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Supply Chain", "Labour Rights", "Consumer Protection"),
     ),
-
     SectorESGProfile(
         nace_section="H",
         section_name="Transportation and Storage",
@@ -234,7 +236,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Climate & Emissions", "Labour Rights", "Environmental Impact"),
     ),
-
     SectorESGProfile(
         nace_section="J",
         section_name="Information and Communication",
@@ -262,7 +263,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Governance & Ethics", "Digital Rights", "Supply Chain"),
     ),
-
     SectorESGProfile(
         nace_section="K",
         section_name="Financial and Insurance Activities",
@@ -288,9 +288,12 @@ _PROFILES: list[SectorESGProfile] = [
             "and G1 (business conduct) central. Financed emissions increasingly material "
             "under PCAF methodology and Paris-alignment investor expectations."
         ),
-        esg_priority_categories=("Governance & Ethics", "Financed Emissions", "Responsible Business"),
+        esg_priority_categories=(
+            "Governance & Ethics",
+            "Financed Emissions",
+            "Responsible Business",
+        ),
     ),
-
     SectorESGProfile(
         nace_section="Q",
         section_name="Human Health and Social Work Activities",
@@ -318,7 +321,6 @@ _PROFILES: list[SectorESGProfile] = [
         ),
         esg_priority_categories=("Labour Rights", "Consumer Protection", "Environmental Impact"),
     ),
-
     # Generic fallback for unrecognised sectors
     SectorESGProfile(
         nace_section="*",

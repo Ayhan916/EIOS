@@ -10,17 +10,17 @@ All logic is deterministic and explainable — no LLM calls.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from domain.assessment import Assessment
 from domain.finding import Finding
 from domain.risk import Risk
 from domain.sector import Sector
 
-from .profiles import SectorESGProfile, _FALLBACK, get_profile
-
+from .profiles import SectorESGProfile, get_profile
 
 # ── Output data structures ─────────────────────────────────────────────────────
+
 
 @dataclass
 class SeverityDistribution:
@@ -80,19 +80,19 @@ class SectorBenchmark:
     regulatory_exposure_notes: str
 
     # Compliance comparison
-    mandatory_coverage: float | None      # Actual coverage (None = not computed yet)
-    coverage_vs_baseline: float | None    # actual - baseline (negative = below)
+    mandatory_coverage: float | None  # Actual coverage (None = not computed yet)
+    coverage_vs_baseline: float | None  # actual - baseline (negative = below)
 
     # Coverage rating
-    coverage_rating: str     # "above_baseline" | "meets_baseline" | "below_baseline" | "not_assessed"
+    coverage_rating: str  # "above_baseline" | "meets_baseline" | "below_baseline" | "not_assessed"
     coverage_explanation: str
 
     # Finding adequacy
-    finding_adequacy: str    # "above_expected" | "meets_expected" | "below_expected"
+    finding_adequacy: str  # "above_expected" | "meets_expected" | "below_expected"
     finding_explanation: str
 
     # Key sector themes found vs missed
-    key_themes_identified: list[str]   # Themes whose keywords appeared in findings/risks
+    key_themes_identified: list[str]  # Themes whose keywords appeared in findings/risks
     key_themes_not_addressed: list[str]
 
     # Peer comparison (org-scoped, same sector)
@@ -102,11 +102,14 @@ class SectorBenchmark:
     org_avg_finding_count: float | None
 
     # Overall benchmark rating
-    benchmark_rating: str        # "above_sector_baseline" | "meets_sector_baseline" | "below_sector_baseline"
+    benchmark_rating: (
+        str  # "above_sector_baseline" | "meets_sector_baseline" | "below_sector_baseline"
+    )
     benchmark_explanation: str
 
 
 # ── Public API ─────────────────────────────────────────────────────────────────
+
 
 def compute_benchmark(
     assessment: Assessment,
@@ -140,13 +143,9 @@ def compute_benchmark(
     if mandatory_coverage is not None:
         coverage_vs_baseline = round(mandatory_coverage - profile.baseline_mandatory_coverage, 4)
 
-    coverage_rating, coverage_explanation = _rate_coverage(
-        mandatory_coverage, profile, assessment
-    )
+    coverage_rating, coverage_explanation = _rate_coverage(mandatory_coverage, profile, assessment)
 
-    finding_adequacy, finding_explanation = _rate_finding_adequacy(
-        finding_dist.total, profile
-    )
+    finding_adequacy, finding_explanation = _rate_finding_adequacy(finding_dist.total, profile)
 
     # Which key sector risk themes appear in the assessment content?
     assessment_text = _build_assessment_text(assessment, findings, risks)
@@ -205,6 +204,7 @@ def compute_benchmark(
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
 
+
 def _severity_distribution(
     items: list,
     level_attr: str,
@@ -244,7 +244,7 @@ def _rate_coverage(
         return (
             "above_baseline",
             f"Mandatory compliance coverage ({pct}%) exceeds the sector baseline "
-            f"of {baseline_pct}% by {round(delta*100)}pp. This assessment demonstrates "
+            f"of {baseline_pct}% by {round(delta * 100)}pp. This assessment demonstrates "
             "strong regulatory framework alignment for its sector.",
         )
     elif delta >= -0.10:
@@ -257,7 +257,7 @@ def _rate_coverage(
     else:
         return (
             "below_baseline",
-            f"Mandatory compliance coverage ({pct}%) falls {abs(round(delta*100))}pp "
+            f"Mandatory compliance coverage ({pct}%) falls {abs(round(delta * 100))}pp "
             f"below the sector baseline of {baseline_pct}%. This sector typically "
             "requires stronger regulatory framework coverage. A gap remediation plan "
             "is recommended.",
@@ -340,25 +340,25 @@ def _compute_peer_metrics(
 
     for peer_assessment, peer_findings in peers:
         finding_dist = _severity_distribution(peer_findings, "severity")
-        summaries.append(PeerSummary(
-            assessment_id=peer_assessment.id,
-            title=peer_assessment.title,
-            quality_score=peer_assessment.quality_score,
-            finding_count=finding_dist.total,
-            risk_count=0,  # Simplified — risks not loaded for peers in this pass
-            high_critical_finding_count=finding_dist.high_or_critical_count,
-        ))
+        summaries.append(
+            PeerSummary(
+                assessment_id=peer_assessment.id,
+                title=peer_assessment.title,
+                quality_score=peer_assessment.quality_score,
+                finding_count=finding_dist.total,
+                risk_count=0,  # Simplified — risks not loaded for peers in this pass
+                high_critical_finding_count=finding_dist.high_or_critical_count,
+            )
+        )
         if peer_assessment.quality_score is not None:
             quality_scores.append(peer_assessment.quality_score)
         finding_counts.append(finding_dist.total)
 
     org_avg_quality = (
-        round(sum(quality_scores) / len(quality_scores), 4)
-        if quality_scores else None
+        round(sum(quality_scores) / len(quality_scores), 4) if quality_scores else None
     )
     org_avg_findings = (
-        round(sum(finding_counts) / len(finding_counts), 1)
-        if finding_counts else None
+        round(sum(finding_counts) / len(finding_counts), 1) if finding_counts else None
     )
 
     return summaries, org_avg_quality, org_avg_findings
@@ -378,21 +378,24 @@ def _overall_rating(
     coverage_ok = coverage_rating in ("above_baseline", "meets_baseline")
     findings_ok = finding_adequacy in ("above_expected", "meets_expected")
     themes_coverage = (total_themes - themes_missed_count) / total_themes if total_themes else 1.0
-    quality_ok = quality_score is not None and quality_score >= 0.40
 
-    strong_count = sum([
-        coverage_rating == "above_baseline",
-        finding_adequacy == "above_expected",
-        themes_coverage >= 0.60,
-        quality_score is not None and quality_score >= 0.65,
-    ])
+    strong_count = sum(
+        [
+            coverage_rating == "above_baseline",
+            finding_adequacy == "above_expected",
+            themes_coverage >= 0.60,
+            quality_score is not None and quality_score >= 0.65,
+        ]
+    )
 
-    weak_count = sum([
-        not coverage_ok,
-        not findings_ok,
-        themes_coverage < 0.30,
-        quality_score is not None and quality_score < 0.30,
-    ])
+    weak_count = sum(
+        [
+            not coverage_ok,
+            not findings_ok,
+            themes_coverage < 0.30,
+            quality_score is not None and quality_score < 0.30,
+        ]
+    )
 
     sector_risk = profile.overall_risk
 

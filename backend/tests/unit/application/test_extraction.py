@@ -13,7 +13,6 @@ from application.extraction.service import StructuredExtractionService
 from domain.enums import EntityStatus, RiskLevel
 from domain.workflow_run import WorkflowRun
 
-
 # ---------------------------------------------------------------------------
 # Fixtures
 # ---------------------------------------------------------------------------
@@ -96,6 +95,7 @@ RECOMMENDATION_OUTPUT = """
 # Parser tests
 # ---------------------------------------------------------------------------
 
+
 class TestFindingParser:
     def test_parses_structured_findings(self) -> None:
         findings = parse_findings(ESG_ASSESSMENT_OUTPUT)
@@ -128,7 +128,8 @@ class TestFindingParser:
 
     def test_capped_at_twenty_findings(self) -> None:
         big_content = "\n".join(
-            f"### Finding {i}: Issue {i}\n- Severity: Medium\n- Confidence: Medium\n" for i in range(1, 30)
+            f"### Finding {i}: Issue {i}\n- Severity: Medium\n- Confidence: Medium\n"
+            for i in range(1, 30)
         )
         findings = parse_findings(big_content)
         assert len(findings) <= 20
@@ -193,6 +194,7 @@ class TestRecommendationParser:
 # ---------------------------------------------------------------------------
 # StructuredExtractionService tests
 # ---------------------------------------------------------------------------
+
 
 def _make_workflow_run() -> WorkflowRun:
     return WorkflowRun(
@@ -263,11 +265,14 @@ class TestStructuredExtractionService:
     def test_full_extraction_all_outputs(self) -> None:
         service = StructuredExtractionService()
         run = _make_workflow_run()
-        assessment, findings, risks, recs = service.extract(run, {
-            "esg_assessment": ESG_ASSESSMENT_OUTPUT,
-            "risk_assessment": RISK_ASSESSMENT_OUTPUT,
-            "recommendation": RECOMMENDATION_OUTPUT,
-        })
+        assessment, findings, risks, recs = service.extract(
+            run,
+            {
+                "esg_assessment": ESG_ASSESSMENT_OUTPUT,
+                "risk_assessment": RISK_ASSESSMENT_OUTPUT,
+                "recommendation": RECOMMENDATION_OUTPUT,
+            },
+        )
         assert assessment is not None
         assert len(findings) > 0
         assert len(risks) > 0

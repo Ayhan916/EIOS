@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Optional
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -85,8 +83,8 @@ class SQLWorkflowRunRepository(BaseRepository[WorkflowRun, WorkflowRunModel]):
         organization_id: str,
         page: int,
         page_size: int,
-        workflow_type: Optional[str] = None,
-        verdict: Optional[str] = None,
+        workflow_type: str | None = None,
+        verdict: str | None = None,
     ) -> tuple[list[WorkflowRun], int]:
         stmt = (
             select(WorkflowRunModel)

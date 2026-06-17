@@ -9,8 +9,9 @@ Traceability chain:
 
 from __future__ import annotations
 
-import structlog
 from dataclasses import dataclass, field
+
+import structlog
 
 from application.ingestion.parsers import ParseResult, parse_document
 from application.ports.embeddings import EmbeddingProvider
@@ -36,7 +37,7 @@ class IngestionResult:
     file_name: str
     file_size_bytes: int
     mime_type: str
-    ingestion_status: str   # "ingested" | "failed" | "ocr_required"
+    ingestion_status: str  # "ingested" | "failed" | "ocr_required"
     warnings: list[str] = field(default_factory=list)
     parser_used: str = ""
     file_type: str = ""
@@ -115,8 +116,9 @@ async def ingest_document(
         )
 
     # --- Phase 2: Chunk (per page, preserving traceability) ---
-    chunk_index = 0
-    chunk_specs: list[tuple[str, int | None, str | None]] = []  # (text, page_number, source_section)
+    chunk_specs: list[
+        tuple[str, int | None, str | None]
+    ] = []  # (text, page_number, source_section)
 
     for page in parse_result.pages:
         if not page.text.strip():
@@ -161,7 +163,9 @@ async def ingest_document(
         existing = await chunk_repo.list_by_evidence(evidence.id)
         if existing:
             await chunk_repo.delete_by_evidence(evidence.id)
-            logger.info("ingestion_existing_chunks_deleted", evidence_id=evidence.id, count=len(existing))
+            logger.info(
+                "ingestion_existing_chunks_deleted", evidence_id=evidence.id, count=len(existing)
+            )
 
     chunks: list[EvidenceChunk] = []
     for i, (text, page_num, section) in enumerate(chunk_specs):

@@ -6,14 +6,11 @@ and required columns are present — without a database connection.
 """
 
 from infrastructure.persistence.models import (
-    AgentRunModel,
-    AuditEventModel,
-    AssetModel,
     AssessmentModel,
+    AssetModel,
     Base,
     ControlModel,
     DecisionModel,
-    EvidenceChunkModel,
     EvidenceModel,
     FindingModel,
     OrganizationModel,
@@ -21,35 +18,63 @@ from infrastructure.persistence.models import (
     ProcessModel,
     ProjectModel,
     RecommendationModel,
-    ReportModel,
     RequirementModel,
     RiskModel,
     SectorModel,
     StandardModel,
     TaskModel,
     UserModel,
-    WorkflowJobModel,
-    WorkflowRunModel,
 )
 
 EXPECTED_ENTITY_TABLES = {
-    "organizations", "users", "sectors", "assessments", "evidences",
-    "evidence_chunks", "agent_runs", "workflow_runs", "workflow_jobs", "audit_events",
-    "findings", "risks", "recommendations", "decisions", "controls",
-    "requirements", "policies", "standards", "assets", "processes",
-    "projects", "tasks", "reports",
+    "organizations",
+    "users",
+    "sectors",
+    "assessments",
+    "evidences",
+    "evidence_chunks",
+    "agent_runs",
+    "workflow_runs",
+    "workflow_jobs",
+    "audit_events",
+    "findings",
+    "risks",
+    "recommendations",
+    "decisions",
+    "controls",
+    "requirements",
+    "policies",
+    "standards",
+    "assets",
+    "processes",
+    "projects",
+    "tasks",
+    "reports",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
-    "assessment_evidence", "finding_evidence", "risk_finding",
-    "recommendation_risk", "recommendation_finding", "control_risk",
-    "control_requirement", "policy_requirement", "policy_control",
-    "standard_requirement", "decision_recommendation",
+    "assessment_evidence",
+    "finding_evidence",
+    "risk_finding",
+    "recommendation_risk",
+    "recommendation_finding",
+    "control_risk",
+    "control_requirement",
+    "policy_requirement",
+    "policy_control",
+    "standard_requirement",
+    "decision_recommendation",
 }
 
 COMMON_COLUMNS = {
-    "id", "status", "version", "owner",
-    "created_by", "updated_by", "created_at", "updated_at",
+    "id",
+    "status",
+    "version",
+    "owner",
+    "created_by",
+    "updated_by",
+    "created_at",
+    "updated_at",
 }
 
 
@@ -89,10 +114,23 @@ class TestCommonColumns:
 
     def test_all_models_have_common_columns(self) -> None:
         models = [
-            AssessmentModel, EvidenceModel, FindingModel, RiskModel,
-            RecommendationModel, DecisionModel, ControlModel, RequirementModel,
-            PolicyModel, StandardModel, AssetModel, ProcessModel,
-            ProjectModel, TaskModel, UserModel, OrganizationModel, SectorModel,
+            AssessmentModel,
+            EvidenceModel,
+            FindingModel,
+            RiskModel,
+            RecommendationModel,
+            DecisionModel,
+            ControlModel,
+            RequirementModel,
+            PolicyModel,
+            StandardModel,
+            AssetModel,
+            ProcessModel,
+            ProjectModel,
+            TaskModel,
+            UserModel,
+            OrganizationModel,
+            SectorModel,
         ]
         for model in models:
             cols = self._columns(model)

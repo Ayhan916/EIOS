@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -16,10 +16,10 @@ class AuditEvent(BaseEntity):
     """
 
     action: str
-    actor_id: Optional[str] = None
-    actor_email: Optional[str] = None
-    entity_type: Optional[str] = None
-    entity_id: Optional[str] = None
+    actor_id: str | None = None
+    actor_email: str | None = None
+    entity_type: str | None = None
+    entity_id: str | None = None
     outcome: str = "success"
-    detail: Optional[str] = None
-    event_metadata: dict = field(default_factory=dict)
+    detail: str | None = None
+    event_metadata: dict[str, Any] = field(default_factory=dict)

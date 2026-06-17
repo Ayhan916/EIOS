@@ -52,7 +52,9 @@ def _make_mock_provider() -> MagicMock:
 
 async def _create_assessment_via_workflow(client: AsyncClient) -> str:
     """Run a quick_scan workflow and return the created assessment_id."""
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
             with patch(
                 "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
@@ -72,6 +74,7 @@ async def _create_assessment_via_workflow(client: AsyncClient) -> str:
 # ---------------------------------------------------------------------------
 # Governance endpoint tests
 # ---------------------------------------------------------------------------
+
 
 async def test_approve_assessment(client: AsyncClient) -> None:
     assessment_id = await _create_assessment_via_workflow(client)
@@ -133,6 +136,7 @@ async def test_revise_nonexistent_assessment_returns_404(client: AsyncClient) ->
 # Compliance endpoint tests
 # ---------------------------------------------------------------------------
 
+
 async def test_list_frameworks_returns_all_supported(client: AsyncClient) -> None:
     resp = await client.get(f"{COMPLIANCE_BASE}/frameworks")
     assert resp.status_code == 200
@@ -184,11 +188,10 @@ async def test_assessment_compliance_nonexistent_returns_404(client: AsyncClient
 async def test_compliance_requires_auth(setup_test_schema: None) -> None:
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
-    async with httpx.AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.get(f"{COMPLIANCE_BASE}/frameworks")
         assert r.status_code == 403
 

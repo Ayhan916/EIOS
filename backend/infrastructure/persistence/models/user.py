@@ -19,9 +19,7 @@ class UserModel(BaseModel):
         String(36), ForeignKey("organizations.id"), nullable=True
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    last_login_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     password_hash: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     organization: Mapped[OrganizationModel | None] = relationship(back_populates="users")

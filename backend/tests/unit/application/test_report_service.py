@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -17,7 +16,7 @@ from application.reporting.service import (
     _risk_dict,
 )
 from domain.assessment import Assessment
-from domain.enums import ConfidenceLevel, EntityStatus, EvidenceType, RiskLevel
+from domain.enums import ConfidenceLevel, EvidenceType, RiskLevel
 from domain.evidence import Evidence
 from domain.finding import Finding
 from domain.recommendation import Recommendation
@@ -25,8 +24,8 @@ from domain.risk import Risk
 from domain.user import User
 from infrastructure.reporting.pdf_renderer import render_report_pdf
 
-
 # ── Fixtures ──────────────────────────────────────────────────────────────────
+
 
 def _make_user(**kwargs: Any) -> User:
     defaults: dict[str, Any] = dict(
@@ -112,6 +111,7 @@ def _make_evidence(**kwargs: Any) -> Evidence:
 
 # ── Snapshot serialisation ────────────────────────────────────────────────────
 
+
 class TestSnapshotSerializers:
     def test_assessment_dict_fields(self) -> None:
         a = _make_assessment()
@@ -157,7 +157,7 @@ class TestSnapshotSerializers:
         assert d["due_date"] is None
 
     def test_rec_dict_due_date_serialized(self) -> None:
-        due = datetime(2025, 12, 31, tzinfo=timezone.utc)
+        due = datetime(2025, 12, 31, tzinfo=UTC)
         rec = _make_recommendation(due_date=due)
         d = _rec_dict(rec)
         assert d["due_date"] == due.isoformat()
@@ -206,31 +206,23 @@ class TestBuildSnapshot:
 
     def test_snapshot_generated_by(self) -> None:
         user = _make_user(display_name="Jane Analyst")
-        snap = _build_snapshot(
-            _make_assessment(), [], [], [], [], user
-        )
+        snap = _build_snapshot(_make_assessment(), [], [], [], [], user)
         assert snap["meta"]["generated_by"] == "user-1"
         assert snap["meta"]["generated_by_name"] == "Jane Analyst"
 
     def test_snapshot_generated_by_falls_back_to_email(self) -> None:
         user = _make_user(display_name=None)
-        snap = _build_snapshot(
-            _make_assessment(), [], [], [], [], user
-        )
+        snap = _build_snapshot(_make_assessment(), [], [], [], [], user)
         assert snap["meta"]["generated_by_name"] == "analyst@eios.io"
 
     def test_snapshot_report_id_placeholder(self) -> None:
         user = _make_user()
-        snap = _build_snapshot(
-            _make_assessment(), [], [], [], [], user
-        )
+        snap = _build_snapshot(_make_assessment(), [], [], [], [], user)
         assert snap["meta"]["report_id"] == ""
 
     def test_snapshot_assessment_serialized(self) -> None:
         user = _make_user()
-        snap = _build_snapshot(
-            _make_assessment(title="My Assessment"), [], [], [], [], user
-        )
+        snap = _build_snapshot(_make_assessment(title="My Assessment"), [], [], [], [], user)
         assert snap["assessment"]["title"] == "My Assessment"
 
     def test_snapshot_findings_list(self) -> None:
@@ -238,7 +230,10 @@ class TestBuildSnapshot:
         snap = _build_snapshot(
             _make_assessment(),
             [_make_finding(id="f1"), _make_finding(id="f2")],
-            [], [], [], user,
+            [],
+            [],
+            [],
+            user,
         )
         assert len(snap["findings"]) == 2
         ids = {f["id"] for f in snap["findings"]}
@@ -254,6 +249,7 @@ class TestBuildSnapshot:
 
 
 # ── PDF renderer ──────────────────────────────────────────────────────────────
+
 
 class TestPDFRenderer:
     def _full_snapshot(self) -> dict:
@@ -287,7 +283,12 @@ class TestPDFRenderer:
             "risks": [],
             "recommendations": [],
             "evidence": [],
-            "meta": {"generated_at": "2026-06-16T00:00:00Z", "generated_by_name": "Test", "report_id": "r-1", "counts": {}},
+            "meta": {
+                "generated_at": "2026-06-16T00:00:00Z",
+                "generated_by_name": "Test",
+                "report_id": "r-1",
+                "counts": {},
+            },
         }
         pdf_bytes = render_report_pdf(snap)
         assert pdf_bytes[:4] == b"%PDF"
@@ -302,9 +303,7 @@ class TestPDFRenderer:
             )
             for i in range(20)
         ]
-        snap = _build_snapshot(
-            _make_assessment(), findings, [], [], [], user
-        )
+        snap = _build_snapshot(_make_assessment(), findings, [], [], [], user)
         snap["meta"]["report_id"] = "r-multi"
         pdf_bytes = render_report_pdf(snap)
         assert pdf_bytes[:4] == b"%PDF"
@@ -314,7 +313,10 @@ class TestPDFRenderer:
         snap = _build_snapshot(
             _make_assessment(title="ESG Bewertung — Ürün Güvenliği"),
             [_make_finding(title="Çevre Riski", description="Énvironnemental impact assessment")],
-            [], [], [], user,
+            [],
+            [],
+            [],
+            user,
         )
         snap["meta"]["report_id"] = "r-unicode"
         pdf_bytes = render_report_pdf(snap)

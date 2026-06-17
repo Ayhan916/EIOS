@@ -82,8 +82,7 @@ class Settings(BaseSettings):
             )
         if errors:
             raise RuntimeError(
-                "Production configuration errors:\n"
-                + "\n".join(f"  - {e}" for e in errors)
+                "Production configuration errors:\n" + "\n".join(f"  - {e}" for e in errors)
             )
 
 

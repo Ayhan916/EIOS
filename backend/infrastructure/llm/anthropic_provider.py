@@ -8,8 +8,6 @@ All agent code depends only on the LLMProvider Protocol defined in
 application/ports/llm.py — never on this file directly.
 """
 
-from typing import Optional
-
 import structlog
 from anthropic import AsyncAnthropic
 
@@ -37,13 +35,11 @@ class AnthropicLLMProvider:
         self,
         messages: list[Message],
         *,
-        system: Optional[str] = None,
+        system: str | None = None,
         max_tokens: int = 4096,
         temperature: float = 0.0,
     ) -> LLMResponse:
-        anthropic_messages = [
-            {"role": m.role, "content": m.content} for m in messages
-        ]
+        anthropic_messages = [{"role": m.role, "content": m.content} for m in messages]
         kwargs: dict = {
             "model": self._model,
             "max_tokens": max_tokens,

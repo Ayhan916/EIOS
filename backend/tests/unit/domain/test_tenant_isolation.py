@@ -7,17 +7,13 @@ pure domain objects — no database, no HTTP stack.
 
 from __future__ import annotations
 
-import pytest
-
 from domain.assessment import Assessment
-from domain.enums import EntityStatus
 from domain.evidence import Evidence
 from domain.finding import Finding
-from domain.risk import Risk
 from domain.recommendation import Recommendation
-from domain.workflow_run import WorkflowRun
+from domain.risk import Risk
 from domain.workflow_job import WorkflowJob
-
+from domain.workflow_run import WorkflowRun
 
 ORG_A = "org-aaa-111"
 ORG_B = "org-bbb-222"
@@ -27,6 +23,7 @@ ORG_B = "org-bbb-222"
 # Helpers that mirror the router assertion logic
 # ---------------------------------------------------------------------------
 
+
 def _org_access_denied(item_org_id: str | None, user_org_id: str | None) -> bool:
     """Return True when access should be blocked (mirrors _assert_org_access logic)."""
     return bool(item_org_id and user_org_id and item_org_id != user_org_id)
@@ -35,6 +32,7 @@ def _org_access_denied(item_org_id: str | None, user_org_id: str | None) -> bool
 # ---------------------------------------------------------------------------
 # Assessment tenant isolation
 # ---------------------------------------------------------------------------
+
 
 class TestAssessmentTenantIsolation:
     def _make_assessment(self, org_id: str | None = ORG_A) -> Assessment:
@@ -77,6 +75,7 @@ class TestAssessmentTenantIsolation:
 # Evidence tenant isolation
 # ---------------------------------------------------------------------------
 
+
 class TestEvidenceTenantIsolation:
     def _make_evidence(self, org_id: str | None = ORG_A) -> Evidence:
         return Evidence(
@@ -106,6 +105,7 @@ class TestEvidenceTenantIsolation:
 # ---------------------------------------------------------------------------
 # Finding isolation (via parent assessment)
 # ---------------------------------------------------------------------------
+
 
 class TestFindingTenantIsolation:
     """Findings don't carry org_id — isolation is enforced through parent assessment."""
@@ -147,6 +147,7 @@ class TestFindingTenantIsolation:
 # Risk isolation (via parent assessment)
 # ---------------------------------------------------------------------------
 
+
 class TestRiskTenantIsolation:
     def _make_risk(self, assessment_id: str = "assess-001") -> Risk:
         return Risk(
@@ -174,6 +175,7 @@ class TestRiskTenantIsolation:
 # Recommendation isolation (via parent assessment)
 # ---------------------------------------------------------------------------
 
+
 class TestRecommendationTenantIsolation:
     def _make_recommendation(self, assessment_id: str = "assess-001") -> Recommendation:
         return Recommendation(
@@ -196,6 +198,7 @@ class TestRecommendationTenantIsolation:
 # ---------------------------------------------------------------------------
 # WorkflowRun tenant isolation
 # ---------------------------------------------------------------------------
+
 
 class TestWorkflowRunTenantIsolation:
     def _make_run(self, org_id: str | None = ORG_A) -> WorkflowRun:
@@ -226,6 +229,7 @@ class TestWorkflowRunTenantIsolation:
 # WorkflowJob tenant isolation
 # ---------------------------------------------------------------------------
 
+
 class TestWorkflowJobTenantIsolation:
     def _make_job(self, org_id: str | None = ORG_A) -> WorkflowJob:
         return WorkflowJob(
@@ -254,6 +258,7 @@ class TestWorkflowJobTenantIsolation:
 # ---------------------------------------------------------------------------
 # Cross-tenant 404 vs 403 — information-leakage prevention
 # ---------------------------------------------------------------------------
+
 
 class TestCrossTenantResponseSemantics:
     """Cross-tenant access must return 404, not 403, to avoid confirming resource existence."""

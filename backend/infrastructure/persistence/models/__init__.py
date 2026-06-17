@@ -6,9 +6,8 @@ Alembic and the database engine depend on this import to discover the schema.
 """
 
 from .agent_run import AgentRunModel
-from .audit_event import AuditEventModel
-from .asset import AssetModel
 from .assessment import AssessmentModel
+from .asset import AssetModel
 from .associations import (
     assessment_evidence,
     control_requirement,
@@ -22,6 +21,7 @@ from .associations import (
     risk_finding,
     standard_requirement,
 )
+from .audit_event import AuditEventModel
 from .base import Base, BaseModel
 from .control import ControlModel
 from .decision import DecisionModel

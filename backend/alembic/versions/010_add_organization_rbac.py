@@ -18,13 +18,12 @@ Revision: 010
 
 from __future__ import annotations
 
-from typing import Union
-
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "010"
-down_revision: Union[str, None] = "009"
+down_revision: str | None = "009"
 branch_labels = None
 depends_on = None
 
@@ -33,21 +32,27 @@ def upgrade() -> None:
     # assessments
     op.add_column(
         "assessments",
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
     )
     op.create_index("ix_assessments_organization_id", "assessments", ["organization_id"])
 
     # evidences
     op.add_column(
         "evidences",
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
     )
     op.create_index("ix_evidences_organization_id", "evidences", ["organization_id"])
 
     # workflow_runs
     op.add_column(
         "workflow_runs",
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=True
+        ),
     )
     op.create_index("ix_workflow_runs_organization_id", "workflow_runs", ["organization_id"])
 

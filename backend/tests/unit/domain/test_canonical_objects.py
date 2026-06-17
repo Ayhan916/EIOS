@@ -9,11 +9,9 @@ Every object must:
 4. Carry the correct default EntityStatus (DRAFT)
 """
 
-import pytest
-
 from domain import (
-    Asset,
     Assessment,
+    Asset,
     BaseEntity,
     ConfidenceLevel,
     Control,
@@ -104,7 +102,9 @@ class TestEvidence:
 
 class TestFinding:
     def test_minimal_instantiation(self) -> None:
-        f = Finding(title="Child Labour Risk", description="Elevated risk detected", assessment_id="a-001")
+        f = Finding(
+            title="Child Labour Risk", description="Elevated risk detected", assessment_id="a-001"
+        )
         assert f.title == "Child Labour Risk"
         assert f.assessment_id == "a-001"
 
@@ -213,7 +213,9 @@ class TestControl:
 
 class TestRequirement:
     def test_minimal_instantiation(self) -> None:
-        r = Requirement(title="CSDDD Art. 5", description="Human rights due diligence", source="CSDDD")
+        r = Requirement(
+            title="CSDDD Art. 5", description="Human rights due diligence", source="CSDDD"
+        )
         assert r.source == "CSDDD"
 
     def test_inherits_base_entity(self) -> None:
@@ -397,9 +399,22 @@ class TestSector:
 class TestCanonicalObjectCount:
     def test_sixteen_canonical_objects_plus_sector(self) -> None:
         canonical = [
-            Assessment, Evidence, Finding, Risk, Recommendation,
-            Decision, Control, Requirement, Policy, Standard,
-            Asset, Process, Project, Task, User, Organization,
+            Assessment,
+            Evidence,
+            Finding,
+            Risk,
+            Recommendation,
+            Decision,
+            Control,
+            Requirement,
+            Policy,
+            Standard,
+            Asset,
+            Process,
+            Project,
+            Task,
+            User,
+            Organization,
         ]
         assert len(canonical) == 16
 
@@ -425,7 +440,9 @@ class TestCanonicalObjectCount:
         ]
         for obj in objects:
             assert isinstance(obj, BaseEntity), f"{type(obj).__name__} does not inherit BaseEntity"
-            assert obj.status == EntityStatus.DRAFT, f"{type(obj).__name__} default status is not DRAFT"
+            assert obj.status == EntityStatus.DRAFT, (
+                f"{type(obj).__name__} default status is not DRAFT"
+            )
             assert obj.version == 1, f"{type(obj).__name__} default version is not 1"
             assert obj.id is not None, f"{type(obj).__name__} has no ID"
 

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from domain.finding import Finding
@@ -9,8 +7,8 @@ from interfaces.api.deps import (
     get_assessment_repo,
     get_current_user,
     get_finding_repo,
-    require_analyst,
     require_admin,
+    require_analyst,
 )
 from interfaces.api.schemas.finding import FindingCreate, FindingResponse
 
@@ -23,7 +21,7 @@ router = APIRouter(
 
 async def _assert_finding_org_access(
     finding: Finding,
-    user_org_id: Optional[str],
+    user_org_id: str | None,
     assessment_repo: SQLAssessmentRepository,
 ) -> None:
     """Verify the finding's parent assessment belongs to the user's org."""
@@ -38,7 +36,7 @@ async def _assert_finding_org_access(
 
 @router.get("/", response_model=list[FindingResponse])
 async def list_findings(
-    assessment_id: Optional[str] = Query(default=None),
+    assessment_id: str | None = Query(default=None),
     repo: SQLFindingRepository = Depends(get_finding_repo),
 ) -> list[FindingResponse]:
     if not assessment_id:

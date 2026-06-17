@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
@@ -48,7 +46,7 @@ class SQLSectorRepository(BaseRepository[Sector, SectorModel]):
             organization_id=model.organization_id,
         )
 
-    async def get_by_nace_code(self, nace_code: str) -> Optional[Sector]:
+    async def get_by_nace_code(self, nace_code: str) -> Sector | None:
         results = await self._list_by_field("nace_code", nace_code)
         return results[0] if results else None
 

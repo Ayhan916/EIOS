@@ -31,7 +31,9 @@ def _to_response(event: AuditEvent) -> AuditEventResponse:
 
 @router.get("/events", response_model=list[AuditEventResponse])
 async def list_audit_events(
-    action: str | None = Query(default=None, description="Filter by action (e.g. 'workflow.completed')"),
+    action: str | None = Query(
+        default=None, description="Filter by action (e.g. 'workflow.completed')"
+    ),
     entity_type: str | None = Query(default=None),
     entity_id: str | None = Query(default=None),
     actor_id: str | None = Query(default=None),
@@ -61,7 +63,9 @@ async def get_audit_event(
 ) -> AuditEventResponse:
     event = await repo.get_by_id(event_id)
     if event is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"AuditEvent {event_id} not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=f"AuditEvent {event_id} not found"
+        )
     return _to_response(event)
 
 

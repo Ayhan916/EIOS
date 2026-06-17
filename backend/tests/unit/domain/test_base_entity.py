@@ -1,8 +1,6 @@
 """Tests for BaseEntity — the root of all EIOS domain objects."""
 
-from datetime import datetime, timezone
-
-import pytest
+from datetime import UTC
 
 from domain.base_entity import BaseEntity
 from domain.enums import EntityStatus
@@ -26,11 +24,11 @@ class TestBaseEntity:
 
     def test_created_at_is_utc(self) -> None:
         entity = BaseEntity()
-        assert entity.created_at.tzinfo == timezone.utc
+        assert entity.created_at.tzinfo == UTC
 
     def test_updated_at_is_utc(self) -> None:
         entity = BaseEntity()
-        assert entity.updated_at.tzinfo == timezone.utc
+        assert entity.updated_at.tzinfo == UTC
 
     def test_explicit_id(self) -> None:
         entity = BaseEntity(id="custom-id")

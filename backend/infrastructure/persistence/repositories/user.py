@@ -1,5 +1,3 @@
-from typing import Optional
-
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
@@ -50,6 +48,6 @@ class SQLUserRepository(BaseRepository[User, UserModel]):
             password_hash=model.password_hash,
         )
 
-    async def get_by_email(self, email: str) -> Optional[User]:
+    async def get_by_email(self, email: str) -> User | None:
         results = await self._list_by_field("email", email)
         return results[0] if results else None

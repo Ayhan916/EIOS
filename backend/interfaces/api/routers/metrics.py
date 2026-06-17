@@ -18,7 +18,6 @@ import time
 from fastapi import APIRouter
 from pydantic import BaseModel
 
-from application.budget.tracker import budget_tracker
 from shared.config import settings
 
 router = APIRouter(tags=["metrics"])
@@ -27,6 +26,7 @@ _start_time = time.time()
 
 
 # ── In-process counters ────────────────────────────────────────────────────────
+
 
 class _Counters:
     def __init__(self) -> None:
@@ -59,6 +59,7 @@ counters = _Counters()
 
 
 # ── Response schema ────────────────────────────────────────────────────────────
+
 
 class MetricsResponse(BaseModel):
     uptime_seconds: float

@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from domain.risk import Risk
@@ -9,10 +7,9 @@ from interfaces.api.deps import (
     get_assessment_repo,
     get_current_user,
     get_risk_repo,
-    require_analyst,
     require_admin,
+    require_analyst,
 )
-from interfaces.api.schemas.pagination import Page, PaginationParams
 from interfaces.api.schemas.risk import RiskCreate, RiskResponse
 
 router = APIRouter(
@@ -24,7 +21,7 @@ router = APIRouter(
 
 async def _assert_risk_org_access(
     risk: Risk,
-    user_org_id: Optional[str],
+    user_org_id: str | None,
     assessment_repo: SQLAssessmentRepository,
 ) -> None:
     """Verify the risk's parent assessment belongs to the user's org."""
@@ -68,8 +65,8 @@ async def create_risk(
 
 @router.get("/", response_model=list[RiskResponse])
 async def list_risks(
-    sector_id: Optional[str] = Query(default=None),
-    assessment_id: Optional[str] = Query(default=None),
+    sector_id: str | None = Query(default=None),
+    assessment_id: str | None = Query(default=None),
     repo: SQLRiskRepository = Depends(get_risk_repo),
 ) -> list[RiskResponse]:
     if sector_id:

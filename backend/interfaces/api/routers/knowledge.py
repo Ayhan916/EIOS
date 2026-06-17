@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
 from domain.evidence_chunk import EvidenceChunk
+from domain.user import User
 from infrastructure.embeddings.chunker import chunk_text
 from infrastructure.embeddings.deps import get_embedding_provider
 from infrastructure.embeddings.sentence_transformer import SentenceTransformerEmbeddingProvider
@@ -20,7 +21,6 @@ from interfaces.api.schemas.knowledge import (
     SearchResultItem,
 )
 from shared.config import settings
-from domain.user import User
 
 logger = structlog.get_logger(__name__)
 
@@ -79,7 +79,7 @@ async def ingest_evidence(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Evidence {body.evidence_id} already ingested ({len(existing)} chunks). "
-                   "Use force=true to re-ingest.",
+            "Use force=true to re-ingest.",
         )
 
     if existing and body.force:

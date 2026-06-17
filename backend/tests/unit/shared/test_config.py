@@ -2,7 +2,7 @@
 
 import pytest
 
-from shared.config import Settings, _INSECURE_SECRET_KEY
+from shared.config import _INSECURE_SECRET_KEY, Settings
 
 
 class TestProductionValidation:

@@ -16,14 +16,16 @@ import io
 import re
 from dataclasses import dataclass, field
 
-SUPPORTED_MIME_TYPES: frozenset[str] = frozenset({
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    # Browser variants
-    "application/msword",
-    "application/vnd.ms-excel",
-})
+SUPPORTED_MIME_TYPES: frozenset[str] = frozenset(
+    {
+        "application/pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        # Browser variants
+        "application/msword",
+        "application/vnd.ms-excel",
+    }
+)
 
 MIME_BY_EXTENSION: dict[str, str] = {
     ".pdf": "application/pdf",
@@ -39,7 +41,8 @@ _WHITESPACE_RE = re.compile(r"\s+")
 @dataclass
 class ParsedPage:
     """Text extracted from a single logical unit of a document."""
-    page_number: int        # 1-indexed; 0 for formats without page concepts
+
+    page_number: int  # 1-indexed; 0 for formats without page concepts
     text: str
     source_section: str | None = None  # worksheet name (XLSX) or heading/style (DOCX)
 
@@ -70,6 +73,7 @@ def resolve_mime_type(filename: str, content_type: str | None) -> str:
 # ---------------------------------------------------------------------------
 # PDF parsing
 # ---------------------------------------------------------------------------
+
 
 def _parse_pdf_pypdf(content: bytes) -> tuple[list[ParsedPage], list[str], bool]:
     """Primary PDF parser using pypdf. Returns (pages, warnings, requires_ocr)."""
@@ -150,10 +154,9 @@ def parse_pdf(content: bytes) -> ParseResult:
         # Both parsers returned empty — scanned document
         return ParseResult(
             pages=pages,
-            warnings=warnings + fallback_warnings + [
-                "PDF appears to be a scanned image with no text layer. "
-                "OCR processing is required."
-            ],
+            warnings=warnings
+            + fallback_warnings
+            + ["PDF appears to be a scanned image with no text layer. OCR processing is required."],
             requires_ocr=True,
             parser_used="pypdf+pdfminer(failed)",
             file_type="pdf",
@@ -175,6 +178,7 @@ def parse_pdf(content: bytes) -> ParseResult:
 # ---------------------------------------------------------------------------
 # DOCX parsing
 # ---------------------------------------------------------------------------
+
 
 def parse_docx(content: bytes) -> ParseResult:
     """Parse DOCX using python-docx. Extracts paragraphs and table cells."""
@@ -243,6 +247,7 @@ def parse_docx(content: bytes) -> ParseResult:
 # XLSX parsing
 # ---------------------------------------------------------------------------
 
+
 def parse_xlsx(content: bytes) -> ParseResult:
     """Parse XLSX using openpyxl. Each worksheet becomes a separate page."""
     try:
@@ -289,6 +294,7 @@ def parse_xlsx(content: bytes) -> ParseResult:
 # Dispatch
 # ---------------------------------------------------------------------------
 
+
 def parse_document(content: bytes, mime_type: str, filename: str) -> ParseResult:
     """Route to the correct parser based on MIME type."""
     resolved = resolve_mime_type(filename, mime_type)
@@ -304,7 +310,6 @@ def parse_document(content: bytes, mime_type: str, filename: str) -> ParseResult
 
     return ParseResult(
         warnings=[
-            f"Unsupported file type '{resolved}' for file '{filename}'. "
-            "Supported: PDF, DOCX, XLSX."
+            f"Unsupported file type '{resolved}' for file '{filename}'. Supported: PDF, DOCX, XLSX."
         ]
     )

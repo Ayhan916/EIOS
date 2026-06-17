@@ -9,8 +9,8 @@ RUN pip install uv --no-cache-dir
 # Copy only dependency manifests first (layer cache)
 COPY pyproject.toml uv.lock ./
 
-# Install dependencies into a fixed prefix; exclude dev extras
-RUN uv sync --frozen --no-dev --prefix /install
+# Sync production deps only into a virtual environment at /app/.venv
+RUN uv sync --frozen --no-dev
 
 # ── Stage 2: runtime image ────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
@@ -21,26 +21,23 @@ RUN groupadd --gid 1001 eios && \
 
 WORKDIR /app
 
-# Copy installed packages from builder
-COPY --from=builder /install/lib /usr/local/lib
-COPY --from=builder /install/bin /usr/local/bin
+# Copy the virtual environment from builder
+COPY --from=builder /app/.venv /app/.venv
 
 # Copy application source
 COPY --chown=eios:eios . .
 
-# Remove test artifacts and dev tooling from the image
-RUN rm -rf tests/ .venv/ *.egg-info/ alembic/versions/__pycache__/
+# Remove test artifacts from the runtime image
+RUN rm -rf tests/ eios_backend.egg-info/
+
+# Add the venv to PATH so python / uvicorn are found without activation
+ENV PATH="/app/.venv/bin:$PATH"
 
 USER eios
 
-# Expose the application port
 EXPOSE 8000
 
-# Health check — liveness endpoint
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
-# Production entry point
-# --workers 2 is a conservative default for 1–2 vCPU containers
-# Override with WORKERS env var: docker run -e WORKERS=4 ...
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WORKERS:-2} --no-access-log"]

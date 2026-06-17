@@ -76,9 +76,15 @@ async def test_list_workflow_types(client: AsyncClient) -> None:
 
 
 async def test_run_quick_scan_workflow(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 response = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={
@@ -100,9 +106,15 @@ async def test_run_quick_scan_workflow(client: AsyncClient) -> None:
 
 
 async def test_run_workflow_steps_have_sequential_indices(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 response = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "supply chain risks"},
@@ -117,7 +129,11 @@ async def test_run_workflow_verdict_from_high_risk_content(client: AsyncClient) 
     provider = _make_mock_provider(_ESG_HIGH_RISK)
     with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=provider):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 response = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "textile supply chain audit"},
@@ -145,9 +161,15 @@ async def test_run_workflow_empty_query_returns_422(client: AsyncClient) -> None
 
 
 async def test_list_workflow_runs_returns_all(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "governance review"},
@@ -161,9 +183,15 @@ async def test_list_workflow_runs_returns_all(client: AsyncClient) -> None:
 
 
 async def test_get_workflow_run_by_id(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 create_resp = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "sector risk analysis"},
@@ -187,7 +215,11 @@ async def test_get_step_output_returns_full_content(client: AsyncClient) -> None
     provider = _make_mock_provider("Full LLM output for this step.")
     with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=provider):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 create_resp = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "step output test"},
@@ -205,14 +237,17 @@ async def test_get_step_output_returns_full_content(client: AsyncClient) -> None
 
 async def test_workflow_traceability_agent_runs_linked(client: AsyncClient) -> None:
     """Each AgentRun from a workflow must have workflow_run_id set."""
-    from httpx import AsyncClient as AC
-    from httpx import ASGITransport
-    from app.main import app
 
     # We can verify via the agents API
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 create_resp = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "traceability test"},
@@ -223,9 +258,15 @@ async def test_workflow_traceability_agent_runs_linked(client: AsyncClient) -> N
 
 
 async def test_workflow_metadata_stored_in_run(client: AsyncClient) -> None:
-    with patch("interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()):
+    with patch(
+        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+    ):
         with patch("interfaces.api.routers.workflows.get_embedding_provider"):
-            with patch("infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search", new_callable=AsyncMock, return_value=[]):
+            with patch(
+                "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
+                new_callable=AsyncMock,
+                return_value=[],
+            ):
                 response = await client.post(
                     WORKFLOWS_BASE + "/run",
                     json={
@@ -242,11 +283,10 @@ async def test_workflow_metadata_stored_in_run(client: AsyncClient) -> None:
 async def test_workflows_routes_require_auth(setup_test_schema: None) -> None:
     import httpx
     from httpx import ASGITransport
+
     from app.main import app
 
-    async with httpx.AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test"
-    ) as c:
+    async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.post(
             WORKFLOWS_BASE + "/run",
             json={"workflow_type": "quick_scan", "query": "test"},
