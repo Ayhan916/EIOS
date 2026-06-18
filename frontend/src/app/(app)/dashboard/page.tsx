@@ -6,13 +6,14 @@ import {
   AlertTriangle,
   ArrowRight,
   CheckCircle2,
+  Clock,
   FileText,
   Plus,
-  RefreshCw,
+  ShieldAlert,
+  TrendingUp,
 } from "lucide-react";
-import { listAssessments } from "@/lib/api/assessments";
-import { listJobs } from "@/lib/api/workflows";
-import { formatDateTime, jobStatusColor, severityColor } from "@/lib/utils";
+import { getDashboard } from "@/lib/api/dashboard";
+import { formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,30 +25,56 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
 
-function StatCard({
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+function qualityClass(score: number | null) {
+  if (score == null) return "text-muted-foreground";
+  if (score >= 0.7) return "text-emerald-600";
+  if (score >= 0.4) return "text-amber-600";
+  return "text-red-600";
+}
+
+function qualityBg(score: number | null) {
+  if (score == null) return "bg-slate-100 text-slate-600";
+  if (score >= 0.7) return "bg-emerald-50 text-emerald-700";
+  if (score >= 0.4) return "bg-amber-50 text-amber-700";
+  return "bg-red-50 text-red-700";
+}
+
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function KpiCard({
   label,
   value,
-  icon: Icon,
   sub,
+  icon: Icon,
+  valueClass,
+  accent,
 }: {
   label: string;
   value: string | number;
-  icon: React.ElementType;
   sub?: string;
+  icon: React.ElementType;
+  valueClass?: string;
+  accent?: string;
 }) {
   return (
     <Card>
-      <CardContent className="pt-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="mt-1 text-3xl font-bold text-foreground">{value}</p>
+      <CardContent className="pt-5 pb-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+              {label}
+            </p>
+            <p className={`mt-1 text-3xl font-bold ${valueClass ?? "text-foreground"}`}>
+              {value}
+            </p>
             {sub && (
-              <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
             )}
           </div>
-          <div className="rounded-full bg-primary/10 p-2.5">
-            <Icon className="h-5 w-5 text-primary" />
+          <div className={`rounded-full p-2.5 flex-shrink-0 ${accent ?? "bg-primary/10"}`}>
+            <Icon className={`h-5 w-5 ${accent ? "text-white" : "text-primary"}`} />
           </div>
         </div>
       </CardContent>
@@ -55,35 +82,85 @@ function StatCard({
   );
 }
 
+function HBar({
+  label,
+  count,
+  max,
+  colorClass,
+}: {
+  label: string;
+  count: number;
+  max: number;
+  colorClass: string;
+}) {
+  const pct = max > 0 ? Math.round((count / max) * 100) : 0;
+  return (
+    <div className="flex items-center gap-3">
+      <span className="w-20 text-xs text-muted-foreground text-right flex-shrink-0">{label}</span>
+      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+        <div
+          className={`h-full rounded-full ${colorClass}`}
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="w-7 text-xs font-semibold text-right flex-shrink-0">{count}</span>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
 export default function DashboardPage() {
   const { user } = useAuth();
 
-  const { data: assessments, isLoading: loadingAssessments } = useQuery({
-    queryKey: ["assessments", { page: 1, page_size: 5 }],
-    queryFn: () => listAssessments({ page: 1, page_size: 5 }),
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["dashboard"],
+    queryFn: getDashboard,
+    staleTime: 30_000,
   });
 
-  const { data: jobs, isLoading: loadingJobs } = useQuery({
-    queryKey: ["jobs", { page: 1, page_size: 5 }],
-    queryFn: () => listJobs({ page: 1, page_size: 5 }),
-  });
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-24">
+        <Spinner size="lg" />
+      </div>
+    );
+  }
 
-  const completedJobs =
-    jobs?.items.filter((j) => j.job_status === "completed").length ?? 0;
-  const runningJobs =
-    jobs?.items.filter((j) => j.job_status === "running" || j.job_status === "pending")
-      .length ?? 0;
+  if (error || !data) {
+    return (
+      <div className="py-24 text-center text-muted-foreground">
+        Failed to load dashboard.
+      </div>
+    );
+  }
+
+  const totalFindings = Object.values(data.findings_by_severity).reduce(
+    (a, b) => a + b,
+    0
+  );
+  const maxSeverity = Math.max(...Object.values(data.findings_by_severity), 1);
+  const maxCategory = Math.max(...Object.values(data.findings_by_category), 1);
+  const maxMonthly = Math.max(
+    ...data.assessments_over_time.map((m) => m.count),
+    1
+  );
+
+  const avgQualityPct =
+    data.avg_quality_score != null
+      ? `${Math.round(data.avg_quality_score * 100)}%`
+      : "—";
 
   return (
     <div className="space-y-8">
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
             Welcome back, {user?.display_name?.split(" ")[0]}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            ESG Due Diligence & Risk Intelligence Overview
+            Portfolio Dashboard · ESG Due Diligence & Risk Intelligence
           </p>
         </div>
         <Button asChild>
@@ -94,40 +171,133 @@ export default function DashboardPage() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
+      {/* ── KPI strip ──────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <KpiCard
           label="Total Assessments"
-          value={assessments?.total ?? "—"}
+          value={data.total_assessments}
           icon={FileText}
-          sub="across your organisation"
+          sub="in your organisation"
         />
-        <StatCard
-          label="Active Jobs"
-          value={runningJobs}
-          icon={RefreshCw}
-          sub="workflows in progress"
+        <KpiCard
+          label="Avg Quality Score"
+          value={avgQualityPct}
+          icon={TrendingUp}
+          valueClass={qualityClass(data.avg_quality_score)}
+          sub="across all assessments"
         />
-        <StatCard
-          label="Completed Jobs"
-          value={completedJobs}
-          icon={CheckCircle2}
-          sub="this session"
+        <KpiCard
+          label="Open Actions"
+          value={data.open_actions}
+          icon={Clock}
+          sub={`${data.closed_actions_pct}% closed`}
         />
-        <StatCard
-          label="Pending Review"
-          value={
-            assessments?.items.filter((a) => a.status === "pending").length ?? 0
-          }
+        <KpiCard
+          label="Overdue"
+          value={data.overdue_actions}
           icon={AlertTriangle}
-          sub="require attention"
+          valueClass={data.overdue_actions > 0 ? "text-red-600" : "text-foreground"}
+          accent={data.overdue_actions > 0 ? "bg-red-500" : undefined}
+          sub="past due date"
+        />
+        <KpiCard
+          label="High-Risk Findings"
+          value={data.high_risk_finding_count + data.critical_finding_count}
+          icon={ShieldAlert}
+          valueClass={
+            data.critical_finding_count > 0 ? "text-red-600" : "text-foreground"
+          }
+          sub={`${data.critical_finding_count} critical`}
         />
       </div>
 
-      {/* Two-column content */}
+      {/* ── Middle row: Action breakdown + Findings breakdown ──────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Assessments */}
+        {/* Action status breakdown */}
         <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Action Status</CardTitle>
+            <CardDescription>Recommendation lifecycle across portfolio</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                { key: "open", label: "Open", cls: "bg-slate-100 text-slate-700" },
+                { key: "in_progress", label: "In Progress", cls: "bg-blue-100 text-blue-700" },
+                { key: "resolved", label: "Resolved", cls: "bg-amber-100 text-amber-700" },
+                { key: "verified", label: "Verified", cls: "bg-emerald-100 text-emerald-700" },
+              ].map(({ key, label, cls }) => (
+                <div
+                  key={key}
+                  className={`rounded-lg p-4 text-center ${cls}`}
+                >
+                  <p className="text-2xl font-bold">
+                    {data.action_status_breakdown[key] ?? 0}
+                  </p>
+                  <p className="text-xs font-medium mt-0.5">{label}</p>
+                </div>
+              ))}
+            </div>
+            {data.open_actions > 0 && (
+              <div className="mt-4">
+                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                  <span>Closure rate</span>
+                  <span className="font-medium">{data.closed_actions_pct}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full"
+                    style={{ width: `${data.closed_actions_pct}%` }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Findings breakdown */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Findings Breakdown</CardTitle>
+            <CardDescription>
+              {totalFindings} total findings across all assessments
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            {/* By severity */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                By Severity
+              </p>
+              <div className="space-y-2">
+                <HBar label="Critical" count={data.findings_by_severity["Critical"] ?? 0} max={maxSeverity} colorClass="bg-red-500" />
+                <HBar label="High" count={data.findings_by_severity["High"] ?? 0} max={maxSeverity} colorClass="bg-orange-400" />
+                <HBar label="Medium" count={data.findings_by_severity["Medium"] ?? 0} max={maxSeverity} colorClass="bg-amber-400" />
+                <HBar label="Low" count={data.findings_by_severity["Low"] ?? 0} max={maxSeverity} colorClass="bg-slate-300" />
+              </div>
+            </div>
+            {/* By ESG category */}
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                By ESG Category
+              </p>
+              <div className="space-y-2">
+                <HBar label="Environmental" count={data.findings_by_category["E"] ?? 0} max={maxCategory} colorClass="bg-emerald-500" />
+                <HBar label="Social" count={data.findings_by_category["S"] ?? 0} max={maxCategory} colorClass="bg-blue-500" />
+                <HBar label="Governance" count={data.findings_by_category["G"] ?? 0} max={maxCategory} colorClass="bg-purple-500" />
+                {(data.findings_by_category["Other"] ?? 0) > 0 && (
+                  <HBar label="Other" count={data.findings_by_category["Other"]} max={maxCategory} colorClass="bg-slate-400" />
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Bottom row: Recent assessments + Timeline ──────────────────────── */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        {/* Recent assessments — 2/3 width */}
+        <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
               <CardTitle className="text-base">Recent Assessments</CardTitle>
@@ -140,11 +310,7 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {loadingAssessments ? (
-              <div className="flex justify-center py-8">
-                <Spinner />
-              </div>
-            ) : !assessments?.items.length ? (
+            {!data.recent_assessments.length ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
                 No assessments yet.{" "}
                 <Link href="/assessments/new" className="text-primary underline">
@@ -152,36 +318,41 @@ export default function DashboardPage() {
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
-                {assessments.items.map((a) => (
+              <div className="space-y-1">
+                {data.recent_assessments.map((a) => (
                   <Link
                     key={a.id}
                     href={`/assessments/${a.id}`}
-                    className="flex items-start justify-between rounded-md p-3 transition-colors hover:bg-muted/60"
+                    className="flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-muted/60"
                   >
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">
                         {a.title}
                       </p>
-                      <p className="mt-0.5 text-xs text-muted-foreground">
-                        {formatDateTime(a.created_at)}
-                      </p>
+                      <div className="mt-0.5 flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{formatDateTime(a.created_at)}</span>
+                        {a.assessment_type && (
+                          <>
+                            <span>·</span>
+                            <span className="capitalize">{a.assessment_type.replace(/_/g, " ")}</span>
+                          </>
+                        )}
+                        {a.finding_count > 0 && (
+                          <>
+                            <span>·</span>
+                            <span>{a.finding_count} findings</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     <div
-                      className={`ml-3 flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${
-                        a.quality_score != null
-                          ? a.quality_score >= 0.7
-                            ? "bg-emerald-50 text-emerald-700"
-                            : a.quality_score >= 0.4
-                            ? "bg-amber-50 text-amber-700"
-                            : "bg-red-50 text-red-700"
-                          : "bg-slate-50 text-slate-600"
-                      }`}
+                      className={`flex-shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold ${qualityBg(a.quality_score)}`}
                     >
                       {a.quality_score != null
                         ? `${Math.round(a.quality_score * 100)}%`
                         : a.status}
                     </div>
+                    <CheckCircle2 className="h-4 w-4 flex-shrink-0 text-muted-foreground/40" />
                   </Link>
                 ))}
               </div>
@@ -189,52 +360,37 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Recent Jobs */}
+        {/* Assessment timeline — 1/3 width */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div>
-              <CardTitle className="text-base">Workflow Jobs</CardTitle>
-              <CardDescription>Analysis pipeline status</CardDescription>
-            </div>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Assessment Volume</CardTitle>
+            <CardDescription>Assessments per month</CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingJobs ? (
-              <div className="flex justify-center py-8">
-                <Spinner />
-              </div>
-            ) : !jobs?.items.length ? (
-              <div className="py-8 text-center text-sm text-muted-foreground">
-                No jobs yet. Start by running a new assessment.
-              </div>
+            {!data.assessments_over_time.length ? (
+              <p className="py-8 text-center text-xs text-muted-foreground">
+                No timeline data yet.
+              </p>
             ) : (
-              <div className="space-y-3">
-                {jobs.items.map((job) => {
-                  const colors = jobStatusColor(job.job_status);
-                  return (
-                    <div
-                      key={job.id}
-                      className="flex items-start justify-between rounded-md p-3 hover:bg-muted/60"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-foreground">
-                          {job.workflow_type}
-                        </p>
-                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                          {job.query.slice(0, 60)}
-                          {job.query.length > 60 ? "…" : ""}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {formatDateTime(job.created_at)}
-                        </p>
-                      </div>
-                      <span
-                        className={`ml-3 flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-medium capitalize ${colors.bg} ${colors.text}`}
-                      >
-                        {job.job_status}
-                      </span>
+              <div className="space-y-2">
+                {data.assessments_over_time.map((m) => (
+                  <div key={m.month} className="flex items-center gap-3">
+                    <span className="w-16 text-xs text-muted-foreground flex-shrink-0">
+                      {m.month}
+                    </span>
+                    <div className="flex-1 h-5 bg-muted rounded overflow-hidden">
+                      <div
+                        className="h-full bg-primary/70 rounded"
+                        style={{
+                          width: `${Math.round((m.count / maxMonthly) * 100)}%`,
+                        }}
+                      />
                     </div>
-                  );
-                })}
+                    <span className="w-4 text-xs font-semibold text-right flex-shrink-0">
+                      {m.count}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </CardContent>

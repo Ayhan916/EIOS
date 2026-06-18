@@ -30,6 +30,7 @@ from interfaces.api.routers import (
     assessments_router,
     audit_router,
     auth_router,
+    dashboard_router,
     evidences_router,
     findings_router,
     frameworks_router,
@@ -172,3 +173,4 @@ app.include_router(assessments_compliance_router, prefix=API_V1)
 app.include_router(assessments_benchmark_router, prefix=API_V1)
 app.include_router(reports_router, prefix=API_V1)
 app.include_router(sector_intelligence_router, prefix=API_V1)
+app.include_router(dashboard_router, prefix=API_V1)

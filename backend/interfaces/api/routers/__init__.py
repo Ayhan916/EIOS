@@ -3,6 +3,7 @@ from .assessments import router as assessments_router
 from .audit import router as audit_router
 from .auth import router as auth_router
 from .compliance import assessments_compliance_router, frameworks_router
+from .dashboard import router as dashboard_router
 from .evidences import router as evidences_router
 from .findings import router as findings_router
 from .health import router as health_router
@@ -18,6 +19,7 @@ from .workflows import router as workflows_router
 
 __all__ = [
     "agents_router",
+    "dashboard_router",
     "assessments_compliance_router",
     "assessments_benchmark_router",
     "assessments_router",
