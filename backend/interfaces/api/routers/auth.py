@@ -26,7 +26,7 @@ from interfaces.api.schemas.auth import (
     RegisterRequest,
     TokenResponse,
 )
-from interfaces.api.schemas.user import UserResponse
+from interfaces.api.schemas.user import PatchMeRequest, UserResponse
 from shared.rate_limit import rate_limit_auth
 from shared.security import (
     create_access_token,
@@ -196,3 +196,20 @@ async def get_me(
     current_user: User = Depends(get_current_user),
 ) -> UserResponse:
     return UserResponse.model_validate(current_user)
+
+
+@router.patch("/me", response_model=UserResponse)
+async def patch_me(
+    body: PatchMeRequest,
+    current_user: User = Depends(get_current_user),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
+) -> UserResponse:
+    if body.display_name is not None:
+        current_user.display_name = body.display_name
+    if body.notification_preferences is not None:
+        current_user.notification_preferences = {
+            **current_user.notification_preferences,
+            **body.notification_preferences,
+        }
+    saved = await user_repo.save(current_user)
+    return UserResponse.model_validate(saved)

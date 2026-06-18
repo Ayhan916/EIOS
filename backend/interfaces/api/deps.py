@@ -21,6 +21,7 @@ from infrastructure.persistence.repositories import (
     SQLAuditEventRepository,
     SQLEvidenceRepository,
     SQLFindingRepository,
+    SQLNotificationRepository,
     SQLOrganizationRepository,
     SQLRecommendationRepository,
     SQLRiskRepository,
@@ -117,6 +118,12 @@ async def get_chunk_repo(
     session: AsyncSession = Depends(get_db),
 ) -> SQLEvidenceChunkRepository:
     return SQLEvidenceChunkRepository(session)
+
+
+async def get_notification_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLNotificationRepository:
+    return SQLNotificationRepository(session)
 
 
 async def get_report_repo(

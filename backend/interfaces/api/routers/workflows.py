@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 

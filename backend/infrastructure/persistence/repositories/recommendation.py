@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -59,6 +61,16 @@ class SQLRecommendationRepository(BaseRepository[Recommendation, RecommendationM
 
     async def list_by_assessment(self, assessment_id: str) -> list[Recommendation]:
         return await self._list_by_field("assessment_id", assessment_id)
+
+    async def list_overdue(self, reference_date: date) -> list[Recommendation]:
+        """Return all non-completed recommendations with due_date < reference_date."""
+        stmt = select(RecommendationModel).where(
+            RecommendationModel.due_date < reference_date,
+            RecommendationModel.action_status != ActionStatus.COMPLETED.value,
+            RecommendationModel.assigned_to_id.isnot(None),
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_domain(m) for m in result.scalars().all()]
 
     async def list_by_org_and_status(
         self, organization_id: str, action_status: ActionStatus | None = None

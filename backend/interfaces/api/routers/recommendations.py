@@ -1,18 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 import application.audit as audit_factory
+import application.notification_service as notification_service
+from domain.enums import NotificationType
 from domain.recommendation import Recommendation
 from domain.user import User
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLAuditEventRepository,
     SQLRecommendationRepository,
+    SQLUserRepository,
 )
 from interfaces.api.deps import (
     get_assessment_repo,
     get_audit_event_repo,
     get_current_user,
     get_recommendation_repo,
+    get_user_repo,
     require_admin,
     require_analyst,
 )
@@ -108,6 +112,7 @@ async def update_recommendation_action(
     repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
     assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
 ) -> RecommendationResponse:
     existing = await repo.get_by_id(recommendation_id)
     if existing is None:
@@ -152,6 +157,20 @@ async def update_recommendation_action(
                 actor_email=current_user.email,
             )
         )
+        assignee = await user_repo.get_by_id(body.assigned_to_id)
+        if assignee and assignee.organization_id == current_user.organization_id:
+            await notification_service.notify(
+                session=repo._session,
+                user_id=assignee.id,
+                organization_id=assignee.organization_id or "",
+                notification_type=NotificationType.RECOMMENDATION_ASSIGNED,
+                title="New recommendation assigned to you",
+                body=f"'{existing.title}' has been assigned to you by {current_user.display_name}.",
+                entity_type="recommendation",
+                entity_id=recommendation_id,
+                dedupe_key=f"rec_assigned:{recommendation_id}:{assignee.id}",
+                user_email=assignee.email,
+            )
 
     existing.updated_by = current_user.id
     saved = await repo.save(existing)

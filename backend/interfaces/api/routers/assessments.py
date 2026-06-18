@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 import application.audit as audit_events
+import application.notification_service as notification_service
 from application.compliance.coverage import compute_coverage
 from application.compliance.gaps import compute_gaps
 from application.compliance.verdict import compute_verdict
@@ -11,7 +12,7 @@ from application.remediation.brief import compute_brief
 from application.remediation.matcher import compute_matches
 from application.remediation.planner import compute_remediation_plan
 from domain.assessment import Assessment
-from domain.enums import EntityStatus
+from domain.enums import EntityStatus, NotificationType
 from domain.user import User
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
@@ -19,6 +20,7 @@ from infrastructure.persistence.repositories import (
     SQLFindingRepository,
     SQLRecommendationRepository,
     SQLRiskRepository,
+    SQLUserRepository,
     SQLWorkflowRunRepository,
 )
 from interfaces.api.deps import (
@@ -28,6 +30,7 @@ from interfaces.api.deps import (
     get_finding_repo,
     get_recommendation_repo,
     get_risk_repo,
+    get_user_repo,
     get_workflow_run_repo,
     require_admin,
     require_analyst,
@@ -179,6 +182,7 @@ async def approve_assessment(
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
 ) -> AssessmentResponse:
     assessment = await repo.get_by_id(assessment_id)
     if assessment is None:
@@ -200,6 +204,23 @@ async def approve_assessment(
         approved_by_email=current_user.email,
     )
     await audit_repo.save(event)
+
+    # Notify the assessment creator
+    if assessment.created_by and assessment.created_by != current_user.id:
+        creator = await user_repo.get_by_id(assessment.created_by)
+        if creator and creator.organization_id == current_user.organization_id:
+            await notification_service.notify(
+                session=repo._session,
+                user_id=creator.id,
+                organization_id=creator.organization_id or "",
+                notification_type=NotificationType.ASSESSMENT_APPROVED,
+                title="Assessment approved",
+                body=f"Your assessment has been approved by {current_user.display_name}.",
+                entity_type="assessment",
+                entity_id=assessment_id,
+                dedupe_key=f"assessment_approved:{assessment_id}",
+                user_email=creator.email,
+            )
 
     return AssessmentResponse.model_validate(saved)
 

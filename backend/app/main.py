@@ -5,9 +5,11 @@ Clean Architecture: Interfaces layer wires up the HTTP transport.
 Domain and Application layers have no knowledge of FastAPI.
 """
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, date, datetime
 
 import structlog
 from fastapi import FastAPI, Request
@@ -37,6 +39,7 @@ from interfaces.api.routers import (
     health_router,
     knowledge_router,
     metrics_router,
+    notifications_router,
     organizations_router,
     recommendations_router,
     reports_router,
@@ -47,6 +50,48 @@ from interfaces.api.routers import (
     workflows_router,
 )
 from shared.config import settings
+
+# ── Overdue notification background task ──────────────────────────────────────
+
+_overdue_task: asyncio.Task | None = None
+
+
+async def _check_overdue_loop() -> None:
+    """Runs every 6 hours; fires ACTION_OVERDUE notifications for past-due recommendations."""
+    from infrastructure.persistence.database import AsyncSessionFactory
+    from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
+    from infrastructure.persistence.repositories.user import SQLUserRepository
+    from application import notification_service
+    from domain.enums import NotificationType
+
+    log = structlog.get_logger("overdue_task")
+    while True:
+        await asyncio.sleep(6 * 3600)
+        try:
+            async with AsyncSessionFactory() as session, session.begin():
+                rec_repo = SQLRecommendationRepository(session)
+                user_repo = SQLUserRepository(session)
+                all_recs = await rec_repo.list_overdue(reference_date=date.today())
+                for rec in all_recs:
+                    user = await user_repo.get_by_id(rec.assigned_to_id) if rec.assigned_to_id else None
+                    if user is None:
+                        continue
+                    dedupe = f"overdue:{rec.id}:{date.today()}"
+                    await notification_service.notify(
+                        session=session,
+                        user_id=user.id,
+                        organization_id=user.organization_id or "",
+                        notification_type=NotificationType.ACTION_OVERDUE,
+                        title="Action overdue",
+                        body=f"Recommendation '{rec.title}' was due on {rec.due_date}.",
+                        entity_type="recommendation",
+                        entity_id=rec.id,
+                        dedupe_key=dedupe,
+                        user_email=user.email,
+                    )
+        except Exception as exc:
+            log.error("overdue_check_failed", error=str(exc))
+
 
 # ── Structured logging ─────────────────────────────────────────────────────────
 
@@ -102,7 +147,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             monthly_token_budget=settings.llm_monthly_token_budget,
         )
 
+    global _overdue_task
+    _overdue_task = asyncio.create_task(_check_overdue_loop())
+    logger.info("overdue_task_started")
+
     yield
+
+    if _overdue_task is not None:
+        _overdue_task.cancel()
     logger.info("eios_shutdown")
 
 
@@ -176,3 +228,4 @@ app.include_router(reports_router, prefix=API_V1)
 app.include_router(sector_intelligence_router, prefix=API_V1)
 app.include_router(dashboard_router, prefix=API_V1)
 app.include_router(users_router, prefix=API_V1)
+app.include_router(notifications_router, prefix=API_V1)

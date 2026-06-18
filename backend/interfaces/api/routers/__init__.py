@@ -1,4 +1,5 @@
 from .agents import router as agents_router
+from .notifications import router as notifications_router
 from .assessments import router as assessments_router
 from .audit import router as audit_router
 from .auth import router as auth_router
@@ -38,6 +39,7 @@ __all__ = [
     "risks_router",
     "sector_intelligence_router",
     "sectors_router",
+    "notifications_router",
     "users_router",
     "workflows_router",
 ]

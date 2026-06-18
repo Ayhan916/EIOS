@@ -20,3 +20,13 @@ class User(BaseEntity):
     is_active: bool = True
     last_login_at: datetime | None = None
     password_hash: str | None = None
+    notification_preferences: dict = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.notification_preferences is None:
+            self.notification_preferences = {
+                "email_workflow_completed": True,
+                "email_action_overdue": True,
+                "email_assessment_approved": True,
+                "email_recommendation_assigned": True,
+            }

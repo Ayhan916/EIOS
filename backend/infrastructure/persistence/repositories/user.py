@@ -27,6 +27,7 @@ class SQLUserRepository(BaseRepository[User, UserModel]):
             is_active=entity.is_active,
             last_login_at=entity.last_login_at,
             password_hash=entity.password_hash,
+            notification_preferences=entity.notification_preferences,
         )
 
     def _to_domain(self, model: UserModel) -> User:
@@ -46,6 +47,7 @@ class SQLUserRepository(BaseRepository[User, UserModel]):
             is_active=model.is_active,
             last_login_at=model.last_login_at,
             password_hash=model.password_hash,
+            notification_preferences=model.notification_preferences or {},
         )
 
     async def get_by_email(self, email: str) -> User | None:

@@ -398,6 +398,30 @@ export interface ReportGenerateRequest {
   assessment_id: string;
 }
 
+export interface NotificationResponse {
+  id: string;
+  notification_type: string;
+  title: string;
+  body: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  is_read: boolean;
+  read_at: string | null;
+  created_at: string;
+}
+
+export interface NotificationListResponse {
+  items: NotificationResponse[];
+  unread_count: number;
+}
+
+export interface NotificationPreferences {
+  email_workflow_completed: boolean;
+  email_action_overdue: boolean;
+  email_assessment_approved: boolean;
+  email_recommendation_assigned: boolean;
+}
+
 export interface ApiError {
   detail: string | { msg: string; type: string }[];
 }

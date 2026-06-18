@@ -74,3 +74,10 @@ class ActionStatus(str, Enum):
     IN_PROGRESS = "in_progress"
     RESOLVED = "resolved"
     VERIFIED = "verified"
+
+
+class NotificationType(str, Enum):
+    WORKFLOW_COMPLETED = "workflow_completed"
+    ACTION_OVERDUE = "action_overdue"
+    ASSESSMENT_APPROVED = "assessment_approved"
+    RECOMMENDATION_ASSIGNED = "recommendation_assigned"

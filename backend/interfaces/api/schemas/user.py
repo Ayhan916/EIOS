@@ -21,6 +21,12 @@ class UserResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_login_at: datetime | None = None
+    notification_preferences: dict = {}
+
+
+class PatchMeRequest(BaseModel):
+    notification_preferences: dict | None = None
+    display_name: str | None = None
 
 
 class UserUpdate(BaseModel):

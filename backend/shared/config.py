@@ -59,6 +59,18 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     groq_api_key: str = ""
 
+    # SMTP email — leave smtp_host empty to disable email sending
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_from: str = "noreply@eios.io"
+    smtp_tls: bool = True
+
+    @property
+    def email_enabled(self) -> bool:
+        return bool(self.smtp_host)
+
     @property
     def is_production(self) -> bool:
         return self.environment == "production"

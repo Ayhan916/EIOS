@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  Bell,
   Building2,
   FileText,
   LayoutDashboard,
@@ -77,19 +78,29 @@ export function Sidebar() {
           );
         })}
 
-        {user?.role === "admin" && (
-          <>
-            <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-              Settings
-            </p>
-            {[
-              { label: "Users", href: "/settings/users", icon: Users },
-              {
-                label: "Organization",
-                href: "/settings/organization",
-                icon: Building2,
-              },
-            ].map((item) => {
+        <>
+          <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+            Settings
+          </p>
+          {[
+            {
+              label: "Notifications",
+              href: "/settings/notifications",
+              icon: Bell,
+              adminOnly: false,
+            },
+            ...(user?.role === "admin"
+              ? [
+                  { label: "Users", href: "/settings/users", icon: Users, adminOnly: true },
+                  {
+                    label: "Organization",
+                    href: "/settings/organization",
+                    icon: Building2,
+                    adminOnly: true,
+                  },
+                ]
+              : []),
+          ].map((item) => {
               const active =
                 pathname === item.href ||
                 pathname.startsWith(`${item.href}/`);
@@ -109,8 +120,7 @@ export function Sidebar() {
                 </Link>
               );
             })}
-          </>
-        )}
+        </>
       </nav>
 
       {/* User section */}

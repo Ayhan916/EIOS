@@ -28,6 +28,7 @@ from .decision import DecisionModel
 from .evidence import EvidenceModel
 from .evidence_chunk import EvidenceChunkModel
 from .finding import FindingModel
+from .notification import NotificationModel
 from .organization import OrganizationModel
 from .policy import PolicyModel
 from .process import ProcessModel
@@ -55,6 +56,7 @@ __all__ = [
     "EvidenceChunkModel",
     "EvidenceModel",
     "FindingModel",
+    "NotificationModel",
     "OrganizationModel",
     "PolicyModel",
     "ProcessModel",

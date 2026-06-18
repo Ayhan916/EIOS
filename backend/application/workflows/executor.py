@@ -29,6 +29,8 @@ from infrastructure.knowledge_search import EvidenceChunkSearchAdapter
 from infrastructure.llm.deps import get_llm_provider
 from infrastructure.persistence.database import AsyncSessionFactory
 from infrastructure.persistence.models.workflow_job import WorkflowJobModel
+import application.notification_service as notification_service
+from domain.enums import NotificationType
 from infrastructure.persistence.repositories.agent_run import SQLAgentRunRepository
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.audit_event import SQLAuditEventRepository
@@ -36,6 +38,7 @@ from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceCh
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
+from infrastructure.persistence.repositories.user import SQLUserRepository
 from infrastructure.persistence.repositories.workflow_job import SQLWorkflowJobRepository
 from infrastructure.persistence.repositories.workflow_run import SQLWorkflowRunRepository
 
@@ -202,6 +205,27 @@ async def execute_workflow_background(
             job.workflow_run_id = saved_run.id
             job.completed_at = datetime.now(UTC)
             await job_repo.save(job)
+
+            # In-app notification: workflow completed
+            try:
+                user_repo = SQLUserRepository(session)
+                user = await user_repo.get_by_id(user_id)
+                if user:
+                    verdict_str = f" Verdict: {saved_run.verdict}." if saved_run.verdict else ""
+                    await notification_service.notify(
+                        session=session,
+                        user_id=user_id,
+                        organization_id=organization_id or "",
+                        notification_type=NotificationType.WORKFLOW_COMPLETED,
+                        title="Workflow analysis complete",
+                        body=f"Your {job.workflow_type} workflow has finished.{verdict_str}",
+                        entity_type="workflow_run",
+                        entity_id=saved_run.id,
+                        dedupe_key=f"workflow_completed:{saved_run.id}",
+                        user_email=user.email,
+                    )
+            except Exception as notif_exc:
+                log.warning("workflow_notification_failed", error=str(notif_exc))
 
         log.info("workflow_job_completed", workflow_run_id=saved_run.id)
 
