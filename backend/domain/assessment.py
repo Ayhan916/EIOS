@@ -36,3 +36,5 @@ class Assessment(BaseEntity):
     review_status: ReviewStatus = field(default=ReviewStatus.DRAFT)
     assigned_reviewer_id: str | None = None
     review_due_date: datetime | None = None
+    # Supplier ownership (M27)
+    supplier_id: str | None = None

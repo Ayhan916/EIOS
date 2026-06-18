@@ -426,6 +426,87 @@ def comment_created(
     )
 
 
+# ── M27 Supplier Management ───────────────────────────────────────────────────
+
+
+def supplier_created(
+    supplier_id: str,
+    supplier_name: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    organization_id: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="supplier.created",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Supplier",
+        entity_id=supplier_id,
+        outcome="success",
+        detail=f"Supplier '{supplier_name}' created",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"organization_id": organization_id},
+    )
+
+
+def supplier_updated(
+    supplier_id: str,
+    supplier_name: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    changes: dict | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="supplier.updated",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Supplier",
+        entity_id=supplier_id,
+        outcome="success",
+        detail=f"Supplier '{supplier_name}' updated",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"changes": changes or {}},
+    )
+
+
+def supplier_archived(
+    supplier_id: str,
+    supplier_name: str,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="supplier.archived",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Supplier",
+        entity_id=supplier_id,
+        outcome="success",
+        detail=f"Supplier '{supplier_name}' archived",
+        status=EntityStatus.ACTIVE,
+        event_metadata={},
+    )
+
+
+def supplier_assessment_linked(
+    supplier_id: str,
+    assessment_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="supplier.assessment_linked",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Supplier",
+        entity_id=supplier_id,
+        outcome="success",
+        detail=f"Assessment {assessment_id} linked to supplier {supplier_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"assessment_id": assessment_id},
+    )
+
+
 def comment_deleted(
     comment_id: str,
     entity_type: str,

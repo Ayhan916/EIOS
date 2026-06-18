@@ -30,6 +30,7 @@ from infrastructure.persistence.repositories import (
     SQLRecommendationRepository,
     SQLReviewActionRepository,
     SQLRiskRepository,
+    SQLSupplierRepository,
     SQLUserRepository,
     SQLWorkflowRunRepository,
 )
@@ -43,6 +44,7 @@ from interfaces.api.deps import (
     get_recommendation_repo,
     get_review_action_repo,
     get_risk_repo,
+    get_supplier_repo,
     get_user_repo,
     get_workflow_run_repo,
     require_admin,
@@ -100,8 +102,31 @@ async def create_assessment(
     body: AssessmentCreate,
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> AssessmentResponse:
+    if body.supplier_id is not None:
+        supplier = await supplier_repo.get_by_id(body.supplier_id)
+        if supplier is None or supplier.status.value == "Deleted":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Supplier not found.",
+            )
+        if supplier.organization_id != current_user.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Supplier not found.",
+            )
+        from domain.enums import SupplierStatus  # noqa: PLC0415
+        if supplier.supplier_status != SupplierStatus.ACTIVE:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=(
+                    f"Supplier '{supplier.name}' is {supplier.supplier_status.value.lower()} "
+                    "and cannot be assigned to new assessments."
+                ),
+            )
+
     assessment = Assessment(
         title=body.title,
         description=body.description,
@@ -112,6 +137,7 @@ async def create_assessment(
         confidence=body.confidence,
         organization_id=current_user.organization_id,
         created_by=current_user.id,
+        supplier_id=body.supplier_id,
     )
     saved = await repo.save(assessment)
     await audit_repo.save(

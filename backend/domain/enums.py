@@ -120,3 +120,18 @@ _REVIEW_TRANSITIONS: dict[ReviewStatus, set[ReviewStatus]] = {
 
 def is_valid_review_transition(from_status: ReviewStatus, to_status: ReviewStatus) -> bool:
     return to_status in _REVIEW_TRANSITIONS.get(from_status, set())
+
+
+# ── M27 Supplier Management ───────────────────────────────────────────────────
+
+
+class SupplierTier(str, Enum):
+    TIER_1 = "Tier 1"
+    TIER_2 = "Tier 2"
+    TIER_3 = "Tier 3"
+    OTHER = "Other"
+
+
+class SupplierStatus(str, Enum):
+    ACTIVE = "Active"
+    INACTIVE = "Inactive"

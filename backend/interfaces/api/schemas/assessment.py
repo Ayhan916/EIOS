@@ -15,6 +15,8 @@ class AssessmentCreate(BaseModel):
     sector_id: str | None = None
     methodology: str | None = None
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
+    # Supplier ownership (M27)
+    supplier_id: str | None = None
 
 
 class AssessmentResponse(EntityResponse):
@@ -31,3 +33,5 @@ class AssessmentResponse(EntityResponse):
     review_status: str = "Draft"
     assigned_reviewer_id: str | None = None
     review_due_date: datetime | None = None
+    # Supplier ownership (M27)
+    supplier_id: str | None = None

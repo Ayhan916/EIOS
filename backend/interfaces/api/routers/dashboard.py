@@ -1,19 +1,21 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
+from infrastructure.persistence.models.supplier import SupplierModel
 from interfaces.api.deps import get_current_user, get_db
 from interfaces.api.schemas.dashboard import (
     DashboardResponse,
     MonthlyCount,
     RecentAssessmentItem,
     ReviewQueueItem,
+    SupplierWatchlistItem,
 )
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -247,6 +249,136 @@ async def get_dashboard(
         for r in review_queue_items
     ]
 
+    # ── 9. Supplier KPIs (M27) ─────────────────────────────────────────────────
+    from infrastructure.persistence.models.risk import RiskModel  # noqa: PLC0415
+
+    total_suppliers_row = await session.execute(
+        select(func.count(SupplierModel.id)).where(
+            SupplierModel.organization_id == org_id,
+            SupplierModel.status != "Deleted",
+        )
+    )
+    total_suppliers = total_suppliers_row.scalar() or 0
+
+    active_suppliers_row = await session.execute(
+        select(func.count(SupplierModel.id)).where(
+            SupplierModel.organization_id == org_id,
+            SupplierModel.supplier_status == "Active",
+            SupplierModel.status != "Deleted",
+        )
+    )
+    active_suppliers = active_suppliers_row.scalar() or 0
+
+    # Suppliers that have at least one critical finding
+    critical_supplier_ids_row = await session.execute(
+        select(AssessmentModel.supplier_id)
+        .join(FindingModel, FindingModel.assessment_id == AssessmentModel.id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.supplier_id.is_not(None),
+            FindingModel.severity == "Critical",
+        )
+        .distinct()
+    )
+    suppliers_with_critical_risks = len(critical_supplier_ids_row.scalars().all())
+
+    # Suppliers without any assessment
+    suppliers_with_assessments_row = await session.execute(
+        select(AssessmentModel.supplier_id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.supplier_id.is_not(None),
+            AssessmentModel.status != "Deleted",
+        )
+        .distinct()
+    )
+    covered_ids = set(suppliers_with_assessments_row.scalars().all())
+
+    total_supplier_ids_row = await session.execute(
+        select(SupplierModel.id).where(
+            SupplierModel.organization_id == org_id,
+            SupplierModel.status != "Deleted",
+        )
+    )
+    all_supplier_ids = set(total_supplier_ids_row.scalars().all())
+    suppliers_without_assessments = len(all_supplier_ids - covered_ids)
+
+    # Watchlist: top suppliers by critical + high findings
+    critical_expr = func.coalesce(
+        func.sum(case((FindingModel.severity == "Critical", 1), else_=0)), 0
+    )
+    high_expr = func.coalesce(
+        func.sum(case((FindingModel.severity == "High", 1), else_=0)), 0
+    )
+
+    watchlist_rows = await session.execute(
+        select(
+            SupplierModel.id,
+            SupplierModel.name,
+            SupplierModel.country,
+            SupplierModel.supplier_tier,
+            critical_expr.label("critical_cnt"),
+            high_expr.label("high_cnt"),
+            func.max(AssessmentModel.created_at).label("last_assessment"),
+        )
+        .outerjoin(AssessmentModel, AssessmentModel.supplier_id == SupplierModel.id)
+        .outerjoin(FindingModel, FindingModel.assessment_id == AssessmentModel.id)
+        .where(
+            SupplierModel.organization_id == org_id,
+            SupplierModel.status != "Deleted",
+        )
+        .group_by(SupplierModel.id, SupplierModel.name, SupplierModel.country, SupplierModel.supplier_tier)
+        .order_by(critical_expr.desc())
+        .limit(8)
+    )
+
+    # Open/overdue actions per supplier
+    supplier_action_row = await session.execute(
+        select(
+            AssessmentModel.supplier_id,
+            func.count(RecommendationModel.id).label("open_cnt"),
+        )
+        .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.supplier_id.is_not(None),
+            RecommendationModel.action_status.in_(["open", "in_progress"]),
+        )
+        .group_by(AssessmentModel.supplier_id)
+    )
+    supplier_open_actions: dict[str, int] = {r.supplier_id: r.open_cnt for r in supplier_action_row}
+
+    supplier_overdue_row = await session.execute(
+        select(
+            AssessmentModel.supplier_id,
+            func.count(RecommendationModel.id).label("overdue_cnt"),
+        )
+        .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.supplier_id.is_not(None),
+            RecommendationModel.due_date < now,
+            RecommendationModel.action_status.notin_(["resolved", "verified"]),
+        )
+        .group_by(AssessmentModel.supplier_id)
+    )
+    supplier_overdue_actions: dict[str, int] = {r.supplier_id: r.overdue_cnt for r in supplier_overdue_row}
+
+    supplier_watchlist = [
+        SupplierWatchlistItem(
+            id=row.id,
+            name=row.name,
+            country=row.country or "",
+            supplier_tier=row.supplier_tier,
+            critical_findings=row.critical_cnt or 0,
+            high_findings=row.high_cnt or 0,
+            open_actions=supplier_open_actions.get(row.id, 0),
+            overdue_actions=supplier_overdue_actions.get(row.id, 0),
+            last_assessment_date=row.last_assessment.isoformat() if row.last_assessment else None,
+        )
+        for row in watchlist_rows
+    ]
+
     return DashboardResponse(
         total_assessments=total_assessments,
         avg_quality_score=avg_quality_score,
@@ -265,4 +397,9 @@ async def get_dashboard(
         recently_approved=recently_approved,
         recently_rejected=recently_rejected,
         review_queue=review_queue,
+        total_suppliers=total_suppliers,
+        active_suppliers=active_suppliers,
+        suppliers_with_critical_risks=suppliers_with_critical_risks,
+        suppliers_without_assessments=suppliers_without_assessments,
+        supplier_watchlist=supplier_watchlist,
     )

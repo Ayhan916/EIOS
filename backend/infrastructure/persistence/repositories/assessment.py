@@ -36,6 +36,7 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
             review_status=entity.review_status.value,
             assigned_reviewer_id=entity.assigned_reviewer_id,
             review_due_date=entity.review_due_date,
+            supplier_id=entity.supplier_id,
         )
 
     def _to_domain(self, model: AssessmentModel) -> Assessment:
@@ -63,6 +64,7 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
             review_status=ReviewStatus(model.review_status) if model.review_status else ReviewStatus.DRAFT,
             assigned_reviewer_id=model.assigned_reviewer_id,
             review_due_date=model.review_due_date,
+            supplier_id=model.supplier_id,
         )
 
     async def list_by_sector(self, sector_id: str) -> list[Assessment]:
@@ -70,6 +72,9 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
 
     async def list_by_organization(self, organization_id: str) -> list[Assessment]:
         return await self._list_by_field("organization_id", organization_id)
+
+    async def list_by_supplier(self, supplier_id: str) -> list[Assessment]:
+        return await self._list_by_field("supplier_id", supplier_id)
 
     async def list_org_paged(
         self,

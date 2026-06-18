@@ -33,6 +33,10 @@ class AssessmentModel(BaseModel):
     review_status: Mapped[str] = mapped_column(String(30), nullable=False, default="Draft")
     assigned_reviewer_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     review_due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Supplier ownership (M27)
+    supplier_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("suppliers.id"), nullable=True, index=True
+    )
 
     sector: Mapped[SectorModel | None] = relationship(back_populates="assessments")
     evidence: Mapped[list[EvidenceModel]] = relationship(
@@ -40,3 +44,4 @@ class AssessmentModel(BaseModel):
     )
     findings: Mapped[list[FindingModel]] = relationship(back_populates="assessment")
     risks: Mapped[list[RiskModel]] = relationship(back_populates="assessment")
+    supplier: Mapped[SupplierModel | None] = relationship(back_populates="assessments")

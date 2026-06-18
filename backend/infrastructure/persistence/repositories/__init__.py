@@ -23,6 +23,7 @@ from .standard import SQLStandardRepository
 from .task import SQLTaskRepository
 from .user import SQLUserRepository
 from .review_action import SQLReviewActionRepository
+from .supplier import SQLSupplierRepository
 from .workflow_job import SQLWorkflowJobRepository
 from .workflow_run import SQLWorkflowRunRepository
 
@@ -52,6 +53,7 @@ __all__ = [
     "SQLTaskRepository",
     "SQLUserRepository",
     "SQLReviewActionRepository",
+    "SQLSupplierRepository",
     "SQLWorkflowJobRepository",
     "SQLWorkflowRunRepository",
 ]

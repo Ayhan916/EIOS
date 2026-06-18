@@ -1,5 +1,6 @@
 from .agents import router as agents_router
 from .comments import router as comments_router
+from .suppliers import router as suppliers_router
 from .notifications import router as notifications_router
 from .assessments import router as assessments_router
 from .audit import router as audit_router
@@ -42,6 +43,7 @@ __all__ = [
     "sector_intelligence_router",
     "sectors_router",
     "notifications_router",
+    "suppliers_router",
     "users_router",
     "workflows_router",
 ]

@@ -47,6 +47,7 @@ from interfaces.api.routers import (
     risks_router,
     sector_intelligence_router,
     sectors_router,
+    suppliers_router,
     users_router,
     workflows_router,
 )
@@ -255,3 +256,4 @@ app.include_router(dashboard_router, prefix=API_V1)
 app.include_router(users_router, prefix=API_V1)
 app.include_router(notifications_router, prefix=API_V1)
 app.include_router(comments_router, prefix=API_V1)
+app.include_router(suppliers_router, prefix=API_V1)

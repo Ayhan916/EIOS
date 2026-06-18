@@ -29,6 +29,7 @@ from infrastructure.persistence.repositories import (
     SQLReviewActionRepository,
     SQLRiskRepository,
     SQLSectorRepository,
+    SQLSupplierRepository,
     SQLUserRepository,
     SQLWorkflowJobRepository,
     SQLWorkflowRunRepository,
@@ -151,6 +152,12 @@ async def get_review_action_repo(
     session: AsyncSession = Depends(get_db),
 ) -> SQLReviewActionRepository:
     return SQLReviewActionRepository(session)
+
+
+async def get_supplier_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLSupplierRepository:
+    return SQLSupplierRepository(session)
 
 
 async def get_current_user(

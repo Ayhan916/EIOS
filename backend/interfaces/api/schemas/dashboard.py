@@ -30,6 +30,18 @@ class MonthlyCount(BaseModel):
     count: int
 
 
+class SupplierWatchlistItem(BaseModel):
+    id: str
+    name: str
+    country: str
+    supplier_tier: str
+    critical_findings: int
+    high_findings: int
+    open_actions: int
+    overdue_actions: int
+    last_assessment_date: str | None
+
+
 class DashboardResponse(BaseModel):
     total_assessments: int
     avg_quality_score: float | None
@@ -49,3 +61,9 @@ class DashboardResponse(BaseModel):
     recently_approved: int = 0
     recently_rejected: int = 0
     review_queue: list[ReviewQueueItem] = []
+    # Supplier KPIs (M27)
+    total_suppliers: int = 0
+    active_suppliers: int = 0
+    suppliers_with_critical_risks: int = 0
+    suppliers_without_assessments: int = 0
+    supplier_watchlist: list[SupplierWatchlistItem] = []
