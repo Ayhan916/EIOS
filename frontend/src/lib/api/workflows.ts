@@ -6,18 +6,19 @@ import type {
   WorkflowRunResponse,
 } from "@/types/api";
 
-export interface StartWorkflowResponse {
-  job_id: string;
-  status: string;
-  message: string;
-}
-
 export async function startWorkflow(
   data: WorkflowRunRequest
-): Promise<StartWorkflowResponse> {
-  const res = await apiClient.post<StartWorkflowResponse>(
+): Promise<WorkflowJobResponse> {
+  const res = await apiClient.post<WorkflowJobResponse>(
     "/workflows/run",
     data
+  );
+  return res.data;
+}
+
+export async function getRun(runId: string): Promise<WorkflowRunResponse> {
+  const res = await apiClient.get<WorkflowRunResponse>(
+    `/workflows/runs/${runId}`
   );
   return res.data;
 }

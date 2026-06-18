@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { CheckCircle2, Loader2 } from "lucide-react";
-import { startWorkflow, getJob, getWorkflowTypes } from "@/lib/api/workflows";
+import { startWorkflow, getJob, getRun, getWorkflowTypes } from "@/lib/api/workflows";
 import { extractErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -75,7 +75,14 @@ export default function NewAssessmentPage() {
         const job = await getJob(jobId);
         if (job.job_status === "completed") {
           clearInterval(interval);
-          setAssessmentId(job.workflow_run_id ?? null);
+          if (job.workflow_run_id) {
+            try {
+              const run = await getRun(job.workflow_run_id);
+              setAssessmentId(run.assessment_id ?? null);
+            } catch {
+              setAssessmentId(null);
+            }
+          }
           setJobState("done");
         } else if (job.job_status === "failed") {
           clearInterval(interval);
@@ -94,7 +101,7 @@ export default function NewAssessmentPage() {
     setJobState("submitted");
     try {
       const res = await startWorkflow(data);
-      setJobId(res.job_id);
+      setJobId(res.id);
       setJobState("polling");
     } catch (err) {
       setError(extractErrorMessage(err));
