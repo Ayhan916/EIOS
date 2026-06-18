@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     llm_max_tokens: int = 4096
     anthropic_api_key: str = ""
     openai_api_key: str = ""
+    groq_api_key: str = ""
 
     @property
     def is_production(self) -> bool:

@@ -43,10 +43,20 @@ def init_llm_provider() -> LLMProvider:
             model=settings.llm_model,
         )
 
+    elif name == "groq":
+        from infrastructure.llm.groq_provider import GroqLLMProvider
+
+        if not settings.groq_api_key:
+            raise RuntimeError("GROQ_API_KEY is not set. Add it to your .env file.")
+        _provider = GroqLLMProvider(
+            api_key=settings.groq_api_key,
+            model=settings.llm_model,
+        )
+
     else:
         raise ValueError(
             f"Unknown LLM provider: '{name}'. "
-            "Supported values: anthropic, openai. "
+            "Supported values: anthropic, openai, groq. "
             "To add a new provider, implement LLMProvider in infrastructure/llm/ "
             "and register it here."
         )
