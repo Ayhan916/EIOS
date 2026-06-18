@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowRight,
+  Briefcase,
   CheckCircle2,
   Clock,
   FileText,
@@ -354,6 +355,119 @@ export default function DashboardPage() {
               </Link>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Supplier KPIs (M27) ────────────────────────────────────────────── */}
+      {data.total_suppliers > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <Briefcase className="h-4 w-4 text-blue-500" />
+                Supplier Portfolio
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                ESG due diligence subjects under management
+              </p>
+            </div>
+            <Link href="/suppliers">
+              <Button variant="ghost" size="sm" className="gap-1 text-xs">
+                View all <ArrowRight className="h-3 w-3" />
+              </Button>
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <KpiCard
+              label="Total Suppliers"
+              value={data.total_suppliers}
+              icon={Briefcase}
+              sub={`${data.active_suppliers} active`}
+            />
+            <KpiCard
+              label="With Critical Risks"
+              value={data.suppliers_with_critical_risks}
+              icon={ShieldAlert}
+              valueClass={data.suppliers_with_critical_risks > 0 ? "text-red-600" : "text-foreground"}
+              accent={data.suppliers_with_critical_risks > 0 ? "bg-red-500" : undefined}
+              sub="have critical findings"
+            />
+            <KpiCard
+              label="No Assessments"
+              value={data.suppliers_without_assessments}
+              icon={AlertTriangle}
+              valueClass={data.suppliers_without_assessments > 0 ? "text-amber-600" : "text-foreground"}
+              sub="need first assessment"
+            />
+            <KpiCard
+              label="Active"
+              value={data.active_suppliers}
+              icon={CheckCircle2}
+              valueClass="text-emerald-600"
+              sub="suppliers in scope"
+            />
+          </div>
+
+          {data.supplier_watchlist.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Supplier Risk Watchlist</CardTitle>
+                <p className="text-xs text-muted-foreground">Ranked by critical findings</p>
+              </CardHeader>
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/30">
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Supplier</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Country</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Tier</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Critical</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">High</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Open Actions</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Overdue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {data.supplier_watchlist.map((s) => (
+                      <tr key={s.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-2.5">
+                          <Link
+                            href={`/suppliers/${s.id}`}
+                            className="font-medium hover:text-blue-600 hover:underline"
+                          >
+                            {s.name}
+                          </Link>
+                        </td>
+                        <td className="px-4 py-2.5 text-muted-foreground">{s.country || "—"}</td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-xs font-medium text-muted-foreground">{s.supplier_tier}</span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className={`font-semibold ${s.critical_findings > 0 ? "text-red-600" : "text-muted-foreground"}`}>
+                            {s.critical_findings}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className={`font-semibold ${s.high_findings > 0 ? "text-orange-500" : "text-muted-foreground"}`}>
+                            {s.high_findings}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-right text-muted-foreground">
+                          {s.open_actions}
+                        </td>
+                        <td className="px-4 py-2.5 text-right">
+                          <span className={s.overdue_actions > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
+                            {s.overdue_actions}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

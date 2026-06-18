@@ -99,6 +99,75 @@ export interface AssessmentResponse extends EntityResponse {
   review_status: string;
   assigned_reviewer_id: string | null;
   review_due_date: string | null;
+  // Supplier ownership (M27)
+  supplier_id: string | null;
+}
+
+export type SupplierTier = "Tier 1" | "Tier 2" | "Tier 3" | "Other";
+export type SupplierStatus = "Active" | "Inactive";
+
+export interface SupplierResponse extends EntityResponse {
+  organization_id: string;
+  name: string;
+  legal_name: string | null;
+  country: string;
+  industry: string;
+  nace_code: string | null;
+  website: string | null;
+  supplier_tier: SupplierTier;
+  supplier_status: SupplierStatus;
+  notes: string | null;
+}
+
+export interface SupplierCreate {
+  name: string;
+  legal_name?: string | null;
+  country?: string;
+  industry?: string;
+  nace_code?: string | null;
+  website?: string | null;
+  supplier_tier?: SupplierTier;
+  notes?: string | null;
+}
+
+export interface SupplierUpdate {
+  name?: string;
+  legal_name?: string | null;
+  country?: string;
+  industry?: string;
+  nace_code?: string | null;
+  website?: string | null;
+  supplier_tier?: SupplierTier;
+  supplier_status?: SupplierStatus;
+  notes?: string | null;
+}
+
+export interface SupplierRiskProfile {
+  supplier_id: string;
+  supplier_name: string;
+  total_assessments: number;
+  approved_assessments: number;
+  assessments_in_review: number;
+  last_assessment_date: string | null;
+  total_findings: number;
+  findings_by_severity: Record<string, number>;
+  total_risks: number;
+  risks_by_severity: Record<string, number>;
+  open_recommendations: number;
+  open_actions: number;
+  overdue_actions: number;
+}
+
+export interface SupplierWatchlistItem {
+  id: string;
+  name: string;
+  country: string;
+  supplier_tier: SupplierTier;
+  critical_findings: number;
+  high_findings: number;
+  open_actions: number;
+  overdue_actions: number;
+  last_assessment_date: string | null;
 }
 
 export interface CommentResponse {

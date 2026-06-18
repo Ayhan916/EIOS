@@ -1,5 +1,5 @@
 import apiClient from "./client";
-import type { ReviewQueueItem } from "@/types/api";
+import type { ReviewQueueItem, SupplierWatchlistItem } from "@/types/api";
 
 export interface RecentAssessmentItem {
   id: string;
@@ -37,6 +37,12 @@ export interface DashboardData {
   recently_approved: number;
   recently_rejected: number;
   review_queue: ReviewQueueItem[];
+  // M27 supplier KPIs
+  total_suppliers: number;
+  active_suppliers: number;
+  suppliers_with_critical_risks: number;
+  suppliers_without_assessments: number;
+  supplier_watchlist: SupplierWatchlistItem[];
 }
 
 export async function getDashboard(): Promise<DashboardData> {

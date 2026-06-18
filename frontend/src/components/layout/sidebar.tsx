@@ -11,6 +11,7 @@ import {
   Shield,
   Upload,
   Users,
+  Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
@@ -21,6 +22,11 @@ const navItems = [
     label: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    label: "Suppliers",
+    href: "/suppliers",
+    icon: Briefcase,
   },
   {
     label: "Assessments",
