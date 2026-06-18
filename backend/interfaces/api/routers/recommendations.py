@@ -84,6 +84,7 @@ async def create_recommendation(
         reasoning=body.reasoning,
         action_required=body.action_required,
         due_date=body.due_date,
+        assessment_id=body.assessment_id,
         created_by=current_user.id,
     )
     saved = await repo.save(recommendation)

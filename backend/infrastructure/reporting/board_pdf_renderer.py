@@ -10,6 +10,7 @@ assessment pdf_renderer.  All colour constants are shared via the same palette.
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from fpdf import FPDF
@@ -170,6 +171,12 @@ def render_board_report_pdf(
         generated_at=generated_at,
         report_id=report_id,
     )
+    # Pin creation date to report generation time so repeated downloads produce
+    # byte-identical PDFs from the same snapshot.
+    try:
+        pdf.set_creation_date(datetime.fromisoformat(generated_at).replace(tzinfo=timezone.utc))
+    except (ValueError, TypeError):
+        pass  # fall back to FPDF2 default if generated_at is not parseable
 
     _cover(pdf, meta, period, organization_name)
     _exec_summary_section(pdf, report_data)

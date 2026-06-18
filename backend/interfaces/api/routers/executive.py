@@ -29,7 +29,7 @@ from io import BytesIO
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
-from sqlalchemy import case, func, select
+from sqlalchemy import case, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.executive import (
@@ -46,6 +46,7 @@ from domain.enums import EntityStatus, UserRole
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.finding import FindingModel
+from infrastructure.persistence.models.organization import OrganizationModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.models.review_action import ReviewActionModel
 from infrastructure.persistence.models.supplier import SupplierModel
@@ -277,10 +278,13 @@ async def get_kpi_trends(
     since = datetime.now(UTC) - timedelta(days=period)
 
     # Group supplier_scores by month, computing avg scores and band distribution
+    # literal_column keeps the format as a SQL literal so PostgreSQL treats SELECT/
+    # GROUP BY/ORDER BY as the same expression (parameterized strings would differ).
+    _month = func.to_char(SupplierScoreModel.created_at, literal_column("'YYYY-MM'"))
     rows = (
         await session.execute(
             select(
-                func.to_char(SupplierScoreModel.created_at, "YYYY-MM").label("month"),
+                _month.label("month"),
                 func.avg(SupplierScoreModel.esg_score).label("avg_esg"),
                 func.avg(SupplierScoreModel.risk_score).label("avg_risk"),
                 func.count(SupplierScoreModel.supplier_id.distinct()).label("count"),
@@ -293,8 +297,8 @@ async def get_kpi_trends(
                 SupplierScoreModel.organization_id == org_id,
                 SupplierScoreModel.created_at >= since,
             )
-            .group_by(func.to_char(SupplierScoreModel.created_at, "YYYY-MM"))
-            .order_by(func.to_char(SupplierScoreModel.created_at, "YYYY-MM"))
+            .group_by(_month)
+            .order_by(_month)
         )
     ).all()
 
@@ -671,6 +675,14 @@ async def generate_board_report(
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=f"Invalid date format: {exc}") from exc
 
+    # Freeze organization name at generation time (L4 fix)
+    org_name_row = (
+        await session.execute(
+            select(OrganizationModel.name).where(OrganizationModel.id == org_id)
+        )
+    ).scalar_one_or_none()
+    org_name = org_name_row or "Organisation"
+
     # Gather all data needed for the report
     _, total_suppliers = await supplier_repo.list_org_paged(
         organization_id=org_id, page=1, page_size=1
@@ -706,10 +718,11 @@ async def generate_board_report(
 
     # KPI trends (last kpi_period_days)
     trend_since = now - timedelta(days=body.kpi_period_days)
+    _trend_month = func.to_char(SupplierScoreModel.created_at, literal_column("'YYYY-MM'"))
     trend_rows = (
         await session.execute(
             select(
-                func.to_char(SupplierScoreModel.created_at, "YYYY-MM").label("month"),
+                _trend_month.label("month"),
                 func.avg(SupplierScoreModel.esg_score).label("avg_esg"),
                 func.avg(SupplierScoreModel.risk_score).label("avg_risk"),
                 func.count(SupplierScoreModel.supplier_id.distinct()).label("count"),
@@ -722,8 +735,8 @@ async def generate_board_report(
                 SupplierScoreModel.organization_id == org_id,
                 SupplierScoreModel.created_at >= trend_since,
             )
-            .group_by(func.to_char(SupplierScoreModel.created_at, "YYYY-MM"))
-            .order_by(func.to_char(SupplierScoreModel.created_at, "YYYY-MM"))
+            .group_by(_trend_month)
+            .order_by(_trend_month)
         )
     ).all()
     monthly_rows = [
@@ -843,7 +856,8 @@ async def generate_board_report(
         for r in overdue_rows
     ]
 
-    # Governance and action effectiveness metrics
+    # Governance metrics — decisions and avg review turnaround (L3 fix)
+    gov_since = now - timedelta(days=body.kpi_period_days)
     gov_decisions = (
         await session.execute(
             select(ReviewActionModel.action_type)
@@ -851,7 +865,7 @@ async def generate_board_report(
             .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
             .where(
                 SupplierModel.organization_id == org_id,
-                ReviewActionModel.created_at >= (now - timedelta(days=body.kpi_period_days)),
+                ReviewActionModel.created_at >= gov_since,
             )
         )
     ).scalars().all()
@@ -859,20 +873,75 @@ async def generate_board_report(
     gov_approved = sum(1 for d in gov_decisions if d == "approve")
     gov_rejected = sum(1 for d in gov_decisions if d == "reject")
     gov_changes = sum(1 for d in gov_decisions if d == "request_changes")
+
+    assess_review_rows = (
+        await session.execute(
+            select(
+                AssessmentModel.created_at.label("created"),
+                func.min(ReviewActionModel.created_at).label("first_decision"),
+            )
+            .join(ReviewActionModel, ReviewActionModel.assessment_id == AssessmentModel.id)
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+            .where(
+                SupplierModel.organization_id == org_id,
+                ReviewActionModel.created_at >= gov_since,
+            )
+            .group_by(AssessmentModel.id, AssessmentModel.created_at)
+        )
+    ).all()
+    review_times: list[float] = []
+    for row in assess_review_rows:
+        if row.created and row.first_decision:
+            delta = (row.first_decision - row.created).total_seconds() / 86400
+            if delta >= 0:
+                review_times.append(delta)
+    avg_review_days = round(sum(review_times) / len(review_times), 1) if review_times else None
+
     gov_metrics = compute_governance_metrics(
         total_decisions=len(gov_decisions),
         approved=gov_approved,
         rejected=gov_rejected,
         changes_requested=gov_changes,
-        avg_review_days=None,
+        avg_review_days=avg_review_days,
     )
 
+    # Action effectiveness — actions opened/closed during reporting period (L2 fix)
+    period_start_dt = datetime(period_start.year, period_start.month, period_start.day, tzinfo=UTC)
+    period_end_dt = datetime(period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=UTC)
+    action_eff_rows = (
+        await session.execute(
+            select(
+                RecommendationModel.action_status,
+                RecommendationModel.created_at,
+                RecommendationModel.updated_at,
+            )
+            .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+            .where(
+                SupplierModel.organization_id == org_id,
+                AssessmentModel.status != "Deleted",
+                RecommendationModel.status != "Deleted",
+                RecommendationModel.created_at >= period_start_dt,
+                RecommendationModel.created_at <= period_end_dt,
+            )
+        )
+    ).all()
+    opened_this_period = len(action_eff_rows)
+    closed_this_period = sum(1 for r in action_eff_rows if r.action_status in _CLOSED_STATUSES)
+    resolution_times: list[float] = []
+    for r in action_eff_rows:
+        if r.action_status in _CLOSED_STATUSES and r.created_at and r.updated_at:
+            delta_days = (r.updated_at - r.created_at).total_seconds() / 86400
+            if delta_days >= 0:
+                resolution_times.append(delta_days)
+    avg_resolution = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else None
+
     action_eff = compute_action_effectiveness(
-        opened_this_period=0,
-        closed_this_period=total_actions - open_actions,
+        opened_this_period=opened_this_period,
+        closed_this_period=closed_this_period,
         total_open=open_actions,
         total_overdue=overdue_actions,
-        avg_resolution_days=None,
+        avg_resolution_days=avg_resolution,
     )
 
     # Determine top risk country and sector for narrative
@@ -922,6 +991,7 @@ async def generate_board_report(
             "report_id": "",  # filled after save
             "period_start": body.period_start,
             "period_end": body.period_end,
+            "organization_name": org_name,
         },
         "executive_summary": executive_summary,
         "portfolio_summary": {
@@ -1058,7 +1128,6 @@ async def download_board_report_pdf(
     report_id: str,
     current_user: User = Depends(get_current_user),
     report_repo: SQLBoardReportRepository = Depends(get_board_report_repo),
-    session: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
     """Download PDF generated from the stored report_data snapshot."""
     org_id = _assert_org(current_user)
@@ -1068,14 +1137,8 @@ async def download_board_report_pdf(
     if report.organization_id != org_id:
         raise HTTPException(status_code=404, detail="Report not found")
 
-    # Get organization name for PDF header
-    from infrastructure.persistence.models.organization import OrganizationModel  # noqa: PLC0415
-    org_row = (
-        await session.execute(
-            select(OrganizationModel.name).where(OrganizationModel.id == org_id)
-        )
-    ).scalar_one_or_none()
-    org_name = org_row or "Organisation"
+    # Read organization name from the frozen snapshot — never from the live DB (L4 fix)
+    org_name = report.report_data.get("meta", {}).get("organization_name", "Organisation")
 
     pdf_bytes = render_board_report_pdf(
         report_data=report.report_data,

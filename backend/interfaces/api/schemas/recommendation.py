@@ -15,6 +15,7 @@ class RecommendationCreate(BaseModel):
     reasoning: str | None = None
     action_required: bool = True
     due_date: datetime | None = None
+    assessment_id: str | None = None
 
 
 class RecommendationUpdate(BaseModel):
