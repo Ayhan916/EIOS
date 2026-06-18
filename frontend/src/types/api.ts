@@ -6,10 +6,48 @@ export interface UserResponse {
   display_name: string;
   role: string;
   organization_id: string | null;
+  is_active: boolean;
   status: string;
   version: number;
   created_at: string;
   updated_at: string;
+  last_login_at: string | null;
+}
+
+export interface UserUpdate {
+  role?: string;
+  is_active?: boolean;
+  display_name?: string;
+}
+
+export interface UserInviteRequest {
+  email: string;
+  display_name: string;
+  role?: string;
+}
+
+export interface UserInviteResponse {
+  user: UserResponse;
+  temp_password: string;
+}
+
+export interface OrganizationResponse {
+  id: string;
+  name: string;
+  description: string | null;
+  organization_type: string;
+  country: string | null;
+  industry: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationUpdate {
+  name?: string;
+  description?: string | null;
+  country?: string | null;
+  industry?: string | null;
 }
 
 export interface TokenResponse {

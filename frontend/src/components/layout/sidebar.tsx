@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  BarChart3,
+  Building2,
   FileText,
   LayoutDashboard,
   LogOut,
   Shield,
   Upload,
+  Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
@@ -52,7 +53,7 @@ export function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 space-y-1 px-3 py-4">
+      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
         <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
           Platform
         </p>
@@ -75,6 +76,41 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {user?.role === "admin" && (
+          <>
+            <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+              Settings
+            </p>
+            {[
+              { label: "Users", href: "/settings/users", icon: Users },
+              {
+                label: "Organization",
+                href: "/settings/organization",
+                icon: Building2,
+              },
+            ].map((item) => {
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 flex-shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </>
+        )}
       </nav>
 
       {/* User section */}

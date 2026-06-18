@@ -21,6 +21,11 @@ from shared.config import settings
 _windows: dict[str, deque[float]] = defaultdict(deque)
 
 
+def reset_for_tests() -> None:
+    """Clear all rate-limit windows. Call from test fixtures only."""
+    _windows.clear()
+
+
 def _check(key: str, limit: int, window_seconds: int = 60) -> bool:
     """Return True if the request is within the limit, False if it should be rejected."""
     now = time.monotonic()

@@ -283,6 +283,45 @@ def recommendation_assigned(
     )
 
 
+def user_updated(
+    target_user_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    changes: dict | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="user.updated",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="User",
+        entity_id=target_user_id,
+        outcome="success",
+        detail=f"User {target_user_id} updated by admin",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"changes": changes or {}},
+    )
+
+
+def user_invited(
+    new_user_id: str,
+    new_user_email: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    organization_id: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="user.invited",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="User",
+        entity_id=new_user_id,
+        outcome="success",
+        detail=f"User {new_user_email} invited by admin",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"organization_id": organization_id, "invited_email": new_user_email},
+    )
+
+
 def assessment_created_manually(
     assessment_id: str,
     actor_id: str,

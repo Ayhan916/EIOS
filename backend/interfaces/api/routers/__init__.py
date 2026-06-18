@@ -15,6 +15,7 @@ from .reports import router as reports_router
 from .risks import router as risks_router
 from .sector_intelligence import assessments_benchmark_router, sector_intelligence_router
 from .sectors import router as sectors_router
+from .users import router as users_router
 from .workflows import router as workflows_router
 
 __all__ = [
@@ -37,5 +38,6 @@ __all__ = [
     "risks_router",
     "sector_intelligence_router",
     "sectors_router",
+    "users_router",
     "workflows_router",
 ]

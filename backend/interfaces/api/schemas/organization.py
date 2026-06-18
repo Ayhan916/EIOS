@@ -5,6 +5,13 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 
 
+class OrganizationUpdate(BaseModel):
+    name: str | None = None
+    description: str | None = None
+    country: str | None = None
+    industry: str | None = None
+
+
 class OrganizationResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

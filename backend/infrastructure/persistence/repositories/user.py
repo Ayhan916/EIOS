@@ -51,3 +51,6 @@ class SQLUserRepository(BaseRepository[User, UserModel]):
     async def get_by_email(self, email: str) -> User | None:
         results = await self._list_by_field("email", email)
         return results[0] if results else None
+
+    async def list_by_organization(self, organization_id: str) -> list[User]:
+        return await self._list_by_field("organization_id", organization_id)

@@ -43,6 +43,7 @@ from interfaces.api.routers import (
     risks_router,
     sector_intelligence_router,
     sectors_router,
+    users_router,
     workflows_router,
 )
 from shared.config import settings
@@ -174,3 +175,4 @@ app.include_router(assessments_benchmark_router, prefix=API_V1)
 app.include_router(reports_router, prefix=API_V1)
 app.include_router(sector_intelligence_router, prefix=API_V1)
 app.include_router(dashboard_router, prefix=API_V1)
+app.include_router(users_router, prefix=API_V1)
