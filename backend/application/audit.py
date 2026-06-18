@@ -507,6 +507,35 @@ def supplier_assessment_linked(
     )
 
 
+def supplier_score_calculated(
+    supplier_id: str,
+    supplier_name: str,
+    risk_score: float,
+    risk_band: str,
+    esg_score: float,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="supplier.score_calculated",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Supplier",
+        entity_id=supplier_id,
+        outcome="success",
+        detail=(
+            f"Score recalculated for '{supplier_name}': "
+            f"Risk={risk_score} ({risk_band}), ESG={esg_score}"
+        ),
+        status=EntityStatus.ACTIVE,
+        event_metadata={
+            "risk_score": risk_score,
+            "risk_band": risk_band,
+            "esg_score": esg_score,
+        },
+    )
+
+
 def comment_deleted(
     comment_id: str,
     entity_type: str,

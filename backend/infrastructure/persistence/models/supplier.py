@@ -26,3 +26,6 @@ class SupplierModel(BaseModel):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     assessments: Mapped[list[AssessmentModel]] = relationship(back_populates="supplier")
+    scores: Mapped[list[SupplierScoreModel]] = relationship(
+        back_populates="supplier", order_by="SupplierScoreModel.created_at.desc()"
+    )

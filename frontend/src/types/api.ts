@@ -583,3 +583,104 @@ export interface NotificationPreferences {
 export interface ApiError {
   detail: string | { msg: string; type: string }[];
 }
+
+// ── M28 Supplier Intelligence ─────────────────────────────────────────────────
+
+export interface ScoreDriver {
+  factor: string;
+  count: number;
+  impact: "high" | "medium" | "low";
+  description: string;
+}
+
+export interface SupplierScoreResponse {
+  supplier_id: string;
+  supplier_name: string;
+  calculated_at: string;
+  score_version: string;
+  esg_score: number;
+  environmental_score: number;
+  social_score: number;
+  governance_score: number;
+  risk_score: number;
+  risk_band: "Low" | "Moderate" | "High" | "Critical";
+  trend: "Improving" | "Stable" | "Deteriorating";
+  trend_delta: number;
+  sector_percentile: number | null;
+  drivers: ScoreDriver[];
+  inputs: Record<string, number>;
+}
+
+export interface SupplierScoreHistoryEntry {
+  calculated_at: string;
+  esg_score: number;
+  risk_score: number;
+  risk_band: string;
+  trend: string;
+}
+
+export interface SupplierBenchmark {
+  supplier_id: string;
+  supplier_name: string;
+  risk_score: number;
+  risk_band: string;
+  sector_percentile: number | null;
+  peer_comparison: string;
+  peers_evaluated: number;
+  industry: string;
+}
+
+export interface WatchlistEntry {
+  supplier_id: string;
+  supplier_name: string;
+  country: string;
+  industry: string;
+  supplier_tier: string;
+  risk_score: number;
+  risk_band: string;
+  trend: string;
+  trend_delta: number;
+  critical_findings: number;
+  overdue_actions: number;
+  alert_reasons: string[];
+}
+
+export interface PortfolioAnalytics {
+  total_suppliers: number;
+  scored_suppliers: number;
+  critical_risk_suppliers: number;
+  high_risk_suppliers: number;
+  improving_suppliers: number;
+  deteriorating_suppliers: number;
+  avg_esg_score: number | null;
+  avg_risk_score: number | null;
+  risk_distribution: Record<string, number>;
+}
+
+export interface ExecutiveRankingEntry {
+  rank: number;
+  supplier_id: string;
+  supplier_name: string;
+  country: string;
+  industry: string;
+  supplier_tier: string;
+  risk_score: number;
+  risk_band: string;
+  esg_score: number;
+  trend: string;
+  trend_delta: number;
+  critical_findings: number;
+  overdue_actions: number;
+}
+
+export interface HeatmapCell {
+  pillar: string;
+  severity: string;
+  count: number;
+}
+
+export interface RiskHeatmap {
+  cells: HeatmapCell[];
+  total_findings: number;
+  supplier_id: string | null;
+}

@@ -135,3 +135,19 @@ class SupplierTier(str, Enum):
 class SupplierStatus(str, Enum):
     ACTIVE = "Active"
     INACTIVE = "Inactive"
+
+
+# ── M28 Supplier Intelligence ─────────────────────────────────────────────────
+
+
+class RiskBand(str, Enum):
+    LOW = "Low"
+    MODERATE = "Moderate"
+    HIGH = "High"
+    CRITICAL = "Critical"
+
+
+class TrendDirection(str, Enum):
+    IMPROVING = "Improving"
+    STABLE = "Stable"
+    DETERIORATING = "Deteriorating"

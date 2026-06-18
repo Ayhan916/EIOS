@@ -46,6 +46,7 @@ from .task import TaskModel
 from .user import UserModel
 from .workflow_job import WorkflowJobModel
 from .supplier import SupplierModel
+from .supplier_score import SupplierScoreModel
 from .workflow_run import WorkflowRunModel
 
 __all__ = [
@@ -77,6 +78,7 @@ __all__ = [
     "TaskModel",
     "UserModel",
     "SupplierModel",
+    "SupplierScoreModel",
     "WorkflowJobModel",
     "WorkflowRunModel",
     "assessment_evidence",
