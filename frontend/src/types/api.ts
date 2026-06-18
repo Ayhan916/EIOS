@@ -84,6 +84,8 @@ export interface RiskResponse extends EntityResponse {
   uncertainty: string | null;
 }
 
+export type ActionStatus = "open" | "in_progress" | "resolved" | "verified";
+
 export interface RecommendationResponse extends EntityResponse {
   title: string;
   description: string;
@@ -93,6 +95,14 @@ export interface RecommendationResponse extends EntityResponse {
   action_required: boolean;
   due_date: string | null;
   approved_by: string | null;
+  action_status: ActionStatus;
+  assigned_to_id: string | null;
+}
+
+export interface RecommendationUpdate {
+  action_status?: ActionStatus;
+  assigned_to_id?: string | null;
+  due_date?: string | null;
 }
 
 export interface Page<T> {

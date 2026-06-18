@@ -67,3 +67,10 @@ def has_min_role(user_role: str, min_role: UserRole) -> bool:
     """Return True if user_role meets or exceeds min_role."""
     user_order = _ROLE_ORDER.get(user_role, 0)
     return user_order >= _ROLE_ORDER[min_role]
+
+
+class ActionStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    RESOLVED = "resolved"
+    VERIFIED = "verified"

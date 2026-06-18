@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   ArrowLeft,
@@ -15,10 +15,11 @@ import {
 import { getAssessment } from "@/lib/api/assessments";
 import { listFindings } from "@/lib/api/findings";
 import { listRisks } from "@/lib/api/risks";
-import { listRecommendations } from "@/lib/api/recommendations";
+import { listRecommendations, updateRecommendation } from "@/lib/api/recommendations";
 import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
+import type { ActionStatus } from "@/types/api";
 import {
   formatDateTime,
   severityColor,
@@ -48,6 +49,22 @@ function SeverityDot({ level }: { level: string }) {
   );
 }
 
+const ACTION_STATUS_META: Record<ActionStatus, { label: string; className: string }> = {
+  open:        { label: "Open",        className: "bg-slate-100 text-slate-700" },
+  in_progress: { label: "In Progress", className: "bg-blue-100 text-blue-700" },
+  resolved:    { label: "Resolved",    className: "bg-amber-100 text-amber-700" },
+  verified:    { label: "Verified",    className: "bg-emerald-100 text-emerald-700" },
+};
+
+function ActionStatusBadge({ status }: { status: ActionStatus }) {
+  const meta = ACTION_STATUS_META[status] ?? ACTION_STATUS_META.open;
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.className}`}>
+      {meta.label}
+    </span>
+  );
+}
+
 export default function AssessmentDetailPage({
   params,
 }: {
@@ -56,6 +73,23 @@ export default function AssessmentDetailPage({
   const { id } = use(params);
   const [generatingReport, setGeneratingReport] = useState(false);
   const [reportError, setReportError] = useState("");
+  const queryClient = useQueryClient();
+
+  const { mutate: updateAction } = useMutation({
+    mutationFn: ({ recId, status }: { recId: string; status: ActionStatus }) =>
+      updateRecommendation(recId, { action_status: status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recommendations", id] });
+    },
+  });
+
+  const { mutate: updateDueDate } = useMutation({
+    mutationFn: ({ recId, due_date }: { recId: string; due_date: string | null }) =>
+      updateRecommendation(recId, { due_date }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["recommendations", id] });
+    },
+  });
 
   const { data: assessment, isLoading: loadingAssessment } = useQuery({
     queryKey: ["assessment", id],
@@ -385,48 +419,125 @@ export default function AssessmentDetailPage({
           )}
         </TabsContent>
 
-        {/* ── RECOMMENDATIONS ── */}
+        {/* ── ACTIONS (Recommendations) ── */}
         <TabsContent value="recommendations" className="mt-6">
           {loadingRecs ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !recs?.length ? (
             <p className="py-12 text-center text-muted-foreground">No recommendations generated.</p>
-          ) : (
-            <div className="space-y-3">
-              {recs.map((rec) => (
-                <Card key={rec.id}>
-                  <CardContent className="pt-4 pb-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-foreground">{rec.title}</p>
-                          {rec.action_required && (
-                            <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
-                              Required
-                            </Badge>
-                          )}
+          ) : (() => {
+            const now = new Date();
+            const isOverdue = (due: string | null, actionStatus: ActionStatus) =>
+              due != null &&
+              new Date(due) < now &&
+              actionStatus !== "resolved" &&
+              actionStatus !== "verified";
+
+            const overdueCount = recs.filter((r) => isOverdue(r.due_date, r.action_status)).length;
+
+            return (
+              <div className="space-y-4">
+                {/* Status summary strip */}
+                <div className="grid grid-cols-5 gap-3">
+                  {(["open", "in_progress", "resolved", "verified"] as ActionStatus[]).map((s) => {
+                    const count = recs.filter((r) => r.action_status === s).length;
+                    const meta = ACTION_STATUS_META[s];
+                    return (
+                      <div key={s} className={`rounded-lg p-3 text-center ${meta.className}`}>
+                        <p className="text-2xl font-bold">{count}</p>
+                        <p className="text-xs font-medium mt-0.5">{meta.label}</p>
+                      </div>
+                    );
+                  })}
+                  <div className="rounded-lg p-3 text-center bg-red-100 text-red-700">
+                    <p className="text-2xl font-bold">{overdueCount}</p>
+                    <p className="text-xs font-medium mt-0.5">Overdue</p>
+                  </div>
+                </div>
+
+                {/* Action cards */}
+                {recs.map((rec) => {
+                  const overdue = isOverdue(rec.due_date, rec.action_status);
+                  const dueDateValue = rec.due_date
+                    ? new Date(rec.due_date).toISOString().split("T")[0]
+                    : "";
+
+                  return (
+                    <Card
+                      key={rec.id}
+                      className={overdue ? "border-red-300 bg-red-50/30" : ""}
+                    >
+                      <CardContent className="pt-4 pb-4">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold text-foreground">{rec.title}</p>
+                              {rec.action_required && (
+                                <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
+                                  Required
+                                </Badge>
+                              )}
+                              <ActionStatusBadge status={rec.action_status} />
+                              {overdue && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold">
+                                  <AlertTriangle className="h-3 w-3" />
+                                  Overdue
+                                </span>
+                              )}
+                            </div>
+                            <p className="mt-1 text-sm text-muted-foreground">{rec.description}</p>
+                            {rec.reasoning && (
+                              <p className="mt-2 text-xs text-muted-foreground border-l-2 border-border pl-3 italic">
+                                {rec.reasoning}
+                              </p>
+                            )}
+                            {/* Due date setter */}
+                            <div className="mt-2 flex items-center gap-2">
+                              <label className={`text-xs font-medium ${overdue ? "text-red-600" : "text-muted-foreground"}`}>
+                                Due date:
+                              </label>
+                              <input
+                                type="date"
+                                value={dueDateValue}
+                                onChange={(e) =>
+                                  updateDueDate({
+                                    recId: rec.id,
+                                    due_date: e.target.value
+                                      ? `${e.target.value}T00:00:00Z`
+                                      : null,
+                                  })
+                                }
+                                className={`text-xs rounded border px-2 py-0.5 bg-background cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring ${
+                                  overdue
+                                    ? "border-red-300 text-red-700"
+                                    : "border-border text-foreground"
+                                }`}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                            <SeverityDot level={rec.priority} />
+                            <select
+                              value={rec.action_status}
+                              onChange={(e) =>
+                                updateAction({ recId: rec.id, status: e.target.value as ActionStatus })
+                              }
+                              className="text-xs rounded-md border border-border bg-background px-2 py-1 text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring"
+                            >
+                              <option value="open">Open</option>
+                              <option value="in_progress">In Progress</option>
+                              <option value="resolved">Resolved</option>
+                              <option value="verified">Verified</option>
+                            </select>
+                          </div>
                         </div>
-                        <p className="mt-1 text-sm text-muted-foreground">{rec.description}</p>
-                        {rec.reasoning && (
-                          <p className="mt-2 text-xs text-muted-foreground border-l-2 border-border pl-3 italic">
-                            {rec.reasoning}
-                          </p>
-                        )}
-                        {rec.due_date && (
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Due: {formatDateTime(rec.due_date)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex-shrink-0">
-                        <SeverityDot level={rec.priority} />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </TabsContent>
 
         {/* ── COMPLIANCE ── */}

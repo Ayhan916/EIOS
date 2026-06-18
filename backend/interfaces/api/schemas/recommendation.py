@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-from domain.enums import ConfidenceLevel, RiskLevel
+from domain.enums import ActionStatus, ConfidenceLevel, RiskLevel
 
 from .base import EntityResponse
 
@@ -17,6 +17,12 @@ class RecommendationCreate(BaseModel):
     due_date: datetime | None = None
 
 
+class RecommendationUpdate(BaseModel):
+    action_status: ActionStatus | None = None
+    assigned_to_id: str | None = None
+    due_date: datetime | None = None
+
+
 class RecommendationResponse(EntityResponse):
     title: str
     description: str
@@ -26,3 +32,5 @@ class RecommendationResponse(EntityResponse):
     action_required: bool
     due_date: datetime | None = None
     approved_by: str | None = None
+    action_status: ActionStatus = ActionStatus.OPEN
+    assigned_to_id: str | None = None

@@ -23,6 +23,8 @@ class RecommendationModel(BaseModel):
     action_required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    action_status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
+    assigned_to_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     risks: Mapped[list[RiskModel]] = relationship(
         secondary=recommendation_risk, back_populates="recommendations"

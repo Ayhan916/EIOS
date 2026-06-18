@@ -225,6 +225,64 @@ def report_generated(
     )
 
 
+def recommendation_status_changed(
+    recommendation_id: str,
+    actor_id: str,
+    old_status: str,
+    new_status: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="recommendation.status_changed",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Recommendation",
+        entity_id=recommendation_id,
+        outcome="success",
+        detail=f"Status changed: {old_status} → {new_status}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"old_status": old_status, "new_status": new_status},
+    )
+
+
+def recommendation_due_date_changed(
+    recommendation_id: str,
+    actor_id: str,
+    new_due_date: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="recommendation.due_date_changed",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Recommendation",
+        entity_id=recommendation_id,
+        outcome="success",
+        detail=f"Due date set to {new_due_date}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"new_due_date": new_due_date},
+    )
+
+
+def recommendation_assigned(
+    recommendation_id: str,
+    actor_id: str,
+    assigned_to_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="recommendation.assigned",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Recommendation",
+        entity_id=recommendation_id,
+        outcome="success",
+        detail=f"Assigned to user {assigned_to_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"assigned_to_id": assigned_to_id},
+    )
+
+
 def assessment_created_manually(
     assessment_id: str,
     actor_id: str,

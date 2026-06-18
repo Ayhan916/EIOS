@@ -1,6 +1,7 @@
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import ConfidenceLevel, EntityStatus, RiskLevel
+from domain.enums import ActionStatus, ConfidenceLevel, EntityStatus, RiskLevel
 from domain.recommendation import Recommendation
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.repositories.base import BaseRepository
@@ -29,6 +30,8 @@ class SQLRecommendationRepository(BaseRepository[Recommendation, RecommendationM
             action_required=entity.action_required,
             due_date=entity.due_date,
             approved_by=entity.approved_by,
+            action_status=entity.action_status.value,
+            assigned_to_id=entity.assigned_to_id,
         )
 
     def _to_domain(self, model: RecommendationModel) -> Recommendation:
@@ -50,7 +53,24 @@ class SQLRecommendationRepository(BaseRepository[Recommendation, RecommendationM
             action_required=model.action_required,
             due_date=model.due_date,
             approved_by=model.approved_by,
+            action_status=ActionStatus(model.action_status),
+            assigned_to_id=model.assigned_to_id,
         )
 
     async def list_by_assessment(self, assessment_id: str) -> list[Recommendation]:
         return await self._list_by_field("assessment_id", assessment_id)
+
+    async def list_by_org_and_status(
+        self, organization_id: str, action_status: ActionStatus | None = None
+    ) -> list[Recommendation]:
+        from infrastructure.persistence.models.assessment import AssessmentModel
+
+        stmt = (
+            select(RecommendationModel)
+            .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
+            .where(AssessmentModel.organization_id == organization_id)
+        )
+        if action_status is not None:
+            stmt = stmt.where(RecommendationModel.action_status == action_status.value)
+        result = await self._session.execute(stmt)
+        return [self._to_domain(m) for m in result.scalars().all()]

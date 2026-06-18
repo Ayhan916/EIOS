@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 
 from .base_entity import BaseEntity
-from .enums import ConfidenceLevel, RiskLevel
+from .enums import ActionStatus, ConfidenceLevel, RiskLevel
 
 
 @dataclass(slots=True, kw_only=True)
@@ -26,3 +26,5 @@ class Recommendation(BaseEntity):
     action_required: bool = True
     due_date: datetime | None = None
     approved_by: str | None = None
+    action_status: ActionStatus = field(default=ActionStatus.OPEN)
+    assigned_to_id: str | None = None
