@@ -1,5 +1,6 @@
 from .agent_run import SQLAgentRunRepository
 from .assessment import SQLAssessmentRepository
+from .comment import SQLCommentRepository
 from .asset import SQLAssetRepository
 from .audit_event import SQLAuditEventRepository
 from .control import SQLControlRepository
@@ -21,12 +22,14 @@ from .sector import SQLSectorRepository
 from .standard import SQLStandardRepository
 from .task import SQLTaskRepository
 from .user import SQLUserRepository
+from .review_action import SQLReviewActionRepository
 from .workflow_job import SQLWorkflowJobRepository
 from .workflow_run import SQLWorkflowRunRepository
 
 __all__ = [
     "SQLAgentRunRepository",
     "SQLAssessmentRepository",
+    "SQLCommentRepository",
     "SQLAuditEventRepository",
     "SQLAssetRepository",
     "SQLEvidenceChunkRepository",
@@ -48,6 +51,7 @@ __all__ = [
     "SQLStandardRepository",
     "SQLTaskRepository",
     "SQLUserRepository",
+    "SQLReviewActionRepository",
     "SQLWorkflowJobRepository",
     "SQLWorkflowRunRepository",
 ]

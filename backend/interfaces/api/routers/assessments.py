@@ -13,7 +13,14 @@ from application.remediation.brief import compute_brief
 from application.remediation.matcher import compute_matches
 from application.remediation.planner import compute_remediation_plan
 from domain.assessment import Assessment
-from domain.enums import EntityStatus, NotificationType
+from domain.enums import (
+    EntityStatus,
+    NotificationType,
+    ReviewActionType,
+    ReviewStatus,
+    is_valid_review_transition,
+)
+from domain.review_action import ReviewAction
 from domain.user import User
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
@@ -21,6 +28,7 @@ from infrastructure.persistence.repositories import (
     SQLFindingEvidenceLinkRepository,
     SQLFindingRepository,
     SQLRecommendationRepository,
+    SQLReviewActionRepository,
     SQLRiskRepository,
     SQLUserRepository,
     SQLWorkflowRunRepository,
@@ -33,6 +41,7 @@ from interfaces.api.deps import (
     get_finding_evidence_link_repo,
     get_finding_repo,
     get_recommendation_repo,
+    get_review_action_repo,
     get_risk_repo,
     get_user_repo,
     get_workflow_run_repo,
@@ -53,6 +62,13 @@ from interfaces.api.schemas.remediation import (
     DecisionBriefResponse,
     RemediationActionResponse,
     RemediationPlanResponse,
+)
+from interfaces.api.schemas.review import (
+    ActivityEvent,
+    AssignReviewerRequest,
+    ReviewActionRequest,
+    ReviewActionResponse,
+    SubmitForReviewRequest,
 )
 from interfaces.api.schemas.risk import RiskResponse
 
@@ -500,6 +516,348 @@ async def get_assessment_brief(
         top_recommendations=brief.top_recommendations,
         disclaimer=brief.disclaimer,
     )
+
+
+@router.post(
+    "/{assessment_id}/submit-for-review",
+    response_model=AssessmentResponse,
+    dependencies=[Depends(require_analyst)],
+    summary="Submit assessment for formal review (M26)",
+)
+async def submit_for_review(
+    assessment_id: str,
+    body: SubmitForReviewRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
+) -> AssessmentResponse:
+    assessment = await repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    if not is_valid_review_transition(assessment.review_status, ReviewStatus.IN_REVIEW):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Cannot submit for review from status '{assessment.review_status.value}'",
+        )
+
+    assessment.review_status = ReviewStatus.IN_REVIEW
+    assessment.updated_by = current_user.id
+
+    if body.reviewer_id:
+        # Validate reviewer belongs to same org and has reviewer+ role
+        reviewer = await user_repo.get_by_id(body.reviewer_id)
+        if reviewer is None or reviewer.organization_id != current_user.organization_id:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")
+        from domain.enums import UserRole, has_min_role
+        if not has_min_role(reviewer.role, UserRole.REVIEWER):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="Assigned reviewer must have reviewer role or higher",
+            )
+        assessment.assigned_reviewer_id = body.reviewer_id
+        if body.review_due_date:
+            assessment.review_due_date = body.review_due_date
+
+    saved = await repo.save(assessment)
+    await audit_repo.save(
+        audit_events.review_submitted(
+            assessment_id=assessment_id,
+            actor_id=current_user.id,
+            actor_email=current_user.email,
+        )
+    )
+
+    # Notify assigned reviewer
+    if assessment.assigned_reviewer_id:
+        reviewer = await user_repo.get_by_id(assessment.assigned_reviewer_id)
+        if reviewer and reviewer.organization_id == current_user.organization_id:
+            await notification_service.notify(
+                session=session,
+                user_id=reviewer.id,
+                organization_id=reviewer.organization_id or "",
+                notification_type=NotificationType.REVIEWER_ASSIGNED,
+                title="Assessment assigned for review",
+                body=f"{current_user.display_name} submitted '{assessment.title}' for your review.",
+                entity_type="assessment",
+                entity_id=assessment_id,
+                dedupe_key=f"review_assigned:{assessment_id}:{reviewer.id}",
+                user_email=reviewer.email,
+            )
+
+    return AssessmentResponse.model_validate(saved)
+
+
+@router.post(
+    "/{assessment_id}/assign-reviewer",
+    response_model=AssessmentResponse,
+    dependencies=[Depends(require_admin)],
+    summary="Assign a reviewer to an assessment (M26)",
+)
+async def assign_reviewer(
+    assessment_id: str,
+    body: AssignReviewerRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
+) -> AssessmentResponse:
+    assessment = await repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    reviewer = await user_repo.get_by_id(body.reviewer_id)
+    if reviewer is None or reviewer.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")
+    from domain.enums import UserRole, has_min_role
+    if not has_min_role(reviewer.role, UserRole.REVIEWER):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Assigned user must have reviewer role or higher",
+        )
+
+    assessment.assigned_reviewer_id = body.reviewer_id
+    if body.review_due_date:
+        assessment.review_due_date = body.review_due_date
+    assessment.updated_by = current_user.id
+    saved = await repo.save(assessment)
+
+    await audit_repo.save(
+        audit_events.reviewer_assigned(
+            assessment_id=assessment_id,
+            reviewer_id=body.reviewer_id,
+            assigned_by_id=current_user.id,
+            assigned_by_email=current_user.email,
+        )
+    )
+
+    await notification_service.notify(
+        session=session,
+        user_id=reviewer.id,
+        organization_id=reviewer.organization_id or "",
+        notification_type=NotificationType.REVIEWER_ASSIGNED,
+        title="You have been assigned as reviewer",
+        body=f"{current_user.display_name} assigned you to review '{assessment.title}'.",
+        entity_type="assessment",
+        entity_id=assessment_id,
+        dedupe_key=f"reviewer_assigned:{assessment_id}:{reviewer.id}",
+        user_email=reviewer.email,
+    )
+
+    return AssessmentResponse.model_validate(saved)
+
+
+@router.post(
+    "/{assessment_id}/review-action",
+    response_model=ReviewActionResponse,
+    dependencies=[Depends(require_reviewer)],
+    summary="Submit a formal review decision (approve / reject / request changes) (M26)",
+)
+async def submit_review_action(
+    assessment_id: str,
+    body: ReviewActionRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    review_action_repo: SQLReviewActionRepository = Depends(get_review_action_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
+) -> ReviewActionResponse:
+    assessment = await repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    if assessment.review_status != ReviewStatus.IN_REVIEW:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"Assessment must be InReview to submit a review action (current: {assessment.review_status.value})",
+        )
+
+    # Four-eyes principle: the creator of the assessment cannot review their own work
+    if assessment.created_by and assessment.created_by == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Reviewers cannot approve, reject or request changes on an assessment they created (four-eyes principle).",
+        )
+
+    # Map action to target review status
+    action_to_status: dict[ReviewActionType, ReviewStatus] = {
+        ReviewActionType.APPROVE: ReviewStatus.APPROVED,
+        ReviewActionType.REJECT: ReviewStatus.CHANGES_REQUESTED,
+        ReviewActionType.REQUEST_CHANGES: ReviewStatus.CHANGES_REQUESTED,
+    }
+    target_review_status = action_to_status[body.action_type]
+
+    # Persist the formal review decision
+    review_action = ReviewAction(
+        assessment_id=assessment_id,
+        actor_id=current_user.id,
+        actor_email=current_user.email,
+        action_type=body.action_type,
+        comment=body.comment,
+        status=EntityStatus.ACTIVE,
+        created_by=current_user.id,
+    )
+    saved_action = await review_action_repo.save(review_action)
+
+    # Transition assessment review status
+    assessment.review_status = target_review_status
+    assessment.updated_by = current_user.id
+    if body.action_type == ReviewActionType.APPROVE:
+        assessment.approved_by = current_user.id
+        assessment.approval_date = datetime.now(UTC)
+        assessment.status = EntityStatus.APPROVED
+
+    await repo.save(assessment)
+
+    await audit_repo.save(
+        audit_events.review_action_taken(
+            assessment_id=assessment_id,
+            action_type=body.action_type.value,
+            actor_id=current_user.id,
+            actor_email=current_user.email,
+            comment=body.comment,
+        )
+    )
+
+    # Notify assessment creator
+    if assessment.created_by and assessment.created_by != current_user.id:
+        creator = await user_repo.get_by_id(assessment.created_by)
+        if creator and creator.organization_id == current_user.organization_id:
+            if body.action_type == ReviewActionType.APPROVE:
+                notif_type = NotificationType.ASSESSMENT_APPROVED
+                title = "Assessment approved"
+                body_text = f"Your assessment '{assessment.title}' was approved by {current_user.display_name}."
+                dedupe_key = f"assessment_approved:{assessment_id}"
+            else:
+                notif_type = NotificationType.CHANGES_REQUESTED
+                title = "Changes requested on your assessment"
+                body_text = (
+                    f"{current_user.display_name} requested changes on '{assessment.title}'."
+                    + (f" Note: {body.comment}" if body.comment else "")
+                )
+                dedupe_key = f"changes_requested:{assessment_id}:{saved_action.id}"
+            await notification_service.notify(
+                session=session,
+                user_id=creator.id,
+                organization_id=creator.organization_id or "",
+                notification_type=notif_type,
+                title=title,
+                body=body_text,
+                entity_type="assessment",
+                entity_id=assessment_id,
+                dedupe_key=dedupe_key,
+                user_email=creator.email,
+            )
+
+    return ReviewActionResponse(
+        id=saved_action.id,
+        assessment_id=saved_action.assessment_id,
+        actor_id=saved_action.actor_id,
+        actor_email=saved_action.actor_email,
+        action_type=saved_action.action_type.value,
+        comment=saved_action.comment,
+        created_at=saved_action.created_at,
+    )
+
+
+@router.get(
+    "/{assessment_id}/review-actions",
+    response_model=list[ReviewActionResponse],
+    summary="List all formal review decisions for an assessment (M26)",
+)
+async def list_review_actions(
+    assessment_id: str,
+    current_user: User = Depends(get_current_user),
+    repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    review_action_repo: SQLReviewActionRepository = Depends(get_review_action_repo),
+) -> list[ReviewActionResponse]:
+    assessment = await repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    actions = await review_action_repo.list_by_assessment(assessment_id)
+    return [
+        ReviewActionResponse(
+            id=a.id,
+            assessment_id=a.assessment_id,
+            actor_id=a.actor_id,
+            actor_email=a.actor_email,
+            action_type=a.action_type.value,
+            comment=a.comment,
+            created_at=a.created_at,
+        )
+        for a in actions
+    ]
+
+
+@router.get(
+    "/{assessment_id}/activity",
+    response_model=list[ActivityEvent],
+    summary="Unified chronological activity timeline for an assessment (M26)",
+)
+async def get_assessment_activity(
+    assessment_id: str,
+    current_user: User = Depends(get_current_user),
+    repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
+    review_action_repo: SQLReviewActionRepository = Depends(get_review_action_repo),
+    user_repo: SQLUserRepository = Depends(get_user_repo),
+) -> list[ActivityEvent]:
+    assessment = await repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    events: list[ActivityEvent] = []
+
+    # 1. Audit trail events for this assessment
+    audit_ev_list = await audit_repo.list_by_entity("Assessment", assessment_id)
+    for ev in audit_ev_list:
+        actor_name: str | None = None
+        if ev.actor_id:
+            u = await user_repo.get_by_id(ev.actor_id)
+            if u:
+                actor_name = u.display_name
+        events.append(
+            ActivityEvent(
+                event_type="audit",
+                timestamp=ev.created_at,
+                actor_id=ev.actor_id,
+                actor_name=actor_name,
+                action=ev.action,
+                detail=ev.detail,
+                entity_type=ev.entity_type,
+                entity_id=ev.entity_id,
+            )
+        )
+
+    # 2. Review actions
+    review_actions = await review_action_repo.list_by_assessment(assessment_id)
+    for ra in review_actions:
+        events.append(
+            ActivityEvent(
+                event_type="review_action",
+                timestamp=ra.created_at,
+                actor_id=ra.actor_id,
+                actor_name=ra.actor_email,
+                action=f"review.{ra.action_type.value}",
+                detail=ra.comment,
+                entity_type="Assessment",
+                entity_id=assessment_id,
+            )
+        )
+
+    # Sort chronologically
+    events.sort(key=lambda e: e.timestamp)
+    return events
 
 
 @router.delete(

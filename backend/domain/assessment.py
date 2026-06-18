@@ -11,7 +11,7 @@ from datetime import datetime
 from typing import Any
 
 from .base_entity import BaseEntity
-from .enums import ConfidenceLevel
+from .enums import ConfidenceLevel, ReviewStatus
 
 
 @dataclass(slots=True, kw_only=True)
@@ -32,3 +32,7 @@ class Assessment(BaseEntity):
     quality_score: float | None = None
     # Extraction audit trail (M16)
     extraction_metadata: dict[str, Any] | None = field(default=None)
+    # Review workflow (M26)
+    review_status: ReviewStatus = field(default=ReviewStatus.DRAFT)
+    assigned_reviewer_id: str | None = None
+    review_due_date: datetime | None = None

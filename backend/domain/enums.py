@@ -81,6 +81,10 @@ class NotificationType(str, Enum):
     ACTION_OVERDUE = "action_overdue"
     ASSESSMENT_APPROVED = "assessment_approved"
     RECOMMENDATION_ASSIGNED = "recommendation_assigned"
+    REVIEWER_ASSIGNED = "reviewer_assigned"
+    REVIEW_SUBMITTED = "review_submitted"
+    CHANGES_REQUESTED = "changes_requested"
+    COMMENT_MENTION = "comment_mention"
 
 
 class EvidenceStrength(str, Enum):
@@ -88,3 +92,31 @@ class EvidenceStrength(str, Enum):
     MODERATE = "Moderate"
     STRONG = "Strong"
     VERY_STRONG = "Very Strong"
+
+
+class ReviewStatus(str, Enum):
+    DRAFT = "Draft"
+    IN_REVIEW = "InReview"
+    CHANGES_REQUESTED = "ChangesRequested"
+    APPROVED = "Approved"
+    ARCHIVED = "Archived"
+
+
+class ReviewActionType(str, Enum):
+    APPROVE = "approve"
+    REJECT = "reject"
+    REQUEST_CHANGES = "request_changes"
+
+
+# Allowed review status transitions: {from_status: {to_status, ...}}
+_REVIEW_TRANSITIONS: dict[ReviewStatus, set[ReviewStatus]] = {
+    ReviewStatus.DRAFT: {ReviewStatus.IN_REVIEW},
+    ReviewStatus.IN_REVIEW: {ReviewStatus.APPROVED, ReviewStatus.CHANGES_REQUESTED},
+    ReviewStatus.CHANGES_REQUESTED: {ReviewStatus.IN_REVIEW},
+    ReviewStatus.APPROVED: {ReviewStatus.ARCHIVED},
+    ReviewStatus.ARCHIVED: set(),
+}
+
+
+def is_valid_review_transition(from_status: ReviewStatus, to_status: ReviewStatus) -> bool:
+    return to_status in _REVIEW_TRANSITIONS.get(from_status, set())

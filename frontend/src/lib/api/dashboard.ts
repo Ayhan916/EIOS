@@ -1,9 +1,11 @@
 import apiClient from "./client";
+import type { ReviewQueueItem } from "@/types/api";
 
 export interface RecentAssessmentItem {
   id: string;
   title: string;
   status: string;
+  review_status: string;
   assessment_type: string | null;
   quality_score: number | null;
   finding_count: number;
@@ -29,6 +31,12 @@ export interface DashboardData {
   critical_finding_count: number;
   recent_assessments: RecentAssessmentItem[];
   assessments_over_time: MonthlyCount[];
+  // M26 review queue
+  awaiting_review: number;
+  reviews_overdue: number;
+  recently_approved: number;
+  recently_rejected: number;
+  review_queue: ReviewQueueItem[];
 }
 
 export async function getDashboard(): Promise<DashboardData> {

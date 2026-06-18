@@ -13,6 +13,7 @@ from interfaces.api.schemas.dashboard import (
     DashboardResponse,
     MonthlyCount,
     RecentAssessmentItem,
+    ReviewQueueItem,
 )
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
@@ -172,6 +173,7 @@ async def get_dashboard(
                 if row.AssessmentModel.created_at
                 else ""
             ),
+            review_status=row.AssessmentModel.review_status or "Draft",
         )
         for row in recent_rows
     ]
@@ -195,6 +197,56 @@ async def get_dashboard(
         for row in monthly_rows
     ]
 
+    # ── 8. Review queue KPIs (M26) ─────────────────────────────────────────────
+    review_queue_rows = await session.execute(
+        select(AssessmentModel)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.review_status.in_(["InReview", "ChangesRequested"]),
+            AssessmentModel.status != "Deleted",
+        )
+        .order_by(AssessmentModel.review_due_date.asc().nulls_last())
+        .limit(20)
+    )
+    review_queue_items = review_queue_rows.scalars().all()
+
+    awaiting_review = sum(1 for r in review_queue_items if r.review_status == "InReview")
+    reviews_overdue = sum(
+        1
+        for r in review_queue_items
+        if r.review_due_date and r.review_due_date < now
+    )
+    recently_approved_row = await session.execute(
+        select(func.count(AssessmentModel.id)).where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.review_status == "Approved",
+            AssessmentModel.approval_date >= now.replace(hour=0, minute=0, second=0, microsecond=0)
+            if now
+            else True,
+        )
+    )
+    recently_approved = recently_approved_row.scalar() or 0
+    recently_rejected_row = await session.execute(
+        select(func.count(AssessmentModel.id)).where(
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.review_status == "ChangesRequested",
+        )
+    )
+    recently_rejected = recently_rejected_row.scalar() or 0
+
+    review_queue = [
+        ReviewQueueItem(
+            id=r.id,
+            title=r.title,
+            review_status=r.review_status,
+            assigned_reviewer_id=r.assigned_reviewer_id,
+            review_due_date=r.review_due_date,
+            created_at=r.created_at.isoformat() if r.created_at else "",
+            is_overdue=bool(r.review_due_date and r.review_due_date < now),
+        )
+        for r in review_queue_items
+    ]
+
     return DashboardResponse(
         total_assessments=total_assessments,
         avg_quality_score=avg_quality_score,
@@ -208,4 +260,9 @@ async def get_dashboard(
         critical_finding_count=critical_finding_count,
         recent_assessments=recent_assessments,
         assessments_over_time=assessments_over_time,
+        awaiting_review=awaiting_review,
+        reviews_overdue=reviews_overdue,
+        recently_approved=recently_approved,
+        recently_rejected=recently_rejected,
+        review_queue=review_queue,
     )

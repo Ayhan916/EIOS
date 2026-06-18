@@ -8,12 +8,13 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  GitPullRequest,
   Plus,
   ShieldAlert,
   TrendingUp,
 } from "lucide-react";
 import { getDashboard } from "@/lib/api/dashboard";
-import { formatDateTime } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -293,6 +294,68 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Review Queue (shown only when there are items pending) ─────────── */}
+      {(data.awaiting_review > 0 || data.reviews_overdue > 0) && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                <GitPullRequest className="h-4 w-4 text-blue-500" />
+                Review Queue
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Assessments awaiting formal governance review
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              {data.awaiting_review > 0 && (
+                <span className="rounded-full bg-blue-100 text-blue-700 px-3 py-0.5 text-xs font-semibold">
+                  {data.awaiting_review} awaiting
+                </span>
+              )}
+              {data.reviews_overdue > 0 && (
+                <span className="rounded-full bg-red-100 text-red-700 px-3 py-0.5 text-xs font-semibold">
+                  {data.reviews_overdue} overdue
+                </span>
+              )}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {data.review_queue.map((item) => (
+              <Link
+                key={item.id}
+                href={`/assessments/${item.id}`}
+                className="flex flex-col gap-2 rounded-lg border border-border bg-card px-4 py-3 transition-colors hover:bg-muted/50"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <p className="truncate text-sm font-medium text-foreground leading-snug">
+                    {item.title}
+                  </p>
+                  <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                    item.review_status === "InReview"
+                      ? "bg-blue-100 text-blue-700"
+                      : "bg-amber-100 text-amber-700"
+                  }`}>
+                    {item.review_status === "InReview" ? "In Review" : "Changes Requested"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Clock className="h-3 w-3 flex-shrink-0" />
+                  {item.review_due_date ? (
+                    <span className={item.is_overdue ? "text-red-600 font-medium" : ""}>
+                      Due {formatDate(item.review_due_date)}
+                      {item.is_overdue && " · Overdue"}
+                    </span>
+                  ) : (
+                    <span>No due date</span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Bottom row: Recent assessments + Timeline ──────────────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

@@ -19,12 +19,14 @@ from infrastructure.persistence.repositories import (
     SQLAgentRunRepository,
     SQLAssessmentRepository,
     SQLAuditEventRepository,
+    SQLCommentRepository,
     SQLEvidenceRepository,
     SQLFindingEvidenceLinkRepository,
     SQLFindingRepository,
     SQLNotificationRepository,
     SQLOrganizationRepository,
     SQLRecommendationRepository,
+    SQLReviewActionRepository,
     SQLRiskRepository,
     SQLSectorRepository,
     SQLUserRepository,
@@ -137,6 +139,18 @@ async def get_report_repo(
     session: AsyncSession = Depends(get_db),
 ) -> SQLReportRepository:
     return SQLReportRepository(session)
+
+
+async def get_comment_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLCommentRepository:
+    return SQLCommentRepository(session)
+
+
+async def get_review_action_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLReviewActionRepository:
+    return SQLReviewActionRepository(session)
 
 
 async def get_current_user(

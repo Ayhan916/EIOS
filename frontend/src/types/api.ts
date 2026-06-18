@@ -94,7 +94,70 @@ export interface AssessmentResponse extends EntityResponse {
   methodology: string | null;
   confidence: string;
   approved_by: string | null;
+  approval_date: string | null;
   quality_score: number | null;
+  review_status: string;
+  assigned_reviewer_id: string | null;
+  review_due_date: string | null;
+}
+
+export interface CommentResponse {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  author_id: string;
+  author_name: string | null;
+  content: string;
+  is_edited: boolean;
+  is_deleted: boolean;
+  edited_at: string | null;
+  deleted_at: string | null;
+  mentioned_user_ids: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CommentCreate {
+  entity_type: string;
+  entity_id: string;
+  content: string;
+}
+
+export interface CommentEdit {
+  content: string;
+}
+
+export interface ReviewActionResponse {
+  id: string;
+  assessment_id: string;
+  actor_id: string;
+  actor_email: string;
+  action_type: string;
+  comment: string | null;
+  created_at: string;
+}
+
+export interface ActivityEvent {
+  event_type: string;
+  timestamp: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  action: string;
+  detail: string | null;
+  entity_type: string | null;
+  entity_id: string | null;
+  comment_id: string | null;
+  comment_content: string | null;
+}
+
+export interface ReviewQueueItem {
+  id: string;
+  title: string;
+  review_status: string;
+  assigned_reviewer_id: string | null;
+  review_due_date: string | null;
+  created_at: string;
+  is_overdue: boolean;
 }
 
 export interface FindingResponse extends EntityResponse {
@@ -106,6 +169,32 @@ export interface FindingResponse extends EntityResponse {
   confidence: string;
   reasoning: string | null;
   uncertainty: string | null;
+  evidence_strength: "Weak" | "Moderate" | "Strong" | "Very Strong" | null;
+  evidence_source_count: number;
+}
+
+export interface FindingEvidenceLinkResponse extends EntityResponse {
+  finding_id: string;
+  evidence_id: string;
+  evidence_chunk_id: string | null;
+  page_number: number | null;
+  confidence_score: number | null;
+  supporting_excerpt: string | null;
+  link_method: string;
+}
+
+export interface FindingWithLinksResponse {
+  finding: FindingResponse;
+  evidence_links: FindingEvidenceLinkResponse[];
+}
+
+export interface EvidenceInsightsResponse {
+  assessment_id: string;
+  total_findings: number;
+  linked_findings: number;
+  total_evidence_links: number;
+  strength_distribution: Record<string, number>;
+  findings: FindingWithLinksResponse[];
 }
 
 export interface RiskResponse extends EntityResponse {

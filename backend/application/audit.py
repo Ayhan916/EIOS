@@ -339,3 +339,108 @@ def assessment_created_manually(
         status=EntityStatus.ACTIVE,
         event_metadata={"assessment_type": assessment_type},
     )
+
+
+# ── M26 Collaboration & Review Workflow ───────────────────────────────────────
+
+
+def review_submitted(
+    assessment_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="assessment.review_started",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Assessment",
+        entity_id=assessment_id,
+        outcome="success",
+        detail=f"Assessment {assessment_id} submitted for review",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"submitted_by": actor_id},
+    )
+
+
+def reviewer_assigned(
+    assessment_id: str,
+    reviewer_id: str,
+    assigned_by_id: str,
+    assigned_by_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="reviewer.assigned",
+        actor_id=assigned_by_id,
+        actor_email=assigned_by_email,
+        entity_type="Assessment",
+        entity_id=assessment_id,
+        outcome="success",
+        detail=f"Reviewer {reviewer_id} assigned to assessment {assessment_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"reviewer_id": reviewer_id, "assigned_by": assigned_by_id},
+    )
+
+
+def review_action_taken(
+    assessment_id: str,
+    action_type: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    comment: str | None = None,
+) -> AuditEvent:
+    action_map = {
+        "approve": "assessment.approved",
+        "reject": "assessment.rejected",
+        "request_changes": "assessment.changes_requested",
+    }
+    return AuditEvent(
+        action=action_map.get(action_type, f"assessment.{action_type}"),
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Assessment",
+        entity_id=assessment_id,
+        outcome="success",
+        detail=f"Review action '{action_type}' taken on assessment {assessment_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"action_type": action_type, "comment": comment},
+    )
+
+
+def comment_created(
+    comment_id: str,
+    entity_type: str,
+    entity_id: str,
+    author_id: str,
+    author_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="comment.created",
+        actor_id=author_id,
+        actor_email=author_email,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        outcome="success",
+        detail=f"Comment {comment_id} added to {entity_type} {entity_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"comment_id": comment_id},
+    )
+
+
+def comment_deleted(
+    comment_id: str,
+    entity_type: str,
+    entity_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="comment.deleted",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        outcome="success",
+        detail=f"Comment {comment_id} soft-deleted from {entity_type} {entity_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"comment_id": comment_id},
+    )

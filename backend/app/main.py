@@ -32,6 +32,7 @@ from interfaces.api.routers import (
     assessments_router,
     audit_router,
     auth_router,
+    comments_router,
     dashboard_router,
     evidences_router,
     findings_router,
@@ -253,3 +254,4 @@ app.include_router(sector_intelligence_router, prefix=API_V1)
 app.include_router(dashboard_router, prefix=API_V1)
 app.include_router(users_router, prefix=API_V1)
 app.include_router(notifications_router, prefix=API_V1)
+app.include_router(comments_router, prefix=API_V1)

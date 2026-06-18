@@ -189,6 +189,7 @@ def render_report_pdf(snapshot: dict[str, Any]) -> bytes:
     _risks_section(pdf, risks)
     _recommendations_section(pdf, recommendations)
     _evidence_index(pdf, evidence)
+    _governance_section(pdf, assessment, snapshot.get("review_actions", []))
     _audit_trail(pdf, meta, report_id, assessment)
 
     return bytes(pdf.output())
@@ -675,6 +676,83 @@ def _evidence_support_section(pdf: _EIOSReport, findings: list) -> None:
 
     pdf.set_text_color(*_DARK)
     pdf.set_fill_color(*_WHITE)
+
+
+def _governance_section(pdf: _EIOSReport, assessment: dict, review_actions: list) -> None:
+    """Render governance accountability section — reviewer, approval, review history."""
+    review_status = assessment.get("review_status") or "Draft"
+    assigned_reviewer = assessment.get("assigned_reviewer_name") or assessment.get("assigned_reviewer_id") or "-"
+    approval_date = assessment.get("approval_date")
+    approved_by = assessment.get("approved_by_name") or assessment.get("approved_by") or "-"
+    review_due_date = assessment.get("review_due_date")
+
+    pdf.add_page()
+    pdf._section_header("Governance & Accountability")
+
+    pdf.ln(2)
+    pdf._sub_header("Review Status")
+    pdf._kv("Current Review Status", _latin1(review_status))
+    pdf.ln(1)
+    pdf._kv("Assigned Reviewer", _latin1(assigned_reviewer))
+    pdf.ln(1)
+    if review_due_date:
+        pdf._kv("Review Due Date", _latin1(str(review_due_date)[:10]))
+        pdf.ln(1)
+    if approval_date:
+        pdf._kv("Approved By", _latin1(approved_by))
+        pdf.ln(1)
+        pdf._kv("Approval Date", _latin1(str(approval_date)[:19]))
+        pdf.ln(1)
+
+    pdf.ln(4)
+
+    # Review decision history
+    if review_actions:
+        pdf._sub_header(f"Review Decision History  ({len(review_actions)} decisions)")
+        pdf.ln(2)
+
+        usable_w = pdf.w - pdf.l_margin - pdf.r_margin
+        _ACTION_COLOURS = {
+            "approve": (15, 130, 55),
+            "reject": (160, 50, 50),
+            "request_changes": (180, 130, 0),
+        }
+
+        for ra in review_actions:
+            action_type = ra.get("action_type", "")
+            col = _ACTION_COLOURS.get(action_type, _MID)
+
+            pdf.set_fill_color(*col)
+            pdf.set_text_color(*_WHITE)
+            pdf.set_font("Helvetica", "B", 8)
+            label = action_type.replace("_", " ").title()
+            pdf.cell(32, 6, _latin1(label), fill=True, align="C")
+            pdf.set_fill_color(*_LIGHT)
+            pdf.set_text_color(*_DARK)
+            pdf.set_font("Helvetica", "", 8)
+            actor_str = ra.get("actor_email") or ra.get("actor_id") or "-"
+            ts_str = str(ra.get("created_at") or "")[:16]
+            pdf.cell(usable_w - 32, 6, f"  {_latin1(actor_str)}  |  {_latin1(ts_str)}", fill=True,
+                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+
+            if ra.get("comment"):
+                pdf.set_font("Helvetica", "I", 7)
+                pdf.set_text_color(*_MID)
+                pdf.cell(6, 4, "")
+                pdf.multi_cell(usable_w - 6, 4, pdf._safe(ra["comment"], 200))
+                pdf.set_text_color(*_DARK)
+            pdf.ln(1)
+    else:
+        pdf._body("No formal review decisions have been recorded for this assessment.")
+
+    pdf.ln(4)
+    pdf._sub_header("Governance Statement")
+    pdf._body(
+        "This assessment has been produced in accordance with EIOS enterprise due diligence "
+        "governance controls. All review decisions, reviewer assignments, and status transitions "
+        "are immutably recorded in the EIOS audit trail and can be independently verified by "
+        "internal audit, compliance officers, or external regulators."
+    )
 
 
 def _audit_trail(pdf: _EIOSReport, meta: dict, report_id: str, assessment: dict) -> None:

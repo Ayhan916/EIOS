@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
 from domain.enums import ConfidenceLevel
@@ -25,3 +27,7 @@ class AssessmentResponse(EntityResponse):
     confidence: str
     approved_by: str | None = None
     quality_score: float | None = None
+    # Review workflow (M26)
+    review_status: str = "Draft"
+    assigned_reviewer_id: str | None = None
+    review_due_date: datetime | None = None

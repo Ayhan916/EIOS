@@ -28,8 +28,10 @@ from .decision import DecisionModel
 from .evidence import EvidenceModel
 from .evidence_chunk import EvidenceChunkModel
 from .finding import FindingModel
+from .comment import CommentModel
 from .finding_evidence_link import FindingEvidenceLinkModel
 from .notification import NotificationModel
+from .review_action import ReviewActionModel
 from .organization import OrganizationModel
 from .policy import PolicyModel
 from .process import ProcessModel
@@ -52,6 +54,7 @@ __all__ = [
     "AssessmentModel",
     "Base",
     "BaseModel",
+    "CommentModel",
     "ControlModel",
     "DecisionModel",
     "EvidenceChunkModel",
@@ -60,6 +63,7 @@ __all__ = [
     "FindingEvidenceLinkModel",
     "NotificationModel",
     "OrganizationModel",
+    "ReviewActionModel",
     "PolicyModel",
     "ProcessModel",
     "ProjectModel",

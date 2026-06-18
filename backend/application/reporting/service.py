@@ -1,11 +1,11 @@
 """
-EIOS Report Service (M18 + M25 evidence intelligence)
+EIOS Report Service (M18 + M25 evidence intelligence + M26 governance)
 
 Assembles a frozen content snapshot from live database records, renders a PDF,
 and persists both the snapshot and PDF bytes in a single atomic operation.
 
-M25: evidence links per finding are included in the snapshot so the PDF can
-render page-level citations for ESG auditors.
+M25: evidence links per finding are included in the snapshot.
+M26: review actions and reviewer info are included for the governance section.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from domain.finding import Finding
 from domain.finding_evidence_link import FindingEvidenceLink
 from domain.recommendation import Recommendation
 from domain.report import Report
+from domain.review_action import ReviewAction
 from domain.risk import Risk
 from domain.user import User
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
@@ -27,6 +28,7 @@ from infrastructure.persistence.repositories.finding import SQLFindingRepository
 from infrastructure.persistence.repositories.finding_evidence_link import SQLFindingEvidenceLinkRepository
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.report import SQLReportRepository
+from infrastructure.persistence.repositories.review_action import SQLReviewActionRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
 from infrastructure.reporting.pdf_renderer import render_report_pdf
 
@@ -41,6 +43,7 @@ class ReportService:
         evidence_repo: SQLEvidenceRepository,
         report_repo: SQLReportRepository,
         finding_evidence_link_repo: SQLFindingEvidenceLinkRepository | None = None,
+        review_action_repo: SQLReviewActionRepository | None = None,
     ) -> None:
         self._assessment_repo = assessment_repo
         self._finding_repo = finding_repo
@@ -49,6 +52,7 @@ class ReportService:
         self._evidence_repo = evidence_repo
         self._report_repo = report_repo
         self._link_repo = finding_evidence_link_repo
+        self._review_action_repo = review_action_repo
 
     async def generate(
         self,
@@ -74,6 +78,11 @@ class ReportService:
             finding_ids = [f.id for f in findings]
             evidence_links = await self._link_repo.list_by_assessment_findings(finding_ids)
 
+        # M26: load review actions for governance section
+        review_actions: list[ReviewAction] = []
+        if self._review_action_repo:
+            review_actions = await self._review_action_repo.list_by_assessment(assessment_id)
+
         snapshot = _build_snapshot(
             assessment=assessment,
             findings=findings,
@@ -81,6 +90,7 @@ class ReportService:
             recommendations=recommendations,
             evidence=evidence,
             evidence_links=evidence_links,
+            review_actions=review_actions,
             current_user=current_user,
         )
 
@@ -117,6 +127,7 @@ def _build_snapshot(
     evidence: list[Evidence],
     current_user: User,
     evidence_links: list[FindingEvidenceLink] | None = None,
+    review_actions: list[ReviewAction] | None = None,
 ) -> dict[str, Any]:
     generated_at = datetime.now(UTC).isoformat()
     generated_by_name = getattr(current_user, "display_name", None) or current_user.email
@@ -132,6 +143,7 @@ def _build_snapshot(
         "risks": [_risk_dict(r) for r in risks],
         "recommendations": [_rec_dict(r) for r in recommendations],
         "evidence": [_evidence_dict(e) for e in evidence],
+        "review_actions": [_review_action_dict(ra) for ra in (review_actions or [])],
         "meta": {
             "generated_at": generated_at,
             "generated_by": current_user.id,
@@ -160,6 +172,24 @@ def _assessment_dict(a: Assessment) -> dict[str, Any]:
         "status": a.status.value,
         "created_at": a.created_at.isoformat(),
         "organization_id": a.organization_id,
+        # M26 review workflow fields
+        "review_status": a.review_status.value if a.review_status else "Draft",
+        "assigned_reviewer_id": a.assigned_reviewer_id,
+        "review_due_date": a.review_due_date.isoformat() if a.review_due_date else None,
+        "approved_by": a.approved_by,
+        "approval_date": a.approval_date.isoformat() if a.approval_date else None,
+    }
+
+
+def _review_action_dict(ra: ReviewAction) -> dict[str, Any]:
+    return {
+        "id": ra.id,
+        "assessment_id": ra.assessment_id,
+        "actor_id": ra.actor_id,
+        "actor_email": ra.actor_email,
+        "action_type": ra.action_type.value,
+        "comment": ra.comment,
+        "created_at": ra.created_at.isoformat(),
     }
 
 

@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.assessment import Assessment
-from domain.enums import ConfidenceLevel, EntityStatus
+from domain.enums import ConfidenceLevel, EntityStatus, ReviewStatus
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.repositories.base import BaseRepository
 
@@ -33,6 +33,9 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
             approval_date=entity.approval_date,
             quality_score=entity.quality_score,
             extraction_metadata=entity.extraction_metadata,
+            review_status=entity.review_status.value,
+            assigned_reviewer_id=entity.assigned_reviewer_id,
+            review_due_date=entity.review_due_date,
         )
 
     def _to_domain(self, model: AssessmentModel) -> Assessment:
@@ -57,6 +60,9 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
             approval_date=model.approval_date,
             quality_score=model.quality_score,
             extraction_metadata=model.extraction_metadata,
+            review_status=ReviewStatus(model.review_status) if model.review_status else ReviewStatus.DRAFT,
+            assigned_reviewer_id=model.assigned_reviewer_id,
+            review_due_date=model.review_due_date,
         )
 
     async def list_by_sector(self, sector_id: str) -> list[Assessment]:

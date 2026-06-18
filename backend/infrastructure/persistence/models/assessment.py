@@ -29,6 +29,10 @@ class AssessmentModel(BaseModel):
     quality_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     # Extraction audit trail (M16)
     extraction_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    # Review workflow (M26)
+    review_status: Mapped[str] = mapped_column(String(30), nullable=False, default="Draft")
+    assigned_reviewer_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    review_due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     sector: Mapped[SectorModel | None] = relationship(back_populates="assessments")
     evidence: Mapped[list[EvidenceModel]] = relationship(

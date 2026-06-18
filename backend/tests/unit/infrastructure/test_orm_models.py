@@ -40,6 +40,8 @@ EXPECTED_ENTITY_TABLES = {
     "findings",
     "finding_evidence_links",
     "notifications",
+    "comments",
+    "review_actions",
     "risks",
     "recommendations",
     "decisions",
@@ -90,7 +92,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 36  # 25 entity + 11 association
+        assert len(Base.metadata.tables) == 38  # 27 entity + 11 association
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())
