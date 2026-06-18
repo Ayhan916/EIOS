@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import application.audit as audit_factory
 import application.notification_service as notification_service
@@ -15,6 +16,7 @@ from interfaces.api.deps import (
     get_assessment_repo,
     get_audit_event_repo,
     get_current_user,
+    get_db,
     get_recommendation_repo,
     get_user_repo,
     require_admin,
@@ -108,6 +110,7 @@ async def get_recommendation(
 async def update_recommendation_action(
     recommendation_id: str,
     body: RecommendationUpdate,
+    session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
     assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
@@ -160,7 +163,7 @@ async def update_recommendation_action(
         assignee = await user_repo.get_by_id(body.assigned_to_id)
         if assignee and assignee.organization_id == current_user.organization_id:
             await notification_service.notify(
-                session=repo._session,
+                session=session,
                 user_id=assignee.id,
                 organization_id=assignee.organization_id or "",
                 notification_type=NotificationType.RECOMMENDATION_ASSIGNED,

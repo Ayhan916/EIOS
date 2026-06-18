@@ -19,6 +19,7 @@ from interfaces.api.schemas.user import (
     UserResponse,
     UserUpdate,
 )
+from shared.email import send_email
 from shared.security import hash_password
 
 router = APIRouter(
@@ -165,6 +166,23 @@ async def invite_user(
             actor_email=current_user.email,
             organization_id=current_user.organization_id,
         )
+    )
+
+    # Send invite email when SMTP is configured.
+    # The temp password is never stored in logs — only hashed in DB and returned here once.
+    await send_email(
+        to=saved.email,
+        subject=f"You have been invited to EIOS by {current_user.display_name}",
+        body_html=(
+            f"<p>Hello {saved.display_name},</p>"
+            f"<p>Your temporary password is: <strong>{temp_password}</strong></p>"
+            f"<p>Please sign in and change it immediately.</p>"
+        ),
+        body_text=(
+            f"Hello {saved.display_name},\n\n"
+            f"Your temporary password is: {temp_password}\n\n"
+            f"Please sign in and change it immediately."
+        ),
     )
 
     return UserInviteResponse(

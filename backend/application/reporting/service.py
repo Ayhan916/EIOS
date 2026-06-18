@@ -1,11 +1,11 @@
 """
-EIOS Report Service (M18)
+EIOS Report Service (M18 + M25 evidence intelligence)
 
 Assembles a frozen content snapshot from live database records, renders a PDF,
 and persists both the snapshot and PDF bytes in a single atomic operation.
 
-All data references are captured at generation time so the report remains
-accurate and auditable regardless of future changes to the underlying entities.
+M25: evidence links per finding are included in the snapshot so the PDF can
+render page-level citations for ESG auditors.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from typing import Any
 from domain.assessment import Assessment
 from domain.evidence import Evidence
 from domain.finding import Finding
+from domain.finding_evidence_link import FindingEvidenceLink
 from domain.recommendation import Recommendation
 from domain.report import Report
 from domain.risk import Risk
@@ -23,6 +24,7 @@ from domain.user import User
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.evidence import SQLEvidenceRepository
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
+from infrastructure.persistence.repositories.finding_evidence_link import SQLFindingEvidenceLinkRepository
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.report import SQLReportRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
@@ -38,6 +40,7 @@ class ReportService:
         recommendation_repo: SQLRecommendationRepository,
         evidence_repo: SQLEvidenceRepository,
         report_repo: SQLReportRepository,
+        finding_evidence_link_repo: SQLFindingEvidenceLinkRepository | None = None,
     ) -> None:
         self._assessment_repo = assessment_repo
         self._finding_repo = finding_repo
@@ -45,22 +48,13 @@ class ReportService:
         self._recommendation_repo = recommendation_repo
         self._evidence_repo = evidence_repo
         self._report_repo = report_repo
+        self._link_repo = finding_evidence_link_repo
 
     async def generate(
         self,
         assessment_id: str,
         current_user: User,
     ) -> Report:
-        """
-        Generate an executive report for the given assessment.
-
-        Steps:
-        1. Load assessment + all related records
-        2. Build a frozen JSON snapshot
-        3. Render PDF from snapshot
-        4. Persist metadata + PDF atomically
-        5. Return the Report domain entity
-        """
         assessment = await self._assessment_repo.get_by_id(assessment_id)
         if assessment is None:
             raise ValueError(f"Assessment {assessment_id} not found")
@@ -74,12 +68,19 @@ class ReportService:
             else []
         )
 
+        # M25: load evidence links for all findings
+        evidence_links: list[FindingEvidenceLink] = []
+        if self._link_repo and findings:
+            finding_ids = [f.id for f in findings]
+            evidence_links = await self._link_repo.list_by_assessment_findings(finding_ids)
+
         snapshot = _build_snapshot(
             assessment=assessment,
             findings=findings,
             risks=risks,
             recommendations=recommendations,
             evidence=evidence,
+            evidence_links=evidence_links,
             current_user=current_user,
         )
 
@@ -99,7 +100,6 @@ class ReportService:
             created_by=current_user.id,
         )
 
-        # Inject report ID into snapshot meta (known only after entity creation)
         snapshot["meta"]["report_id"] = report.id
         report.content_snapshot = snapshot
 
@@ -116,13 +116,19 @@ def _build_snapshot(
     recommendations: list[Recommendation],
     evidence: list[Evidence],
     current_user: User,
+    evidence_links: list[FindingEvidenceLink] | None = None,
 ) -> dict[str, Any]:
     generated_at = datetime.now(UTC).isoformat()
     generated_by_name = getattr(current_user, "display_name", None) or current_user.email
 
+    # Group evidence links by finding_id
+    links_by_finding: dict[str, list[dict]] = {}
+    for lnk in (evidence_links or []):
+        links_by_finding.setdefault(lnk.finding_id, []).append(_link_dict(lnk))
+
     return {
         "assessment": _assessment_dict(assessment),
-        "findings": [_finding_dict(f) for f in findings],
+        "findings": [_finding_dict(f, links_by_finding.get(f.id, [])) for f in findings],
         "risks": [_risk_dict(r) for r in risks],
         "recommendations": [_rec_dict(r) for r in recommendations],
         "evidence": [_evidence_dict(e) for e in evidence],
@@ -130,12 +136,13 @@ def _build_snapshot(
             "generated_at": generated_at,
             "generated_by": current_user.id,
             "generated_by_name": generated_by_name,
-            "report_id": "",  # filled in after Report entity is created
+            "report_id": "",
             "counts": {
                 "findings": len(findings),
                 "risks": len(risks),
                 "recommendations": len(recommendations),
                 "evidence": len(evidence),
+                "evidence_links": len(evidence_links or []),
             },
         },
     }
@@ -157,11 +164,10 @@ def _assessment_dict(a: Assessment) -> dict[str, Any]:
 
 
 def _enum_val(v: Any) -> str:
-    """Return .value for an enum, or the string itself."""
     return v.value if hasattr(v, "value") else str(v)
 
 
-def _finding_dict(f: Finding) -> dict[str, Any]:
+def _finding_dict(f: Finding, links: list[dict] | None = None) -> dict[str, Any]:
     return {
         "id": f.id,
         "title": f.title,
@@ -171,6 +177,21 @@ def _finding_dict(f: Finding) -> dict[str, Any]:
         "confidence": _enum_val(f.confidence),
         "reasoning": f.reasoning,
         "uncertainty": f.uncertainty,
+        "evidence_strength": f.evidence_strength.value if f.evidence_strength else None,
+        "evidence_source_count": f.evidence_source_count,
+        "evidence_links": links or [],
+    }
+
+
+def _link_dict(lnk: FindingEvidenceLink) -> dict[str, Any]:
+    return {
+        "id": lnk.id,
+        "evidence_id": lnk.evidence_id,
+        "evidence_chunk_id": lnk.evidence_chunk_id,
+        "page_number": lnk.page_number,
+        "confidence_score": lnk.confidence_score,
+        "supporting_excerpt": lnk.supporting_excerpt,
+        "link_method": lnk.link_method,
     }
 
 

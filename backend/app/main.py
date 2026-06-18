@@ -57,38 +57,62 @@ _overdue_task: asyncio.Task | None = None
 
 
 async def _check_overdue_loop() -> None:
-    """Runs every 6 hours; fires ACTION_OVERDUE notifications for past-due recommendations."""
+    """
+    Runs every 6 hours. Fires ACTION_OVERDUE notifications for past-due recommendations.
+
+    Query strategy: single JOIN per batch (recs + user in one round-trip).
+    Processes in batches of 500 to avoid loading the full table into memory.
+    Passes pre-fetched notification_preferences to notify() to eliminate the
+    second per-row user lookup inside the service.
+    Total DB cost: ceil(overdue_count / 500) queries + 1 dedupe-check + 1 INSERT per new notif.
+    """
     from infrastructure.persistence.database import AsyncSessionFactory
     from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
-    from infrastructure.persistence.repositories.user import SQLUserRepository
     from application import notification_service
     from domain.enums import NotificationType
 
+    _BATCH = 500
     log = structlog.get_logger("overdue_task")
     while True:
         await asyncio.sleep(6 * 3600)
+        today = date.today()
+        offset = 0
+        total_sent = 0
         try:
-            async with AsyncSessionFactory() as session, session.begin():
-                rec_repo = SQLRecommendationRepository(session)
-                user_repo = SQLUserRepository(session)
-                all_recs = await rec_repo.list_overdue(reference_date=date.today())
-                for rec in all_recs:
-                    user = await user_repo.get_by_id(rec.assigned_to_id) if rec.assigned_to_id else None
-                    if user is None:
-                        continue
-                    dedupe = f"overdue:{rec.id}:{date.today()}"
-                    await notification_service.notify(
-                        session=session,
-                        user_id=user.id,
-                        organization_id=user.organization_id or "",
-                        notification_type=NotificationType.ACTION_OVERDUE,
-                        title="Action overdue",
-                        body=f"Recommendation '{rec.title}' was due on {rec.due_date}.",
-                        entity_type="recommendation",
-                        entity_id=rec.id,
-                        dedupe_key=dedupe,
-                        user_email=user.email,
+            while True:
+                async with AsyncSessionFactory() as session, session.begin():
+                    rec_repo = SQLRecommendationRepository(session)
+                    batch = await rec_repo.list_overdue_with_assignees(
+                        today, limit=_BATCH, offset=offset
                     )
+                    for row in batch:
+                        try:
+                            await notification_service.notify(
+                                session=session,
+                                user_id=row.user_id,
+                                organization_id=row.organization_id,
+                                notification_type=NotificationType.ACTION_OVERDUE,
+                                title="Action overdue",
+                                body=f"Recommendation '{row.recommendation_title}' was due on {row.due_date}.",
+                                entity_type="recommendation",
+                                entity_id=row.recommendation_id,
+                                dedupe_key=f"overdue:{row.recommendation_id}:{today}",
+                                user_email=row.user_email,
+                                notification_preferences=row.notification_preferences,
+                            )
+                            total_sent += 1
+                        except Exception as row_exc:
+                            log.warning(
+                                "overdue_notify_failed",
+                                recommendation_id=row.recommendation_id,
+                                error=str(row_exc),
+                            )
+
+                if len(batch) < _BATCH:
+                    break
+                offset += _BATCH
+
+            log.info("overdue_scan_complete", notifications_sent=total_sent, date=str(today))
         except Exception as exc:
             log.error("overdue_check_failed", error=str(exc))
 

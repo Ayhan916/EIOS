@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date
 
 from sqlalchemy import select
@@ -63,14 +64,74 @@ class SQLRecommendationRepository(BaseRepository[Recommendation, RecommendationM
         return await self._list_by_field("assessment_id", assessment_id)
 
     async def list_overdue(self, reference_date: date) -> list[Recommendation]:
-        """Return all non-completed recommendations with due_date < reference_date."""
+        """Return all open/in-progress recommendations with due_date < reference_date."""
         stmt = select(RecommendationModel).where(
             RecommendationModel.due_date < reference_date,
-            RecommendationModel.action_status != ActionStatus.COMPLETED.value,
+            RecommendationModel.action_status.notin_(
+                [ActionStatus.RESOLVED.value, ActionStatus.VERIFIED.value]
+            ),
             RecommendationModel.assigned_to_id.isnot(None),
         )
         result = await self._session.execute(stmt)
         return [self._to_domain(m) for m in result.scalars().all()]
+
+    async def list_overdue_with_assignees(
+        self, reference_date: date, limit: int = 500, offset: int = 0
+    ) -> list["OverdueScanRow"]:
+        """
+        Single JOIN query: returns overdue recs with their assignee's user data.
+
+        Eliminates the N+1 pattern in the overdue background task — one query per
+        batch instead of one query per recommendation.
+        """
+        from infrastructure.persistence.models.user import UserModel
+
+        stmt = (
+            select(
+                RecommendationModel.id,
+                RecommendationModel.title,
+                RecommendationModel.due_date,
+                UserModel.id.label("user_id"),
+                UserModel.email.label("user_email"),
+                UserModel.organization_id,
+                UserModel.notification_preferences,
+            )
+            .join(UserModel, RecommendationModel.assigned_to_id == UserModel.id)
+            .where(
+                RecommendationModel.due_date < reference_date,
+                RecommendationModel.action_status.notin_(
+                    [ActionStatus.RESOLVED.value, ActionStatus.VERIFIED.value]
+                ),
+                UserModel.is_active.is_(True),
+            )
+            .order_by(RecommendationModel.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        result = await self._session.execute(stmt)
+        return [
+            OverdueScanRow(
+                recommendation_id=row.id,
+                recommendation_title=row.title,
+                due_date=row.due_date,
+                user_id=row.user_id,
+                user_email=row.user_email,
+                organization_id=row.organization_id or "",
+                notification_preferences=row.notification_preferences or {},
+            )
+            for row in result.all()
+        ]
+
+
+@dataclass(frozen=True)
+class OverdueScanRow:
+    recommendation_id: str
+    recommendation_title: str
+    due_date: date | None
+    user_id: str
+    user_email: str
+    organization_id: str
+    notification_preferences: dict
 
     async def list_by_org_and_status(
         self, organization_id: str, action_status: ActionStatus | None = None

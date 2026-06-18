@@ -7,6 +7,7 @@ from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLAuditEventRepository,
     SQLEvidenceRepository,
+    SQLFindingEvidenceLinkRepository,
     SQLFindingRepository,
     SQLRecommendationRepository,
     SQLRiskRepository,
@@ -17,6 +18,7 @@ from interfaces.api.deps import (
     get_audit_event_repo,
     get_current_user,
     get_evidence_repo,
+    get_finding_evidence_link_repo,
     get_finding_repo,
     get_recommendation_repo,
     get_report_repo,
@@ -39,6 +41,7 @@ def _build_service(
     recommendation_repo: SQLRecommendationRepository,
     evidence_repo: SQLEvidenceRepository,
     report_repo: SQLReportRepository,
+    link_repo: SQLFindingEvidenceLinkRepository | None = None,
 ) -> ReportService:
     return ReportService(
         assessment_repo=assessment_repo,
@@ -47,6 +50,7 @@ def _build_service(
         recommendation_repo=recommendation_repo,
         evidence_repo=evidence_repo,
         report_repo=report_repo,
+        finding_evidence_link_repo=link_repo,
     )
 
 
@@ -66,6 +70,7 @@ async def generate_report(
     recommendation_repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
     evidence_repo: SQLEvidenceRepository = Depends(get_evidence_repo),
     report_repo: SQLReportRepository = Depends(get_report_repo),
+    link_repo: SQLFindingEvidenceLinkRepository = Depends(get_finding_evidence_link_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> ReportResponse:
     service = _build_service(
@@ -75,6 +80,7 @@ async def generate_report(
         recommendation_repo,
         evidence_repo,
         report_repo,
+        link_repo,
     )
     try:
         report = await service.generate(

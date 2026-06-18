@@ -24,8 +24,16 @@ class UserResponse(BaseModel):
     notification_preferences: dict = {}
 
 
+class NotificationPreferencesUpdate(BaseModel):
+    """Strict update — only the 4 supported keys are accepted."""
+    email_workflow_completed: bool | None = None
+    email_action_overdue: bool | None = None
+    email_assessment_approved: bool | None = None
+    email_recommendation_assigned: bool | None = None
+
+
 class PatchMeRequest(BaseModel):
-    notification_preferences: dict | None = None
+    notification_preferences: NotificationPreferencesUpdate | None = None
     display_name: str | None = None
 
 

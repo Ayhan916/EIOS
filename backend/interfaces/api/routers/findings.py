@@ -2,15 +2,24 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from domain.finding import Finding
 from domain.user import User
-from infrastructure.persistence.repositories import SQLAssessmentRepository, SQLFindingRepository
+from infrastructure.persistence.repositories import (
+    SQLAssessmentRepository,
+    SQLFindingEvidenceLinkRepository,
+    SQLFindingRepository,
+)
 from interfaces.api.deps import (
     get_assessment_repo,
     get_current_user,
+    get_finding_evidence_link_repo,
     get_finding_repo,
     require_admin,
     require_analyst,
 )
-from interfaces.api.schemas.finding import FindingCreate, FindingResponse
+from interfaces.api.schemas.finding import (
+    FindingCreate,
+    FindingEvidenceLinkResponse,
+    FindingResponse,
+)
 
 router = APIRouter(
     prefix="/findings",
@@ -24,7 +33,6 @@ async def _assert_finding_org_access(
     user_org_id: str | None,
     assessment_repo: SQLAssessmentRepository,
 ) -> None:
-    """Verify the finding's parent assessment belongs to the user's org."""
     if not finding.assessment_id or not user_org_id:
         return
     assessment = await assessment_repo.get_by_id(finding.assessment_id)
@@ -83,6 +91,26 @@ async def get_finding(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
     await _assert_finding_org_access(finding, current_user.organization_id, assessment_repo)
     return FindingResponse.model_validate(finding)
+
+
+@router.get(
+    "/{finding_id}/evidence-links",
+    response_model=list[FindingEvidenceLinkResponse],
+    summary="List evidence links for a finding (M25 traceability)",
+)
+async def list_finding_evidence_links(
+    finding_id: str,
+    current_user: User = Depends(get_current_user),
+    repo: SQLFindingRepository = Depends(get_finding_repo),
+    link_repo: SQLFindingEvidenceLinkRepository = Depends(get_finding_evidence_link_repo),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+) -> list[FindingEvidenceLinkResponse]:
+    finding = await repo.get_by_id(finding_id)
+    if finding is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
+    await _assert_finding_org_access(finding, current_user.organization_id, assessment_repo)
+    links = await link_repo.list_by_finding(finding_id)
+    return [FindingEvidenceLinkResponse.model_validate(lnk) for lnk in links]
 
 
 @router.delete(

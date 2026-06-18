@@ -207,9 +207,11 @@ async def patch_me(
     if body.display_name is not None:
         current_user.display_name = body.display_name
     if body.notification_preferences is not None:
+        # model_dump(exclude_none=True) gives only the keys the caller explicitly set
+        patch = body.notification_preferences.model_dump(exclude_none=True)
         current_user.notification_preferences = {
             **current_user.notification_preferences,
-            **body.notification_preferences,
+            **patch,
         }
     saved = await user_repo.save(current_user)
     return UserResponse.model_validate(saved)

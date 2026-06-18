@@ -25,3 +25,31 @@ class FindingResponse(EntityResponse):
     confidence: str
     reasoning: str | None = None
     uncertainty: str | None = None
+    evidence_strength: str | None = None
+    evidence_source_count: int = 0
+
+
+class FindingEvidenceLinkResponse(EntityResponse):
+    finding_id: str
+    evidence_id: str
+    evidence_chunk_id: str | None = None
+    page_number: int | None = None
+    confidence_score: float | None = None
+    supporting_excerpt: str | None = None
+    link_method: str
+
+
+class EvidenceInsightsResponse(BaseModel):
+    """Summary of evidence intelligence for all findings in an assessment."""
+
+    assessment_id: str
+    total_findings: int
+    linked_findings: int
+    total_evidence_links: int
+    strength_distribution: dict[str, int]
+    findings: list[FindingWithLinksResponse]
+
+
+class FindingWithLinksResponse(BaseModel):
+    finding: FindingResponse
+    evidence_links: list[FindingEvidenceLinkResponse]

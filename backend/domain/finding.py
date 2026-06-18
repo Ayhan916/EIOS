@@ -9,7 +9,7 @@ AI-generated: carries reasoning and uncertainty per architecture/008 (AAM-0001).
 from dataclasses import dataclass, field
 
 from .base_entity import BaseEntity
-from .enums import ConfidenceLevel, RiskLevel
+from .enums import ConfidenceLevel, EvidenceStrength, RiskLevel
 
 
 @dataclass(slots=True, kw_only=True)
@@ -23,3 +23,6 @@ class Finding(BaseEntity):
     evidence_ids: list[str] = field(default_factory=list)
     reasoning: str | None = None
     uncertainty: str | None = None
+    # M25: Evidence intelligence fields
+    evidence_strength: EvidenceStrength | None = None
+    evidence_source_count: int = 0

@@ -37,6 +37,7 @@ async def notify(
     entity_id: str | None = None,
     dedupe_key: str | None = None,
     user_email: str | None = None,
+    notification_preferences: dict | None = None,
 ) -> Notification | None:
     """
     Persist an in-app notification and optionally send an email.
@@ -60,11 +61,15 @@ async def notify(
     )
     saved = await notif_repo.save(notification)
 
-    # Send email if the user has that preference enabled
+    # Send email if the user has that preference enabled.
+    # If notification_preferences is passed by the caller (e.g. overdue batch job that
+    # already fetched the user), skip the extra DB lookup.
     pref_key = _PREF_KEY.get(notification_type)
     if pref_key and user_email:
-        wants_email = True
-        if user_id:
+        if notification_preferences is not None:
+            wants_email = bool(notification_preferences.get(pref_key, True))
+        else:
+            wants_email = True
             user_repo = SQLUserRepository(session)
             user = await user_repo.get_by_id(user_id)
             if user is not None:

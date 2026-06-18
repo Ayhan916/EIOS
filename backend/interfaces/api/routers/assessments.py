@@ -1,6 +1,7 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
 import application.audit as audit_events
@@ -17,6 +18,7 @@ from domain.user import User
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLAuditEventRepository,
+    SQLFindingEvidenceLinkRepository,
     SQLFindingRepository,
     SQLRecommendationRepository,
     SQLRiskRepository,
@@ -27,6 +29,8 @@ from interfaces.api.deps import (
     get_assessment_repo,
     get_audit_event_repo,
     get_current_user,
+    get_db,
+    get_finding_evidence_link_repo,
     get_finding_repo,
     get_recommendation_repo,
     get_risk_repo,
@@ -37,7 +41,12 @@ from interfaces.api.deps import (
     require_reviewer,
 )
 from interfaces.api.schemas.assessment import AssessmentCreate, AssessmentResponse
-from interfaces.api.schemas.finding import FindingResponse
+from interfaces.api.schemas.finding import (
+    EvidenceInsightsResponse,
+    FindingEvidenceLinkResponse,
+    FindingResponse,
+    FindingWithLinksResponse,
+)
 from interfaces.api.schemas.pagination import Page, PaginationParams
 from interfaces.api.schemas.remediation import (
     AssessmentTraceResponse,
@@ -157,6 +166,54 @@ async def list_assessment_findings(
     return [FindingResponse.model_validate(f) for f in findings]
 
 
+@router.get(
+    "/{assessment_id}/evidence-insights",
+    response_model=EvidenceInsightsResponse,
+    summary="Evidence intelligence panel — per-finding citations (M25)",
+)
+async def get_assessment_evidence_insights(
+    assessment_id: str,
+    current_user: User = Depends(get_current_user),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    finding_repo: SQLFindingRepository = Depends(get_finding_repo),
+    link_repo: SQLFindingEvidenceLinkRepository = Depends(get_finding_evidence_link_repo),
+) -> EvidenceInsightsResponse:
+    assessment = await assessment_repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    findings = await finding_repo.list_by_assessment(assessment_id)
+    finding_ids = [f.id for f in findings]
+    all_links = await link_repo.list_by_assessment_findings(finding_ids)
+
+    links_by_finding: dict[str, list] = {}
+    for lnk in all_links:
+        links_by_finding.setdefault(lnk.finding_id, []).append(lnk)
+
+    strength_dist: dict[str, int] = {}
+    findings_with_links: list[FindingWithLinksResponse] = []
+    for f in findings:
+        f_links = links_by_finding.get(f.id, [])
+        if f.evidence_strength:
+            strength_dist[f.evidence_strength.value] = strength_dist.get(f.evidence_strength.value, 0) + 1
+        findings_with_links.append(
+            FindingWithLinksResponse(
+                finding=FindingResponse.model_validate(f),
+                evidence_links=[FindingEvidenceLinkResponse.model_validate(lnk) for lnk in f_links],
+            )
+        )
+
+    return EvidenceInsightsResponse(
+        assessment_id=assessment_id,
+        total_findings=len(findings),
+        linked_findings=sum(1 for f in findings if links_by_finding.get(f.id)),
+        total_evidence_links=len(all_links),
+        strength_distribution=strength_dist,
+        findings=findings_with_links,
+    )
+
+
 @router.get("/{assessment_id}/risks", response_model=list[RiskResponse])
 async def list_assessment_risks(
     assessment_id: str,
@@ -179,6 +236,7 @@ async def list_assessment_risks(
 )
 async def approve_assessment(
     assessment_id: str,
+    session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
@@ -210,7 +268,7 @@ async def approve_assessment(
         creator = await user_repo.get_by_id(assessment.created_by)
         if creator and creator.organization_id == current_user.organization_id:
             await notification_service.notify(
-                session=repo._session,
+                session=session,
                 user_id=creator.id,
                 organization_id=creator.organization_id or "",
                 notification_type=NotificationType.ASSESSMENT_APPROVED,

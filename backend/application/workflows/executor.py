@@ -35,7 +35,12 @@ from infrastructure.persistence.repositories.agent_run import SQLAgentRunReposit
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.audit_event import SQLAuditEventRepository
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
+from application.extraction.evidence_linker import (
+    create_finding_evidence_links,
+    update_finding_evidence_strength,
+)
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
+from infrastructure.persistence.repositories.finding_evidence_link import SQLFindingEvidenceLinkRepository
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
 from infrastructure.persistence.repositories.user import SQLUserRepository
@@ -148,6 +153,7 @@ async def execute_workflow_background(
                     finding_repo = SQLFindingRepository(session)
                     risk_repo = SQLRiskRepository(session)
                     rec_repo = SQLRecommendationRepository(session)
+                    link_repo = SQLFindingEvidenceLinkRepository(session)
 
                     saved_assessment = await assess_repo.save(assessment)
                     assessment_id = saved_assessment.id
@@ -158,6 +164,35 @@ async def execute_workflow_background(
                         await risk_repo.save(r)
                     for rec in recommendations:
                         await rec_repo.save(rec)
+
+                    # M25: create traceable evidence links
+                    retrieved_chunks = saved_run.run_metadata.get("retrieved_chunks", [])
+                    if retrieved_chunks and findings:
+                        try:
+                            links = create_finding_evidence_links(
+                                findings=findings,
+                                retrieved_chunks=retrieved_chunks,
+                                created_by=user_id,
+                            )
+                            for link in links:
+                                await link_repo.save(link)
+
+                            # Group by finding and update strength + source count
+                            from collections import defaultdict
+                            links_by_finding: dict[str, list] = defaultdict(list)
+                            for lnk in links:
+                                links_by_finding[lnk.finding_id].append(lnk)
+                            for f in findings:
+                                update_finding_evidence_strength(f, links_by_finding[f.id])
+                                await finding_repo.save(f)
+
+                            log.info(
+                                "evidence_links_created",
+                                link_count=len(links),
+                                finding_count=len(findings),
+                            )
+                        except Exception as link_exc:
+                            log.warning("evidence_linking_failed", error=str(link_exc))
 
                     finding_count = len(findings)
                     risk_count = len(risks)

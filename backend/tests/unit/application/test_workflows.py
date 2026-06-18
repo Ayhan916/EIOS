@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from application.ports.knowledge import RetrievedChunkMeta
 from application.ports.llm import LLMResponse
 from application.workflows.base import StepResult, WorkflowDefinition, WorkflowStep, extract_verdict
 from application.workflows.definitions import (
@@ -40,8 +41,23 @@ def make_mock_provider(content: str = "mock agent response") -> MagicMock:
 
 
 def make_mock_knowledge(chunks: list[str] | None = None) -> MagicMock:
+    """Return a mock KnowledgeSearchPort. Accepts plain strings and wraps them
+    in RetrievedChunkMeta so the engine's `[c.text for c in ...]` works."""
+    rich = [
+        RetrievedChunkMeta(
+            chunk_id=f"chunk-{i}",
+            evidence_id=f"ev-{i}",
+            page_number=None,
+            source_section=None,
+            text=text,
+            similarity_score=0.8,
+            evidence_title="Mock Evidence",
+            evidence_source="mock",
+        )
+        for i, text in enumerate(chunks or [])
+    ]
     ks = MagicMock()
-    ks.search = AsyncMock(return_value=chunks or [])
+    ks.search = AsyncMock(return_value=rich)
     return ks
 
 

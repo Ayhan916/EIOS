@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import ForeignKey, String, Text
+from sqlalchemy import ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .associations import finding_evidence, recommendation_finding, risk_finding
@@ -20,6 +20,9 @@ class FindingModel(BaseModel):
     confidence: Mapped[str] = mapped_column(String(20), nullable=False, default="High")
     reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
     uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # M25: Evidence intelligence
+    evidence_strength: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    evidence_source_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     assessment: Mapped[AssessmentModel] = relationship(back_populates="findings")
     evidence: Mapped[list[EvidenceModel]] = relationship(
@@ -28,4 +31,7 @@ class FindingModel(BaseModel):
     risks: Mapped[list[RiskModel]] = relationship(secondary=risk_finding, back_populates="findings")
     recommendations: Mapped[list[RecommendationModel]] = relationship(
         secondary=recommendation_finding, back_populates="findings"
+    )
+    evidence_links: Mapped[list[FindingEvidenceLinkModel]] = relationship(
+        back_populates="finding", cascade="all, delete-orphan"
     )

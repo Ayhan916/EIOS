@@ -20,6 +20,7 @@ from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLAuditEventRepository,
     SQLEvidenceRepository,
+    SQLFindingEvidenceLinkRepository,
     SQLFindingRepository,
     SQLNotificationRepository,
     SQLOrganizationRepository,
@@ -58,6 +59,12 @@ async def get_finding_repo(
     session: AsyncSession = Depends(get_db),
 ) -> SQLFindingRepository:
     return SQLFindingRepository(session)
+
+
+async def get_finding_evidence_link_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLFindingEvidenceLinkRepository:
+    return SQLFindingEvidenceLinkRepository(session)
 
 
 async def get_risk_repo(

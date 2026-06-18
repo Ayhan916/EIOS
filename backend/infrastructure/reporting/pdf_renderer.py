@@ -185,6 +185,7 @@ def render_report_pdf(snapshot: dict[str, Any]) -> bytes:
     _cover_page(pdf, assessment, meta)
     _executive_summary(pdf, assessment, findings, risks, recommendations, evidence)
     _findings_section(pdf, findings)
+    _evidence_support_section(pdf, findings)
     _risks_section(pdf, risks)
     _recommendations_section(pdf, recommendations)
     _evidence_index(pdf, evidence)
@@ -601,6 +602,76 @@ def _evidence_index(pdf: _EIOSReport, evidence: list) -> None:
         pdf.cell(cols[4][1], row_h, pdf._safe(ev.get("source", ""), 20), fill=True, align="C")
         pdf.set_xy(pdf.l_margin, row_end_y)
         pdf.ln(1)
+
+    pdf.set_text_color(*_DARK)
+    pdf.set_fill_color(*_WHITE)
+
+
+_STRENGTH_COLOURS: dict[str, tuple[int, int, int]] = {
+    "Very Strong": (15, 130, 55),
+    "Strong": (40, 130, 60),
+    "Moderate": (180, 130, 0),
+    "Weak": (160, 50, 50),
+}
+
+
+def _evidence_support_section(pdf: _EIOSReport, findings: list) -> None:
+    """Render per-finding evidence citations for auditors."""
+    linked = [f for f in findings if f.get("evidence_links")]
+    if not linked:
+        return
+
+    pdf.add_page()
+    pdf._section_header("Evidence Support")
+
+    pdf.set_font("Helvetica", "", 8)
+    pdf.set_text_color(*_MID)
+    pdf._body(
+        "Each finding is traced to the specific document passages that informed it. "
+        "Confidence scores reflect keyword overlap with the supporting text."
+    )
+    pdf.ln(4)
+
+    usable_w = pdf.w - pdf.l_margin - pdf.r_margin
+
+    for f in sorted(linked, key=lambda x: _SEVERITY_ORDER.get(x.get("severity", "Medium"), 2)):
+        # Finding header bar
+        pdf.set_fill_color(*_LIGHT)
+        pdf.set_font("Helvetica", "B", 9)
+        pdf.set_text_color(*_DARK)
+        strength = f.get("evidence_strength") or ""
+        strength_col = _STRENGTH_COLOURS.get(strength, _MID)
+        pdf.cell(usable_w - 30, 7, pdf._safe(f.get("title", ""), 80), fill=True)
+        pdf.set_fill_color(*strength_col)
+        pdf.set_text_color(*_WHITE)
+        pdf.cell(30, 7, _latin1(strength or "N/A"), fill=True, align="C",
+                 new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.set_text_color(*_DARK)
+        pdf.set_fill_color(*_WHITE)
+
+        links = f.get("evidence_links", [])
+        if not links:
+            pdf.ln(2)
+            continue
+
+        for i, lnk in enumerate(links[:5]):  # cap at 5 per finding in PDF
+            pdf._table_row_bg(i)
+            conf = lnk.get("confidence_score")
+            page = lnk.get("page_number")
+            excerpt = lnk.get("supporting_excerpt") or ""
+
+            conf_str = f"{conf:.0%}" if conf is not None else "-"
+            page_str = f"p.{page}" if page is not None else "-"
+
+            pdf.set_font("Helvetica", "B", 7)
+            pdf.set_text_color(*_MID)
+            pdf.cell(12, 5, page_str)
+            pdf.cell(14, 5, conf_str)
+            pdf.set_font("Helvetica", "I", 7)
+            pdf.set_text_color(*_DARK)
+            pdf.multi_cell(usable_w - 26, 4, pdf._safe(excerpt, 280))
+
+        pdf.ln(3)
 
     pdf.set_text_color(*_DARK)
     pdf.set_fill_color(*_WHITE)

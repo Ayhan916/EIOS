@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import ConfidenceLevel, EntityStatus, RiskLevel
+from domain.enums import ConfidenceLevel, EntityStatus, EvidenceStrength, RiskLevel
 from domain.finding import Finding
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.repositories.base import BaseRepository
@@ -28,6 +28,8 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
             confidence=entity.confidence.value,
             reasoning=entity.reasoning,
             uncertainty=entity.uncertainty,
+            evidence_strength=entity.evidence_strength.value if entity.evidence_strength else None,
+            evidence_source_count=entity.evidence_source_count,
         )
 
     def _to_domain(self, model: FindingModel) -> Finding:
@@ -48,6 +50,8 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
             confidence=ConfidenceLevel(model.confidence),
             reasoning=model.reasoning,
             uncertainty=model.uncertainty,
+            evidence_strength=EvidenceStrength(model.evidence_strength) if model.evidence_strength else None,
+            evidence_source_count=model.evidence_source_count or 0,
         )
 
     async def list_by_assessment(self, assessment_id: str) -> list[Finding]:

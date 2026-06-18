@@ -7,6 +7,7 @@ from .decision import SQLDecisionRepository
 from .evidence import SQLEvidenceRepository
 from .evidence_chunk import SQLEvidenceChunkRepository
 from .finding import SQLFindingRepository
+from .finding_evidence_link import SQLFindingEvidenceLinkRepository
 from .notification import SQLNotificationRepository
 from .organization import SQLOrganizationRepository
 from .policy import SQLPolicyRepository
@@ -33,6 +34,7 @@ __all__ = [
     "SQLDecisionRepository",
     "SQLEvidenceRepository",
     "SQLFindingRepository",
+    "SQLFindingEvidenceLinkRepository",
     "SQLNotificationRepository",
     "SQLOrganizationRepository",
     "SQLPolicyRepository",

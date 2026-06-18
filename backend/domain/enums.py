@@ -81,3 +81,10 @@ class NotificationType(str, Enum):
     ACTION_OVERDUE = "action_overdue"
     ASSESSMENT_APPROVED = "assessment_approved"
     RECOMMENDATION_ASSIGNED = "recommendation_assigned"
+
+
+class EvidenceStrength(str, Enum):
+    WEAK = "Weak"
+    MODERATE = "Moderate"
+    STRONG = "Strong"
+    VERY_STRONG = "Very Strong"
