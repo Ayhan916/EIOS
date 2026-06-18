@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from application.workflows.executor import execute_workflow_background
 from application.workflows.registry import WORKFLOW_TYPES, get_workflow_definition
@@ -104,7 +105,6 @@ async def list_workflow_types() -> list[WorkflowTypeInfo]:
 )
 async def run_workflow(
     body: WorkflowRunRequest,
-    background_tasks: BackgroundTasks,
     _rl: None = Depends(rate_limit_llm),
     current_user: User = Depends(get_current_user),
     job_repo: SQLWorkflowJobRepository = Depends(get_workflow_job_repo),
@@ -133,11 +133,16 @@ async def run_workflow(
     )
     saved_job = await job_repo.save(job)
 
-    background_tasks.add_task(
-        execute_workflow_background,
-        job=saved_job,
-        user_id=current_user.id,
-        organization_id=current_user.organization_id,
+    # asyncio.create_task schedules an independent coroutine that does NOT
+    # participate in the response lifecycle. This avoids the BaseHTTPMiddleware
+    # deadlock where BackgroundTasks defers DI teardown until after the task
+    # finishes, but the task blocks on the DI session's uncommitted row lock.
+    asyncio.create_task(
+        execute_workflow_background(
+            job=saved_job,
+            user_id=current_user.id,
+            organization_id=current_user.organization_id,
+        )
     )
 
     logger.info(

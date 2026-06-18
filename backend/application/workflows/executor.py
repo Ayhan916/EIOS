@@ -14,9 +14,11 @@ Session strategy (avoids long-lived transactions during 60-180s LLM execution):
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 
 import structlog
+from sqlalchemy import update
 
 import application.audit as audit_factory
 from application.extraction.service import StructuredExtractionService
@@ -34,6 +36,7 @@ from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceCh
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
+from infrastructure.persistence.models.workflow_job import WorkflowJobModel
 from infrastructure.persistence.repositories.workflow_job import SQLWorkflowJobRepository
 from infrastructure.persistence.repositories.workflow_run import SQLWorkflowRunRepository
 
@@ -56,12 +59,17 @@ async def execute_workflow_background(
     log = logger.bind(job_id=job.id, workflow_type=job.workflow_type, user_id=user_id)
     log.info("workflow_job_started")
 
-    # Phase 1: mark running
+    # Phase 1: mark running via UPDATE only.
+    # BaseHTTPMiddleware starts background tasks before the route handler's DI
+    # session commits, so session.merge() would see no row and issue a conflicting
+    # INSERT. A pure UPDATE is safe: if the row isn't committed yet it affects 0
+    # rows silently; the job stays "pending" until Phase 3 marks it "completed".
     async with AsyncSessionFactory() as session, session.begin():
-        job_repo = SQLWorkflowJobRepository(session)
-        job.job_status = "running"
-        job.started_at = datetime.now(UTC)
-        await job_repo.save(job)
+        await session.execute(
+            update(WorkflowJobModel)
+            .where(WorkflowJobModel.id == job.id)
+            .values(job_status="running", started_at=datetime.now(UTC))
+        )
 
     # Phase 2: execute workflow (LLM calls — no DB transaction held open)
     try:

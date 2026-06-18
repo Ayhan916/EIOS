@@ -80,7 +80,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     init_embedding_provider()
     logger.info("embedding_provider_ready", model=settings.embedding_model)
 
-    if settings.anthropic_api_key or settings.openai_api_key:
+    if settings.anthropic_api_key or settings.openai_api_key or settings.groq_api_key:
         init_llm_provider()
         logger.info(
             "llm_provider_ready",
