@@ -52,6 +52,7 @@ class UserRole(str, Enum):
     VIEWER = "viewer"
     ANALYST = "analyst"
     REVIEWER = "reviewer"
+    EXECUTIVE = "executive"
     ADMIN = "admin"
 
 
@@ -59,7 +60,8 @@ _ROLE_ORDER: dict[str, int] = {
     UserRole.VIEWER: 1,
     UserRole.ANALYST: 2,
     UserRole.REVIEWER: 3,
-    UserRole.ADMIN: 4,
+    UserRole.EXECUTIVE: 4,
+    UserRole.ADMIN: 5,
 }
 
 

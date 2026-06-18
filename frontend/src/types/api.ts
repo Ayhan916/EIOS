@@ -684,3 +684,141 @@ export interface RiskHeatmap {
   total_findings: number;
   supplier_id: string | null;
 }
+
+// ── M29 Executive & Board Reporting ──────────────────────────────────────────
+
+export interface PortfolioSummary {
+  total_suppliers: number;
+  scored_suppliers: number;
+  critical_risk_suppliers: number;
+  high_risk_suppliers: number;
+  moderate_risk_suppliers: number;
+  low_risk_suppliers: number;
+  improving_suppliers: number;
+  deteriorating_suppliers: number;
+  avg_esg_score: number | null;
+  avg_risk_score: number | null;
+  risk_distribution: Record<string, number>;
+}
+
+export interface ActionSummary {
+  open_actions: number;
+  overdue_actions: number;
+  total_actions: number;
+  resolution_rate: number | null;
+}
+
+export interface GovernanceSummary {
+  assessments_awaiting_review: number;
+  assessments_approved: number;
+  critical_findings_total: number;
+}
+
+export interface ExecutiveDashboard {
+  portfolio_summary: PortfolioSummary;
+  action_summary: ActionSummary;
+  governance_summary: GovernanceSummary;
+}
+
+export interface MonthlyDataPoint {
+  month: string;
+  avg_esg_score: number | null;
+  avg_risk_score: number | null;
+  supplier_count: number;
+  high_risk_count: number;
+  critical_risk_count: number;
+  risk_distribution: Record<string, number>;
+}
+
+export interface KPITrendResponse {
+  period_days: number;
+  data_points: MonthlyDataPoint[];
+  esg_delta: number | null;
+  risk_delta: number | null;
+}
+
+export interface RiskRegisterEntry {
+  rank: number;
+  supplier_id: string;
+  supplier_name: string;
+  country: string;
+  industry: string;
+  supplier_tier: string;
+  risk_score: number;
+  risk_band: string;
+  esg_score: number;
+  trend: string;
+  trend_delta: number;
+  critical_findings: number;
+  overdue_actions: number;
+}
+
+export interface HeatmapBucket {
+  label: string;
+  supplier_count: number;
+  avg_risk_score: number;
+  critical_count: number;
+  high_count: number;
+}
+
+export interface ExecutiveHeatmapResponse {
+  view: string;
+  buckets: HeatmapBucket[];
+}
+
+export interface ActionEffectivenessResponse {
+  opened_this_period: number;
+  closed_this_period: number;
+  total_open: number;
+  total_overdue: number;
+  resolution_rate: number | null;
+  avg_resolution_days: number | null;
+}
+
+export interface GovernanceMetricsResponse {
+  total_review_decisions: number;
+  approved: number;
+  rejected: number;
+  changes_requested: number;
+  approval_rate: number | null;
+  rejection_rate: number | null;
+  changes_requested_rate: number | null;
+  avg_review_days: number | null;
+}
+
+export interface BoardReportSummary {
+  id: string;
+  title: string;
+  report_version: string;
+  period_start: string;
+  period_end: string;
+  generated_at: string;
+  executive_summary: string;
+}
+
+export interface BoardReportDetail extends BoardReportSummary {
+  report_data: Record<string, unknown>;
+  supplier_snapshot: unknown[];
+}
+
+export interface BoardReportRequest {
+  title?: string;
+  period_start: string;
+  period_end: string;
+  kpi_period_days?: number;
+}
+
+export interface ReportScheduleResponse {
+  id: string;
+  frequency: string;
+  next_run_at: string;
+  last_run_at: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ReportScheduleRequest {
+  frequency: "monthly" | "quarterly";
+  next_run_at: string;
+  report_config?: Record<string, unknown>;
+}

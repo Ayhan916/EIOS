@@ -1,4 +1,5 @@
 from .agents import router as agents_router
+from .executive import router as executive_router
 from .comments import router as comments_router
 from .suppliers import router as suppliers_router
 from .supplier_intelligence import router as supplier_intelligence_router
@@ -24,6 +25,7 @@ from .workflows import router as workflows_router
 
 __all__ = [
     "agents_router",
+    "executive_router",
     "comments_router",
     "dashboard_router",
     "assessments_compliance_router",

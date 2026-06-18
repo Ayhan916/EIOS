@@ -35,6 +35,7 @@ from interfaces.api.routers import (
     comments_router,
     dashboard_router,
     evidences_router,
+    executive_router,
     findings_router,
     frameworks_router,
     health_router,
@@ -259,3 +260,4 @@ app.include_router(notifications_router, prefix=API_V1)
 app.include_router(comments_router, prefix=API_V1)
 app.include_router(supplier_intelligence_router, prefix=API_V1)
 app.include_router(suppliers_router, prefix=API_V1)
+app.include_router(executive_router, prefix=API_V1)

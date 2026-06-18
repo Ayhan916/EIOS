@@ -19,6 +19,7 @@ from infrastructure.persistence.repositories import (
     SQLAgentRunRepository,
     SQLAssessmentRepository,
     SQLAuditEventRepository,
+    SQLBoardReportRepository,
     SQLCommentRepository,
     SQLEvidenceRepository,
     SQLFindingEvidenceLinkRepository,
@@ -26,6 +27,7 @@ from infrastructure.persistence.repositories import (
     SQLNotificationRepository,
     SQLOrganizationRepository,
     SQLRecommendationRepository,
+    SQLReportScheduleRepository,
     SQLReviewActionRepository,
     SQLRiskRepository,
     SQLSectorRepository,
@@ -219,4 +221,17 @@ def require_role(min_role: UserRole) -> Callable:
 
 require_analyst: Callable = require_role(UserRole.ANALYST)
 require_reviewer: Callable = require_role(UserRole.REVIEWER)
+require_executive: Callable = require_role(UserRole.EXECUTIVE)
 require_admin: Callable = require_role(UserRole.ADMIN)
+
+
+async def get_board_report_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLBoardReportRepository:
+    return SQLBoardReportRepository(session)
+
+
+async def get_report_schedule_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLReportScheduleRepository:
+    return SQLReportScheduleRepository(session)

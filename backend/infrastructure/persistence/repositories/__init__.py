@@ -25,6 +25,7 @@ from .user import SQLUserRepository
 from .review_action import SQLReviewActionRepository
 from .supplier import SQLSupplierRepository
 from .supplier_score import SQLSupplierScoreRepository
+from .board_report import SQLBoardReportRepository, SQLReportScheduleRepository
 from .workflow_job import SQLWorkflowJobRepository
 from .workflow_run import SQLWorkflowRunRepository
 
@@ -56,6 +57,8 @@ __all__ = [
     "SQLReviewActionRepository",
     "SQLSupplierRepository",
     "SQLSupplierScoreRepository",
+    "SQLBoardReportRepository",
+    "SQLReportScheduleRepository",
     "SQLWorkflowJobRepository",
     "SQLWorkflowRunRepository",
 ]

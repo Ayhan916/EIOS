@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  BarChart3,
   Building2,
   FileText,
   LayoutDashboard,
@@ -37,6 +38,19 @@ const navItems = [
     label: "Evidence",
     href: "/evidence",
     icon: Upload,
+  },
+];
+
+const executiveNavItems = [
+  {
+    label: "Executive Dashboard",
+    href: "/executive",
+    icon: BarChart3,
+  },
+  {
+    label: "Board Reports",
+    href: "/executive/reports",
+    icon: FileText,
   },
 ];
 
@@ -83,6 +97,33 @@ export function Sidebar() {
             </Link>
           );
         })}
+
+        {(user?.role === "executive" || user?.role === "admin") && (
+          <>
+            <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+              Executive
+            </p>
+            {executiveNavItems.map((item) => {
+              const active =
+                pathname === item.href || pathname.startsWith(`${item.href}/`);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                    active
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+                  )}
+                >
+                  <item.icon className="h-4 w-4 flex-shrink-0" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </>
+        )}
 
         <>
           <p className="mt-4 px-3 pb-2 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
