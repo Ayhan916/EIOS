@@ -825,11 +825,13 @@ async def _get_critical_finding_counts(
                 func.count(FindingModel.id).label("cnt"),
             )
             .join(FindingModel, FindingModel.assessment_id == AssessmentModel.id)
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
             .where(
                 AssessmentModel.supplier_id.isnot(None),
                 AssessmentModel.status != "Deleted",
                 FindingModel.status != "Deleted",
                 FindingModel.severity == "Critical",
+                SupplierModel.organization_id == organization_id,
             )
             .group_by(AssessmentModel.supplier_id)
         )
@@ -851,12 +853,14 @@ async def _get_overdue_action_counts(
                 RecommendationModel,
                 RecommendationModel.assessment_id == AssessmentModel.id,
             )
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
             .where(
                 AssessmentModel.supplier_id.isnot(None),
                 AssessmentModel.status != "Deleted",
                 RecommendationModel.status != "Deleted",
                 RecommendationModel.due_date < now,
                 RecommendationModel.action_status.notin_(list(_CLOSED_STATUSES)),
+                SupplierModel.organization_id == organization_id,
             )
             .group_by(AssessmentModel.supplier_id)
         )
@@ -876,15 +880,19 @@ async def _build_heatmap(
     if supplier_id:
         where_clauses.append(AssessmentModel.supplier_id == supplier_id)
     else:
+        # org-wide: restrict to this tenant's suppliers only
         where_clauses.append(AssessmentModel.supplier_id.isnot(None))
+        where_clauses.append(SupplierModel.organization_id == organization_id)
 
-    rows = (
-        await session.execute(
-            select(FindingModel.severity, FindingModel.category, FindingModel.title)
-            .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
-            .where(*where_clauses)
-        )
-    ).all()
+    stmt = (
+        select(FindingModel.severity, FindingModel.category, FindingModel.title)
+        .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
+    )
+    if not supplier_id:
+        stmt = stmt.join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+    stmt = stmt.where(*where_clauses)
+
+    rows = (await session.execute(stmt)).all()
 
     cell_counts: dict[tuple[str, str], int] = {}
     for row in rows:
