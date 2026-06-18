@@ -14,13 +14,12 @@ Session strategy (avoids long-lived transactions during 60-180s LLM execution):
 
 from __future__ import annotations
 
-import asyncio
 from datetime import UTC, datetime
 
 import structlog
 from sqlalchemy import update
 
-import application.audit as audit_factory
+import application.audit as audit_factory  # noqa: E402
 from application.extraction.service import StructuredExtractionService
 from application.workflows.engine import WorkflowEngine
 from application.workflows.registry import get_workflow_definition
@@ -29,6 +28,7 @@ from infrastructure.embeddings.deps import get_embedding_provider
 from infrastructure.knowledge_search import EvidenceChunkSearchAdapter
 from infrastructure.llm.deps import get_llm_provider
 from infrastructure.persistence.database import AsyncSessionFactory
+from infrastructure.persistence.models.workflow_job import WorkflowJobModel
 from infrastructure.persistence.repositories.agent_run import SQLAgentRunRepository
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.audit_event import SQLAuditEventRepository
@@ -36,7 +36,6 @@ from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceCh
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
-from infrastructure.persistence.models.workflow_job import WorkflowJobModel
 from infrastructure.persistence.repositories.workflow_job import SQLWorkflowJobRepository
 from infrastructure.persistence.repositories.workflow_run import SQLWorkflowRunRepository
 
@@ -87,6 +86,7 @@ async def execute_workflow_background(
                 query=job.query,
                 metadata=job.job_metadata,
                 created_by=user_id,
+                organization_id=organization_id,
             )
             workflow_run.organization_id = organization_id
 
@@ -99,6 +99,14 @@ async def execute_workflow_background(
             job.completed_at = datetime.now(UTC)
             await job_repo.save(job)
         return
+
+    # Record aggregate token usage to in-process metrics counter
+    try:
+        from interfaces.api.routers.metrics import counters
+        total_tokens = workflow_run.total_input_tokens + workflow_run.total_output_tokens
+        counters.record_llm_call(total_tokens)
+    except Exception:
+        pass
 
     # Phase 3: persist all results
     try:

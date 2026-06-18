@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
+import application.audit as audit_factory
 from application.reporting.service import ReportService
 from domain.user import User
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
+    SQLAuditEventRepository,
     SQLEvidenceRepository,
     SQLFindingRepository,
     SQLRecommendationRepository,
@@ -12,6 +14,7 @@ from infrastructure.persistence.repositories import (
 from infrastructure.persistence.repositories.report import SQLReportRepository
 from interfaces.api.deps import (
     get_assessment_repo,
+    get_audit_event_repo,
     get_current_user,
     get_evidence_repo,
     get_finding_repo,
@@ -63,6 +66,7 @@ async def generate_report(
     recommendation_repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
     evidence_repo: SQLEvidenceRepository = Depends(get_evidence_repo),
     report_repo: SQLReportRepository = Depends(get_report_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> ReportResponse:
     service = _build_service(
         assessment_repo,
@@ -79,6 +83,15 @@ async def generate_report(
         )
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc)) from exc
+
+    await audit_repo.save(
+        audit_factory.report_generated(
+            report_id=report.id,
+            assessment_id=body.assessment_id,
+            actor_id=current_user.id,
+            actor_email=current_user.email,
+        )
+    )
     return ReportResponse.model_validate(report)
 
 

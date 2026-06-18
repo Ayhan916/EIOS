@@ -16,6 +16,7 @@ Restrict via network policy / nginx allow-list in production.
 import time
 
 from fastapi import APIRouter
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from shared.config import settings
@@ -96,3 +97,35 @@ async def get_metrics() -> MetricsResponse:
             "policy": "unlimited" if budget == 0 else "enforced",
         },
     )
+
+
+@router.get("/metrics/prometheus", response_class=PlainTextResponse, include_in_schema=True)
+async def get_metrics_prometheus() -> str:
+    """Prometheus text-format metrics for scraping by Prometheus or Grafana Agent."""
+    uptime = round(time.time() - _start_time, 1)
+    env = settings.environment
+    lines = [
+        "# HELP eios_uptime_seconds Seconds since process start",
+        "# TYPE eios_uptime_seconds gauge",
+        f'eios_uptime_seconds{{environment="{env}"}} {uptime}',
+        "",
+        "# HELP eios_requests_total Total HTTP requests handled",
+        "# TYPE eios_requests_total counter",
+        f'eios_requests_total{{status="2xx",environment="{env}"}} {counters.requests_2xx}',
+        f'eios_requests_total{{status="4xx",environment="{env}"}} {counters.requests_4xx}',
+        f'eios_requests_total{{status="5xx",environment="{env}"}} {counters.requests_5xx}',
+        "",
+        "# HELP eios_llm_calls_total Total LLM workflow calls completed",
+        "# TYPE eios_llm_calls_total counter",
+        f'eios_llm_calls_total{{environment="{env}"}} {counters.llm_calls_total}',
+        "",
+        "# HELP eios_llm_tokens_total Total LLM tokens consumed",
+        "# TYPE eios_llm_tokens_total counter",
+        f'eios_llm_tokens_total{{environment="{env}"}} {counters.llm_tokens_total}',
+        "",
+        "# HELP eios_llm_errors_total Total LLM call errors",
+        "# TYPE eios_llm_errors_total counter",
+        f'eios_llm_errors_total{{environment="{env}"}} {counters.llm_errors_total}',
+        "",
+    ]
+    return "\n".join(lines)

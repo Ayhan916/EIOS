@@ -4,6 +4,7 @@ import structlog
 
 from application.agents.base import AgentContext
 from application.agents.registry import get_agent
+from application.budget.tracker import BudgetExceededError, budget_tracker
 from application.ports.knowledge import KnowledgeSearchPort
 from application.ports.llm import LLMProvider
 from application.workflows.base import StepResult, WorkflowDefinition, extract_verdict
@@ -38,6 +39,7 @@ class WorkflowEngine:
         query: str,
         metadata: dict,
         created_by: str | None = None,
+        organization_id: str | None = None,
     ) -> tuple[WorkflowRun, list[AgentRun]]:
         """Execute the workflow and return (WorkflowRun, [AgentRun, ...]).
 
@@ -125,6 +127,14 @@ class WorkflowEngine:
                 step_result.llm_provider = agent_run.llm_provider
                 step_result.llm_model = agent_run.llm_model
 
+                # Record token usage against org budget (no-op when budget=0)
+                step_tokens = agent_run.input_tokens + agent_run.output_tokens
+                if organization_id and step_tokens > 0:
+                    try:
+                        budget_tracker.check_and_record(organization_id, step_tokens)
+                    except BudgetExceededError as budget_err:
+                        raise budget_err
+
                 logger.info(
                     "workflow_step_complete",
                     workflow_type=definition.workflow_type,
@@ -132,6 +142,9 @@ class WorkflowEngine:
                     step_index=idx,
                     output_tokens=agent_run.output_tokens,
                 )
+
+            except BudgetExceededError:
+                raise
 
             except Exception as exc:
                 error_msg = str(exc)

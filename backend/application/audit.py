@@ -161,3 +161,84 @@ def agent_run_completed(
             "workflow_run_id": workflow_run_id,
         },
     )
+
+
+def user_registered(
+    user_id: str,
+    email: str,
+    organization_id: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="user.registered",
+        actor_id=user_id,
+        actor_email=email,
+        entity_type="User",
+        entity_id=user_id,
+        outcome="success",
+        detail=f"New user registered: {email}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"organization_id": organization_id},
+    )
+
+
+def evidence_uploaded(
+    evidence_id: str,
+    actor_id: str,
+    file_name: str,
+    file_size_bytes: int,
+    ingestion_status: str,
+    chunks_created: int,
+) -> AuditEvent:
+    return AuditEvent(
+        action="evidence.uploaded",
+        actor_id=actor_id,
+        entity_type="Evidence",
+        entity_id=evidence_id,
+        outcome="success",
+        detail=f"Document '{file_name}' ingested: {chunks_created} chunks, status={ingestion_status}",  # noqa: E501
+        status=EntityStatus.ACTIVE,
+        event_metadata={
+            "file_name": file_name,
+            "file_size_bytes": file_size_bytes,
+            "ingestion_status": ingestion_status,
+            "chunks_created": chunks_created,
+        },
+    )
+
+
+def report_generated(
+    report_id: str,
+    assessment_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="report.generated",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Report",
+        entity_id=report_id,
+        outcome="success",
+        detail=f"Executive report generated for assessment {assessment_id}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"assessment_id": assessment_id},
+    )
+
+
+def assessment_created_manually(
+    assessment_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    assessment_type: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="assessment.created",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="Assessment",
+        entity_id=assessment_id,
+        outcome="success",
+        detail="Assessment created manually via API",
+        status=EntityStatus.ACTIVE,
+        event_metadata={"assessment_type": assessment_type},
+    )

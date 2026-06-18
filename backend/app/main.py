@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 
 from app.middleware import (
     MetricsCounterMiddleware,
+    RequestBodySizeLimitMiddleware,
     RequestIDMiddleware,
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
@@ -119,6 +120,7 @@ app = FastAPI(
 # Execution order: RequestID → RequestLogging → SecurityHeaders → MetricsCounter → CORS → route
 
 app.add_middleware(MetricsCounterMiddleware)
+app.add_middleware(RequestBodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)

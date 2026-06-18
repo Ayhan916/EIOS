@@ -26,6 +26,7 @@ dependencies = [
     "python-multipart>=0.0.9",
     "fpdf2>=2.8.7",
     "openai>=2.43.0",
+    "prometheus-client>=0.25.0",
 ]
 
 [project.optional-dependencies]

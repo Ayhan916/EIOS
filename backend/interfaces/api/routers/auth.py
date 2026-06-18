@@ -4,11 +4,21 @@ import jwt
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 
+import application.audit as audit_factory
 from domain.enums import EntityStatus, UserRole
 from domain.organization import Organization
 from domain.user import User
-from infrastructure.persistence.repositories import SQLOrganizationRepository, SQLUserRepository
-from interfaces.api.deps import get_current_user, get_organization_repo, get_user_repo
+from infrastructure.persistence.repositories import (
+    SQLAuditEventRepository,
+    SQLOrganizationRepository,
+    SQLUserRepository,
+)
+from interfaces.api.deps import (
+    get_audit_event_repo,
+    get_current_user,
+    get_organization_repo,
+    get_user_repo,
+)
 from interfaces.api.schemas.auth import (
     AccessTokenResponse,
     LoginRequest,
@@ -37,6 +47,7 @@ async def register(
     _rl: None = Depends(rate_limit_auth),
     user_repo: SQLUserRepository = Depends(get_user_repo),
     org_repo: SQLOrganizationRepository = Depends(get_organization_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> TokenResponse:
     existing = await user_repo.get_by_email(body.email)
     if existing is not None:
@@ -63,6 +74,14 @@ async def register(
     )
     saved = await user_repo.save(user)
 
+    await audit_repo.save(
+        audit_factory.user_registered(
+            user_id=saved.id,
+            email=saved.email,
+            organization_id=saved_org.id,
+        )
+    )
+
     logger.info(
         "user_registered",
         user_id=saved.id,
@@ -82,6 +101,7 @@ async def login(
     body: LoginRequest,
     _rl: None = Depends(rate_limit_auth),
     repo: SQLUserRepository = Depends(get_user_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> TokenResponse:
     user = await repo.get_by_email(body.email)
 
@@ -121,6 +141,10 @@ async def login(
         last_login_at=datetime.now(UTC),
     )
     saved = await repo.save(updated)
+
+    await audit_repo.save(
+        audit_factory.user_authenticated(user_id=saved.id, email=saved.email)
+    )
 
     logger.info("user_login", user_id=saved.id, email=saved.email)
 

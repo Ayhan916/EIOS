@@ -72,6 +72,7 @@ async def create_assessment(
     body: AssessmentCreate,
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> AssessmentResponse:
     assessment = Assessment(
         title=body.title,
@@ -85,6 +86,14 @@ async def create_assessment(
         created_by=current_user.id,
     )
     saved = await repo.save(assessment)
+    await audit_repo.save(
+        audit_events.assessment_created_manually(
+            assessment_id=saved.id,
+            actor_id=current_user.id,
+            actor_email=current_user.email,
+            assessment_type=body.assessment_type,
+        )
+    )
     return AssessmentResponse.model_validate(saved)
 
 

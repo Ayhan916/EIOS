@@ -1,6 +1,7 @@
 import structlog
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 
+import application.audit as audit_factory
 from application.ingestion.parsers import MIME_BY_EXTENSION, resolve_mime_type
 from application.ingestion.pipeline import ingest_document
 from domain.evidence import Evidence
@@ -9,9 +10,10 @@ from infrastructure.embeddings.deps import get_embedding_provider
 from infrastructure.embeddings.sentence_transformer import (
     SentenceTransformerEmbeddingProvider,  # concrete type for DI
 )
-from infrastructure.persistence.repositories import SQLEvidenceRepository
+from infrastructure.persistence.repositories import SQLAuditEventRepository, SQLEvidenceRepository
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
 from interfaces.api.deps import (
+    get_audit_event_repo,
     get_chunk_repo,
     get_current_user,
     get_evidence_repo,
@@ -103,6 +105,7 @@ async def upload_document(
     evidence_repo: SQLEvidenceRepository = Depends(get_evidence_repo),
     chunk_repo: SQLEvidenceChunkRepository = Depends(get_chunk_repo),
     embedding_provider: SentenceTransformerEmbeddingProvider = Depends(get_embedding_provider),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> DocumentUploadResponse:
     """
     Upload a PDF, DOCX, or XLSX file and ingest it into the knowledge pipeline.
@@ -180,6 +183,17 @@ async def upload_document(
     evidence.ingestion_status = result.ingestion_status
     evidence.chunk_count = result.chunks_created
     await evidence_repo.save(evidence)
+
+    await audit_repo.save(
+        audit_factory.evidence_uploaded(
+            evidence_id=evidence_id,
+            actor_id=current_user.id,
+            file_name=result.file_name,
+            file_size_bytes=result.file_size_bytes,
+            ingestion_status=result.ingestion_status,
+            chunks_created=result.chunks_created,
+        )
+    )
 
     return DocumentUploadResponse(
         evidence_id=evidence_id,
