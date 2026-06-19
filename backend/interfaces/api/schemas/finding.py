@@ -39,6 +39,11 @@ class FindingEvidenceLinkResponse(EntityResponse):
     link_method: str
 
 
+class FindingWithLinksResponse(BaseModel):
+    finding: FindingResponse
+    evidence_links: list[FindingEvidenceLinkResponse]
+
+
 class EvidenceInsightsResponse(BaseModel):
     """Summary of evidence intelligence for all findings in an assessment."""
 
@@ -48,8 +53,3 @@ class EvidenceInsightsResponse(BaseModel):
     total_evidence_links: int
     strength_distribution: dict[str, int]
     findings: list[FindingWithLinksResponse]
-
-
-class FindingWithLinksResponse(BaseModel):
-    finding: FindingResponse
-    evidence_links: list[FindingEvidenceLinkResponse]

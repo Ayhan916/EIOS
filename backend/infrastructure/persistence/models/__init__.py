@@ -66,6 +66,14 @@ from .disclosure import (
     ReportingPackageModel,
 )
 from .due_diligence import DueDiligenceReportModel
+from .copilot import CopilotConversationModel, CopilotMessageModel
+from .copilot_audit import (
+    CopilotContradictionModel,
+    CopilotCitationIntegrityModel,
+    CopilotFeedbackModel,
+    CopilotAnswerReviewModel,
+    CopilotAuditPackageModel,
+)
 
 __all__ = [
     "AgentRunModel",
@@ -115,6 +123,13 @@ __all__ = [
     "DisclosureResponseModel",
     "ReportingPackageModel",
     "DueDiligenceReportModel",
+    "CopilotConversationModel",
+    "CopilotMessageModel",
+    "CopilotContradictionModel",
+    "CopilotCitationIntegrityModel",
+    "CopilotFeedbackModel",
+    "CopilotAnswerReviewModel",
+    "CopilotAuditPackageModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

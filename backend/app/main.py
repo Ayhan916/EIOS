@@ -28,6 +28,7 @@ from infrastructure.llm.deps import init_llm_provider
 from interfaces.api.routers import (
     agents_router,
     api_platform_router,
+    copilot_router,
     disclosure_router,
     due_diligence_router,
     regulatory_router,
@@ -295,3 +296,4 @@ app.include_router(api_platform_router, prefix=API_V1)
 app.include_router(regulatory_router, prefix=API_V1)
 app.include_router(disclosure_router, prefix=API_V1)
 app.include_router(due_diligence_router, prefix=API_V1)
+app.include_router(copilot_router, prefix=API_V1)

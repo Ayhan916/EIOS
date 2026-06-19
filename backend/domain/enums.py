@@ -172,6 +172,8 @@ class ApiScope(str, Enum):
     REPORTING_WRITE = "reporting:write"
     DUE_DILIGENCE_READ = "due_diligence:read"
     DUE_DILIGENCE_WRITE = "due_diligence:write"
+    COPILOT_READ = "copilot:read"
+    COPILOT_WRITE = "copilot:write"
 
 
 class WebhookEventType(str, Enum):
@@ -236,6 +238,95 @@ def is_valid_disclosure_transition(
     from_status: DisclosureStatus, to_status: DisclosureStatus
 ) -> bool:
     return to_status in _DISCLOSURE_TRANSITIONS.get(from_status, set())
+
+
+# ── M33 AI Copilot ───────────────────────────────────────────────────────────
+
+
+class CopilotIntentType(str, Enum):
+    RISK = "risk"
+    COMPLIANCE = "compliance"
+    DISCLOSURE = "disclosure"
+    DUE_DILIGENCE = "due_diligence"
+    EXECUTIVE = "executive"
+    ACTION = "action"
+    GENERAL = "general"
+
+
+class CopilotMessageRole(str, Enum):
+    USER = "user"
+    ASSISTANT = "assistant"
+
+
+class CitationType(str, Enum):
+    SUPPLIER = "Supplier"
+    FINDING = "Finding"
+    RISK = "Risk"
+    RECOMMENDATION = "Recommendation"
+    EVIDENCE = "Evidence"
+    ASSESSMENT = "Assessment"
+    COMPLIANCE_GAP = "ComplianceGap"
+    DISCLOSURE = "Disclosure"
+    REPORT = "Report"
+
+
+class CopilotContextType(str, Enum):
+    GENERAL = "general"
+    SUPPLIER = "supplier"
+    COMPLIANCE = "compliance"
+    DISCLOSURE = "disclosure"
+    DUE_DILIGENCE = "due_diligence"
+    EXECUTIVE = "executive"
+
+
+# ── M32 ──────────────────────────────────────────────────────────────────────
+# scope entries added below ApiScope above; keep M33 scopes here for ordering
+
+
+# ── M32.1 Due Diligence Reporting ─────────────────────────────────────────────
+
+
+# ── M33.2 Copilot Enterprise Hardening ───────────────────────────────────────
+
+
+class CopilotConfidenceLevel(str, Enum):
+    VERY_HIGH = "Very High"
+    HIGH = "High"
+    MODERATE = "Moderate"
+    LOW = "Low"
+
+
+class ContradictionType(str, Enum):
+    RISK_VS_COMPLIANCE = "risk_vs_compliance"
+    DISCLOSURE_COMPLETENESS = "disclosure_completeness"
+    FINDING_WITHOUT_ACTION = "finding_without_action"
+    SUPPLIER_SCORE_VS_FINDINGS = "supplier_score_vs_findings"
+    EXECUTIVE_SUMMARY_MISMATCH = "executive_summary_mismatch"
+
+
+class CitationIntegrityStatus(str, Enum):
+    VERIFIED = "verified"
+    STALE = "stale"
+    DELETED = "deleted"
+
+
+class FeedbackRating(str, Enum):
+    HELPFUL = "helpful"
+    NOT_HELPFUL = "not_helpful"
+    INCORRECT = "incorrect"
+    OUTDATED = "outdated"
+
+
+class ReviewDecision(str, Enum):
+    APPROVED = "approved"
+    MISLEADING = "misleading"
+    INVESTIGATE = "investigate"
+
+
+class AuditVerificationStatus(str, Enum):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    TAMPERED = "tampered"
 
 
 # ── M32.1 Due Diligence Reporting ─────────────────────────────────────────────

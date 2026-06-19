@@ -46,6 +46,16 @@ from infrastructure.persistence.models.disclosure import (  # noqa: F401
 )
 # M32.1: ensure due diligence model is registered
 from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel  # noqa: F401
+# M33: ensure copilot models are registered
+from infrastructure.persistence.models.copilot import CopilotConversationModel, CopilotMessageModel  # noqa: F401
+# M33.2: ensure copilot audit models are registered
+from infrastructure.persistence.models.copilot_audit import (  # noqa: F401
+    CopilotContradictionModel,
+    CopilotCitationIntegrityModel,
+    CopilotFeedbackModel,
+    CopilotAnswerReviewModel,
+    CopilotAuditPackageModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -93,6 +103,13 @@ EXPECTED_ENTITY_TABLES = {
     "disclosure_responses",
     "reporting_packages",
     "due_diligence_reports",
+    "copilot_conversations",
+    "copilot_messages",
+    "copilot_contradictions",
+    "copilot_citation_integrity",
+    "copilot_feedback",
+    "copilot_answer_reviews",
+    "copilot_audit_packages",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -131,7 +148,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 56  # 41 entity + 11 association + 4 M32 disclosure (M31 adds 4, M31.1 adds 1, M32 adds 4, M32.1 adds 1)
+        assert len(Base.metadata.tables) == 63  # M33.2 adds 5: copilot_contradictions, copilot_citation_integrity, copilot_feedback, copilot_answer_reviews, copilot_audit_packages
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())
