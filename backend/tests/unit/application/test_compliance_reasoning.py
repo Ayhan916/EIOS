@@ -22,7 +22,8 @@ forced labour screening (GRI 409, ESRS S2),
 child labour due diligence (GRI 408, CSDDD Art. 6).
 """
 
-# Comprehensive text covering >50% of mandatory articles (required for "partial" verdict)
+# Comprehensive text covering >50% of mandatory articles (required for "partial" verdict).
+# Updated for M31: includes CSRD, ESRS, EU Taxonomy, and ISSB coverage.
 COMPREHENSIVE_TEXT = """
 Due diligence policy (CSDDD Art. 5) integrated into corporate governance.
 Identification of adverse impacts (CSDDD Art. 6) across Tier 1 and Tier 2 supply chain.
@@ -39,9 +40,15 @@ Preventive measures (LkSG § 5) implemented — Präventionsmaßnahmen documente
 Remediation measures (LkSG § 6) — Abhilfemaßnahmen for confirmed violations.
 Documentation and reporting obligations (LkSG § 8) — BAFA report submitted.
 ESRS E1 climate change — GHG emissions Scope 3 disclosed; net zero target set.
+ESRS E2 pollution — hazardous substances inventory completed.
 Own workforce (ESRS S1) — working conditions and labour rights assessed.
 Value chain workers (ESRS S2) — supply chain workers screening completed.
 Business conduct and anti-corruption (ESRS G1) — whistleblower channel active.
+CSRD sustainability reporting — CSRD Art. 19a disclosures prepared; double materiality assessment completed.
+EU Taxonomy alignment — climate change mitigation activities screened; DNSH assessment performed; minimum social safeguards verified.
+IFRS S1 general sustainability disclosures — sustainability KPIs and sustainability strategy disclosed.
+IFRS S2 climate-related financial disclosures — climate transition plan prepared; Scope 1 2 3 ISSB emissions measured.
+EU taxonomy adaptation — climate resilience assessed and physical risk addressed.
 """
 
 # Covers nothing — all articles should be gaps

@@ -29,6 +29,14 @@ from infrastructure.persistence.models import (
     WebhookDeliveryModel,
     WebhookSubscriptionModel,
 )
+# M31/M31.1: ensure new regulatory models are registered
+from infrastructure.persistence.models.regulatory import (  # noqa: F401
+    ComplianceGapModel,
+    ComplianceReportModel,
+    RegulationModel,
+    RegulationRequirementModel,
+    RequirementMappingModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -66,6 +74,11 @@ EXPECTED_ENTITY_TABLES = {
     "api_keys",
     "webhook_subscriptions",
     "webhook_deliveries",
+    "regulations",
+    "regulation_requirements",
+    "requirement_mappings",
+    "compliance_gaps",
+    "compliance_reports",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -104,7 +117,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 46  # 35 entity + 11 association
+        assert len(Base.metadata.tables) == 51  # 40 entity + 11 association (M31 adds 4, M31.1 adds 1)
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

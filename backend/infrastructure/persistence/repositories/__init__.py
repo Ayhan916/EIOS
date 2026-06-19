@@ -31,6 +31,13 @@ from .workflow_run import SQLWorkflowRunRepository
 from .api_key import SQLApiKeyRepository
 from .service_account import SQLServiceAccountRepository
 from .webhook import SQLWebhookSubscriptionRepository, SQLWebhookDeliveryRepository
+from .regulatory import (
+    SQLRegulationRepository,
+    SQLRegulationRequirementRepository,
+    SQLRequirementMappingRepository,
+    SQLComplianceGapRepository,
+    SQLComplianceReportRepository,
+)
 
 __all__ = [
     "SQLAgentRunRepository",
@@ -68,4 +75,9 @@ __all__ = [
     "SQLServiceAccountRepository",
     "SQLWebhookSubscriptionRepository",
     "SQLWebhookDeliveryRepository",
+    "SQLRegulationRepository",
+    "SQLRegulationRequirementRepository",
+    "SQLRequirementMappingRepository",
+    "SQLComplianceGapRepository",
+    "SQLComplianceReportRepository",
 ]

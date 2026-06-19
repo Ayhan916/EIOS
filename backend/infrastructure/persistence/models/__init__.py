@@ -52,6 +52,13 @@ from .workflow_run import WorkflowRunModel
 from .api_key import ApiKeyModel
 from .service_account import ServiceAccountModel
 from .webhook import WebhookSubscriptionModel, WebhookDeliveryModel
+from .regulatory import (
+    RegulationModel,
+    RegulationRequirementModel,
+    RequirementMappingModel,
+    ComplianceGapModel,
+    ComplianceReportModel,
+)
 
 __all__ = [
     "AgentRunModel",
@@ -91,6 +98,11 @@ __all__ = [
     "ServiceAccountModel",
     "WebhookSubscriptionModel",
     "WebhookDeliveryModel",
+    "RegulationModel",
+    "RegulationRequirementModel",
+    "RequirementMappingModel",
+    "ComplianceGapModel",
+    "ComplianceReportModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",
