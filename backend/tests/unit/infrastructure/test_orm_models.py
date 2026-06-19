@@ -64,6 +64,11 @@ from infrastructure.persistence.models.external_intelligence import (  # noqa: F
     ExternalRiskSignalModel,
     SupplierEnrichmentModel,
 )
+# M34.1: ensure connector run models are registered
+from infrastructure.persistence.models.connector_run import (  # noqa: F401
+    ConnectorRunModel,
+    DatasetValidationResultModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -124,6 +129,9 @@ EXPECTED_ENTITY_TABLES = {
     "sector_benchmarks",
     "external_risk_signals",
     "supplier_enrichments",
+    # M34.1: Connector runs & validation
+    "connector_runs",
+    "dataset_validation_results",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -162,7 +170,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 68  # M34 adds 5: external_datasets, country_risk_profiles, sector_benchmarks, external_risk_signals, supplier_enrichments
+        assert len(Base.metadata.tables) == 70  # M34.1 adds 2: connector_runs, dataset_validation_results
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

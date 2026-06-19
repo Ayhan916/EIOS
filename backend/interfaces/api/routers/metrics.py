@@ -200,4 +200,7 @@ async def get_metrics_prometheus() -> str:
         f'eios_api_key_requests_total{{environment="{env}"}} {counters.api_key_requests_total}',
         "",
     ]
+    # Append M34.1 external intelligence metrics
+    from application.external_intelligence.metrics import ext_counters
+    lines.extend(ext_counters.to_prometheus_lines(env))
     return "\n".join(lines)

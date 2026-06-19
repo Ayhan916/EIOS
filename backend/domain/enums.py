@@ -174,6 +174,8 @@ class ApiScope(str, Enum):
     DUE_DILIGENCE_WRITE = "due_diligence:write"
     COPILOT_READ = "copilot:read"
     COPILOT_WRITE = "copilot:write"
+    EXTERNAL_INTELLIGENCE_READ = "external_intelligence:read"
+    EXTERNAL_INTELLIGENCE_WRITE = "external_intelligence:write"
 
 
 class WebhookEventType(str, Enum):
@@ -378,6 +380,8 @@ class DatasetStatus(str, Enum):
     ACTIVE = "active"
     SUPERSEDED = "superseded"
     ARCHIVED = "archived"
+    INVALID = "invalid"
+    QUARANTINED = "quarantined"
 
 
 class RiskSignalType(str, Enum):
@@ -414,3 +418,17 @@ class CountryRiskLevel(str, Enum):
     MODERATE = "moderate"
     HIGH = "high"
     CRITICAL = "critical"
+
+
+# ── M34.1 Live Connector enums ────────────────────────────────────────────────
+
+class ConnectorStatus(str, Enum):
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+
+
+class FreshnessStatus(str, Enum):
+    FRESH = "fresh"
+    STALE = "stale"
+    EXPIRED = "expired"

@@ -81,6 +81,7 @@ from .external_intelligence import (
     ExternalRiskSignalModel,
     SupplierEnrichmentModel,
 )
+from .connector_run import ConnectorRunModel, DatasetValidationResultModel
 
 __all__ = [
     "AgentRunModel",
@@ -142,6 +143,8 @@ __all__ = [
     "SectorBenchmarkModel",
     "ExternalRiskSignalModel",
     "SupplierEnrichmentModel",
+    "ConnectorRunModel",
+    "DatasetValidationResultModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

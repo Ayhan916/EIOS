@@ -32,6 +32,7 @@ from interfaces.api.routers import (
     disclosure_router,
     due_diligence_router,
     external_intelligence_router,
+    operations_router,
     regulatory_router,
     assessments_benchmark_router,
     assessments_compliance_router,
@@ -65,6 +66,7 @@ from shared.config import settings
 
 _overdue_task: asyncio.Task | None = None
 _webhook_recovery_task: asyncio.Task | None = None
+_intelligence_scheduler_task: asyncio.Task | None = None
 
 
 async def _check_overdue_loop() -> None:
@@ -203,11 +205,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as _dseed_exc:
         logger.warning("disclosure_seed_failed", error=str(_dseed_exc))
 
-    global _overdue_task, _webhook_recovery_task
+    from application.external_intelligence.scheduler import run_intelligence_scheduler  # noqa: PLC0415
+
+    global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task
     _overdue_task = asyncio.create_task(_check_overdue_loop())
     logger.info("overdue_task_started")
     _webhook_recovery_task = asyncio.create_task(run_webhook_recovery_loop())
     logger.info("webhook_recovery_task_started")
+    _intelligence_scheduler_task = asyncio.create_task(run_intelligence_scheduler())
+    logger.info("intelligence_scheduler_started")
 
     yield
 
@@ -215,6 +221,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _overdue_task.cancel()
     if _webhook_recovery_task is not None:
         _webhook_recovery_task.cancel()
+    if _intelligence_scheduler_task is not None:
+        _intelligence_scheduler_task.cancel()
     logger.info("eios_shutdown")
 
 
@@ -299,3 +307,4 @@ app.include_router(disclosure_router, prefix=API_V1)
 app.include_router(due_diligence_router, prefix=API_V1)
 app.include_router(copilot_router, prefix=API_V1)
 app.include_router(external_intelligence_router, prefix=API_V1)
+app.include_router(operations_router, prefix=API_V1)

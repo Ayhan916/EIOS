@@ -28,6 +28,7 @@ from .sectors import router as sectors_router
 from .users import router as users_router
 from .workflows import router as workflows_router
 from .external_intelligence import router as external_intelligence_router
+from .operations import router as operations_router
 
 __all__ = [
     "agents_router",
@@ -62,4 +63,5 @@ __all__ = [
     "users_router",
     "workflows_router",
     "external_intelligence_router",
+    "operations_router",
 ]

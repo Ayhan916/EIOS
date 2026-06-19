@@ -47,8 +47,7 @@ from application.external_intelligence.sector_benchmark_service import (
     list_sector_benchmarks,
 )
 from domain.external_intelligence import ExternalRiskSignal
-from infrastructure.database import get_db
-from interfaces.api.dependencies import get_current_user, scope_gate
+from interfaces.api.deps import get_current_user, get_db, scope_gate
 from interfaces.api.schemas.external_intelligence import (
     CountryRiskListResponse,
     CountryRiskResponse,
@@ -63,7 +62,7 @@ from interfaces.api.schemas.external_intelligence import (
     SignalListResponse,
     SupplierEnrichmentResponse,
 )
-from domain.models import User
+from domain.user import User
 
 router = APIRouter(
     prefix="/external-intelligence",
