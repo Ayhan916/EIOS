@@ -26,13 +26,14 @@ from interfaces.api.deps import (
     get_review_action_repo,
     get_risk_repo,
     require_analyst,
+    scope_gate,
 )
 from interfaces.api.schemas.report import ReportGenerateRequest, ReportResponse
 
 router = APIRouter(
     prefix="/reports",
     tags=["reports"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(scope_gate("reports:read"))],
 )
 
 

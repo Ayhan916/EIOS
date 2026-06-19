@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +36,9 @@ from interfaces.api.deps import (
     get_supplier_repo,
     require_analyst,
     require_admin,
+    scope_gate,
 )
+from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.pagination import Page, PaginationParams
 from interfaces.api.schemas.supplier import (
     SupplierCreate,
@@ -50,7 +52,7 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(
     prefix="/suppliers",
     tags=["suppliers"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(scope_gate("suppliers:read", "suppliers:write"))],
 )
 
 
@@ -70,6 +72,7 @@ def _assert_org_access(supplier_org_id: str, user_org_id: str | None) -> None:
 )
 async def create_supplier(
     body: SupplierCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
@@ -119,6 +122,12 @@ async def create_supplier(
         )
     )
     logger.info("supplier_created", supplier_id=saved.id, name=saved.name)
+    background_tasks.add_task(
+        dispatch_webhook_event,
+        current_user.organization_id,
+        "supplier.created",
+        {"supplier_id": saved.id, "name": saved.name, "country": saved.country},
+    )
     return SupplierResponse.model_validate(saved)
 
 

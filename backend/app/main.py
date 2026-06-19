@@ -27,6 +27,7 @@ from infrastructure.embeddings.deps import init_embedding_provider
 from infrastructure.llm.deps import init_llm_provider
 from interfaces.api.routers import (
     agents_router,
+    api_platform_router,
     assessments_benchmark_router,
     assessments_compliance_router,
     assessments_router,
@@ -55,9 +56,10 @@ from interfaces.api.routers import (
 )
 from shared.config import settings
 
-# ── Overdue notification background task ──────────────────────────────────────
+# ── Background tasks ──────────────────────────────────────────────────────────
 
 _overdue_task: asyncio.Task | None = None
+_webhook_recovery_task: asyncio.Task | None = None
 
 
 async def _check_overdue_loop() -> None:
@@ -175,14 +177,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             monthly_token_budget=settings.llm_monthly_token_budget,
         )
 
-    global _overdue_task
+    from application.api_platform.recovery_worker import run_webhook_recovery_loop  # noqa: PLC0415
+
+    global _overdue_task, _webhook_recovery_task
     _overdue_task = asyncio.create_task(_check_overdue_loop())
     logger.info("overdue_task_started")
+    _webhook_recovery_task = asyncio.create_task(run_webhook_recovery_loop())
+    logger.info("webhook_recovery_task_started")
 
     yield
 
     if _overdue_task is not None:
         _overdue_task.cancel()
+    if _webhook_recovery_task is not None:
+        _webhook_recovery_task.cancel()
     logger.info("eios_shutdown")
 
 
@@ -261,3 +269,4 @@ app.include_router(comments_router, prefix=API_V1)
 app.include_router(supplier_intelligence_router, prefix=API_V1)
 app.include_router(suppliers_router, prefix=API_V1)
 app.include_router(executive_router, prefix=API_V1)
+app.include_router(api_platform_router, prefix=API_V1)

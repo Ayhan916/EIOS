@@ -536,6 +536,73 @@ def supplier_score_calculated(
     )
 
 
+def make(
+    action: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    entity_type: str = "",
+    entity_id: str = "",
+    detail: str = "",
+    metadata: dict | None = None,
+    outcome: str = "success",
+) -> AuditEvent:
+    """Generic audit event factory for ad-hoc actions."""
+    return AuditEvent(
+        action=action,
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        outcome=outcome,
+        detail=detail,
+        status=EntityStatus.ACTIVE,
+        event_metadata=metadata or {},
+    )
+
+
+def board_report_generated(
+    report_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+    organization_id: str | None = None,
+    period_start: str | None = None,
+    period_end: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="board_report.generated",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="BoardReport",
+        entity_id=report_id,
+        outcome="success",
+        detail=f"Board report generated for period {period_start} – {period_end}",
+        status=EntityStatus.ACTIVE,
+        event_metadata={
+            "organization_id": organization_id,
+            "period_start": period_start,
+            "period_end": period_end,
+        },
+    )
+
+
+def board_report_downloaded(
+    report_id: str,
+    actor_id: str,
+    actor_email: str | None = None,
+) -> AuditEvent:
+    return AuditEvent(
+        action="board_report.downloaded",
+        actor_id=actor_id,
+        actor_email=actor_email,
+        entity_type="BoardReport",
+        entity_id=report_id,
+        outcome="success",
+        detail=f"Board report PDF downloaded",
+        status=EntityStatus.ACTIVE,
+        event_metadata={},
+    )
+
+
 def comment_deleted(
     comment_id: str,
     entity_type: str,

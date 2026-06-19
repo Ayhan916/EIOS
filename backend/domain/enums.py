@@ -153,3 +153,39 @@ class TrendDirection(str, Enum):
     IMPROVING = "Improving"
     STABLE = "Stable"
     DETERIORATING = "Deteriorating"
+
+
+# ── M30 API Platform ──────────────────────────────────────────────────────────
+
+
+class ApiScope(str, Enum):
+    ASSESSMENTS_READ = "assessments:read"
+    ASSESSMENTS_WRITE = "assessments:write"
+    SUPPLIERS_READ = "suppliers:read"
+    SUPPLIERS_WRITE = "suppliers:write"
+    FINDINGS_READ = "findings:read"
+    RISKS_READ = "risks:read"
+    RECOMMENDATIONS_READ = "recommendations:read"
+    EXECUTIVE_READ = "executive:read"
+    REPORTS_READ = "reports:read"
+
+
+class WebhookEventType(str, Enum):
+    ASSESSMENT_CREATED = "assessment.created"
+    ASSESSMENT_APPROVED = "assessment.approved"
+    FINDING_CREATED = "finding.created"
+    RISK_CREATED = "risk.created"
+    RECOMMENDATION_CREATED = "recommendation.created"
+    RECOMMENDATION_ASSIGNED = "recommendation.assigned"
+    WORKFLOW_COMPLETED = "workflow.completed"
+    SUPPLIER_CREATED = "supplier.created"
+    SUPPLIER_RISK_CHANGED = "supplier.risk_changed"
+    BOARD_REPORT_GENERATED = "board_report.generated"
+    NOTIFICATION_CREATED = "notification.created"
+
+
+class WebhookDeliveryStatus(str, Enum):
+    PENDING = "pending"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+    DEAD_LETTER = "dead_letter"

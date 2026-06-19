@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import application.audit as audit_factory
@@ -21,7 +21,9 @@ from interfaces.api.deps import (
     get_user_repo,
     require_admin,
     require_analyst,
+    scope_gate,
 )
+from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.recommendation import (
     RecommendationCreate,
     RecommendationResponse,
@@ -31,7 +33,7 @@ from interfaces.api.schemas.recommendation import (
 router = APIRouter(
     prefix="/recommendations",
     tags=["recommendations"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(scope_gate("recommendations:read", "assessments:write"))],
 )
 
 
@@ -73,6 +75,7 @@ async def list_recommendations(
 )
 async def create_recommendation(
     body: RecommendationCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
 ) -> RecommendationResponse:
@@ -88,6 +91,13 @@ async def create_recommendation(
         created_by=current_user.id,
     )
     saved = await repo.save(recommendation)
+    if current_user.organization_id:
+        background_tasks.add_task(
+            dispatch_webhook_event,
+            current_user.organization_id,
+            "recommendation.created",
+            {"recommendation_id": saved.id, "title": saved.title, "priority": saved.priority},
+        )
     return RecommendationResponse.model_validate(saved)
 
 

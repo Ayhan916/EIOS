@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 
@@ -50,7 +50,9 @@ from interfaces.api.deps import (
     require_admin,
     require_analyst,
     require_reviewer,
+    scope_gate,
 )
+from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.assessment import AssessmentCreate, AssessmentResponse
 from interfaces.api.schemas.finding import (
     EvidenceInsightsResponse,
@@ -82,7 +84,7 @@ class AssessmentReviseRequest(BaseModel):
 router = APIRouter(
     prefix="/assessments",
     tags=["assessments"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(scope_gate("assessments:read", "assessments:write"))],
 )
 
 
@@ -100,6 +102,7 @@ def _assert_org_access(item_org_id: str | None, user_org_id: str | None) -> None
 )
 async def create_assessment(
     body: AssessmentCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
     supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
@@ -148,6 +151,13 @@ async def create_assessment(
             assessment_type=body.assessment_type,
         )
     )
+    if current_user.organization_id:
+        background_tasks.add_task(
+            dispatch_webhook_event,
+            current_user.organization_id,
+            "assessment.created",
+            {"assessment_id": saved.id, "title": saved.title, "assessment_type": saved.assessment_type},
+        )
     return AssessmentResponse.model_validate(saved)
 
 
@@ -278,6 +288,7 @@ async def list_assessment_risks(
 )
 async def approve_assessment(
     assessment_id: str,
+    background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
@@ -322,6 +333,13 @@ async def approve_assessment(
                 user_email=creator.email,
             )
 
+    if current_user.organization_id:
+        background_tasks.add_task(
+            dispatch_webhook_event,
+            current_user.organization_id,
+            "assessment.approved",
+            {"assessment_id": assessment_id, "approved_by": current_user.id},
+        )
     return AssessmentResponse.model_validate(saved)
 
 

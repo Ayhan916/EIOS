@@ -149,7 +149,7 @@ class BoardReportDetail(BaseModel):
     generated_at: str
     executive_summary: str
     report_data: dict
-    supplier_snapshot: list
+    supplier_snapshot: dict
 
 
 # ── Report Schedules ──────────────────────────────────────────────────────────

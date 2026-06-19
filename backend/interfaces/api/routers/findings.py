@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from domain.finding import Finding
 from domain.user import User
@@ -14,7 +14,9 @@ from interfaces.api.deps import (
     get_finding_repo,
     require_admin,
     require_analyst,
+    scope_gate,
 )
+from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.finding import (
     FindingCreate,
     FindingEvidenceLinkResponse,
@@ -24,7 +26,7 @@ from interfaces.api.schemas.finding import (
 router = APIRouter(
     prefix="/findings",
     tags=["findings"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(scope_gate("findings:read", "assessments:write"))],
 )
 
 
@@ -61,6 +63,7 @@ async def list_findings(
 )
 async def create_finding(
     body: FindingCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     repo: SQLFindingRepository = Depends(get_finding_repo),
 ) -> FindingResponse:
@@ -76,6 +79,13 @@ async def create_finding(
         created_by=current_user.id,
     )
     saved = await repo.save(finding)
+    if current_user.organization_id:
+        background_tasks.add_task(
+            dispatch_webhook_event,
+            current_user.organization_id,
+            "finding.created",
+            {"finding_id": saved.id, "title": saved.title, "severity": saved.severity},
+        )
     return FindingResponse.model_validate(saved)
 
 

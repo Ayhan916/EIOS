@@ -24,7 +24,7 @@ class BoardReportModel(BaseModel):
     period_end: Mapped[date] = mapped_column(Date, nullable=False)
     executive_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
     report_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    supplier_snapshot: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    supplier_snapshot: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
 
 class ReportScheduleModel(BaseModel):

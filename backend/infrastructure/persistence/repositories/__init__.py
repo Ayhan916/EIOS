@@ -28,6 +28,9 @@ from .supplier_score import SQLSupplierScoreRepository
 from .board_report import SQLBoardReportRepository, SQLReportScheduleRepository
 from .workflow_job import SQLWorkflowJobRepository
 from .workflow_run import SQLWorkflowRunRepository
+from .api_key import SQLApiKeyRepository
+from .service_account import SQLServiceAccountRepository
+from .webhook import SQLWebhookSubscriptionRepository, SQLWebhookDeliveryRepository
 
 __all__ = [
     "SQLAgentRunRepository",
@@ -61,4 +64,8 @@ __all__ = [
     "SQLReportScheduleRepository",
     "SQLWorkflowJobRepository",
     "SQLWorkflowRunRepository",
+    "SQLApiKeyRepository",
+    "SQLServiceAccountRepository",
+    "SQLWebhookSubscriptionRepository",
+    "SQLWebhookDeliveryRepository",
 ]

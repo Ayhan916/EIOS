@@ -25,13 +25,15 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, date, timedelta
 from io import BytesIO
+from uuid import uuid4
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Response, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy import case, func, literal_column, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import application.audit as audit_factory
 from application.executive import (
     ExecutiveSummaryInputs,
     compute_action_effectiveness,
@@ -52,6 +54,7 @@ from infrastructure.persistence.models.review_action import ReviewActionModel
 from infrastructure.persistence.models.supplier import SupplierModel
 from infrastructure.persistence.models.supplier_score import SupplierScoreModel
 from infrastructure.persistence.repositories import (
+    SQLAuditEventRepository,
     SQLBoardReportRepository,
     SQLReportScheduleRepository,
     SQLSupplierRepository,
@@ -59,6 +62,7 @@ from infrastructure.persistence.repositories import (
 )
 from infrastructure.reporting.board_pdf_renderer import render_board_report_pdf
 from interfaces.api.deps import (
+    get_audit_event_repo,
     get_board_report_repo,
     get_current_user,
     get_db,
@@ -67,7 +71,9 @@ from interfaces.api.deps import (
     get_supplier_score_repo,
     require_admin,
     require_executive,
+    scope_gate,
 )
+from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.executive import (
     ActionEffectivenessResponse,
     BoardReportDetail,
@@ -92,7 +98,7 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(
     prefix="/executive",
     tags=["executive"],
-    dependencies=[Depends(require_executive)],
+    dependencies=[Depends(require_executive), Depends(scope_gate("executive:read"))],
 )
 
 _CLOSED_STATUSES = ("resolved", "verified")
@@ -277,28 +283,41 @@ async def get_kpi_trends(
     org_id = _assert_org(current_user)
     since = datetime.now(UTC) - timedelta(days=period)
 
-    # Group supplier_scores by month, computing avg scores and band distribution
-    # literal_column keeps the format as a SQL literal so PostgreSQL treats SELECT/
-    # GROUP BY/ORDER BY as the same expression (parameterized strings would differ).
-    _month = func.to_char(SupplierScoreModel.created_at, literal_column("'YYYY-MM'"))
+    # Use latest score per supplier per month to avoid double-counting suppliers
+    # that have multiple score rows within the same calendar month.
+    _month_fn = func.to_char(SupplierScoreModel.created_at, literal_column("'YYYY-MM'"))
+    latest_per_month_subq = (
+        select(
+            SupplierScoreModel.supplier_id.label("supplier_id"),
+            _month_fn.label("month"),
+            func.max(SupplierScoreModel.created_at).label("max_created"),
+        )
+        .where(
+            SupplierScoreModel.organization_id == org_id,
+            SupplierScoreModel.created_at >= since,
+        )
+        .group_by(SupplierScoreModel.supplier_id, _month_fn)
+        .subquery()
+    )
     rows = (
         await session.execute(
             select(
-                _month.label("month"),
+                latest_per_month_subq.c.month,
                 func.avg(SupplierScoreModel.esg_score).label("avg_esg"),
                 func.avg(SupplierScoreModel.risk_score).label("avg_risk"),
-                func.count(SupplierScoreModel.supplier_id.distinct()).label("count"),
+                func.count(SupplierScoreModel.supplier_id).label("count"),
                 func.sum(case((SupplierScoreModel.risk_band == "Critical", 1), else_=0)).label("critical"),
                 func.sum(case((SupplierScoreModel.risk_band == "High", 1), else_=0)).label("high"),
                 func.sum(case((SupplierScoreModel.risk_band == "Moderate", 1), else_=0)).label("moderate"),
                 func.sum(case((SupplierScoreModel.risk_band == "Low", 1), else_=0)).label("low"),
             )
-            .where(
-                SupplierScoreModel.organization_id == org_id,
-                SupplierScoreModel.created_at >= since,
+            .join(
+                latest_per_month_subq,
+                (SupplierScoreModel.supplier_id == latest_per_month_subq.c.supplier_id)
+                & (SupplierScoreModel.created_at == latest_per_month_subq.c.max_created),
             )
-            .group_by(_month)
-            .order_by(_month)
+            .group_by(latest_per_month_subq.c.month)
+            .order_by(latest_per_month_subq.c.month)
         )
     ).all()
 
@@ -659,11 +678,13 @@ async def get_governance_metrics(
 )
 async def generate_board_report(
     body: BoardReportRequest,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
     supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
     score_repo: SQLSupplierScoreRepository = Depends(get_supplier_score_repo),
     report_repo: SQLBoardReportRepository = Depends(get_board_report_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> BoardReportDetail:
     """Generate and persist an immutable board report snapshot."""
     org_id = _assert_org(current_user)
@@ -716,27 +737,41 @@ async def generate_board_report(
         critical_findings_total=crit_findings_total,
     )
 
-    # KPI trends (last kpi_period_days)
+    # KPI trends (last kpi_period_days) — latest score per supplier per month only
     trend_since = now - timedelta(days=body.kpi_period_days)
-    _trend_month = func.to_char(SupplierScoreModel.created_at, literal_column("'YYYY-MM'"))
+    _trend_month_fn = func.to_char(SupplierScoreModel.created_at, literal_column("'YYYY-MM'"))
+    trend_latest_subq = (
+        select(
+            SupplierScoreModel.supplier_id.label("supplier_id"),
+            _trend_month_fn.label("month"),
+            func.max(SupplierScoreModel.created_at).label("max_created"),
+        )
+        .where(
+            SupplierScoreModel.organization_id == org_id,
+            SupplierScoreModel.created_at >= trend_since,
+        )
+        .group_by(SupplierScoreModel.supplier_id, _trend_month_fn)
+        .subquery()
+    )
     trend_rows = (
         await session.execute(
             select(
-                _trend_month.label("month"),
+                trend_latest_subq.c.month,
                 func.avg(SupplierScoreModel.esg_score).label("avg_esg"),
                 func.avg(SupplierScoreModel.risk_score).label("avg_risk"),
-                func.count(SupplierScoreModel.supplier_id.distinct()).label("count"),
+                func.count(SupplierScoreModel.supplier_id).label("count"),
                 func.sum(case((SupplierScoreModel.risk_band == "Critical", 1), else_=0)).label("critical"),
                 func.sum(case((SupplierScoreModel.risk_band == "High", 1), else_=0)).label("high"),
                 func.sum(case((SupplierScoreModel.risk_band == "Moderate", 1), else_=0)).label("moderate"),
                 func.sum(case((SupplierScoreModel.risk_band == "Low", 1), else_=0)).label("low"),
             )
-            .where(
-                SupplierScoreModel.organization_id == org_id,
-                SupplierScoreModel.created_at >= trend_since,
+            .join(
+                trend_latest_subq,
+                (SupplierScoreModel.supplier_id == trend_latest_subq.c.supplier_id)
+                & (SupplierScoreModel.created_at == trend_latest_subq.c.max_created),
             )
-            .group_by(_trend_month)
-            .order_by(_trend_month)
+            .group_by(trend_latest_subq.c.month)
+            .order_by(trend_latest_subq.c.month)
         )
     ).all()
     monthly_rows = [
@@ -982,13 +1017,17 @@ async def generate_board_report(
     )
     executive_summary = generate_executive_summary(summary_inputs)
 
+    # Pre-generate the report ID so report_data["meta"]["report_id"] is set before the
+    # first (and only) save, making the trigger-protected report_data fully immutable.
+    report_id = str(uuid4())
+
     # Assemble report_data (frozen snapshot)
     report_data = {
         "meta": {
             "title": body.title,
             "report_version": "1.0",
             "generated_at": now.isoformat(),
-            "report_id": "",  # filled after save
+            "report_id": report_id,
             "period_start": body.period_start,
             "period_end": body.period_end,
             "organization_name": org_name,
@@ -1048,7 +1087,7 @@ async def generate_board_report(
     }
 
     # Supplier snapshot for audit (top 50 by risk score)
-    supplier_snapshot = [
+    snapshot_entries = [
         {
             "supplier_id": s.supplier_id,
             "supplier_name": supplier_map[s.supplier_id].name if s.supplier_id in supplier_map else "",
@@ -1061,9 +1100,17 @@ async def generate_board_report(
         for s in sorted_by_risk[:50]
         if s.supplier_id in supplier_map
     ]
+    supplier_snapshot = {
+        "supplier_snapshot_metadata": {
+            "total_supplier_count": total_suppliers,
+            "snapshot_supplier_count": len(snapshot_entries),
+        },
+        "suppliers": snapshot_entries,
+    }
 
-    # Persist — immutable after this point
+    # Persist — immutable after this point (report_id already embedded in report_data)
     report = BoardReport(
+        id=report_id,
         organization_id=org_id,
         title=body.title,
         report_version="1.0",
@@ -1077,12 +1124,29 @@ async def generate_board_report(
     )
     saved = await report_repo.save(report)
 
-    # Patch the report_id into report_data meta now that we have the id
-    saved.report_data["meta"]["report_id"] = saved.id
-    saved = await report_repo.save(saved)
+    await audit_repo.save(
+        audit_factory.board_report_generated(
+            report_id=saved.id,
+            actor_id=current_user.id,
+            actor_email=current_user.email,
+            organization_id=org_id,
+            period_start=body.period_start,
+            period_end=body.period_end,
+        )
+    )
+    try:
+        from interfaces.api.routers.metrics import counters as _m  # noqa: PLC0415
+        _m.record_board_report_generated()
+    except Exception:  # noqa: BLE001
+        pass
 
     logger.info("board_report_generated", report_id=saved.id, org_id=org_id)
-
+    background_tasks.add_task(
+        dispatch_webhook_event,
+        org_id,
+        "board_report.generated",
+        {"report_id": saved.id, "title": saved.title, "period_start": body.period_start, "period_end": body.period_end},
+    )
     return _to_detail(saved)
 
 
@@ -1128,6 +1192,7 @@ async def download_board_report_pdf(
     report_id: str,
     current_user: User = Depends(get_current_user),
     report_repo: SQLBoardReportRepository = Depends(get_board_report_repo),
+    audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
 ) -> StreamingResponse:
     """Download PDF generated from the stored report_data snapshot."""
     org_id = _assert_org(current_user)
@@ -1145,6 +1210,19 @@ async def download_board_report_pdf(
         report_id=report.id,
         organization_name=org_name,
     )
+
+    await audit_repo.save(
+        audit_factory.board_report_downloaded(
+            report_id=report.id,
+            actor_id=current_user.id,
+            actor_email=current_user.email,
+        )
+    )
+    try:
+        from interfaces.api.routers.metrics import counters as _m  # noqa: PLC0415
+        _m.record_board_report_downloaded()
+    except Exception:  # noqa: BLE001
+        pass
 
     filename = f"board-report-{report.period_start.isoformat()}-{report.period_end.isoformat()}.pdf"
     return StreamingResponse(

@@ -6,6 +6,7 @@ and required columns are present — without a database connection.
 """
 
 from infrastructure.persistence.models import (
+    ApiKeyModel,
     AssessmentModel,
     AssetModel,
     Base,
@@ -21,9 +22,12 @@ from infrastructure.persistence.models import (
     RequirementModel,
     RiskModel,
     SectorModel,
+    ServiceAccountModel,
     StandardModel,
     TaskModel,
     UserModel,
+    WebhookDeliveryModel,
+    WebhookSubscriptionModel,
 )
 
 EXPECTED_ENTITY_TABLES = {
@@ -58,6 +62,10 @@ EXPECTED_ENTITY_TABLES = {
     "supplier_scores",
     "board_reports",
     "report_schedules",
+    "service_accounts",
+    "api_keys",
+    "webhook_subscriptions",
+    "webhook_deliveries",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -96,7 +104,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 42  # 31 entity + 11 association
+        assert len(Base.metadata.tables) == 46  # 35 entity + 11 association
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

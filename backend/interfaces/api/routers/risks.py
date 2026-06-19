@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
 from domain.risk import Risk
 from domain.user import User
@@ -9,13 +9,15 @@ from interfaces.api.deps import (
     get_risk_repo,
     require_admin,
     require_analyst,
+    scope_gate,
 )
+from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.risk import RiskCreate, RiskResponse
 
 router = APIRouter(
     prefix="/risks",
     tags=["risks"],
-    dependencies=[Depends(get_current_user)],
+    dependencies=[Depends(get_current_user), Depends(scope_gate("risks:read", "assessments:write"))],
 )
 
 
@@ -42,6 +44,7 @@ async def _assert_risk_org_access(
 )
 async def create_risk(
     body: RiskCreate,
+    background_tasks: BackgroundTasks,
     current_user: User = Depends(get_current_user),
     repo: SQLRiskRepository = Depends(get_risk_repo),
 ) -> RiskResponse:
@@ -60,6 +63,13 @@ async def create_risk(
         created_by=current_user.id,
     )
     saved = await repo.save(risk)
+    if current_user.organization_id:
+        background_tasks.add_task(
+            dispatch_webhook_event,
+            current_user.organization_id,
+            "risk.created",
+            {"risk_id": saved.id, "title": saved.title, "risk_level": saved.risk_level},
+        )
     return RiskResponse.model_validate(saved)
 
 

@@ -8,7 +8,7 @@ The transaction commits at request end (on success) and rolls back on exception.
 from collections.abc import AsyncGenerator, Callable
 
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from domain.user import User
 from infrastructure.persistence.database import AsyncSessionFactory
 from infrastructure.persistence.repositories import (
     SQLAgentRunRepository,
+    SQLApiKeyRepository,
     SQLAssessmentRepository,
     SQLAuditEventRepository,
     SQLBoardReportRepository,
@@ -31,17 +32,22 @@ from infrastructure.persistence.repositories import (
     SQLReviewActionRepository,
     SQLRiskRepository,
     SQLSectorRepository,
+    SQLServiceAccountRepository,
     SQLSupplierRepository,
     SQLSupplierScoreRepository,
     SQLUserRepository,
+    SQLWebhookDeliveryRepository,
+    SQLWebhookSubscriptionRepository,
     SQLWorkflowJobRepository,
     SQLWorkflowRunRepository,
 )
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
 from infrastructure.persistence.repositories.report import SQLReportRepository
+from application.api_platform.key_service import hash_api_key, is_api_key_token
 from shared.security import decode_token
 
-_bearer = HTTPBearer(auto_error=True)
+_bearer = HTTPBearer(auto_error=False)
+_bearer_required = HTTPBearer(auto_error=True)
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -169,12 +175,92 @@ async def get_supplier_score_repo(
     return SQLSupplierScoreRepository(session)
 
 
+async def get_api_key_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLApiKeyRepository:
+    return SQLApiKeyRepository(session)
+
+
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(_bearer),
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     repo: SQLUserRepository = Depends(get_user_repo),
+    api_key_repo: SQLApiKeyRepository = Depends(get_api_key_repo),
 ) -> User:
+    _unauth = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Not authenticated",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if credentials is None:
+        raise _unauth
+
+    token = credentials.credentials
+
+    # ── API key path ──────────────────────────────────────────────────────────
+    if is_api_key_token(token):
+        key_hash = hash_api_key(token)
+        api_key = await api_key_repo.get_by_hash(key_hash)
+        if api_key is None or not api_key.is_active:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or revoked API key",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        # Atomic increment + rate limit check.
+        # Increment counters first (resetting expired windows), then check the new
+        # values against limits. This is fully atomic at the DB level via a single
+        # UPDATE…RETURNING. The counter reflects this request — reject if it exceeded.
+        from datetime import UTC, datetime  # noqa: PLC0415
+        now = datetime.now(UTC)
+        new_min, new_hr = await api_key_repo.atomic_increment_and_get_counts(api_key.id, now)
+        if new_min > api_key.rate_limit_per_minute:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded (per-minute)",
+                headers={"Retry-After": "60"},
+            )
+        if new_hr > api_key.rate_limit_per_hour:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="Rate limit exceeded (per-hour)",
+                headers={"Retry-After": "3600"},
+            )
+
+        # Emit process-level metric
+        try:
+            from interfaces.api.routers.metrics import counters as _m  # noqa: PLC0415
+            _m.record_api_key_request()
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Attach scopes to request state for require_scope checks
+        request.state.api_scopes = set(api_key.scopes)
+        request.state.api_key_id = api_key.id
+
+        # Build a synthetic User representing the service account
+        # organization_id and is_active are the fields existing endpoints care about
+        from domain.enums import EntityStatus, UserRole  # noqa: PLC0415
+        from domain.user import User as DomainUser  # noqa: PLC0415
+        synthetic = DomainUser(
+            id=api_key.service_account_id or api_key.id,
+            status=EntityStatus.ACTIVE,
+            email="api-key@service",
+            display_name=api_key.name,
+            role=UserRole.ANALYST,
+            organization_id=api_key.organization_id,
+            is_active=True,
+            password_hash="",
+        )
+        return synthetic
+
+    # ── JWT path ──────────────────────────────────────────────────────────────
+    # Clear any stale API platform state from request
+    request.state.api_scopes = None
+    request.state.api_key_id = None
+
     try:
-        payload = decode_token(credentials.credentials)
+        payload = decode_token(token)
     except jwt.ExpiredSignatureError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -206,9 +292,20 @@ async def get_current_user(
 
 
 def require_role(min_role: UserRole) -> Callable:
-    """Return a FastAPI dependency that enforces a minimum role."""
+    """Return a FastAPI dependency that enforces a minimum role.
 
-    async def _check(current_user: User = Depends(get_current_user)) -> User:
+    API key users bypass role checks entirely — their access is governed
+    exclusively by scope enforcement (require_scope).  JWT users continue
+    to use role-based access control as before.
+    """
+
+    async def _check(
+        request: Request,
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        # API key requests: scopes control access, not roles
+        if getattr(request.state, "api_key_id", None) is not None:
+            return current_user
         if not has_min_role(current_user.role, min_role):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -235,3 +332,71 @@ async def get_report_schedule_repo(
     session: AsyncSession = Depends(get_db),
 ) -> SQLReportScheduleRepository:
     return SQLReportScheduleRepository(session)
+
+
+# ── M30 API Platform repos ────────────────────────────────────────────────────
+
+async def get_service_account_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLServiceAccountRepository:
+    return SQLServiceAccountRepository(session)
+
+
+async def get_webhook_subscription_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLWebhookSubscriptionRepository:
+    return SQLWebhookSubscriptionRepository(session)
+
+
+async def get_webhook_delivery_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLWebhookDeliveryRepository:
+    return SQLWebhookDeliveryRepository(session)
+
+
+def require_scope(scope: str) -> Callable:
+    """FastAPI dependency: pass for JWT users, enforce scope for API-key requests."""
+
+    async def _check(
+        request: Request,
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        api_scopes = getattr(request.state, "api_scopes", None)
+        if api_scopes is not None and scope not in api_scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"API key missing required scope: {scope}",
+            )
+        return current_user
+
+    return _check
+
+
+def scope_gate(read_scope: str, write_scope: str | None = None) -> Callable:
+    """Router-level scope dependency.  Checks scope based on HTTP method.
+
+    GET/HEAD/OPTIONS → read_scope
+    POST/PATCH/PUT/DELETE → write_scope if provided, else read_scope
+
+    JWT users (api_scopes is None) always pass through — RBAC handles them.
+    This is the canonical way to add scope enforcement to a whole router
+    without modifying every individual endpoint signature.
+    """
+    _WRITE_METHODS = frozenset({"POST", "PATCH", "PUT", "DELETE"})
+
+    async def _check(
+        request: Request,
+        _: User = Depends(get_current_user),
+    ) -> None:
+        api_scopes = getattr(request.state, "api_scopes", None)
+        if api_scopes is None:
+            return  # JWT user — RBAC already handled by require_role
+        method = request.method.upper()
+        required = (write_scope if write_scope and method in _WRITE_METHODS else read_scope)
+        if required not in api_scopes:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"API key missing required scope: {required}",
+            )
+
+    return _check

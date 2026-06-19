@@ -49,6 +49,9 @@ from .supplier import SupplierModel
 from .supplier_score import SupplierScoreModel
 from .board_report import BoardReportModel, ReportScheduleModel
 from .workflow_run import WorkflowRunModel
+from .api_key import ApiKeyModel
+from .service_account import ServiceAccountModel
+from .webhook import WebhookSubscriptionModel, WebhookDeliveryModel
 
 __all__ = [
     "AgentRunModel",
@@ -84,6 +87,10 @@ __all__ = [
     "ReportScheduleModel",
     "WorkflowJobModel",
     "WorkflowRunModel",
+    "ApiKeyModel",
+    "ServiceAccountModel",
+    "WebhookSubscriptionModel",
+    "WebhookDeliveryModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

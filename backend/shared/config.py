@@ -59,6 +59,11 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     groq_api_key: str = ""
 
+    # Webhook secret encryption key (Fernet, base64url-encoded 32-byte key)
+    # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    # Leave empty to store secrets in plaintext (acceptable for development).
+    webhook_secret_key: str = ""
+
     # SMTP email — leave smtp_host empty to disable email sending
     smtp_host: str = ""
     smtp_port: int = 587

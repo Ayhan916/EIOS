@@ -17,7 +17,7 @@ class BoardReport(BaseEntity):
     period_end: date = field(default_factory=date.today)
     executive_summary: str = ""
     report_data: dict = field(default_factory=dict)
-    supplier_snapshot: list = field(default_factory=list)
+    supplier_snapshot: dict = field(default_factory=dict)
 
 
 @dataclass(slots=True, kw_only=True)
