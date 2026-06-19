@@ -38,6 +38,12 @@ from .regulatory import (
     SQLComplianceGapRepository,
     SQLComplianceReportRepository,
 )
+from .disclosure import (
+    SQLDisclosureFrameworkRepository,
+    SQLDisclosureRequirementRepository,
+    SQLDisclosureResponseRepository,
+    SQLReportingPackageRepository,
+)
 
 __all__ = [
     "SQLAgentRunRepository",

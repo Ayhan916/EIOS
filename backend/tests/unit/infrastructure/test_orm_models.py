@@ -37,6 +37,13 @@ from infrastructure.persistence.models.regulatory import (  # noqa: F401
     RegulationRequirementModel,
     RequirementMappingModel,
 )
+# M32: ensure disclosure models are registered
+from infrastructure.persistence.models.disclosure import (  # noqa: F401
+    DisclosureFrameworkModel,
+    DisclosureRequirementModel,
+    DisclosureResponseModel,
+    ReportingPackageModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -79,6 +86,10 @@ EXPECTED_ENTITY_TABLES = {
     "requirement_mappings",
     "compliance_gaps",
     "compliance_reports",
+    "disclosure_frameworks",
+    "disclosure_requirements",
+    "disclosure_responses",
+    "reporting_packages",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -117,7 +128,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 51  # 40 entity + 11 association (M31 adds 4, M31.1 adds 1)
+        assert len(Base.metadata.tables) == 55  # 40 entity + 11 association (M31 adds 4, M31.1 adds 1, M32 adds 4)
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

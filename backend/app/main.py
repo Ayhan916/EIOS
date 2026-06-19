@@ -28,6 +28,7 @@ from infrastructure.llm.deps import init_llm_provider
 from interfaces.api.routers import (
     agents_router,
     api_platform_router,
+    disclosure_router,
     regulatory_router,
     assessments_benchmark_router,
     assessments_compliance_router,
@@ -180,6 +181,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     from application.api_platform.recovery_worker import run_webhook_recovery_loop  # noqa: PLC0415
     from application.compliance.seed_regulations import seed_regulatory_data  # noqa: PLC0415
+    from application.disclosure.seed_frameworks import seed_disclosure_frameworks  # noqa: PLC0415
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
 
     # Seed regulatory frameworks (idempotent — only inserts if absent)
@@ -189,6 +191,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.info("regulatory_seed_done")
     except Exception as _seed_exc:
         logger.warning("regulatory_seed_failed", error=str(_seed_exc))
+
+    # Seed disclosure frameworks (idempotent — only inserts if absent)
+    try:
+        async with AsyncSessionFactory() as _dseed_session, _dseed_session.begin():
+            await seed_disclosure_frameworks(_dseed_session)
+        logger.info("disclosure_seed_done")
+    except Exception as _dseed_exc:
+        logger.warning("disclosure_seed_failed", error=str(_dseed_exc))
 
     global _overdue_task, _webhook_recovery_task
     _overdue_task = asyncio.create_task(_check_overdue_loop())
@@ -282,3 +292,4 @@ app.include_router(suppliers_router, prefix=API_V1)
 app.include_router(executive_router, prefix=API_V1)
 app.include_router(api_platform_router, prefix=API_V1)
 app.include_router(regulatory_router, prefix=API_V1)
+app.include_router(disclosure_router, prefix=API_V1)

@@ -168,6 +168,8 @@ class ApiScope(str, Enum):
     RECOMMENDATIONS_READ = "recommendations:read"
     EXECUTIVE_READ = "executive:read"
     REPORTS_READ = "reports:read"
+    REPORTING_READ = "reporting:read"
+    REPORTING_WRITE = "reporting:write"
 
 
 class WebhookEventType(str, Enum):
@@ -189,3 +191,46 @@ class WebhookDeliveryStatus(str, Enum):
     DELIVERED = "delivered"
     FAILED = "failed"
     DEAD_LETTER = "dead_letter"
+
+
+# ── M32 Sustainability Reporting ──────────────────────────────────────────────
+
+
+class DisclosureStatus(str, Enum):
+    NOT_STARTED = "Not Started"
+    DRAFT = "Draft"
+    IN_REVIEW = "In Review"
+    APPROVED = "Approved"
+    PUBLISHED = "Published"
+
+
+class CoverageCategory(str, Enum):
+    WEAK = "Weak"
+    MODERATE = "Moderate"
+    STRONG = "Strong"
+    COMPLETE = "Complete"
+
+
+class ReadinessStatus(str, Enum):
+    NOT_STARTED = "Not Started"
+    DRAFT = "Draft"
+    READY_FOR_REVIEW = "Ready for Review"
+    READY_FOR_APPROVAL = "Ready for Approval"
+    READY_FOR_PUBLICATION = "Ready for Publication"
+    BLOCKED = "Blocked"
+
+
+# Allowed disclosure status transitions: {from_status: allowed_to_statuses}
+_DISCLOSURE_TRANSITIONS: dict[DisclosureStatus, set[DisclosureStatus]] = {
+    DisclosureStatus.NOT_STARTED: {DisclosureStatus.DRAFT},
+    DisclosureStatus.DRAFT: {DisclosureStatus.IN_REVIEW},
+    DisclosureStatus.IN_REVIEW: {DisclosureStatus.APPROVED, DisclosureStatus.DRAFT},
+    DisclosureStatus.APPROVED: {DisclosureStatus.PUBLISHED, DisclosureStatus.IN_REVIEW},
+    DisclosureStatus.PUBLISHED: set(),
+}
+
+
+def is_valid_disclosure_transition(
+    from_status: DisclosureStatus, to_status: DisclosureStatus
+) -> bool:
+    return to_status in _DISCLOSURE_TRANSITIONS.get(from_status, set())

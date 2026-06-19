@@ -59,6 +59,12 @@ from .regulatory import (
     ComplianceGapModel,
     ComplianceReportModel,
 )
+from .disclosure import (
+    DisclosureFrameworkModel,
+    DisclosureRequirementModel,
+    DisclosureResponseModel,
+    ReportingPackageModel,
+)
 
 __all__ = [
     "AgentRunModel",
@@ -103,6 +109,10 @@ __all__ = [
     "RequirementMappingModel",
     "ComplianceGapModel",
     "ComplianceReportModel",
+    "DisclosureFrameworkModel",
+    "DisclosureRequirementModel",
+    "DisclosureResponseModel",
+    "ReportingPackageModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",
