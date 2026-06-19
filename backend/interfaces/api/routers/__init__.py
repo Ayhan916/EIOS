@@ -1,5 +1,6 @@
 from .agents import router as agents_router
 from .disclosure import router as disclosure_router
+from .due_diligence import router as due_diligence_router
 from .regulatory import router as regulatory_router
 from .api_platform import router as api_platform_router
 from .executive import router as executive_router
@@ -29,6 +30,7 @@ from .workflows import router as workflows_router
 __all__ = [
     "agents_router",
     "disclosure_router",
+    "due_diligence_router",
     "regulatory_router",
     "api_platform_router",
     "executive_router",

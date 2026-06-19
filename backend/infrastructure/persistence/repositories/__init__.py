@@ -44,6 +44,7 @@ from .disclosure import (
     SQLDisclosureResponseRepository,
     SQLReportingPackageRepository,
 )
+from .due_diligence import SQLDueDiligenceReportRepository
 
 __all__ = [
     "SQLAgentRunRepository",
@@ -86,4 +87,5 @@ __all__ = [
     "SQLRequirementMappingRepository",
     "SQLComplianceGapRepository",
     "SQLComplianceReportRepository",
+    "SQLDueDiligenceReportRepository",
 ]

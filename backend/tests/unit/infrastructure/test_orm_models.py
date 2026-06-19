@@ -44,6 +44,8 @@ from infrastructure.persistence.models.disclosure import (  # noqa: F401
     DisclosureResponseModel,
     ReportingPackageModel,
 )
+# M32.1: ensure due diligence model is registered
+from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel  # noqa: F401
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -90,6 +92,7 @@ EXPECTED_ENTITY_TABLES = {
     "disclosure_requirements",
     "disclosure_responses",
     "reporting_packages",
+    "due_diligence_reports",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -128,7 +131,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 55  # 40 entity + 11 association (M31 adds 4, M31.1 adds 1, M32 adds 4)
+        assert len(Base.metadata.tables) == 56  # 41 entity + 11 association + 4 M32 disclosure (M31 adds 4, M31.1 adds 1, M32 adds 4, M32.1 adds 1)
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

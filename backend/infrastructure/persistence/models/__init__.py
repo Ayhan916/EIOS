@@ -65,6 +65,7 @@ from .disclosure import (
     DisclosureResponseModel,
     ReportingPackageModel,
 )
+from .due_diligence import DueDiligenceReportModel
 
 __all__ = [
     "AgentRunModel",
@@ -113,6 +114,7 @@ __all__ = [
     "DisclosureRequirementModel",
     "DisclosureResponseModel",
     "ReportingPackageModel",
+    "DueDiligenceReportModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

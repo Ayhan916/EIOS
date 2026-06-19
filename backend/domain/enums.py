@@ -170,6 +170,8 @@ class ApiScope(str, Enum):
     REPORTS_READ = "reports:read"
     REPORTING_READ = "reporting:read"
     REPORTING_WRITE = "reporting:write"
+    DUE_DILIGENCE_READ = "due_diligence:read"
+    DUE_DILIGENCE_WRITE = "due_diligence:write"
 
 
 class WebhookEventType(str, Enum):
@@ -234,3 +236,22 @@ def is_valid_disclosure_transition(
     from_status: DisclosureStatus, to_status: DisclosureStatus
 ) -> bool:
     return to_status in _DISCLOSURE_TRANSITIONS.get(from_status, set())
+
+
+# ── M32.1 Due Diligence Reporting ─────────────────────────────────────────────
+
+
+class DueDiligenceReportType(str, Enum):
+    LKSGG_ANNUAL = "lksgg_annual"
+    CSDDD = "csddd"
+    HUMAN_RIGHTS = "human_rights"
+    ENVIRONMENTAL = "environmental"
+    PREVENTIVE_MEASURES = "preventive_measures"
+    REMEDIATION = "remediation"
+
+
+class PreventiveMeasureEffectiveness(str, Enum):
+    EFFECTIVE = "Effective"
+    PARTIALLY_EFFECTIVE = "Partially Effective"
+    INEFFECTIVE = "Ineffective"
+    UNKNOWN = "Unknown"
