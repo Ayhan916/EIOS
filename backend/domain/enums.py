@@ -346,3 +346,71 @@ class PreventiveMeasureEffectiveness(str, Enum):
     PARTIALLY_EFFECTIVE = "Partially Effective"
     INEFFECTIVE = "Ineffective"
     UNKNOWN = "Unknown"
+
+
+# ── M34 External Data & Benchmarking Intelligence ─────────────────────────────
+
+
+class ExternalSourceName(str, Enum):
+    # Country risk
+    WORLD_BANK = "world_bank"
+    TRANSPARENCY_INTERNATIONAL = "transparency_international"
+    FRAGILE_STATES_INDEX = "fragile_states_index"
+    # Human rights
+    ILO = "ilo"
+    UNICEF = "unicef"
+    UN_HUMAN_RIGHTS = "un_human_rights"
+    # Sanctions
+    EU_SANCTIONS = "eu_sanctions"
+    UN_SANCTIONS = "un_sanctions"
+    OFAC = "ofac"
+    # Environmental
+    CLIMATE_VULNERABILITY = "climate_vulnerability"
+    WATER_STRESS = "water_stress"
+    BIODIVERSITY_RISK = "biodiversity_risk"
+    # Sector intelligence
+    SECTOR_ESG_BENCHMARK = "sector_esg_benchmark"
+    SECTOR_RISK_CLASSIFICATION = "sector_risk_classification"
+    SECTOR_INCIDENT_STATISTICS = "sector_incident_statistics"
+
+
+class DatasetStatus(str, Enum):
+    ACTIVE = "active"
+    SUPERSEDED = "superseded"
+    ARCHIVED = "archived"
+
+
+class RiskSignalType(str, Enum):
+    SANCTIONS = "sanctions"
+    CORRUPTION = "corruption"
+    LABOUR_RIGHTS = "labour_rights"
+    ENVIRONMENTAL = "environmental"
+    GOVERNANCE = "governance"
+
+
+class SignalSeverity(str, Enum):
+    CRITICAL = "critical"
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
+class PercentileRank(str, Enum):
+    TOP_10 = "top_10"
+    TOP_25 = "top_25"
+    MEDIAN = "median"
+    BOTTOM_25 = "bottom_25"
+    BOTTOM_10 = "bottom_10"
+
+
+class SanctionsExposure(str, Enum):
+    NONE = "none"
+    POTENTIAL = "potential"
+    CONFIRMED = "confirmed"
+
+
+class CountryRiskLevel(str, Enum):
+    LOW = "low"
+    MODERATE = "moderate"
+    HIGH = "high"
+    CRITICAL = "critical"

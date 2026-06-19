@@ -74,6 +74,13 @@ from .copilot_audit import (
     CopilotAnswerReviewModel,
     CopilotAuditPackageModel,
 )
+from .external_intelligence import (
+    ExternalDatasetModel,
+    CountryRiskProfileModel,
+    SectorBenchmarkModel,
+    ExternalRiskSignalModel,
+    SupplierEnrichmentModel,
+)
 
 __all__ = [
     "AgentRunModel",
@@ -130,6 +137,11 @@ __all__ = [
     "CopilotFeedbackModel",
     "CopilotAnswerReviewModel",
     "CopilotAuditPackageModel",
+    "ExternalDatasetModel",
+    "CountryRiskProfileModel",
+    "SectorBenchmarkModel",
+    "ExternalRiskSignalModel",
+    "SupplierEnrichmentModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

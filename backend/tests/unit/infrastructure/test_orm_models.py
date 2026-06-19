@@ -56,6 +56,14 @@ from infrastructure.persistence.models.copilot_audit import (  # noqa: F401
     CopilotAnswerReviewModel,
     CopilotAuditPackageModel,
 )
+# M34: ensure external intelligence models are registered
+from infrastructure.persistence.models.external_intelligence import (  # noqa: F401
+    ExternalDatasetModel,
+    CountryRiskProfileModel,
+    SectorBenchmarkModel,
+    ExternalRiskSignalModel,
+    SupplierEnrichmentModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -110,6 +118,12 @@ EXPECTED_ENTITY_TABLES = {
     "copilot_feedback",
     "copilot_answer_reviews",
     "copilot_audit_packages",
+    # M34: External Intelligence
+    "external_datasets",
+    "country_risk_profiles",
+    "sector_benchmarks",
+    "external_risk_signals",
+    "supplier_enrichments",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -148,7 +162,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 63  # M33.2 adds 5: copilot_contradictions, copilot_citation_integrity, copilot_feedback, copilot_answer_reviews, copilot_audit_packages
+        assert len(Base.metadata.tables) == 68  # M34 adds 5: external_datasets, country_risk_profiles, sector_benchmarks, external_risk_signals, supplier_enrichments
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

@@ -31,6 +31,7 @@ from interfaces.api.routers import (
     copilot_router,
     disclosure_router,
     due_diligence_router,
+    external_intelligence_router,
     regulatory_router,
     assessments_benchmark_router,
     assessments_compliance_router,
@@ -297,3 +298,4 @@ app.include_router(regulatory_router, prefix=API_V1)
 app.include_router(disclosure_router, prefix=API_V1)
 app.include_router(due_diligence_router, prefix=API_V1)
 app.include_router(copilot_router, prefix=API_V1)
+app.include_router(external_intelligence_router, prefix=API_V1)
