@@ -32,4 +32,11 @@ class UserModel(BaseModel):
         },
     )
 
+    # M40 — Enterprise RBAC scope fields (all nullable for backward compat)
+    # enterprise_admin | bu_admin | regional_admin | None (org-scoped)
+    enterprise_scope: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    enterprise_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    business_unit_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    region_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
     organization: Mapped[OrganizationModel | None] = relationship(back_populates="users")

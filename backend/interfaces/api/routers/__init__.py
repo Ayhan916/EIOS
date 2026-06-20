@@ -35,6 +35,7 @@ from .agent_monitoring import router as agent_monitoring_router
 from .surveillance import router as surveillance_router
 from .network import router as network_router
 from .operating_system import router as operating_system_router
+from .enterprise import router as enterprise_router
 
 __all__ = [
     "agents_router",
@@ -76,4 +77,5 @@ __all__ = [
     "surveillance_router",
     "network_router",
     "operating_system_router",
+    "enterprise_router",
 ]

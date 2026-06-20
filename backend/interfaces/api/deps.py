@@ -400,3 +400,31 @@ def scope_gate(read_scope: str, write_scope: str | None = None) -> Callable:
             )
 
     return _check
+
+
+# ── SCIM bearer token dependency (M40.1) ─────────────────────────────────────
+
+
+async def require_scim_token(
+    credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    session: AsyncSession = Depends(get_db),
+):
+    """FastAPI dependency for SCIM endpoints.
+
+    Validates the SCIM bearer token (separate from user JWTs).
+    Returns the SCIMTokenModel so the endpoint knows which enterprise it belongs to.
+    Raises 401 on missing, invalid, expired, or revoked token.
+    """
+    _unauth = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="SCIM authentication required",
+        headers={"WWW-Authenticate": 'Bearer realm="SCIM"'},
+    )
+    if credentials is None:
+        raise _unauth
+
+    from application.enterprise.scim_token_service import verify_scim_token  # noqa: PLC0415
+    token = await verify_scim_token(credentials.credentials, session)
+    if token is None:
+        raise _unauth
+    return token

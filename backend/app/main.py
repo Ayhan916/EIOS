@@ -65,6 +65,7 @@ from interfaces.api.routers import (
     surveillance_router,
     network_router,
     operating_system_router,
+    enterprise_router,
 )
 from shared.config import settings
 
@@ -344,3 +345,4 @@ app.include_router(agent_monitoring_router, prefix=API_V1)
 app.include_router(surveillance_router, prefix=API_V1)
 app.include_router(network_router, prefix=API_V1)
 app.include_router(operating_system_router, prefix=API_V1)
+app.include_router(enterprise_router)

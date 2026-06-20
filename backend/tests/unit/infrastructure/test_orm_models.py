@@ -115,6 +115,21 @@ from infrastructure.persistence.models.network import (  # noqa: F401
     IncidentClusterModel,
     NetworkWatchlistEntryModel,
 )
+# M40: ensure enterprise models are registered (includes M40.1 SecretReference + SCIMToken)
+from infrastructure.persistence.models.enterprise import (  # noqa: F401
+    EnterpriseModel,
+    BusinessUnitModel,
+    LegalEntityModel,
+    RegionModel,
+    IdentityProviderModel,
+    GroupMappingModel,
+    EnterprisePolicyModel,
+    RetentionRuleModel,
+    NotificationPolicyModel,
+    EnterpriseRiskModel,
+    SecretReferenceModel,
+    SCIMTokenModel,
+)
 # M39: ensure operating system models are registered
 from infrastructure.persistence.models.operating_system import (  # noqa: F401
     ESGObjectiveModel,
@@ -251,6 +266,20 @@ EXPECTED_ENTITY_TABLES = {
     "governance_escalation_rules",
     "esg_health_scores",
     "strategic_risks",
+    # M40: Enterprise Multi-Tenant Scale (10 tables)
+    "enterprises",
+    "business_units",
+    "legal_entities",
+    "enterprise_regions",
+    "identity_providers",
+    "group_mappings",
+    "enterprise_policies",
+    "retention_rules",
+    "notification_policies",
+    "enterprise_risks",
+    # M40.1: Identity & Provisioning Hardening (2 tables)
+    "secret_references",
+    "scim_tokens",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -289,7 +318,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 119  # +15 M39 operating system tables
+        assert len(Base.metadata.tables) == 131  # +10 M40, +2 M40.1
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())
