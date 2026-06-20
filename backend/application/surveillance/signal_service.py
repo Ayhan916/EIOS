@@ -159,6 +159,22 @@ async def create_signal(
     await _log_audit_event(session, "surveillance.signal.created", signal.id, detail=title)
     await _maybe_notify(signal, organization_id, session)
 
+    # M39 cross-module: critical signals → ESGAction (idempotent)
+    if severity.upper() == "CRITICAL":
+        try:
+            from application.operating_system.action_service import ingest_from_module_idempotent
+            await ingest_from_module_idempotent(
+                organization_id=organization_id,
+                source_type="SURVEILLANCE_SIGNAL",
+                source_id=signal.id,
+                title=f"Critical surveillance signal: {title}",
+                priority="CRITICAL",
+                description=description,
+                session=session,
+            )
+        except Exception:
+            pass  # Do not fail signal creation on M39 wiring error
+
     return signal
 
 

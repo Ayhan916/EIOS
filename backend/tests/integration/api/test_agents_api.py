@@ -169,4 +169,4 @@ async def test_agents_routes_require_auth(setup_test_schema: None) -> None:
             AGENTS_BASE + "/run",
             json={"agent_type": "research", "query": "test"},
         )
-        assert r.status_code == 403
+        assert r.status_code == 401

@@ -324,6 +324,22 @@ async def cluster_incidents(
             entity_type="incident_cluster",
             detail=f"category={category} supplier_count={len(data['suppliers'])}",
         )
+
+        # M39 cross-module: new incident cluster → ESGAction (idempotent)
+        try:
+            from application.operating_system.action_service import ingest_from_module_idempotent
+            await ingest_from_module_idempotent(
+                organization_id=organization_id,
+                source_type="NETWORK_EXPOSURE",
+                source_id=cluster.id,
+                title=f"Network incident cluster: {cluster_name}",
+                priority="HIGH" if cluster.severity == "HIGH" else "MEDIUM",
+                description=cluster.root_cause,
+                session=session,
+            )
+        except Exception:
+            pass  # Do not fail cluster creation on M39 wiring error
+
         created.append(cluster)
 
     return created

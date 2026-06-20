@@ -33,10 +33,27 @@ class GovernanceSummary(BaseModel):
     critical_findings_total: int
 
 
+class ESGOperatingSummary(BaseModel):
+    """M39 ESG Operating System summary surfaced on the executive dashboard."""
+    status: str = "ok"
+    degraded_reason: str | None = None
+    objectives_at_risk: int = 0
+    initiatives_at_risk: int = 0
+    strategic_risks_critical: int = 0
+    strategic_risks_total: int = 0
+    overdue_esg_actions: int = 0
+    objectives_by_status: dict[str, int] = Field(default_factory=dict)
+    initiatives_by_status: dict[str, int] = Field(default_factory=dict)
+    compliance_readiness: dict[str, float] = Field(default_factory=dict)
+    accountability_coverage: int = 0
+    controls_failing: int = 0
+
+
 class ExecutiveDashboard(BaseModel):
     portfolio_summary: PortfolioSummary
     action_summary: ActionSummary
     governance_summary: GovernanceSummary
+    esg_summary: ESGOperatingSummary | None = None
 
 
 # ── KPI Trends ────────────────────────────────────────────────────────────────

@@ -660,6 +660,38 @@ async def recalculate_gaps(
         finding_gaps=sum(1 for g in new_gaps if g.gap_type == "unresolved_finding"),
         risk_gaps=sum(1 for g in new_gaps if g.gap_type == "missing_control"),
     )
+
+    # M39 cross-module: sync gap summary per framework into ComplianceOperations
+    try:
+        from application.operating_system.compliance_operation_service import (
+            sync_from_m31, resolve_framework_name,
+        )
+        from collections import defaultdict
+        # Build requirement_id → regulation.code lookup for deterministic resolution
+        req_to_reg_code: dict[str, str] = {}
+        if regulations and requirements:
+            reg_code_by_id = {r.id: r.code for r in regulations}
+            for req in requirements:
+                rc = reg_code_by_id.get(getattr(req, "regulation_id", ""))
+                if rc:
+                    req_to_reg_code[req.id] = rc
+        framework_gaps: dict = defaultdict(int)
+        for g in new_gaps:
+            fw = resolve_framework_name(g, req_to_reg_code)
+            framework_gaps[fw] += 1
+        for fw, gap_count in framework_gaps.items():
+            total_reqs = max(len(requirements), 1)
+            coverage = round(max(0.0, (total_reqs - gap_count) / total_reqs * 100), 1)
+            await sync_from_m31(
+                organization_id=org_id,
+                framework_name=fw,
+                coverage_percent=coverage,
+                gap_count=gap_count,
+                session=session,
+            )
+    except Exception as _m39_exc:
+        log.warning("m39_compliance_op_sync_failed", error=str(_m39_exc))
+
     return {
         "status": "recalculated",
         "gaps_deleted": deleted,

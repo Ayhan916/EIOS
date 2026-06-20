@@ -62,6 +62,31 @@ async def auth_token(setup_test_schema: None) -> str:  # type: ignore[misc]
         return str(response.json()["access_token"])
 
 
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def mock_embedding_provider(setup_test_schema: None) -> None:  # type: ignore[misc]
+    """Override the FastAPI embedding provider dependency for all integration tests.
+
+    The knowledge router uses Depends(get_embedding_provider). Since the test
+    ASGI transport does not run lifespan events, the provider singleton is never
+    initialised. We override the dependency with a mock that returns valid 384-d
+    vectors (matching settings.embedding_dim) so knowledge-layer tests work
+    without requiring sentence-transformers model weights at test time.
+    """
+    from unittest.mock import AsyncMock, MagicMock
+
+    from infrastructure.embeddings.deps import get_embedding_provider
+
+    mock_provider = MagicMock()
+    mock_provider.embed_documents = AsyncMock(
+        side_effect=lambda texts: [[0.1] * 384 for _ in texts]
+    )
+    mock_provider.embed_query = AsyncMock(return_value=[0.1] * 384)
+
+    app.dependency_overrides[get_embedding_provider] = lambda: mock_provider
+    yield
+    app.dependency_overrides.pop(get_embedding_provider, None)
+
+
 @pytest_asyncio.fixture
 async def client(auth_token: str) -> AsyncClient:  # type: ignore[misc]
     """Authenticated httpx client for API integration tests."""

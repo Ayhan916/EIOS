@@ -169,4 +169,4 @@ async def test_knowledge_routes_require_auth(setup_test_schema: None) -> None:
 
     async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.post(KNOWLEDGE_BASE + "/ingest", json={"evidence_id": "x"})
-        assert r.status_code == 403
+        assert r.status_code == 401

@@ -38,6 +38,7 @@ async def anon_client() -> AsyncClient:
     async with AsyncClient(
         transport=ASGITransport(app=app),
         base_url="http://test",
+        follow_redirects=True,
     ) as c:
         yield c
 

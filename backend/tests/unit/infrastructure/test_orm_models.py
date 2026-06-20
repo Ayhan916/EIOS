@@ -115,6 +115,24 @@ from infrastructure.persistence.models.network import (  # noqa: F401
     IncidentClusterModel,
     NetworkWatchlistEntryModel,
 )
+# M39: ensure operating system models are registered
+from infrastructure.persistence.models.operating_system import (  # noqa: F401
+    ESGObjectiveModel,
+    ESGKeyResultModel,
+    ESGInitiativeModel,
+    GovernanceCalendarEventModel,
+    ESGProgramModel,
+    ESGControlModel,
+    ControlTestModel,
+    ComplianceOperationModel,
+    ESGActionModel,
+    AccountabilityAssignmentModel,
+    ESGPlaybookModel,
+    WorkflowExecutionModel,
+    GovernanceEscalationRuleModel,
+    OrganizationESGHealthScoreModel,
+    StrategicRiskModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -217,6 +235,22 @@ EXPECTED_ENTITY_TABLES = {
     "incident_clusters",
     # M38.1: Network Watchlist (1 table)
     "network_watchlist_entries",
+    # M39: ESG Operating System (15 tables)
+    "esg_objectives",
+    "esg_key_results",
+    "esg_initiatives",
+    "governance_calendar_events",
+    "esg_programs",
+    "esg_controls",
+    "control_tests",
+    "compliance_operations",
+    "esg_actions",
+    "accountability_assignments",
+    "esg_playbooks",
+    "workflow_executions",
+    "governance_escalation_rules",
+    "esg_health_scores",
+    "strategic_risks",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -255,7 +289,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 104  # M35+15 M35.1+1 M36+6 M37+4 M38+7 M38.1+1
+        assert len(Base.metadata.tables) == 119  # +15 M39 operating system tables
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

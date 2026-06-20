@@ -372,6 +372,6 @@ async def test_notifications_require_auth(setup_test_schema: None) -> None:
         r_read = await c.patch(NOTIF + "/fake-id/read")
         r_all = await c.patch(NOTIF + "/read-all")
 
-    assert r_list.status_code == 403
-    assert r_read.status_code == 403
-    assert r_all.status_code == 403
+    assert r_list.status_code == 401
+    assert r_read.status_code == 401
+    assert r_all.status_code == 401

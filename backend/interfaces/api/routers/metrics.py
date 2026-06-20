@@ -216,4 +216,8 @@ async def get_metrics_prometheus() -> str:
     from application.network.metrics import network_counters
     lines.extend(network_counters.to_prometheus_lines(env))
 
+    # Append M39 operating system metrics
+    from application.operating_system.metrics import os_counters
+    lines.extend(os_counters.to_prometheus_lines(env))
+
     return "\n".join(lines)

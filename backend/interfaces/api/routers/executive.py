@@ -78,6 +78,7 @@ from interfaces.api.schemas.executive import (
     ActionEffectivenessResponse,
     BoardReportDetail,
     BoardReportRequest,
+    ESGOperatingSummary,
     BoardReportSummary,
     ExecutiveDashboard,
     ExecutiveHeatmapResponse,
@@ -242,6 +243,107 @@ async def get_executive_dashboard(
         critical_findings_total=crit_findings,
     )
 
+    # M39 ESG Operating System summary
+    try:
+        from sqlalchemy import func, select as sa_select
+        from infrastructure.persistence.models.operating_system import (
+            ESGObjectiveModel, ESGInitiativeModel, StrategicRiskModel, ESGActionModel,
+            ESGControlModel, AccountabilityAssignmentModel, ComplianceOperationModel,
+        )
+        from datetime import UTC as _UTC, datetime as _dt
+
+        _now = _dt.now(_UTC)
+
+        _obj_rows = (await session.execute(
+            sa_select(ESGObjectiveModel.objective_status, func.count().label("cnt"))
+            .where(ESGObjectiveModel.organization_id == org_id)
+            .group_by(ESGObjectiveModel.objective_status)
+        )).all()
+        _objectives_by_status: dict[str, int] = {r.objective_status: r.cnt for r in _obj_rows}
+        _obj_at_risk = sum(
+            v for k, v in _objectives_by_status.items() if k in ("AT_RISK", "OFF_TRACK")
+        )
+
+        _init_rows = (await session.execute(
+            sa_select(ESGInitiativeModel.initiative_status, func.count().label("cnt"))
+            .where(ESGInitiativeModel.organization_id == org_id)
+            .group_by(ESGInitiativeModel.initiative_status)
+        )).all()
+        _initiatives_by_status: dict[str, int] = {r.initiative_status: r.cnt for r in _init_rows}
+        _init_at_risk = _initiatives_by_status.get("BLOCKED", 0)
+
+        _sr_critical = (await session.execute(
+            sa_select(func.count()).select_from(StrategicRiskModel).where(
+                StrategicRiskModel.organization_id == org_id,
+                StrategicRiskModel.risk_level == "CRITICAL",
+                StrategicRiskModel.risk_status != "CLOSED",
+            )
+        )).scalar_one() or 0
+
+        _sr_total = (await session.execute(
+            sa_select(func.count()).select_from(StrategicRiskModel).where(
+                StrategicRiskModel.organization_id == org_id,
+                StrategicRiskModel.risk_status != "CLOSED",
+            )
+        )).scalar_one() or 0
+
+        _overdue_esg = (await session.execute(
+            sa_select(func.count()).select_from(ESGActionModel).where(
+                ESGActionModel.organization_id == org_id,
+                ESGActionModel.due_date < _now,
+                ESGActionModel.action_status.in_(["OPEN", "IN_PROGRESS", "BLOCKED"]),
+            )
+        )).scalar_one() or 0
+
+        # Controls failing tests
+        _controls_failing = (await session.execute(
+            sa_select(func.count()).select_from(ESGControlModel).where(
+                ESGControlModel.organization_id == org_id,
+                ESGControlModel.control_status == "FAILING",
+            )
+        )).scalar_one() or 0
+
+        # Accountability coverage (assignments with status ACTIVE)
+        _accountability_coverage = (await session.execute(
+            sa_select(func.count()).select_from(AccountabilityAssignmentModel).where(
+                AccountabilityAssignmentModel.organization_id == org_id,
+                AccountabilityAssignmentModel.assignment_status == "ACTIVE",
+            )
+        )).scalar_one() or 0
+
+        # Compliance readiness: framework → coverage_percent
+        _comp_ops = (await session.execute(
+            sa_select(
+                ComplianceOperationModel.framework_name,
+                ComplianceOperationModel.coverage_percent,
+            ).where(
+                ComplianceOperationModel.organization_id == org_id,
+            ).order_by(ComplianceOperationModel.updated_at.desc())
+        )).all()
+        _compliance_readiness: dict[str, float] = {}
+        for _row in _comp_ops:
+            if _row.framework_name not in _compliance_readiness:
+                _compliance_readiness[_row.framework_name] = float(_row.coverage_percent or 0.0)
+
+        esg_summary = ESGOperatingSummary(
+            status="ok",
+            objectives_at_risk=_obj_at_risk,
+            initiatives_at_risk=_init_at_risk,
+            strategic_risks_critical=_sr_critical,
+            strategic_risks_total=_sr_total,
+            overdue_esg_actions=_overdue_esg,
+            objectives_by_status=_objectives_by_status,
+            initiatives_by_status=_initiatives_by_status,
+            compliance_readiness=_compliance_readiness,
+            accountability_coverage=_accountability_coverage,
+            controls_failing=_controls_failing,
+        )
+    except Exception as _esg_exc:
+        esg_summary = ESGOperatingSummary(
+            status="degraded",
+            degraded_reason=str(_esg_exc),
+        )
+
     return ExecutiveDashboard(
         portfolio_summary=PortfolioSummary(
             total_suppliers=snapshot.total_suppliers,
@@ -267,6 +369,7 @@ async def get_executive_dashboard(
             assessments_approved=snapshot.assessments_approved,
             critical_findings_total=snapshot.critical_findings_total,
         ),
+        esg_summary=esg_summary,
     )
 
 

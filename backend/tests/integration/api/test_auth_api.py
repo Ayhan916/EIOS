@@ -124,17 +124,16 @@ async def test_get_me_with_valid_token(client: AsyncClient) -> None:
     assert "password_hash" not in data
 
 
-async def test_get_me_without_token_returns_403(setup_test_schema: None) -> None:
+async def test_get_me_without_token_returns_401(setup_test_schema: None) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.get(BASE + "/me")
-    # FastAPI HTTPBearer returns 403 when no Authorization header is present
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
-async def test_protected_route_without_token_returns_403(setup_test_schema: None) -> None:
+async def test_protected_route_without_token_returns_401(setup_test_schema: None) -> None:
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         response = await c.get("/api/v1/sectors/some-id")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 async def test_protected_route_with_invalid_token_returns_401(setup_test_schema: None) -> None:

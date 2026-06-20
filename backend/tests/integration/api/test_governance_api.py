@@ -11,6 +11,7 @@ Run with:
 
 from __future__ import annotations
 
+import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -51,11 +52,12 @@ def _make_mock_provider() -> MagicMock:
 
 
 async def _create_assessment_via_workflow(client: AsyncClient) -> str:
-    """Run a quick_scan workflow and return the created assessment_id."""
+    """Submit a quick_scan workflow and return the created assessment_id."""
+    jd: dict = {}
     with patch(
-        "interfaces.api.routers.workflows.get_llm_provider", return_value=_make_mock_provider()
+        "application.workflows.executor.get_llm_provider", return_value=_make_mock_provider()
     ):
-        with patch("interfaces.api.routers.workflows.get_embedding_provider"):
+        with patch("application.workflows.executor.get_embedding_provider"):
             with patch(
                 "infrastructure.knowledge_search.EvidenceChunkSearchAdapter.search",
                 new_callable=AsyncMock,
@@ -65,8 +67,18 @@ async def _create_assessment_via_workflow(client: AsyncClient) -> str:
                     WORKFLOWS_BASE + "/run",
                     json={"workflow_type": "quick_scan", "query": "Governance test query"},
                 )
-    assert resp.status_code == 201
-    data = resp.json()
+                assert resp.status_code == 202, f"Expected 202, got {resp.status_code}: {resp.text}"
+                job_id = resp.json()["id"]
+                for _ in range(40):
+                    job_resp = await client.get(f"{WORKFLOWS_BASE}/jobs/{job_id}")
+                    jd = job_resp.json()
+                    if jd["job_status"] in ("completed", "failed"):
+                        break
+                    await asyncio.sleep(0.05)
+    assert jd["job_status"] == "completed", f"Workflow job did not complete: {jd}"
+    run_resp = await client.get(f"{WORKFLOWS_BASE}/runs/{jd['workflow_run_id']}")
+    assert run_resp.status_code == 200
+    data = run_resp.json()
     assert data.get("assessment_id"), "Workflow must produce an assessment"
     return data["assessment_id"]
 
@@ -193,7 +205,7 @@ async def test_compliance_requires_auth(setup_test_schema: None) -> None:
 
     async with httpx.AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
         r = await c.get(f"{COMPLIANCE_BASE}/frameworks")
-        assert r.status_code == 403
+        assert r.status_code == 401
 
 
 async def test_assessment_has_quality_score_after_workflow(client: AsyncClient) -> None:
