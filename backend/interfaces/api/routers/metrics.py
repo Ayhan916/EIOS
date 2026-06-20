@@ -203,4 +203,9 @@ async def get_metrics_prometheus() -> str:
     # Append M34.1 external intelligence metrics
     from application.external_intelligence.metrics import ext_counters
     lines.extend(ext_counters.to_prometheus_lines(env))
+
+    # Append M36.2 agent monitoring metrics
+    from application.agent_monitoring.metrics import agent_counters
+    lines.extend(agent_counters.to_prometheus_lines(env))
+
     return "\n".join(lines)

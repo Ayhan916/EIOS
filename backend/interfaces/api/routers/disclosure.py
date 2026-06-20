@@ -38,7 +38,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.disclosure.coverage_engine import compute_coverage
 from application.disclosure.readiness_engine import determine_readiness
 from application.disclosure.workflow import transition_disclosure
-from domain.disclosure import DisclosureResponse, ReportingPackage
+from domain.disclosure import DisclosureResponse
 from domain.enums import EntityStatus
 from domain.reporting_package import ReportingPackage as ReportingPackageDomain
 from domain.user import User

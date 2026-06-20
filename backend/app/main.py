@@ -61,6 +61,7 @@ from interfaces.api.routers import (
     suppliers_router,
     users_router,
     workflows_router,
+    agent_monitoring_router,
 )
 from shared.config import settings
 
@@ -69,6 +70,7 @@ from shared.config import settings
 _overdue_task: asyncio.Task | None = None
 _webhook_recovery_task: asyncio.Task | None = None
 _intelligence_scheduler_task: asyncio.Task | None = None
+_agent_scheduler_task: asyncio.Task | None = None
 
 
 async def _check_overdue_loop() -> None:
@@ -216,15 +218,27 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as _qseed_exc:
         logger.warning("questionnaire_templates_seed_failed", error=str(_qseed_exc))
 
-    from application.external_intelligence.scheduler import run_intelligence_scheduler  # noqa: PLC0415
+    # Seed M36 monitoring agents (idempotent)
+    from application.agent_monitoring.agent_service import seed_monitoring_agents  # noqa: PLC0415
+    try:
+        async with AsyncSessionFactory() as _aseed_session, _aseed_session.begin():
+            await seed_monitoring_agents(_aseed_session)
+        logger.info("monitoring_agents_seed_done")
+    except Exception as _aseed_exc:
+        logger.warning("monitoring_agents_seed_failed", error=str(_aseed_exc))
 
-    global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task
+    from application.external_intelligence.scheduler import run_intelligence_scheduler  # noqa: PLC0415
+    from application.agent_monitoring.scheduler import run_agent_scheduler  # noqa: PLC0415
+
+    global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task, _agent_scheduler_task
     _overdue_task = asyncio.create_task(_check_overdue_loop())
     logger.info("overdue_task_started")
     _webhook_recovery_task = asyncio.create_task(run_webhook_recovery_loop())
     logger.info("webhook_recovery_task_started")
     _intelligence_scheduler_task = asyncio.create_task(run_intelligence_scheduler())
     logger.info("intelligence_scheduler_started")
+    _agent_scheduler_task = asyncio.create_task(run_agent_scheduler())
+    logger.info("agent_scheduler_started")
 
     yield
 
@@ -234,6 +248,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _webhook_recovery_task.cancel()
     if _intelligence_scheduler_task is not None:
         _intelligence_scheduler_task.cancel()
+    if _agent_scheduler_task is not None:
+        _agent_scheduler_task.cancel()
     logger.info("eios_shutdown")
 
 
@@ -321,3 +337,4 @@ app.include_router(external_intelligence_router, prefix=API_V1)
 app.include_router(operations_router, prefix=API_V1)
 app.include_router(supplier_portal_router, prefix=API_V1)
 app.include_router(supplier_portal_internal_router, prefix=API_V1)
+app.include_router(agent_monitoring_router, prefix=API_V1)

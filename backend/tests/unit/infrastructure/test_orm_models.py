@@ -88,6 +88,15 @@ from infrastructure.persistence.models.supplier_portal import (  # noqa: F401
     SupplierActivityEventModel,
     SupplierPasswordResetTokenModel,
 )
+# M36: ensure agent monitoring models are registered
+from infrastructure.persistence.models.agent_monitoring import (  # noqa: F401
+    MonitoringAgentModel,
+    MonitoringAgentRunModel,
+    AgentFindingModel,
+    AgentAlertModel,
+    EscalationRuleModel,
+    RecommendationDraftModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -168,6 +177,13 @@ EXPECTED_ENTITY_TABLES = {
     "message_attachments",
     "supplier_activity_events",
     "supplier_password_reset_tokens",
+    # M36: Agent Monitoring (6 tables)
+    "monitoring_agents",
+    "monitoring_agent_runs",
+    "agent_findings",
+    "agent_alerts",
+    "escalation_rules",
+    "recommendation_drafts",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -206,7 +222,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 86  # M35 adds 15 + M35.1 adds 1 supplier portal tables
+        assert len(Base.metadata.tables) == 92  # M35 adds 15 + M35.1 adds 1 + M36 adds 6
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

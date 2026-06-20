@@ -82,6 +82,14 @@ from .external_intelligence import (
     SupplierEnrichmentModel,
 )
 from .connector_run import ConnectorRunModel, DatasetValidationResultModel
+from .agent_monitoring import (
+    MonitoringAgentModel,
+    MonitoringAgentRunModel,
+    AgentFindingModel,
+    AgentAlertModel,
+    EscalationRuleModel,
+    RecommendationDraftModel,
+)
 from .supplier_portal import (
     SupplierUserModel,
     SupplierInvitationModel,
@@ -178,6 +186,13 @@ __all__ = [
     "MessageModel",
     "MessageAttachmentModel",
     "SupplierActivityEventModel",
+    "SupplierPasswordResetTokenModel",
+    "MonitoringAgentModel",
+    "MonitoringAgentRunModel",
+    "AgentFindingModel",
+    "AgentAlertModel",
+    "EscalationRuleModel",
+    "RecommendationDraftModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",
