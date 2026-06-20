@@ -61,8 +61,9 @@ def _make_run(run_id="run-1", agent_id="agent-1", started_at=None):
 # ── seed_monitoring_agents ─────────────────────────────────────────────────────
 
 class TestSeedMonitoringAgents:
-    async def test_seeds_six_agents_when_none_exist(self) -> None:
+    async def test_seeds_all_builtin_agents_when_none_exist(self) -> None:
         from application.agent_monitoring.agent_service import seed_monitoring_agents
+        from domain.agent_monitoring import BUILTIN_AGENTS
 
         session = AsyncMock()
         result = MagicMock()
@@ -73,7 +74,7 @@ class TestSeedMonitoringAgents:
 
         await seed_monitoring_agents(session)
 
-        assert session.add.call_count == 6
+        assert session.add.call_count == len(BUILTIN_AGENTS)
 
     async def test_skips_existing_agents(self) -> None:
         from application.agent_monitoring.agent_service import seed_monitoring_agents

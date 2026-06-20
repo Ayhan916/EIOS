@@ -97,6 +97,13 @@ from infrastructure.persistence.models.agent_monitoring import (  # noqa: F401
     EscalationRuleModel,
     RecommendationDraftModel,
 )
+# M37: ensure surveillance models are registered
+from infrastructure.persistence.models.surveillance import (  # noqa: F401
+    SurveillanceSignalModel,
+    SupplierWatchlistModel,
+    RiskEpisodeModel,
+    RiskTrendModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -184,6 +191,11 @@ EXPECTED_ENTITY_TABLES = {
     "agent_alerts",
     "escalation_rules",
     "recommendation_drafts",
+    # M37: Surveillance (4 tables)
+    "surveillance_signals",
+    "supplier_watchlists",
+    "risk_episodes",
+    "risk_trends",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -222,7 +234,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 92  # M35 adds 15 + M35.1 adds 1 + M36 adds 6
+        assert len(Base.metadata.tables) == 96  # M35 adds 15 + M35.1 adds 1 + M36 adds 6 + M37 adds 4
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

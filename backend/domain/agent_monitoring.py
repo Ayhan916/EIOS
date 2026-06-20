@@ -14,6 +14,7 @@ class AgentType(str, Enum):
     COMPLIANCE_MONITOR = "COMPLIANCE_MONITOR"
     REMEDIATION_MONITOR = "REMEDIATION_MONITOR"
     INTELLIGENCE_MONITOR = "INTELLIGENCE_MONITOR"
+    SURVEILLANCE_MONITOR = "SURVEILLANCE_MONITOR"
 
 
 class AgentStatus(str, Enum):
@@ -171,6 +172,15 @@ BUILTIN_AGENTS: list[dict] = [
         "description": (
             "Monitors sanctions data, country risk, corruption indicators, "
             "and governance signals. Detects sanctions exposure and country deterioration."
+        ),
+        "run_interval_hours": 12,
+    },
+    {
+        "agent_type": AgentType.SURVEILLANCE_MONITOR,
+        "name": "Continuous Surveillance Agent",
+        "description": (
+            "M37 continuous risk surveillance: drift detection, emerging risk, "
+            "cross-supplier correlation, early warning, and predictive escalation."
         ),
         "run_interval_hours": 12,
     },

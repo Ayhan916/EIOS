@@ -62,6 +62,7 @@ from interfaces.api.routers import (
     users_router,
     workflows_router,
     agent_monitoring_router,
+    surveillance_router,
 )
 from shared.config import settings
 
@@ -338,3 +339,4 @@ app.include_router(operations_router, prefix=API_V1)
 app.include_router(supplier_portal_router, prefix=API_V1)
 app.include_router(supplier_portal_internal_router, prefix=API_V1)
 app.include_router(agent_monitoring_router, prefix=API_V1)
+app.include_router(surveillance_router, prefix=API_V1)

@@ -211,6 +211,13 @@ async def _dispatch(
         risk_monitor,
         supplier_behaviour_monitor,
     )
+    from application.surveillance import (
+        risk_drift_engine,
+        emerging_risk_engine,
+        correlation_engine,
+        early_warning_engine,
+        predictive_escalation_engine,
+    )
     from infrastructure.persistence.models.agent_monitoring import AgentAlertModel, RecommendationDraftModel
     from sqlalchemy import func, select
 
@@ -220,6 +227,19 @@ async def _dispatch(
         .where(AgentAlertModel.agent_id == agent_id)
     )
 
+    async def _run_surveillance(agent_id, run_id, org_id, session):
+        """Fan out to all M37 surveillance engines and sum signal counts."""
+        total = 0
+        for engine in [
+            risk_drift_engine,
+            emerging_risk_engine,
+            correlation_engine,
+            early_warning_engine,
+            predictive_escalation_engine,
+        ]:
+            total += await engine.run(agent_id, run_id, org_id, session)
+        return total
+
     dispatch_map = {
         "RISK_MONITOR": risk_monitor.run,
         "REGULATION_MONITOR": regulatory_monitor.run,
@@ -227,6 +247,7 @@ async def _dispatch(
         "COMPLIANCE_MONITOR": compliance_drift_monitor.run,
         "REMEDIATION_MONITOR": remediation_monitor.run,
         "INTELLIGENCE_MONITOR": intelligence_monitor.run,
+        "SURVEILLANCE_MONITOR": _run_surveillance,
     }
 
     run_fn = dispatch_map.get(agent_type)
