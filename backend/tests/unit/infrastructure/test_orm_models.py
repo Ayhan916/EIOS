@@ -69,6 +69,25 @@ from infrastructure.persistence.models.connector_run import (  # noqa: F401
     ConnectorRunModel,
     DatasetValidationResultModel,
 )
+# M35: ensure supplier portal models are registered
+from infrastructure.persistence.models.supplier_portal import (  # noqa: F401
+    SupplierUserModel,
+    SupplierInvitationModel,
+    EvidenceRequestModel,
+    EvidenceSubmissionModel,
+    EvidenceSubmissionFileModel,
+    QuestionnaireTemplateModel,
+    QuestionnaireQuestionModel,
+    QuestionnaireAssignmentModel,
+    QuestionnaireAnswerModel,
+    RemediationPlanModel,
+    ConversationModel,
+    ConversationParticipantModel,
+    MessageModel,
+    MessageAttachmentModel,
+    SupplierActivityEventModel,
+    SupplierPasswordResetTokenModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -132,6 +151,23 @@ EXPECTED_ENTITY_TABLES = {
     # M34.1: Connector runs & validation
     "connector_runs",
     "dataset_validation_results",
+    # M35: Supplier Portal (15 tables)
+    "supplier_users",
+    "supplier_invitations",
+    "evidence_requests",
+    "evidence_submissions",
+    "evidence_submission_files",
+    "questionnaire_templates",
+    "questionnaire_questions",
+    "questionnaire_assignments",
+    "questionnaire_answers",
+    "remediation_plans",
+    "conversations",
+    "conversation_participants",
+    "messages",
+    "message_attachments",
+    "supplier_activity_events",
+    "supplier_password_reset_tokens",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -170,7 +206,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 70  # M34.1 adds 2: connector_runs, dataset_validation_results
+        assert len(Base.metadata.tables) == 86  # M35 adds 15 + M35.1 adds 1 supplier portal tables
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

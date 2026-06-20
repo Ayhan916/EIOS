@@ -56,6 +56,8 @@ from interfaces.api.routers import (
     sector_intelligence_router,
     sectors_router,
     supplier_intelligence_router,
+    supplier_portal_router,
+    supplier_portal_internal_router,
     suppliers_router,
     users_router,
     workflows_router,
@@ -205,6 +207,15 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as _dseed_exc:
         logger.warning("disclosure_seed_failed", error=str(_dseed_exc))
 
+    # Seed M35 questionnaire templates (idempotent)
+    from application.supplier_portal.questionnaire_service import seed_builtin_templates  # noqa: PLC0415
+    try:
+        async with AsyncSessionFactory() as _qseed_session, _qseed_session.begin():
+            await seed_builtin_templates(_qseed_session)
+        logger.info("questionnaire_templates_seed_done")
+    except Exception as _qseed_exc:
+        logger.warning("questionnaire_templates_seed_failed", error=str(_qseed_exc))
+
     from application.external_intelligence.scheduler import run_intelligence_scheduler  # noqa: PLC0415
 
     global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task
@@ -308,3 +319,5 @@ app.include_router(due_diligence_router, prefix=API_V1)
 app.include_router(copilot_router, prefix=API_V1)
 app.include_router(external_intelligence_router, prefix=API_V1)
 app.include_router(operations_router, prefix=API_V1)
+app.include_router(supplier_portal_router, prefix=API_V1)
+app.include_router(supplier_portal_internal_router, prefix=API_V1)

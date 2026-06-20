@@ -432,3 +432,65 @@ class FreshnessStatus(str, Enum):
     FRESH = "fresh"
     STALE = "stale"
     EXPIRED = "expired"
+
+
+# ── M35 Supplier Portal ────────────────────────────────────────────────────────
+
+
+class SupplierUserRole(str, Enum):
+    SUPPLIER_USER = "supplier_user"
+    SUPPLIER_MANAGER = "supplier_manager"
+
+
+class EvidenceRequestStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+
+
+class EvidenceSubmissionStatus(str, Enum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    REVISION_REQUESTED = "revision_requested"
+
+
+class QuestionType(str, Enum):
+    TEXT = "text"
+    NUMBER = "number"
+    BOOLEAN = "boolean"
+    SELECT = "select"
+    MULTI_SELECT = "multi_select"
+    FILE_UPLOAD = "file_upload"
+
+
+class QuestionnaireStatus(str, Enum):
+    DRAFT = "draft"
+    ASSIGNED = "assigned"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class RemediationStatus(str, Enum):
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    VERIFIED = "verified"
+
+
+class SupplierActivityEventType(str, Enum):
+    LOGIN = "login"
+    QUESTIONNAIRE_SUBMISSION = "questionnaire_submission"
+    EVIDENCE_UPLOAD = "evidence_upload"
+    REMEDIATION_UPDATE = "remediation_update"
+    COMMENT = "comment"
+    MESSAGE = "message"
+    STATUS_CHANGE = "status_change"
+    INVITATION_ACCEPTED = "invitation_accepted"
+    PASSWORD_RESET = "password_reset"
+    PROFILE_UPDATE = "profile_update"
