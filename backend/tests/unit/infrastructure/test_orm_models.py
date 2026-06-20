@@ -104,6 +104,17 @@ from infrastructure.persistence.models.surveillance import (  # noqa: F401
     RiskEpisodeModel,
     RiskTrendModel,
 )
+# M38: ensure network intelligence models are registered
+from infrastructure.persistence.models.network import (  # noqa: F401
+    SupplierRelationshipModel,
+    SuggestedRelationshipModel,
+    NetworkExposureSignalModel,
+    SupplierCriticalityModel,
+    DependencyAnalysisModel,
+    ResilienceAssessmentModel,
+    IncidentClusterModel,
+    NetworkWatchlistEntryModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -196,6 +207,16 @@ EXPECTED_ENTITY_TABLES = {
     "supplier_watchlists",
     "risk_episodes",
     "risk_trends",
+    # M38: Network Intelligence (7 tables)
+    "supplier_relationships",
+    "suggested_relationships",
+    "network_exposure_signals",
+    "supplier_criticality",
+    "dependency_analyses",
+    "resilience_assessments",
+    "incident_clusters",
+    # M38.1: Network Watchlist (1 table)
+    "network_watchlist_entries",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -234,7 +255,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 96  # M35 adds 15 + M35.1 adds 1 + M36 adds 6 + M37 adds 4
+        assert len(Base.metadata.tables) == 104  # M35+15 M35.1+1 M36+6 M37+4 M38+7 M38.1+1
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

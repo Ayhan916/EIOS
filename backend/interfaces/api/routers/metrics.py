@@ -212,4 +212,8 @@ async def get_metrics_prometheus() -> str:
     from application.surveillance.metrics import surveillance_counters
     lines.extend(surveillance_counters.to_prometheus_lines(env))
 
+    # Append M38 network intelligence metrics
+    from application.network.metrics import network_counters
+    lines.extend(network_counters.to_prometheus_lines(env))
+
     return "\n".join(lines)

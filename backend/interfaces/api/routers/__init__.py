@@ -33,6 +33,7 @@ from .supplier_portal import router as supplier_portal_router
 from .supplier_portal_internal import router as supplier_portal_internal_router
 from .agent_monitoring import router as agent_monitoring_router
 from .surveillance import router as surveillance_router
+from .network import router as network_router
 
 __all__ = [
     "agents_router",
@@ -72,4 +73,5 @@ __all__ = [
     "supplier_portal_internal_router",
     "agent_monitoring_router",
     "surveillance_router",
+    "network_router",
 ]
