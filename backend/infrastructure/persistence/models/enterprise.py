@@ -273,6 +273,9 @@ class SCIMTokenModel(BaseModel):
 
     Raw token is returned ONCE on creation and never stored.
     Only the SHA-256 hash is persisted.
+
+    M40.4: idp_id binds the token to a specific IdentityProvider.
+           scope controls what operations the token may perform.
     """
 
     __tablename__ = "scim_tokens"
@@ -280,6 +283,12 @@ class SCIMTokenModel(BaseModel):
     enterprise_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("enterprises.id"), nullable=False
     )
+    # M40.4: FK to identity_providers — nullable for backward compat with pre-M40.4 tokens
+    idp_id: Mapped[str | None] = mapped_column(
+        String(36), ForeignKey("identity_providers.id"), nullable=True
+    )
+    # M40.4: READ_ONLY | PROVISIONING | FULL_ADMIN
+    scope: Mapped[str] = mapped_column(String(20), nullable=False, default="FULL_ADMIN")
     # SHA-256 hex digest of the raw token
     token_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
     # Optional human label ("Azure AD SCIM connector")

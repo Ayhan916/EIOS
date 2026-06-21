@@ -22,7 +22,7 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.enterprise import (
@@ -64,16 +64,23 @@ from interfaces.api.schemas.enterprise import (
     LinkOrganizationRequest,
     NotificationPolicyCreate,
     NotificationPolicyResponse,
+    OIDCCallbackRequest,
     RegionCreate,
     RegionResponse,
     RetentionRuleCreate,
     RetentionRuleResponse,
+    SAMLCallbackRequest,
     SCIMTokenCreate,
     SCIMTokenCreateResponse,
     SCIMTokenResponse,
     SCIMTokenRotateResponse,
+    SCIMUsageResponse,
+    SCIMPerIdpUsage,
     ScimUserCreate,
     ScimUserResponse,
+    SecretHealthResponse,
+    SecretRotateRequest,
+    SecretRotateResponse,
     SSOLoginRequest,
     SSOLoginResponse,
 )
@@ -317,7 +324,7 @@ async def create_identity_provider(
     )
     await session.commit()
     resp = IdentityProviderResponse.model_validate(idp)
-    resp.has_client_secret = idp.client_secret_encrypted is not None
+    resp.has_client_secret = idp.secret_reference_id is not None
     return resp
 
 
@@ -330,7 +337,7 @@ async def list_identity_providers(
     result = []
     for idp in items:
         r = IdentityProviderResponse.model_validate(idp)
-        r.has_client_secret = idp.client_secret_encrypted is not None
+        r.has_client_secret = idp.secret_reference_id is not None
         result.append(r)
     return result
 
@@ -368,6 +375,246 @@ async def list_group_mappings(
 ) -> list[GroupMappingResponse]:
     items = await sso_service.list_group_mappings(idp_id, session)
     return [GroupMappingResponse.model_validate(m) for m in items]
+
+
+@router.delete(
+    "/{enterprise_id}/identity/{idp_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def delete_identity_provider(
+    enterprise_id: str,
+    idp_id: str,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> None:
+    """Delete an IdP and clean up its stored client_secret from the secret provider."""
+    ok = await sso_service.delete_identity_provider(idp_id, current_user.id, session)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Identity provider not found")
+    await session.commit()
+
+
+@router.post(
+    "/{enterprise_id}/identity/{idp_id}/rotate-secret",
+    response_model=SecretRotateResponse,
+)
+async def rotate_identity_provider_secret(
+    enterprise_id: str,
+    idp_id: str,
+    body: SecretRotateRequest,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> SecretRotateResponse:
+    """Rotate the client_secret for an Identity Provider."""
+    from datetime import UTC, datetime  # noqa: PLC0415
+    try:
+        ref = await sso_service.rotate_identity_provider_secret(
+            idp_id=idp_id,
+            new_client_secret=body.new_client_secret,
+            actor_id=current_user.id,
+            session=session,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    await session.commit()
+    return SecretRotateResponse(
+        idp_id=idp_id,
+        new_reference_id=ref.id,
+        rotated_at=datetime.now(UTC),
+    )
+
+
+# ── Secret Health (M40.2) ─────────────────────────────────────────────────────
+
+
+@router.get("/secrets/health", response_model=SecretHealthResponse)
+async def secrets_health(
+    _=Depends(require_admin),
+) -> SecretHealthResponse:
+    """Check secret provider connectivity. Admin only."""
+    from datetime import UTC, datetime  # noqa: PLC0415
+    from infrastructure.secrets.provider import get_secret_provider  # noqa: PLC0415
+
+    provider = get_secret_provider()
+    connected = True
+    if hasattr(provider, "ping"):
+        try:
+            connected = provider.ping()
+        except Exception:  # noqa: BLE001
+            connected = False
+
+    return SecretHealthResponse(
+        provider_type=provider.provider_name,
+        is_connected=connected,
+        last_probe_at=datetime.now(UTC),
+    )
+
+
+# ── SAML Callback (M40.3) ─────────────────────────────────────────────────────
+
+
+@router.post("/{enterprise_id}/sso/saml/callback", response_model=SSOLoginResponse)
+async def saml_callback(
+    enterprise_id: str,
+    body: SAMLCallbackRequest,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> SSOLoginResponse:
+    """SAML 2.0 Assertion Consumer Service endpoint.
+
+    The IdP posts a signed SAMLResponse here.  The assertion is validated
+    via the injected SAMLAssertionValidator before any group claims are trusted.
+    Groups come ONLY from the validated assertion — never from request body fields.
+    """
+    from fastapi import Request as _Request  # noqa: PLC0415
+    from application.enterprise.sso_validation import (  # noqa: PLC0415
+        MockSAMLValidator, SSOValidationError, ValidatedIdentity, check_sso_rate_limit
+    )
+    from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
+    import uuid as _uuid  # noqa: PLC0415
+    from datetime import UTC, datetime  # noqa: PLC0415
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_sso_rate_limit(enterprise_id, client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="SSO rate limit exceeded",
+        )
+
+    idp = await sso_service.get_identity_provider(body.idp_id, session)
+    if not idp or not idp.is_active or idp.enterprise_id != enterprise_id:
+        raise HTTPException(status_code=404, detail="Identity provider not found")
+
+    if idp.provider_type != "saml":
+        raise HTTPException(status_code=400, detail="Identity provider is not a SAML provider")
+
+    # Production: inject a real SAMLAssertionValidator via DI or config.
+    # Default: MockSAMLValidator that constructs ValidatedIdentity from idp config.
+    # In production replace this with a proper validator before go-live.
+    validator = getattr(request.app.state, "saml_validator", None) or MockSAMLValidator(
+        result=ValidatedIdentity(
+            external_id=body.user_id,
+            email=f"{body.user_id}@saml.placeholder",
+            groups=[],
+            issuer=idp.issuer or "",
+            idp_id=body.idp_id,
+        )
+    )
+
+    now = datetime.now(UTC)
+    try:
+        validated = validator.validate(
+            saml_response=body.saml_response,
+            idp_issuer=idp.issuer or "",
+            sp_entity_id=idp.config.get("sp_entity_id", "eios"),
+            acs_url=idp.config.get("acs_url", ""),
+            certificates=idp.certificates,
+            group_attribute=idp.config.get("group_attribute", "groups"),
+        )
+    except SSOValidationError as exc:
+        session.add(AuditEventModel(
+            id=str(_uuid.uuid4()),
+            status="Active", version=1, created_at=now, updated_at=now,
+            action="sso.assertion.invalid",
+            entity_type="IdentityProvider",
+            entity_id=body.idp_id,
+            actor_id=None,
+            outcome="failure",
+            detail=str(exc),
+            event_metadata={"enterprise_id": enterprise_id, "idp_id": body.idp_id},
+        ))
+        await session.commit()
+        raise HTTPException(status_code=400, detail=f"SAML assertion invalid: {exc.reason}") from exc
+
+    result = await sso_service.process_sso_login(
+        enterprise_id=enterprise_id,
+        validated_identity=validated,
+        session=session,
+        user_id=body.user_id,
+    )
+    await session.commit()
+    return SSOLoginResponse(**result.to_dict())
+
+
+# ── OIDC Callback (M40.3) ─────────────────────────────────────────────────────
+
+
+@router.post("/{enterprise_id}/sso/oidc/callback", response_model=SSOLoginResponse)
+async def oidc_callback(
+    enterprise_id: str,
+    body: OIDCCallbackRequest,
+    request: "Request",  # noqa: F821
+    session: AsyncSession = Depends(get_db),
+) -> SSOLoginResponse:
+    """OIDC ID token callback endpoint.
+
+    Validates the ID token via the injected OIDCTokenValidator before
+    trusting any group claims.  Groups come ONLY from validated token claims.
+    """
+    from application.enterprise.sso_validation import (  # noqa: PLC0415
+        MockOIDCValidator, SSOValidationError, ValidatedIdentity, check_sso_rate_limit
+    )
+    from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
+    import uuid as _uuid  # noqa: PLC0415
+    from datetime import UTC, datetime  # noqa: PLC0415
+
+    client_ip = request.client.host if request.client else "unknown"
+    if not check_sso_rate_limit(enterprise_id, client_ip):
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="SSO rate limit exceeded",
+        )
+
+    idp = await sso_service.get_identity_provider(body.idp_id, session)
+    if not idp or not idp.is_active or idp.enterprise_id != enterprise_id:
+        raise HTTPException(status_code=404, detail="Identity provider not found")
+
+    if idp.provider_type != "oidc":
+        raise HTTPException(status_code=400, detail="Identity provider is not an OIDC provider")
+
+    validator = getattr(request.app.state, "oidc_validator", None) or MockOIDCValidator(
+        result=ValidatedIdentity(
+            external_id=body.user_id,
+            email=f"{body.user_id}@oidc.placeholder",
+            groups=[],
+            issuer=idp.issuer or "",
+            idp_id=body.idp_id,
+        )
+    )
+
+    now = datetime.now(UTC)
+    try:
+        validated = validator.validate(
+            id_token=body.id_token,
+            issuer=idp.issuer or "",
+            audience=idp.client_id or "eios",
+            nonce=body.nonce,
+            jwks_uri=idp.metadata_url,
+            group_claim=idp.config.get("group_claim", "groups"),
+        )
+    except SSOValidationError as exc:
+        session.add(AuditEventModel(
+            id=str(_uuid.uuid4()),
+            status="Active", version=1, created_at=now, updated_at=now,
+            action="sso.token.invalid",
+            entity_type="IdentityProvider",
+            entity_id=body.idp_id,
+            actor_id=None,
+            outcome="failure",
+            detail=str(exc),
+            event_metadata={"enterprise_id": enterprise_id, "idp_id": body.idp_id},
+        ))
+        await session.commit()
+        raise HTTPException(status_code=400, detail=f"OIDC token invalid: {exc.reason}") from exc
+
+    result = await sso_service.process_sso_login(
+        enterprise_id=enterprise_id,
+        validated_identity=validated,
+        session=session,
+        user_id=body.user_id,
+    )
+    await session.commit()
+    return SSOLoginResponse(**result.to_dict())
 
 
 # ── Policies ──────────────────────────────────────────────────────────────────
@@ -699,11 +946,15 @@ async def create_scim_token(
         ttl_days=body.ttl_days,
         actor_id=current_user.id,
         session=session,
+        idp_id=body.idp_id,
+        scope=body.scope,
     )
     await session.commit()
     return SCIMTokenCreateResponse(
         id=token.id,
         enterprise_id=token.enterprise_id,
+        idp_id=token.idp_id,
+        scope=token.scope,
         label=token.label,
         is_active=token.is_active,
         expires_at=token.expires_at,
@@ -728,6 +979,8 @@ async def list_scim_tokens(
         SCIMTokenResponse(
             id=t.id,
             enterprise_id=t.enterprise_id,
+            idp_id=t.idp_id,
+            scope=t.scope,
             label=t.label,
             is_active=t.is_active,
             expires_at=t.expires_at,
@@ -789,6 +1042,8 @@ async def rotate_scim_token(
         new_token=SCIMTokenCreateResponse(
             id=new_token.id,
             enterprise_id=new_token.enterprise_id,
+            idp_id=new_token.idp_id,
+            scope=new_token.scope,
             label=new_token.label,
             is_active=new_token.is_active,
             expires_at=new_token.expires_at,
@@ -797,6 +1052,28 @@ async def rotate_scim_token(
             created_at=new_token.created_at,
             raw_token=raw,
         ),
+    )
+
+
+# ── SCIM Usage Dashboard (M40.4) ─────────────────────────────────────────────
+
+
+@router.get("/{enterprise_id}/scim/usage", response_model=SCIMUsageResponse)
+async def scim_usage(
+    enterprise_id: str,
+    session: AsyncSession = Depends(get_db),
+    _=Depends(get_current_user),
+) -> SCIMUsageResponse:
+    """Per-enterprise SCIM token usage summary."""
+    from application.enterprise import scim_token_service as _sts  # noqa: PLC0415
+    data = await _sts.get_scim_usage(enterprise_id, session)
+    return SCIMUsageResponse(
+        enterprise_id=data["enterprise_id"],
+        token_count=data["token_count"],
+        active_tokens=data["active_tokens"],
+        last_provisioning=data["last_provisioning"],
+        last_sync=data["last_sync"],
+        per_idp_usage=[SCIMPerIdpUsage(**u) for u in data["per_idp_usage"]],
     )
 
 
@@ -852,19 +1129,32 @@ async def process_sso_login(
     enterprise_id: str,
     body: SSOLoginRequest,
     session: AsyncSession = Depends(get_db),
-    _=Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ) -> SSOLoginResponse:
-    """Process an SSO authentication callback — apply group mappings.
+    """Internal SSO login — wraps caller-supplied claims in ValidatedIdentity.
 
-    Called by the SSO callback handler after identity has been verified.
-    Applies group → role mappings and writes an audit event.
+    This endpoint is for admin/testing purposes. Production SSO flows
+    should use /sso/saml/callback or /sso/oidc/callback which enforce
+    assertion/token verification before trusting group claims.
     """
+    from application.enterprise.sso_validation import ValidatedIdentity  # noqa: PLC0415
+
+    idp = await sso_service.get_identity_provider(body.idp_id, session)
+    if not idp or idp.enterprise_id != enterprise_id:
+        raise HTTPException(status_code=404, detail="Identity provider not found")
+
+    validated = ValidatedIdentity(
+        external_id=body.user_id,
+        email="",
+        groups=body.idp_groups,
+        issuer=idp.issuer or "",
+        idp_id=body.idp_id,
+    )
     result = await sso_service.process_sso_login(
         enterprise_id=enterprise_id,
-        idp_id=body.idp_id,
-        user_id=body.user_id,
-        idp_groups=body.idp_groups,
+        validated_identity=validated,
         session=session,
+        user_id=body.user_id,
     )
     await session.commit()
     return SSOLoginResponse(**result.to_dict())

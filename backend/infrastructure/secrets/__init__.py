@@ -1,4 +1,4 @@
-"""EIOS secret provider infrastructure (M40.1)."""
+"""EIOS secret provider infrastructure (M40.1 / M40.2)."""
 
 from .provider import (
     EnvironmentSecretProvider,
@@ -7,6 +7,8 @@ from .provider import (
     get_secret_provider,
     set_secret_provider,
 )
+from .vault_provider import VaultClient, VaultSecretProvider
+from .aws_provider import AwsSecretsManagerProvider, SecretsManagerClient
 
 __all__ = [
     "SecretProvider",
@@ -14,4 +16,8 @@ __all__ = [
     "EnvironmentSecretProvider",
     "get_secret_provider",
     "set_secret_provider",
+    "VaultSecretProvider",
+    "VaultClient",
+    "AwsSecretsManagerProvider",
+    "SecretsManagerClient",
 ]

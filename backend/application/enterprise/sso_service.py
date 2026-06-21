@@ -1,9 +1,10 @@
-"""SSO Identity Provider configuration management — M40.1 hardened.
+"""SSO Identity Provider management — M40.1 / M40.2 / M40.3 hardened.
 
 Changes from M40:
-  - client_secret is stored via SecretProvider (never in the DB column directly)
-  - IdentityProvider.secret_reference_id points to a SecretReferenceModel row
-  - process_sso_login() enforces group mappings at login time
+  - client_secret stored via SecretProvider (SecretReference pattern)
+  - process_sso_login() accepts ValidatedIdentity — never raw caller claims
+  - rotate_identity_provider_secret() rotates secrets with full audit trail
+  - delete_identity_provider() cleans up the SecretReference + provider storage
 """
 
 from __future__ import annotations
@@ -30,20 +31,22 @@ async def _log(
     actor_id: str | None,
     entity_id: str,
     detail: str = "",
+    metadata: dict | None = None,
 ) -> None:
+    now = datetime.now(UTC)
     session.add(AuditEventModel(
         id=str(uuid.uuid4()),
         status="Active",
         version=1,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
+        created_at=now,
+        updated_at=now,
         action=action,
         entity_type="IdentityProvider",
         entity_id=entity_id,
         actor_id=actor_id,
         outcome="success",
         detail=detail,
-        event_metadata={},
+        event_metadata=metadata or {},
     ))
 
 
@@ -65,7 +68,6 @@ async def create_identity_provider(
     secret_ref_id: str | None = None
     if client_secret:
         provider = get_secret_provider()
-        # identifier: enterprise-scoped so secrets don't collide across enterprises
         identifier = f"EIOS_IDP_{enterprise_id}_{str(uuid.uuid4())[:8]}_CLIENT_SECRET"
         provider.store(identifier, client_secret)
 
@@ -107,10 +109,11 @@ async def create_identity_provider(
     await session.flush()
     await _log(
         session,
-        "idp.created",
+        "enterprise.idp.created",
         actor_id,
         idp.id,
         f"Identity provider '{name}' ({provider_type}) created",
+        {"enterprise_id": enterprise_id},
     )
     return idp
 
@@ -144,8 +147,125 @@ async def deactivate_identity_provider(
         return False
     idp.is_active = False
     idp.updated_at = datetime.now(UTC)
-    await _log(session, "idp.deactivated", actor_id, idp_id)
+    await _log(session, "enterprise.idp.deactivated", actor_id, idp_id)
     return True
+
+
+async def delete_identity_provider(
+    idp_id: str,
+    actor_id: str,
+    session: AsyncSession,
+) -> bool:
+    """Delete an IdentityProvider and clean up its SecretReference.
+
+    Calls provider.delete(identifier) to remove the secret from the
+    backing store — no orphaned secrets.
+    """
+    idp = await get_identity_provider(idp_id, session)
+    if not idp:
+        return False
+
+    # Clean up the secret before removing the reference row
+    if idp.secret_reference_id:
+        ref_result = await session.execute(
+            select(SecretReferenceModel).where(
+                SecretReferenceModel.id == idp.secret_reference_id
+            )
+        )
+        ref = ref_result.scalar_one_or_none()
+        if ref:
+            try:
+                provider = get_secret_provider()
+                provider.delete(ref.secret_identifier)
+            except Exception:  # noqa: BLE001
+                pass  # best-effort; audit still fires
+            await session.delete(ref)
+
+    await session.delete(idp)
+    await _log(
+        session,
+        "enterprise.idp.deleted",
+        actor_id,
+        idp_id,
+        f"Identity provider '{idp.name}' deleted with secret cleanup",
+        {"enterprise_id": idp.enterprise_id, "had_secret": idp.secret_reference_id is not None},
+    )
+    return True
+
+
+async def rotate_identity_provider_secret(
+    idp_id: str,
+    new_client_secret: str,
+    actor_id: str,
+    session: AsyncSession,
+) -> SecretReferenceModel:
+    """Replace the client_secret for an IdP.
+
+    Flow:
+      1. Generate a new identifier and store the new secret.
+      2. Create a new SecretReference row.
+      3. Update IdentityProvider.secret_reference_id.
+      4. Delete the old secret from the provider (best-effort).
+      5. Delete the old SecretReference row.
+      6. Audit enterprise.idp.secret_rotated.
+    """
+    idp = await get_identity_provider(idp_id, session)
+    if not idp:
+        raise ValueError(f"IdentityProvider {idp_id!r} not found")
+
+    now = datetime.now(UTC)
+    provider = get_secret_provider()
+
+    # Step 1-2: Store new secret + create reference
+    new_identifier = f"EIOS_IDP_{idp.enterprise_id}_{str(uuid.uuid4())[:8]}_CLIENT_SECRET"
+    provider.store(new_identifier, new_client_secret)
+    new_ref = SecretReferenceModel(
+        id=str(uuid.uuid4()),
+        provider=provider.provider_name,
+        secret_identifier=new_identifier,
+        label=f"IdP client_secret for '{idp.name}' (rotated)",
+        reference_created_at=now,
+        status="Active",
+        version=1,
+        created_by=actor_id,
+        created_at=now,
+        updated_at=now,
+    )
+    session.add(new_ref)
+    await session.flush()
+
+    # Step 3: Swap the FK
+    old_ref_id = idp.secret_reference_id
+    idp.secret_reference_id = new_ref.id
+    idp.updated_at = now
+
+    # Steps 4-5: Clean up old reference
+    if old_ref_id:
+        old_result = await session.execute(
+            select(SecretReferenceModel).where(SecretReferenceModel.id == old_ref_id)
+        )
+        old_ref = old_result.scalar_one_or_none()
+        if old_ref:
+            try:
+                provider.delete(old_ref.secret_identifier)
+            except Exception:  # noqa: BLE001
+                pass
+            await session.delete(old_ref)
+
+    # Step 6: Audit
+    await _log(
+        session,
+        "enterprise.idp.secret_rotated",
+        actor_id,
+        idp_id,
+        f"Client secret rotated for IdP '{idp.name}'",
+        {
+            "enterprise_id": idp.enterprise_id,
+            "new_reference_id": new_ref.id,
+            "old_reference_id": old_ref_id,
+        },
+    )
+    return new_ref
 
 
 async def create_group_mapping(
@@ -184,7 +304,7 @@ async def create_group_mapping(
         version=1,
         created_at=now,
         updated_at=now,
-        action="idp.group_mapping_created",
+        action="enterprise.group_mapping.created",
         entity_type="GroupMapping",
         entity_id=mapping.id,
         actor_id=actor_id,
@@ -245,34 +365,32 @@ class SSOLoginResult:
 
 async def process_sso_login(
     enterprise_id: str,
-    idp_id: str,
-    user_id: str,
-    idp_groups: list[str],
+    validated_identity: "ValidatedIdentity",  # noqa: F821 — forward ref; import below
     session: AsyncSession,
+    user_id: str | None = None,
 ) -> SSOLoginResult:
-    """Apply group mappings and update user scopes after a successful SSO authentication.
+    """Apply group mappings to a user after a verified SSO authentication.
 
-    Flow:
-      1. Load all active group mappings for the IdP.
-      2. Match the user's IdP group claims against the mapping table.
-         - Specificity order: bu_admin / regional_admin > enterprise_admin > bare role.
-         - First match in declared order wins if no scoped match exists.
-      3. Apply the matched role + enterprise scope to the user record.
-      4. Write an audit event.
+    Accepts only a ValidatedIdentity — groups come from the validated
+    assertion/token, never from raw caller-supplied claims.
 
-    This function is called by the SSO callback handler (OIDC redirect / SAML ACS)
-    after the identity has been verified — it must NOT perform identity verification.
+    user_id: the EIOS user to update. If None, uses validated_identity.external_id
+             to look up the user by external SSO id (future extension point).
+             For now pass the resolved user_id explicitly.
     """
+    from application.enterprise.sso_validation import ValidatedIdentity  # noqa: PLC0415
+
+    idp_id = validated_identity.idp_id
+    idp_groups = validated_identity.groups
+
     # Load mappings for this IdP
     mappings = await list_group_mappings(idp_id, session)
 
-    # Build a lookup: idp_group → mapping (keep only active, matching groups)
     idp_group_set = set(idp_groups)
     matched: list[GroupMappingModel] = [
         m for m in mappings if m.idp_group in idp_group_set
     ]
 
-    # Rank matches: scoped roles (bu_admin, regional_admin) > enterprise_admin > others
     def _rank(m: GroupMappingModel) -> int:
         if m.mapped_role in ("bu_admin", "regional_admin"):
             return 0
@@ -281,17 +399,16 @@ async def process_sso_login(
         return 2
 
     matched.sort(key=_rank)
-
     best = matched[0] if matched else None
 
-    # Resolve the user from the DB
+    target_user_id = user_id or validated_identity.external_id
     user_result = await session.execute(
-        select(UserModel).where(UserModel.id == user_id)
+        select(UserModel).where(UserModel.id == target_user_id)
     )
     user = user_result.scalar_one_or_none()
 
     now = datetime.now(UTC)
-    applied_role = "viewer"  # fallback
+    applied_role = "viewer"
     enterprise_scope: str | None = None
     bu_id: str | None = None
     region_id: str | None = None
@@ -316,15 +433,16 @@ async def process_sso_login(
         version=1,
         created_at=now,
         updated_at=now,
-        action="sso.login",
+        action="sso.login.success",
         entity_type="User",
-        entity_id=user_id,
-        actor_id=user_id,
+        entity_id=target_user_id,
+        actor_id=target_user_id,
         outcome="success",
         detail=f"SSO login via IdP {idp_id}; role '{applied_role}' applied",
         event_metadata={
             "enterprise_id": enterprise_id,
             "idp_id": idp_id,
+            "issuer": validated_identity.issuer,
             "matched_groups": list(idp_group_set & {m.idp_group for m in matched}),
             "applied_role": applied_role,
             "enterprise_scope": enterprise_scope,
@@ -332,7 +450,7 @@ async def process_sso_login(
     ))
 
     return SSOLoginResult(
-        user_id=user_id,
+        user_id=target_user_id,
         applied_role=applied_role,
         enterprise_scope=enterprise_scope,
         enterprise_id=enterprise_id,

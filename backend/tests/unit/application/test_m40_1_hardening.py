@@ -141,7 +141,11 @@ class TestSecretProviderRegistry:
 
 
 class TestProcessSSOLogin:
-    """Tests for process_sso_login — pure logic with mocked DB."""
+    """Tests for process_sso_login — pure logic with mocked DB.
+
+    M40.3: process_sso_login now accepts ValidatedIdentity instead of raw
+    (idp_id, idp_groups) to prevent trust of caller-supplied claims.
+    """
 
     def _make_mapping(
         self,
@@ -172,6 +176,16 @@ class TestProcessSSOLogin:
         u.region_id = None
         return u
 
+    def _vi(self, idp_id: str, groups: list[str], user_id: str = "user-1"):
+        from application.enterprise.sso_validation import ValidatedIdentity
+        return ValidatedIdentity(
+            external_id=user_id,
+            email=f"{user_id}@corp.com",
+            groups=groups,
+            issuer="https://idp.corp.com",
+            idp_id=idp_id,
+        )
+
     @pytest.mark.asyncio
     async def test_basic_role_assignment(self) -> None:
         from application.enterprise.sso_service import process_sso_login
@@ -183,23 +197,17 @@ class TestProcessSSOLogin:
 
         session = AsyncMock()
         session.execute = AsyncMock()
-
-        # list_group_mappings result
         gm_result = MagicMock()
         gm_result.scalars.return_value.all.return_value = [mapping]
-
-        # user lookup result
         user_result = MagicMock()
         user_result.scalar_one_or_none.return_value = user
-
         session.execute.side_effect = [gm_result, user_result]
 
         result = await process_sso_login(
             enterprise_id=enterprise_id,
-            idp_id=idp_id,
-            user_id=user.id,
-            idp_groups=["eios-analysts"],
+            validated_identity=self._vi(idp_id, ["eios-analysts"], user.id),
             session=session,
+            user_id=user.id,
         )
 
         assert result.applied_role == "analyst"
@@ -212,9 +220,7 @@ class TestProcessSSOLogin:
 
         user = self._make_user()
         bu_id = str(uuid.uuid4())
-        mapping = self._make_mapping(
-            "emea-admins", "bu_admin", scope="bu_admin", bu_id=bu_id
-        )
+        mapping = self._make_mapping("emea-admins", "bu_admin", scope="bu_admin", bu_id=bu_id)
         enterprise_id = str(uuid.uuid4())
         idp_id = str(uuid.uuid4())
 
@@ -227,10 +233,9 @@ class TestProcessSSOLogin:
 
         result = await process_sso_login(
             enterprise_id=enterprise_id,
-            idp_id=idp_id,
-            user_id=user.id,
-            idp_groups=["emea-admins"],
+            validated_identity=self._vi(idp_id, ["emea-admins"], user.id),
             session=session,
+            user_id=user.id,
         )
 
         assert result.applied_role == "bu_admin"
@@ -245,8 +250,7 @@ class TestProcessSSOLogin:
         user = self._make_user()
         region_id = str(uuid.uuid4())
         mapping = self._make_mapping(
-            "eu-regional-admins", "regional_admin", scope="regional_admin",
-            region_id=region_id
+            "eu-regional-admins", "regional_admin", scope="regional_admin", region_id=region_id
         )
         enterprise_id = str(uuid.uuid4())
         idp_id = str(uuid.uuid4())
@@ -260,10 +264,9 @@ class TestProcessSSOLogin:
 
         result = await process_sso_login(
             enterprise_id=enterprise_id,
-            idp_id=idp_id,
-            user_id=user.id,
-            idp_groups=["eu-regional-admins"],
+            validated_identity=self._vi(idp_id, ["eu-regional-admins"], user.id),
             session=session,
+            user_id=user.id,
         )
 
         assert result.applied_role == "regional_admin"
@@ -275,9 +278,7 @@ class TestProcessSSOLogin:
         from application.enterprise.sso_service import process_sso_login
 
         user = self._make_user()
-        mapping = self._make_mapping(
-            "global-admins", "enterprise_admin", scope="enterprise_admin"
-        )
+        mapping = self._make_mapping("global-admins", "enterprise_admin", scope="enterprise_admin")
         enterprise_id = str(uuid.uuid4())
         idp_id = str(uuid.uuid4())
 
@@ -290,10 +291,9 @@ class TestProcessSSOLogin:
 
         result = await process_sso_login(
             enterprise_id=enterprise_id,
-            idp_id=idp_id,
-            user_id=user.id,
-            idp_groups=["global-admins"],
+            validated_identity=self._vi(idp_id, ["global-admins"], user.id),
             session=session,
+            user_id=user.id,
         )
 
         assert result.applied_role == "enterprise_admin"
@@ -317,10 +317,9 @@ class TestProcessSSOLogin:
 
         result = await process_sso_login(
             enterprise_id=enterprise_id,
-            idp_id=idp_id,
-            user_id=user.id,
-            idp_groups=["unrelated-group"],
+            validated_identity=self._vi(idp_id, ["unrelated-group"], user.id),
             session=session,
+            user_id=user.id,
         )
 
         assert result.applied_role == "viewer"
@@ -347,10 +346,9 @@ class TestProcessSSOLogin:
 
         result = await process_sso_login(
             enterprise_id=enterprise_id,
-            idp_id=idp_id,
-            user_id=user.id,
-            idp_groups=["all-staff", "bu-leads"],
+            validated_identity=self._vi(idp_id, ["all-staff", "bu-leads"], user.id),
             session=session,
+            user_id=user.id,
         )
 
         assert result.applied_role == "bu_admin"
@@ -564,6 +562,8 @@ class TestSCIMTokenService:
         old.is_active = True
         old.label = "original"
         old.enterprise_id = "ent-1"
+        old.idp_id = None
+        old.scope = "FULL_ADMIN"
 
         session = AsyncMock()
         session.add = MagicMock()

@@ -342,17 +342,25 @@ class ScimUserResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
-# ── SCIM Tokens (M40.1) ───────────────────────────────────────────────────────
+# ── SCIM Tokens (M40.1 / M40.4) ──────────────────────────────────────────────
+
+SCIM_SCOPE_VALUES = ("READ_ONLY", "PROVISIONING", "FULL_ADMIN")
 
 
 class SCIMTokenCreate(BaseModel):
     label: str | None = None
     ttl_days: int = Field(365, ge=0, description="0 = no expiry")
+    # M40.4: bind to a specific IdP; None = enterprise-wide (backward compat)
+    idp_id: str | None = None
+    # M40.4: scope of operations this token may perform
+    scope: str = Field("FULL_ADMIN", pattern="^(READ_ONLY|PROVISIONING|FULL_ADMIN)$")
 
 
 class SCIMTokenResponse(BaseModel):
     id: str
     enterprise_id: str
+    idp_id: str | None = None
+    scope: str = "FULL_ADMIN"
     label: str | None = None
     is_active: bool
     expires_at: datetime | None = None
@@ -373,6 +381,25 @@ class SCIMTokenRotateResponse(BaseModel):
     new_token: SCIMTokenCreateResponse
 
 
+# ── SCIM Usage Dashboard (M40.4) ──────────────────────────────────────────────
+
+
+class SCIMPerIdpUsage(BaseModel):
+    idp_id: str | None = None
+    token_count: int = 0
+    active_count: int = 0
+    last_used_at: datetime | None = None
+
+
+class SCIMUsageResponse(BaseModel):
+    enterprise_id: str
+    token_count: int = 0
+    active_tokens: int = 0
+    last_provisioning: datetime | None = None
+    last_sync: datetime | None = None
+    per_idp_usage: list[SCIMPerIdpUsage] = Field(default_factory=list)
+
+
 # ── SSO Login (M40.1) ─────────────────────────────────────────────────────────
 
 
@@ -390,6 +417,49 @@ class SSOLoginResponse(BaseModel):
     business_unit_id: str | None = None
     region_id: str | None = None
     matched_groups: list[str]
+
+
+# ── SAML / OIDC Callbacks (M40.3) ────────────────────────────────────────────
+
+
+class SAMLCallbackRequest(BaseModel):
+    """Posted by the IdP to the SAML ACS endpoint."""
+    idp_id: str
+    user_id: str
+    # base64-encoded SAMLResponse from the IdP
+    saml_response: str = Field(..., min_length=1)
+    relay_state: str | None = None
+
+
+class OIDCCallbackRequest(BaseModel):
+    """Posted after the OIDC authorization code exchange."""
+    idp_id: str
+    user_id: str
+    # ID token returned by the OIDC token endpoint
+    id_token: str = Field(..., min_length=1)
+    nonce: str | None = None
+
+
+# ── Secret Rotation (M40.2) ───────────────────────────────────────────────────
+
+
+class SecretRotateRequest(BaseModel):
+    new_client_secret: str = Field(..., min_length=1)
+
+
+class SecretRotateResponse(BaseModel):
+    idp_id: str
+    new_reference_id: str
+    rotated_at: datetime
+
+
+# ── Secret Health (M40.2) ─────────────────────────────────────────────────────
+
+
+class SecretHealthResponse(BaseModel):
+    provider_type: str
+    is_connected: bool
+    last_probe_at: datetime
 
 
 # ── SecretReference (M40.1) ───────────────────────────────────────────────────

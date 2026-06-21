@@ -1,12 +1,10 @@
-"""SCIM 2.0 bearer token management (M40.1).
+"""SCIM 2.0 bearer token management — M40.1 / M40.4.
 
-SCIM provisioning from external IdPs (Azure AD, Okta, etc.) must use a
-dedicated bearer token, not a user JWT. This module handles lifecycle:
-
-  create  — generates cryptographically random token, stores only SHA-256 hash
-  revoke  — soft-delete (is_active=False)
-  rotate  — revoke + create in one transaction
-  verify  — hash lookup + active/expiry check; updates last_used_at
+M40.4 additions:
+  - idp_id binding: each token is bound to exactly one IdentityProvider
+  - scope: READ_ONLY | PROVISIONING | FULL_ADMIN (default: FULL_ADMIN for back-compat)
+  - rotate_scim_token() emits scim.token.rotated (distinct from revoked)
+  - list_scim_usage() returns per-enterprise token usage stats
 """
 
 from __future__ import annotations
@@ -16,18 +14,41 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.persistence.models.audit_event import AuditEventModel
 from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
-_TOKEN_BYTES = 32          # 256-bit raw token
-_DEFAULT_TTL_DAYS = 365    # 1-year default; 0 = no expiry
+_TOKEN_BYTES = 32
+_DEFAULT_TTL_DAYS = 365
+
+# Token scope values — ordered from most to least permissive
+SCIM_SCOPES = ("FULL_ADMIN", "PROVISIONING", "READ_ONLY")
+
+# Which scopes allow which operations
+_WRITE_SCOPES = frozenset({"FULL_ADMIN", "PROVISIONING"})
+_READ_SCOPES = frozenset({"FULL_ADMIN", "PROVISIONING", "READ_ONLY"})
+_ADMIN_SCOPES = frozenset({"FULL_ADMIN"})
 
 
 def _hash_token(raw: str) -> str:
     return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def can_provision(scope: str) -> bool:
+    """True if the scope allows user provisioning (create/update/deactivate)."""
+    return scope in _WRITE_SCOPES
+
+
+def can_read(scope: str) -> bool:
+    """True if the scope allows read operations."""
+    return scope in _READ_SCOPES
+
+
+def can_admin(scope: str) -> bool:
+    """True if the scope allows admin operations (token mgmt, config)."""
+    return scope in _ADMIN_SCOPES
 
 
 async def _audit(
@@ -61,12 +82,20 @@ async def create_scim_token(
     ttl_days: int,
     actor_id: str,
     session: AsyncSession,
+    idp_id: str | None = None,
+    scope: str = "FULL_ADMIN",
 ) -> tuple[str, SCIMTokenModel]:
     """Create a new SCIM bearer token.
 
-    Returns (raw_token, model). The raw_token is returned ONCE — it is never
-    retrievable again. Store it immediately in the IdP configuration.
+    idp_id: bind to a specific IdentityProvider (M40.4).
+            None for enterprise-wide tokens (backward compat).
+    scope: READ_ONLY | PROVISIONING | FULL_ADMIN
+
+    Returns (raw_token, model). The raw_token is returned ONCE only.
     """
+    if scope not in SCIM_SCOPES:
+        raise ValueError(f"Invalid SCIM scope: {scope!r}. Must be one of {SCIM_SCOPES}")
+
     raw = secrets.token_urlsafe(_TOKEN_BYTES)
     now = datetime.now(UTC)
     expires_at = now + timedelta(days=ttl_days) if ttl_days > 0 else None
@@ -74,6 +103,8 @@ async def create_scim_token(
     token = SCIMTokenModel(
         id=str(uuid.uuid4()),
         enterprise_id=enterprise_id,
+        idp_id=idp_id,
+        scope=scope,
         token_hash=_hash_token(raw),
         label=label,
         is_active=True,
@@ -93,8 +124,8 @@ async def create_scim_token(
         "scim.token.created",
         actor_id,
         token.id,
-        f"SCIM token '{label or token.id}' created for enterprise {enterprise_id}",
-        {"enterprise_id": enterprise_id, "ttl_days": ttl_days},
+        f"SCIM token '{label or token.id}' created (scope={scope})",
+        {"enterprise_id": enterprise_id, "ttl_days": ttl_days, "idp_id": idp_id, "scope": scope},
     )
     return raw, token
 
@@ -104,7 +135,6 @@ async def revoke_scim_token(
     actor_id: str,
     session: AsyncSession,
 ) -> bool:
-    """Revoke a SCIM token. Returns False if not found."""
     result = await session.execute(
         select(SCIMTokenModel).where(SCIMTokenModel.id == token_id)
     )
@@ -131,9 +161,10 @@ async def rotate_scim_token(
     actor_id: str,
     session: AsyncSession,
 ) -> tuple[str, SCIMTokenModel] | None:
-    """Revoke existing token and issue a replacement in one transaction.
+    """Revoke existing token and issue a replacement atomically.
 
-    Returns (new_raw_token, new_model) or None if the old token was not found.
+    Emits scim.token.rotated (distinct from scim.token.revoked).
+    The new token inherits idp_id and scope from the old token.
     """
     result = await session.execute(
         select(SCIMTokenModel).where(SCIMTokenModel.id == token_id)
@@ -144,29 +175,46 @@ async def rotate_scim_token(
 
     enterprise_id = old.enterprise_id
     label = new_label or old.label
+    old_idp_id = old.idp_id
+    old_scope = old.scope
 
     old.is_active = False
     old.updated_at = datetime.now(UTC)
+
+    raw, new_token = await create_scim_token(
+        enterprise_id=enterprise_id,
+        label=label,
+        ttl_days=ttl_days,
+        actor_id=actor_id,
+        session=session,
+        idp_id=old_idp_id,
+        scope=old_scope,
+    )
+    # Override the create audit with a rotation-specific event
     await _audit(
         session,
-        "scim.token.revoked",
+        "scim.token.rotated",
         actor_id,
-        token_id,
-        f"SCIM token rotated — old token '{old.label or token_id}' revoked",
-        {"enterprise_id": enterprise_id, "rotated": True},
+        new_token.id,
+        f"SCIM token rotated — old={token_id} new={new_token.id}",
+        {
+            "enterprise_id": enterprise_id,
+            "old_token_id": token_id,
+            "new_token_id": new_token.id,
+            "idp_id": old_idp_id,
+            "scope": old_scope,
+        },
     )
-
-    return await create_scim_token(enterprise_id, label, ttl_days, actor_id, session)
+    return raw, new_token
 
 
 async def verify_scim_token(
     raw_token: str,
     session: AsyncSession,
 ) -> SCIMTokenModel | None:
-    """Return the SCIMTokenModel if the token is valid, active, and not expired.
+    """Return the SCIMTokenModel if valid, active, and unexpired.
 
-    Also increments use_count and updates last_used_at for auditability.
-    Returns None on any failure — callers raise 401.
+    Updates last_used_at and use_count.
     """
     token_hash = _hash_token(raw_token)
     result = await session.execute(
@@ -189,10 +237,63 @@ async def verify_scim_token(
 async def list_scim_tokens(
     enterprise_id: str,
     session: AsyncSession,
+    idp_id: str | None = None,
 ) -> list[SCIMTokenModel]:
-    result = await session.execute(
-        select(SCIMTokenModel).where(
-            SCIMTokenModel.enterprise_id == enterprise_id,
-        ).order_by(SCIMTokenModel.created_at.desc())
+    stmt = (
+        select(SCIMTokenModel)
+        .where(SCIMTokenModel.enterprise_id == enterprise_id)
+        .order_by(SCIMTokenModel.created_at.desc())
     )
+    if idp_id is not None:
+        stmt = stmt.where(SCIMTokenModel.idp_id == idp_id)
+    result = await session.execute(stmt)
     return list(result.scalars().all())
+
+
+async def get_scim_usage(
+    enterprise_id: str,
+    session: AsyncSession,
+) -> dict:
+    """Return per-enterprise SCIM token usage summary for the dashboard."""
+    all_tokens = await list_scim_tokens(enterprise_id, session)
+    active = [t for t in all_tokens if t.is_active]
+    now = datetime.now(UTC)
+    not_expired = [
+        t for t in active
+        if t.expires_at is None or t.expires_at > now
+    ]
+
+    last_provisioning = None
+    last_sync = None
+    for t in all_tokens:
+        if t.last_used_at:
+            if last_provisioning is None or t.last_used_at > last_provisioning:
+                last_provisioning = t.last_used_at
+            if last_sync is None or t.last_used_at > last_sync:
+                last_sync = t.last_used_at
+
+    # Per-idp breakdown
+    per_idp: dict[str, dict] = {}
+    for t in all_tokens:
+        key = t.idp_id or "__enterprise__"
+        entry = per_idp.setdefault(key, {
+            "idp_id": t.idp_id,
+            "token_count": 0,
+            "active_count": 0,
+            "last_used_at": None,
+        })
+        entry["token_count"] += 1
+        if t.is_active:
+            entry["active_count"] += 1
+        if t.last_used_at:
+            if entry["last_used_at"] is None or t.last_used_at > entry["last_used_at"]:
+                entry["last_used_at"] = t.last_used_at
+
+    return {
+        "enterprise_id": enterprise_id,
+        "token_count": len(all_tokens),
+        "active_tokens": len(not_expired),
+        "last_provisioning": last_provisioning,
+        "last_sync": last_sync,
+        "per_idp_usage": list(per_idp.values()),
+    }
