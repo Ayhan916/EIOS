@@ -130,6 +130,26 @@ from infrastructure.persistence.models.enterprise import (  # noqa: F401
     SecretReferenceModel,
     SCIMTokenModel,
 )
+# M41: ensure AI Governance models are registered
+from infrastructure.persistence.models.ai_governance import (  # noqa: F401
+    AIModelModel,
+    AIUseCaseModel,
+    AIRiskAssessmentModel,
+    AIControlModel,
+    AIControlTestModel,
+    ModelApprovalWorkflowModel,
+    PromptTemplateModel,
+    PromptChangeModel,
+    AIDecisionLogModel,
+    AIExplanationModel,
+    HumanReviewModel,
+    ModelMonitoringRecordModel,
+    ModelDriftAlertModel,
+    AIIncidentModel,
+    AIPolicyModel,
+    AIAssuranceReportModel,
+    AIRegulationMappingModel,
+)
 # M39: ensure operating system models are registered
 from infrastructure.persistence.models.operating_system import (  # noqa: F401
     ESGObjectiveModel,
@@ -280,6 +300,25 @@ EXPECTED_ENTITY_TABLES = {
     # M40.1: Identity & Provisioning Hardening (2 tables)
     "secret_references",
     "scim_tokens",
+    # M41: AI Governance (17 tables)
+    "ai_models",
+    "ai_use_cases",
+    "ai_risk_assessments",
+    "ai_controls",
+    "ai_control_tests",
+    "model_approval_workflows",
+    "prompt_templates",
+    "prompt_changes",
+    "ai_decision_logs",
+    "ai_explanations",
+    "human_reviews",
+    "model_monitoring_records",
+    "model_drift_alerts",
+    "ai_incidents",
+    "ai_policies",
+    "ai_assurance_reports",
+    "ai_regulation_mappings",
+    "ai_regulation_mapping_history",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -318,7 +357,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 131  # +10 M40, +2 M40.1
+        assert len(Base.metadata.tables) == 149  # +10 M40, +2 M40.1, +17 M41, +1 M41.1
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())
