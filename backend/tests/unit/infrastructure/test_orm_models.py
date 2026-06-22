@@ -168,6 +168,29 @@ from infrastructure.persistence.models.operating_system import (  # noqa: F401
     OrganizationESGHealthScoreModel,
     StrategicRiskModel,
 )
+# M43: ensure Financial ESG models are registered
+from infrastructure.persistence.models.financial_esg import (  # noqa: F401
+    FinancialESGKPIModel,
+    FinancialKPIMeasurementModel,
+    CarbonCostModelRecord,
+    CostOfRiskAssessmentModel,
+    ValueCreationInitiativeModel,
+    SustainableFinanceInstrumentModel,
+    TaxonomyAlignmentAssessmentModel,
+    GreenRevenueRecordModel,
+    GreenCapexRecordModel,
+    GreenOpexRecordModel,
+    TransitionPlanModel,
+    TransitionPlanMilestoneModel,
+    FinanceLinkedKPIModel,
+    CapitalMarketsAssessmentModel,
+    InvestorDisclosurePackageModel,
+    ClimateFinanceAnalysisModel,
+    SustainabilityValuationModelRecord,
+    ESGFinancialCorrelationModel,
+    FinancialScenarioAnalysisModel,
+    FinancialESGReportModel,
+)
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -339,6 +362,27 @@ EXPECTED_ENTITY_TABLES = {
     "performance_forecasts",
     "scenario_analyses",
     "sustainability_performance_reports",
+    # M43 — Financial ESG, Value Creation & Capital Markets (20 tables)
+    "financial_esg_kpis",
+    "financial_kpi_measurements",
+    "carbon_cost_models",
+    "cost_of_risk_assessments",
+    "value_creation_initiatives",
+    "sustainable_finance_instruments",
+    "taxonomy_alignment_assessments",
+    "green_revenue_records",
+    "green_capex_records",
+    "green_opex_records",
+    "transition_plans",
+    "transition_plan_milestones",
+    "finance_linked_kpis",
+    "capital_markets_assessments",
+    "investor_disclosure_packages",
+    "climate_finance_analyses",
+    "sustainability_valuation_models",
+    "esg_financial_correlations",
+    "financial_scenario_analyses",
+    "financial_esg_reports",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -377,7 +421,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 168  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42
+        assert len(Base.metadata.tables) == 188  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42, +20 M43
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

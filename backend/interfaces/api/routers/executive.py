@@ -94,6 +94,7 @@ from interfaces.api.schemas.executive import (
     RiskRegisterEntry,
 )
 from interfaces.api.schemas.sustainability import SustainabilityExecutiveSummary
+from interfaces.api.schemas.financial_esg import FinancialSustainabilitySummary
 
 logger = structlog.get_logger(__name__)
 
@@ -429,6 +430,70 @@ async def get_executive_dashboard(
             degraded_reason=str(_s42_exc),
         )
 
+    # M43 Financial ESG summary
+    try:
+        from sqlalchemy import func as _f43, select as _sel43
+        from infrastructure.persistence.models.financial_esg import (
+            GreenRevenueRecordModel as _GRR,
+            TaxonomyAlignmentAssessmentModel as _TAA,
+            CarbonCostModelRecord as _CCM,
+            ValueCreationInitiativeModel as _VCI,
+            SustainableFinanceInstrumentModel as _SFI,
+            CapitalMarketsAssessmentModel as _CMA,
+        )
+
+        _grr_row = (await session.execute(
+            _sel43(_f43.avg(_GRR.green_revenue_percent).label("avg_grp"))
+            .where(_GRR.organization_id == org_id)
+        )).one()
+        _green_rev_pct = round(float(_grr_row.avg_grp), 2) if _grr_row.avg_grp else None
+
+        _tax_row = (await session.execute(
+            _sel43(_f43.avg(_TAA.aligned_percent).label("avg_aligned"))
+            .where(_TAA.organization_id == org_id)
+        )).one()
+        _tax_pct = round(float(_tax_row.avg_aligned), 2) if _tax_row.avg_aligned else None
+
+        _ccm_row = (await session.execute(
+            _sel43(_f43.sum(_CCM.regulatory_exposure).label("total_reg"))
+            .where(_CCM.organization_id == org_id)
+        )).one()
+        _carbon_exp = round(float(_ccm_row.total_reg), 2) if _ccm_row.total_reg else None
+
+        _vci_row = (await session.execute(
+            _sel43(_f43.avg(_VCI.roi_percent).label("avg_roi"))
+            .where(_VCI.organization_id == org_id)
+        )).one()
+        _sus_roi = round(float(_vci_row.avg_roi), 2) if _vci_row.avg_roi else None
+
+        _sfi_row = (await session.execute(
+            _sel43(_f43.sum(_SFI.amount).label("total_exp"))
+            .where(_SFI.organization_id == org_id)
+        )).one()
+        _fin_exp = round(float(_sfi_row.total_exp), 2) if _sfi_row.total_exp else None
+
+        _cma = (await session.execute(
+            _sel43(_CMA.overall_readiness)
+            .where(_CMA.organization_id == org_id)
+            .order_by(_CMA.assessed_at.desc())
+            .limit(1)
+        )).scalar_one_or_none()
+
+        financial_summary = FinancialSustainabilitySummary(
+            status="ok",
+            green_revenue_percent=_green_rev_pct,
+            taxonomy_alignment_percent=_tax_pct,
+            carbon_cost_exposure=_carbon_exp,
+            sustainability_roi=_sus_roi,
+            sustainable_finance_exposure=_fin_exp,
+            capital_markets_readiness=_cma,
+        )
+    except Exception as _f43_exc:
+        financial_summary = FinancialSustainabilitySummary(
+            status="degraded",
+            degraded_reason=str(_f43_exc),
+        )
+
     return ExecutiveDashboard(
         portfolio_summary=PortfolioSummary(
             total_suppliers=snapshot.total_suppliers,
@@ -456,6 +521,7 @@ async def get_executive_dashboard(
         ),
         esg_summary=esg_summary,
         sustainability_summary=sustainability_summary,
+        financial_summary=financial_summary,
     )
 
 

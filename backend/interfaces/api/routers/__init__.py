@@ -38,6 +38,7 @@ from .operating_system import router as operating_system_router
 from .enterprise import router as enterprise_router
 from .ai_governance import router as ai_governance_router
 from .sustainability import router as sustainability_router
+from .financial_esg import router as financial_esg_router
 
 __all__ = [
     "agents_router",
@@ -82,4 +83,5 @@ __all__ = [
     "enterprise_router",
     "ai_governance_router",
     "sustainability_router",
+    "financial_esg_router",
 ]
