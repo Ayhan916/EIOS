@@ -69,6 +69,7 @@ from interfaces.api.routers import (
     ai_governance_router,
     sustainability_router,
     financial_esg_router,
+    strategy_router,
 )
 from shared.config import settings
 
@@ -352,3 +353,4 @@ app.include_router(enterprise_router)
 app.include_router(ai_governance_router, prefix=API_V1)
 app.include_router(sustainability_router, prefix=API_V1)
 app.include_router(financial_esg_router, prefix=API_V1)
+app.include_router(strategy_router, prefix=API_V1)

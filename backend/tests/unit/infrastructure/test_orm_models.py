@@ -192,6 +192,37 @@ from infrastructure.persistence.models.financial_esg import (  # noqa: F401
     FinancialESGReportModel,
 )
 
+# M44: ensure Strategy models are registered
+from infrastructure.persistence.models.strategy import (  # noqa: F401
+    EnterpriseDigitalTwinModel,
+    DigitalTwinSnapshotModel,
+    StrategicPlanModel,
+    StrategicObjectiveModel,
+    StrategyScenarioModel,
+    ScenarioAssumptionModel,
+    ScenarioExecutionModel,
+    ClimateStressTestModel,
+    SupplierShockScenarioModel,
+    FinancialStressTestModel,
+    TransitionPathwayModel,
+    NetZeroPathwayRecord,
+    StrategicRiskProjectionModel,
+    PortfolioOptimizationModel,
+    InvestmentScenarioModel,
+    ForecastMethodologyRecordModel,
+    ForecastModelRecord,
+    ForecastResultModel,
+    BoardSimulationModel,
+    StrategicForecastSummaryModel,
+    StrategicScenarioReportModel,
+    # M44.1 additions
+    ScenarioTemplateModel,
+    StrategyMethodologyModel,
+    ScenarioComparisonModel,
+    StressTestTemplateModel,
+    ForecastWindowPolicyModel,
+)
+
 EXPECTED_ENTITY_TABLES = {
     "organizations",
     "users",
@@ -383,6 +414,34 @@ EXPECTED_ENTITY_TABLES = {
     "esg_financial_correlations",
     "financial_scenario_analyses",
     "financial_esg_reports",
+    # M44 — Digital Twin, Strategic Planning & Scenario Intelligence (21 tables)
+    "enterprise_digital_twins",
+    "digital_twin_snapshots",
+    "strategic_plans",
+    "strategic_objectives",
+    "strategy_scenarios",
+    "scenario_assumptions",
+    "scenario_executions",
+    "climate_stress_tests",
+    "supplier_shock_scenarios",
+    "financial_stress_tests",
+    "transition_pathways",
+    "net_zero_pathways",
+    "strategic_risk_projections",
+    "portfolio_optimizations",
+    "investment_scenarios",
+    "forecast_methodology_records",
+    "forecast_models",
+    "forecast_results",
+    "board_simulations",
+    "strategic_forecast_summaries",
+    "strategic_scenario_reports",
+    # M44.1 additions (5 tables)
+    "scenario_templates",
+    "strategy_methodologies",
+    "scenario_comparisons",
+    "stress_test_templates",
+    "forecast_window_policies",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -421,7 +480,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 188  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42, +20 M43
+        assert len(Base.metadata.tables) == 214  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42, +20 M43, +21 M44, +5 M44.1
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())
