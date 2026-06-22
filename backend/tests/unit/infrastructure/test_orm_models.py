@@ -319,6 +319,26 @@ EXPECTED_ENTITY_TABLES = {
     "ai_assurance_reports",
     "ai_regulation_mappings",
     "ai_regulation_mapping_history",
+    # M42 — Sustainability Performance Management
+    "sustainability_objectives",
+    "esg_targets",
+    "esg_kpis",
+    "kpi_measurements",
+    "kpi_alerts",
+    "sustainability_scorecards",
+    "emission_sources",
+    "carbon_inventories",
+    "decarbonization_initiatives",
+    "net_zero_roadmaps",
+    "net_zero_milestones",
+    "science_based_targets",
+    "climate_risk_assessments",
+    "sustainability_assurance_records",
+    "csrd_performance_mappings",
+    "issb_sustainability_mappings",
+    "performance_forecasts",
+    "scenario_analyses",
+    "sustainability_performance_reports",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -357,7 +377,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 149  # +10 M40, +2 M40.1, +17 M41, +1 M41.1
+        assert len(Base.metadata.tables) == 168  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

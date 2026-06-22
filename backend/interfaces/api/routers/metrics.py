@@ -220,4 +220,8 @@ async def get_metrics_prometheus() -> str:
     from application.operating_system.metrics import os_counters
     lines.extend(os_counters.to_prometheus_lines(env))
 
+    # Append M42 sustainability metrics
+    from application.sustainability.metrics import sustainability_counters
+    lines.extend(sustainability_counters.to_prometheus_lines(env))
+
     return "\n".join(lines)

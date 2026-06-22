@@ -67,6 +67,7 @@ from interfaces.api.routers import (
     operating_system_router,
     enterprise_router,
     ai_governance_router,
+    sustainability_router,
 )
 from shared.config import settings
 
@@ -348,3 +349,4 @@ app.include_router(network_router, prefix=API_V1)
 app.include_router(operating_system_router, prefix=API_V1)
 app.include_router(enterprise_router)
 app.include_router(ai_governance_router, prefix=API_V1)
+app.include_router(sustainability_router, prefix=API_V1)

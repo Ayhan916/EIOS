@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from interfaces.api.schemas.sustainability import SustainabilityExecutiveSummary  # noqa: F401 re-exported
+
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -54,6 +56,7 @@ class ExecutiveDashboard(BaseModel):
     action_summary: ActionSummary
     governance_summary: GovernanceSummary
     esg_summary: ESGOperatingSummary | None = None
+    sustainability_summary: SustainabilityExecutiveSummary | None = None
 
 
 # ── KPI Trends ────────────────────────────────────────────────────────────────

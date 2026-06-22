@@ -93,6 +93,7 @@ from interfaces.api.schemas.executive import (
     ReportScheduleResponse,
     RiskRegisterEntry,
 )
+from interfaces.api.schemas.sustainability import SustainabilityExecutiveSummary
 
 logger = structlog.get_logger(__name__)
 
@@ -344,6 +345,90 @@ async def get_executive_dashboard(
             degraded_reason=str(_esg_exc),
         )
 
+    # M42 Sustainability Performance summary
+    try:
+        from sqlalchemy import func as _func, select as _sa_select
+        from infrastructure.persistence.models.sustainability import (
+            SustainabilityObjectiveModel,
+            CarbonInventoryModel,
+            SustainabilityScorecardModel,
+            ClimateRiskAssessmentModel,
+            NetZeroRoadmapModel,
+            ScienceBasedTargetModel,
+            KPIAlertModel,
+        )
+
+        _s42_obj_rows = (await session.execute(
+            _sa_select(
+                SustainabilityObjectiveModel.objective_status,
+                _func.count().label("cnt"),
+            )
+            .where(SustainabilityObjectiveModel.organization_id == org_id)
+            .group_by(SustainabilityObjectiveModel.objective_status)
+        )).all()
+        _s42_obj_by_status: dict[str, int] = {r.objective_status: r.cnt for r in _s42_obj_rows}
+        _s42_obj_total = sum(_s42_obj_by_status.values())
+        _s42_obj_completed = _s42_obj_by_status.get("COMPLETED", 0)
+        _obj_completion_pct = round(_s42_obj_completed / _s42_obj_total * 100, 1) if _s42_obj_total else None
+
+        _s42_emission_row = (await session.execute(
+            _sa_select(_func.sum(CarbonInventoryModel.total_emissions).label("total"))
+            .where(
+                CarbonInventoryModel.organization_id == org_id,
+                CarbonInventoryModel.inventory_status == "FINALIZED",
+            )
+        )).one()
+        _total_emissions = float(_s42_emission_row.total) if _s42_emission_row.total else None
+
+        _s42_score_row = (await session.execute(
+            _sa_select(_func.avg(SustainabilityScorecardModel.overall_score).label("avg_score"))
+            .where(SustainabilityScorecardModel.organization_id == org_id)
+        )).one()
+        _sus_score = round(float(_s42_score_row.avg_score), 2) if _s42_score_row.avg_score else None
+
+        _s42_climate_row = (await session.execute(
+            _sa_select(_func.avg(ClimateRiskAssessmentModel.overall_risk_score).label("avg_risk"))
+            .where(ClimateRiskAssessmentModel.organization_id == org_id)
+        )).one()
+        _climate_risk = round(float(_s42_climate_row.avg_risk), 2) if _s42_climate_row.avg_risk else None
+
+        _active_roadmaps = (await session.execute(
+            _sa_select(_func.count()).select_from(NetZeroRoadmapModel).where(
+                NetZeroRoadmapModel.organization_id == org_id,
+                NetZeroRoadmapModel.roadmap_status == "ACTIVE",
+            )
+        )).scalar_one() or 0
+
+        _active_sbts = (await session.execute(
+            _sa_select(_func.count()).select_from(ScienceBasedTargetModel).where(
+                ScienceBasedTargetModel.organization_id == org_id,
+                ScienceBasedTargetModel.sbt_status == "COMMITTED",
+            )
+        )).scalar_one() or 0
+
+        _open_kpi_alerts = (await session.execute(
+            _sa_select(_func.count()).select_from(KPIAlertModel).where(
+                KPIAlertModel.organization_id == org_id,
+                KPIAlertModel.alert_status == "OPEN",
+            )
+        )).scalar_one() or 0
+
+        sustainability_summary = SustainabilityExecutiveSummary(
+            status="ok",
+            total_emissions=_total_emissions,
+            objective_completion_percent=_obj_completion_pct,
+            sustainability_score=_sus_score,
+            climate_risk_score=_climate_risk,
+            active_net_zero_roadmaps=int(_active_roadmaps),
+            active_science_based_targets=int(_active_sbts),
+            open_kpi_alerts=int(_open_kpi_alerts),
+        )
+    except Exception as _s42_exc:
+        sustainability_summary = SustainabilityExecutiveSummary(
+            status="degraded",
+            degraded_reason=str(_s42_exc),
+        )
+
     return ExecutiveDashboard(
         portfolio_summary=PortfolioSummary(
             total_suppliers=snapshot.total_suppliers,
@@ -370,6 +455,7 @@ async def get_executive_dashboard(
             critical_findings_total=snapshot.critical_findings_total,
         ),
         esg_summary=esg_summary,
+        sustainability_summary=sustainability_summary,
     )
 
 
