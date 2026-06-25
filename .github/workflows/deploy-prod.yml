@@ -1,0 +1,121 @@
+name: Deploy — Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: "Docker image tag to deploy (e.g. sha-abc1234)"
+        required: true
+        type: string
+      confirm:
+        description: "Type DEPLOY to confirm production deployment"
+        required: true
+        type: string
+
+jobs:
+  validate:
+    name: Validate inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require explicit confirmation
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "DEPLOY" ]; then
+            echo "Confirmation text must be exactly: DEPLOY"
+            exit 1
+          fi
+          echo "Confirmation accepted. Deploying ${{ github.event.inputs.image_tag }} to production."
+
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: production   # requires manual approval in GitHub Environments settings
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false   # never cancel a running prod deploy
+
+    env:
+      KUBECONFIG_DATA: ${{ secrets.PROD_KUBECONFIG }}
+      IMAGE_TAG: ${{ github.event.inputs.image_tag }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.0"
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure kubeconfig
+        run: |
+          mkdir -p ~/.kube
+          echo "$KUBECONFIG_DATA" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Add Bitnami Helm repo
+        run: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+      - name: Update chart dependencies
+        run: helm dependency update ./helm/eios
+
+      - name: Capture pre-deploy revision
+        id: pre-deploy
+        run: |
+          echo "revision=$(helm history eios -n eios-prod --max 1 --output json | python3 -c 'import sys,json; h=json.load(sys.stdin); print(h[0]["revision"] if h else 0)')" >> $GITHUB_OUTPUT
+
+      - name: Deploy to production namespace
+        run: |
+          helm upgrade --install eios ./helm/eios \
+            --namespace eios-prod \
+            --create-namespace \
+            -f helm/eios/values.prod.yaml \
+            --set image.backend.repository=ghcr.io/${{ github.repository_owner }}/eios-backend \
+            --set image.backend.tag=${{ env.IMAGE_TAG }} \
+            --set image.frontend.repository=ghcr.io/${{ github.repository_owner }}/eios-frontend \
+            --set image.frontend.tag=${{ env.IMAGE_TAG }} \
+            --set global.imagePullSecrets[0].name=ghcr-credentials \
+            --wait \
+            --timeout 10m \
+            --atomic   # rolls back automatically on failure
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment/eios-backend \
+            --namespace eios-prod \
+            --timeout=5m
+          kubectl rollout status deployment/eios-frontend \
+            --namespace eios-prod \
+            --timeout=5m
+
+      - name: Production smoke test
+        run: |
+          for i in $(seq 1 15); do
+            STATUS=$(kubectl exec -n eios-prod deploy/eios-backend -- \
+              curl -sf http://localhost:8000/health 2>/dev/null | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))" 2>/dev/null || echo "")
+            [ "$STATUS" = "ok" ] && echo "Production healthy" && exit 0
+            sleep 10
+          done
+          echo "Production health check failed — consider rolling back:" && \
+          echo "  helm rollback eios ${{ steps.pre-deploy.outputs.revision }} -n eios-prod"
+          exit 1
+
+      - name: Record deployment
+        if: success()
+        run: |
+          echo "Production deployment successful"
+          echo "  Image: ${{ env.IMAGE_TAG }}"
+          echo "  Namespace: eios-prod"
+          echo "  Deployed by: ${{ github.actor }}"
+          echo "  Triggered at: ${{ github.run_id }}"
+
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "Deployment failed — rolling back to revision ${{ steps.pre-deploy.outputs.revision }}"
+          helm rollback eios ${{ steps.pre-deploy.outputs.revision }} \
+            --namespace eios-prod \
+            --wait \
+            --timeout 5m || true

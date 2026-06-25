@@ -12,16 +12,20 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  GitBranch,
+  Network,
   ShieldAlert,
   BarChart3,
   Edit2,
   Archive,
+  Printer,
   ExternalLink,
   ChevronRight,
   TrendingUp,
   TrendingDown,
   Minus,
   RefreshCw,
+  Share2,
   Target,
   Users,
 } from "lucide-react";
@@ -32,6 +36,7 @@ import {
   updateSupplier,
   archiveSupplier,
 } from "@/lib/api/suppliers";
+import { getSectorProfileByNace } from "@/lib/api/sector_intelligence";
 import {
   getSupplierIntelligence,
   recalculateSupplierScore,
@@ -39,6 +44,7 @@ import {
   getSupplierBenchmark,
   getSupplierHeatmap,
 } from "@/lib/api/supplier-scores";
+import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,9 +140,324 @@ function TrendBadge({ trend, delta }: { trend: string; delta: number }) {
   );
 }
 
+// ── Network Tab ───────────────────────────────────────────────────────────────
+
+function NetworkTab({ supplierId }: { supplierId: string }) {
+  const { data: rels, isLoading: relsLoading } = useQuery({
+    queryKey: ["supplier-network-rels", supplierId],
+    queryFn: async () => {
+      const res = await apiClient.get(
+        `/api/v1/network/relationships?supplier_id=${supplierId}&limit=50`
+      );
+      return res.data;
+    },
+    refetchInterval: 60_000,
+  });
+
+  const { data: exposures, isLoading: expLoading } = useQuery({
+    queryKey: ["supplier-network-exposures", supplierId],
+    queryFn: async () => {
+      const res = await apiClient.get(
+        `/api/v1/network/exposure-signals?impacted_supplier_id=${supplierId}&exposure_status=ACTIVE&limit=10`
+      );
+      return res.data;
+    },
+    refetchInterval: 60_000,
+  });
+
+  const { data: criticality, isLoading: critLoading } = useQuery({
+    queryKey: ["supplier-criticality", supplierId],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get(`/api/v1/network/criticality/${supplierId}`);
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 300_000,
+  });
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Criticality */}
+      <Card className="border-slate-800 bg-slate-900 text-slate-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <ShieldAlert className="h-4 w-4" />
+            Supplier Criticality
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {critLoading ? (
+            <div className="flex justify-center p-4"><Spinner /></div>
+          ) : criticality ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Classification</span>
+                <span className={`text-sm font-bold ${
+                  criticality.criticality === "CRITICAL" ? "text-red-400" :
+                  criticality.criticality === "HIGH" ? "text-orange-400" :
+                  criticality.criticality === "MEDIUM" ? "text-yellow-400" : "text-green-400"
+                }`}>{criticality.criticality}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Score</span>
+                <span className="text-sm text-slate-200">{Math.round(criticality.criticality_score * 100)}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Degree Centrality</span>
+                <span className="text-sm text-slate-200">{Math.round(criticality.degree_centrality * 100)}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Inbound / Outbound</span>
+                <span className="text-sm text-slate-200">{criticality.inbound_degree} / {criticality.outbound_degree}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Component Size</span>
+                <span className="text-sm text-slate-200">{criticality.connected_component_size}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 py-4 text-center">
+              No criticality data yet. Compute centrality from the Network dashboard.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Relationships */}
+      <Card className="border-slate-800 bg-slate-900 text-slate-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <Share2 className="h-4 w-4" />
+            Relationships ({relsLoading ? "…" : (rels?.length ?? 0)})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {relsLoading ? (
+            <div className="flex justify-center p-4"><Spinner /></div>
+          ) : !rels?.length ? (
+            <p className="text-sm text-slate-500 py-4 text-center">No relationships found.</p>
+          ) : (
+            <div className="divide-y divide-slate-800">
+              {rels.map((r: any) => (
+                <div key={r.id} className="py-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium text-slate-300">
+                      {r.supplier_id === supplierId
+                        ? `→ ${r.related_supplier_id.slice(0, 8)}…`
+                        : `← ${r.supplier_id.slice(0, 8)}…`}
+                    </span>
+                    <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+                      {r.relationship_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="ml-auto text-xs text-slate-500">
+                      {Math.round(r.confidence * 100)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Exposure Signals */}
+      <Card className="border-slate-800 bg-slate-900 text-slate-100 lg:col-span-2">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <GitBranch className="h-4 w-4 text-orange-400" />
+            Network Exposure Signals ({expLoading ? "…" : (exposures?.length ?? 0)})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {expLoading ? (
+            <div className="flex justify-center p-4"><Spinner /></div>
+          ) : !exposures?.length ? (
+            <p className="text-sm text-slate-500 py-4 text-center">
+              No active exposure signals for this supplier.
+            </p>
+          ) : (
+            <div className="divide-y divide-slate-800">
+              {exposures.map((e: any) => (
+                <div key={e.id} className="py-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      e.severity === "CRITICAL" ? "bg-red-600 text-white" :
+                      e.severity === "HIGH" ? "bg-orange-500 text-white" :
+                      e.severity === "MEDIUM" ? "bg-yellow-500 text-black" : "bg-blue-500 text-white"
+                    }`}>{e.severity}</span>
+                    <span className="text-sm font-medium text-slate-200">
+                      {e.exposure_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="ml-auto text-xs text-slate-500">
+                      {Math.round(e.confidence * 100)}% · {e.path_length} hop(s)
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400 truncate">{e.rationale}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    From: {e.origin_supplier_id.slice(0, 8)}…
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Portal Tab ────────────────────────────────────────────────────────────────
+
+function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; supplierName: string }) {
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const { data: conversations = [], isLoading } = useQuery<{
+    id: string; subject: string | null; created_at: string;
+    message_count: number; last_message_at: string | null;
+  }[]>({
+    queryKey: ["portal-conversations", supplierId],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/supplier-portal/internal/conversations?supplier_id=${supplierId}`);
+        return r.data ?? [];
+      } catch { return []; }
+    },
+    retry: false,
+  });
+
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+
+  const { data: messages = [] } = useQuery<{
+    id: string; content: string; sender_type: string; sent_at: string;
+  }[]>({
+    queryKey: ["portal-messages", activeConvId],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/supplier-portal/internal/conversations/${activeConvId}/messages`);
+        return r.data ?? [];
+      } catch { return []; }
+    },
+    enabled: !!activeConvId,
+    retry: false,
+  });
+
+  async function sendMessage() {
+    if (!newMessage.trim()) return;
+    setSending(true); setSendError(null);
+    try {
+      if (!activeConvId) {
+        const r = await apiClient.post("/api/v1/supplier-portal/internal/conversations", {
+          supplier_id: supplierId, subject: `Message to ${supplierName}`,
+        });
+        const convId = r.data.id;
+        await apiClient.post("/api/v1/supplier-portal/internal/messages", {
+          conversation_id: convId, content: newMessage,
+        });
+        qc.invalidateQueries({ queryKey: ["portal-conversations", supplierId] });
+        setActiveConvId(convId);
+      } else {
+        await apiClient.post("/api/v1/supplier-portal/internal/messages", {
+          conversation_id: activeConvId, content: newMessage,
+        });
+        qc.invalidateQueries({ queryKey: ["portal-messages", activeConvId] });
+      }
+      setNewMessage("");
+    } catch { setSendError("Failed to send"); }
+    finally { setSending(false); }
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Conversations</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading && <div className="flex justify-center py-6"><Spinner /></div>}
+          {!isLoading && conversations.length === 0 && (
+            <p className="px-4 py-6 text-sm text-muted-foreground">No conversations yet.</p>
+          )}
+          <div className="divide-y divide-border">
+            {conversations.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setActiveConvId(c.id)}
+                className={`w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors ${activeConvId === c.id ? "bg-muted/60" : ""}`}
+              >
+                <p className="text-sm font-medium truncate">{c.subject || "No subject"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {c.message_count} message{c.message_count !== 1 ? "s" : ""}
+                  {c.last_message_at && ` · ${new Date(c.last_message_at).toLocaleDateString()}`}
+                </p>
+              </button>
+            ))}
+          </div>
+          <div className="p-3 border-t border-border">
+            <button
+              onClick={() => setActiveConvId(null)}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              + New conversation
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">
+            {activeConvId
+              ? conversations.find((c) => c.id === activeConvId)?.subject ?? "Conversation"
+              : `New message to ${supplierName}`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {activeConvId && (
+            <div className="max-h-64 overflow-y-auto space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+              {messages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No messages yet.</p>
+              ) : (
+                messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.sender_type === "internal" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-xs rounded-lg px-3 py-2 text-sm ${m.sender_type === "internal" ? "bg-blue-600 text-white" : "bg-background border border-border"}`}>
+                      <p>{m.content}</p>
+                      <p className={`text-[10px] mt-0.5 ${m.sender_type === "internal" ? "text-blue-200" : "text-muted-foreground"}`}>
+                        {new Date(m.sent_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Write a message…"
+              rows={3}
+              className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <Button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="self-end">
+              {sending ? "…" : "Send"}
+            </Button>
+          </div>
+          {sendError && <p className="text-xs text-red-500">{sendError}</p>}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Assessments", "Risk Profile", "Intelligence"] as const;
+const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Intelligence", "Network", "Portal"] as const;
 type Tab = typeof TABS[number];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -151,6 +472,27 @@ export default function SupplierDetailPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [intelligenceSubTab, setIntelligenceSubTab] = useState<"score" | "history" | "benchmark" | "heatmap">("score");
+
+  // Start Assessment dialog
+  const [startAssessment, setStartAssessment] = useState(false);
+  const [assessTitle, setAssessTitle] = useState("");
+  const [assessType, setAssessType] = useState("ESG");
+  const [assessBusy, setAssessBusy] = useState(false);
+  const [assessError, setAssessError] = useState<string | null>(null);
+
+  // Schedule Reassessment
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleFrequency, setScheduleFrequency] = useState(90);
+  const [scheduleNextDue, setScheduleNextDue] = useState("");
+
+  // OFAC scan
+  const [ofacBusy, setOfacBusy] = useState(false);
+  const [ofacResult, setOfacResult] = useState<{ matches_found: number; matches: { sdn_name: string; sdn_type: string; programs: string[] }[] } | null>(null);
+  const [ofacError, setOfacError] = useState<string | null>(null);
+
+  // Due diligence
+  const [ddBusy, setDdBusy] = useState(false);
+  const [ddError, setDdError] = useState<string | null>(null);
 
   const { data: supplier, isLoading } = useQuery({
     queryKey: ["supplier", id],
@@ -185,13 +527,83 @@ export default function SupplierDetailPage() {
   const { data: benchmark } = useQuery({
     queryKey: ["supplier-benchmark", id],
     queryFn: () => getSupplierBenchmark(id),
-    enabled: !!id && tab === "Intelligence" && intelligenceSubTab === "benchmark",
+    enabled: !!id && (tab === "Overview" || (tab === "Intelligence" && intelligenceSubTab === "benchmark")),
+    staleTime: 300_000,
   });
 
   const { data: heatmap } = useQuery({
     queryKey: ["supplier-heatmap", id],
     queryFn: () => getSupplierHeatmap(id),
     enabled: !!id && tab === "Intelligence" && intelligenceSubTab === "heatmap",
+  });
+
+  const { data: sectorProfile } = useQuery({
+    queryKey: ["sector-profile-nace", supplier?.nace_code],
+    queryFn: () => getSectorProfileByNace(supplier!.nace_code!),
+    enabled: !!supplier?.nace_code && tab === "Intelligence" && intelligenceSubTab === "benchmark",
+    staleTime: 600_000,
+    retry: false,
+  });
+
+  const { data: dueDiligence, refetch: refetchDD } = useQuery<{
+    supplier_id: string; overall_risk: string; csddd_score: number;
+    human_rights_score: number; environmental_score: number;
+    active_findings: number; critical_findings: number;
+    open_recommendations: number; last_updated: string | null;
+  } | null>({
+    queryKey: ["supplier-due-diligence", id],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/due-diligence/suppliers/${id}`);
+        return r.data;
+      } catch { return null; }
+    },
+    enabled: !!id && tab === "Overview",
+    retry: false,
+  });
+
+  const { data: certificates } = useQuery<{
+    id: string; certificate_type: string; issuer: string | null;
+    valid_from: string | null; valid_until: string | null; status: string;
+  }[]>({
+    queryKey: ["supplier-certificates", id],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/suppliers/${id}/certificates`);
+        return r.data;
+      } catch { return []; }
+    },
+    enabled: !!id && tab === "Overview",
+    staleTime: 300_000,
+    retry: false,
+  });
+
+  const { data: questionnaireProgress } = useQuery<{
+    supplier_id: string; questionnaire_pct: number;
+  } | null>({
+    queryKey: ["supplier-questionnaire-pct", id],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/executive/suppliers?limit=500`);
+        const row = (r.data?.items ?? r.data ?? []).find((s: { id: string }) => s.id === id);
+        return row ? { supplier_id: id, questionnaire_pct: row.questionnaire_pct ?? 0 } : null;
+      } catch { return null; }
+    },
+    enabled: !!id && tab === "Overview",
+    staleTime: 300_000,
+    retry: false,
+  });
+
+  const { data: supplierFindings, isLoading: findingsLoading } = useQuery<{
+    id: string; title: string; description: string; severity: string;
+    category: string; status: string; assessment_id: string; created_at: string | null;
+  }[]>({
+    queryKey: ["supplier-findings", id],
+    queryFn: async () => {
+      const r = await apiClient.get(`/api/v1/executive/findings?supplier_id=${id}&limit=200`);
+      return r.data;
+    },
+    enabled: !!id && tab === "Findings",
   });
 
   const updateMutation = useMutation({
@@ -224,6 +636,31 @@ export default function SupplierDetailPage() {
     },
   });
 
+  const { data: existingSchedule } = useQuery<{ id: string; frequency_days: number; next_due_at: string; is_active: boolean } | null>({
+    queryKey: ["supplier-schedule", id],
+    queryFn: async () => {
+      const r = await apiClient.get(`/api/v1/assessments/schedules?supplier_id=${id}&active_only=false`);
+      return r.data?.[0] ?? null;
+    },
+    enabled: !!id && tab === "Assessments",
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: async () => {
+      const body: Record<string, unknown> = {
+        supplier_id: id,
+        frequency_days: scheduleFrequency,
+      };
+      if (scheduleNextDue) body.next_due_at = new Date(scheduleNextDue).toISOString();
+      const r = await apiClient.post("/api/v1/assessments/schedules", body);
+      return r.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-schedule", id] });
+      setShowSchedule(false);
+    },
+  });
+
   if (isLoading) {
     return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   }
@@ -249,6 +686,62 @@ export default function SupplierDetailPage() {
       notes: supplier!.notes,
     });
     setEditing(true);
+  }
+
+  async function handleStartAssessment() {
+    if (!assessTitle) return;
+    setAssessBusy(true);
+    setAssessError(null);
+    try {
+      const r = await apiClient.post("/api/v1/assessments/", {
+        title: assessTitle,
+        description: `Assessment for ${supplier!.name}`,
+        assessment_type: assessType,
+        scope: "",
+        supplier_id: id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["supplier-assessments", id] });
+      setStartAssessment(false);
+      setAssessTitle("");
+      router.push(`/assessments/${r.data.id}`);
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setAssessError(msg ?? "Failed to create assessment");
+    } finally {
+      setAssessBusy(false);
+    }
+  }
+
+  async function handleOfacScan() {
+    setOfacBusy(true);
+    setOfacError(null);
+    setOfacResult(null);
+    try {
+      const r = await apiClient.post(`/api/v1/integrations/sanctions/ofac/scan/supplier/${id}`);
+      setOfacResult(r.data);
+      // #151 Auto-create finding when OFAC matches found
+      if (r.data?.matches_found > 0) {
+        try {
+          const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
+          if (stored?.ofac_match_finding?.enabled !== false) {
+            await apiClient.post("/api/v1/automations/trigger", {
+              rule_id: "ofac_match_finding",
+              entity_type: "supplier",
+              entity_id: id,
+              payload: {
+                matches: r.data.matches,
+                severity: stored?.ofac_match_finding?.config?.finding_severity ?? "HIGH",
+              },
+            });
+          }
+        } catch { /* silent */ }
+      }
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setOfacError(msg ?? "OFAC scan failed");
+    } finally {
+      setOfacBusy(false);
+    }
   }
 
   return (
@@ -277,6 +770,9 @@ export default function SupplierDetailPage() {
           <div className="flex items-center gap-2">
             {tierBadge(supplier.supplier_tier)}
             {statusBadge(supplier.supplier_status)}
+            <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 print:hidden">
+              <Printer className="h-3.5 w-3.5" /> Export PDF
+            </Button>
             <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
               <Edit2 className="h-3.5 w-3.5" /> Edit
             </Button>
@@ -386,14 +882,180 @@ export default function SupplierDetailPage() {
           </Card>
 
           <div className="space-y-4">
-            {(["Assessments", "Risk Profile", "Intelligence"] as Tab[]).map((t) => {
+            {/* ── Benchmark Summary Card (Item 19) ─────────────────────────── */}
+            {benchmark && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <BarChart3 className="h-4 w-4 text-violet-500" />
+                      Peer Benchmark
+                    </span>
+                    <button
+                      onClick={() => { setTab("Intelligence"); setIntelligenceSubTab("benchmark"); }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Full view →
+                    </button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Risk Score</span>
+                    <span className="text-lg font-bold tabular-nums">{benchmark.risk_score?.toFixed(0) ?? "—"}</span>
+                  </div>
+                  {benchmark.sector_percentile != null && (
+                    <div>
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Sector percentile</span>
+                        <span className="font-medium text-foreground">{benchmark.sector_percentile.toFixed(0)}th</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-violet-500 rounded-full"
+                          style={{ width: `${benchmark.sector_percentile}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {benchmark.peer_comparison && (
+                    <p className="text-xs text-muted-foreground">{benchmark.peer_comparison}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* #88 Questionnaire progress bar */}
+            {questionnaireProgress != null && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-blue-500" /> Portal Questionnaire
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Completion</span>
+                    <span className="font-semibold">{questionnaireProgress.questionnaire_pct}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        questionnaireProgress.questionnaire_pct >= 100 ? "bg-emerald-500" :
+                        questionnaireProgress.questionnaire_pct >= 50 ? "bg-amber-500" : "bg-red-400"
+                      }`}
+                      style={{ width: `${questionnaireProgress.questionnaire_pct}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* #85-86 Due Diligence card */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <GitBranch className="h-4 w-4 text-orange-500" />
+                    Due Diligence
+                  </span>
+                  <button
+                    onClick={async () => {
+                      setDdBusy(true); setDdError(null);
+                      try {
+                        await apiClient.post("/api/v1/due-diligence/reports/generate", {
+                          supplier_id: id, report_types: ["CSDDD", "HUMAN_RIGHTS", "ENVIRONMENTAL"],
+                        });
+                        refetchDD();
+                      } catch { setDdError("Failed to run"); }
+                      finally { setDdBusy(false); }
+                    }}
+                    disabled={ddBusy}
+                    className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  >
+                    {ddBusy ? "Running…" : "Run"}
+                  </button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {ddError && <p className="text-xs text-red-500 mb-2">{ddError}</p>}
+                {dueDiligence ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Overall Risk</span>
+                      <span className={`font-semibold ${dueDiligence.overall_risk === "Critical" || dueDiligence.overall_risk === "High" ? "text-red-600" : dueDiligence.overall_risk === "Medium" ? "text-amber-600" : "text-emerald-600"}`}>
+                        {dueDiligence.overall_risk}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">CSDDD Score</span>
+                      <span className="font-medium">{dueDiligence.csddd_score?.toFixed(0) ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Human Rights</span>
+                      <span className="font-medium">{dueDiligence.human_rights_score?.toFixed(0) ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Active Findings</span>
+                      <span className={`font-semibold ${dueDiligence.active_findings > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        {dueDiligence.active_findings}
+                      </span>
+                    </div>
+                    {dueDiligence.last_updated && (
+                      <p className="text-muted-foreground">
+                        Updated {new Date(dueDiligence.last_updated).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No due diligence report yet. Click Run to generate.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* #90 Certificate expiry widget */}
+            {certificates && certificates.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Certificates
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-1.5">
+                  {certificates.slice(0, 4).map((cert) => {
+                    const expiryDate = cert.valid_until ? new Date(cert.valid_until) : null;
+                    const daysLeft = expiryDate ? Math.floor((expiryDate.getTime() - Date.now()) / 86_400_000) : null;
+                    const expired = daysLeft != null && daysLeft < 0;
+                    const expiring = daysLeft != null && daysLeft >= 0 && daysLeft < 90;
+                    return (
+                      <div key={cert.id} className="flex items-center justify-between text-xs">
+                        <span className="truncate max-w-[120px]" title={cert.certificate_type}>{cert.certificate_type}</span>
+                        {daysLeft == null ? (
+                          <span className="text-muted-foreground">No expiry</span>
+                        ) : expired ? (
+                          <span className="text-red-600 font-semibold">Expired</span>
+                        ) : expiring ? (
+                          <span className="text-amber-600 font-semibold">{daysLeft}d left</span>
+                        ) : (
+                          <span className="text-emerald-600">{daysLeft}d left</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            {(["Assessments", "Findings", "Risk Profile", "Intelligence"] as Tab[]).map((t) => {
               const icons: Record<string, React.ReactNode> = {
                 Assessments: <FileText className="h-8 w-8 text-blue-500" />,
-                "Risk Profile": <AlertTriangle className="h-8 w-8 text-amber-500" />,
+                Findings: <AlertTriangle className="h-8 w-8 text-red-500" />,
+                "Risk Profile": <ShieldAlert className="h-8 w-8 text-amber-500" />,
                 Intelligence: <Target className="h-8 w-8 text-violet-500" />,
               };
               const subtitles: Record<string, string> = {
                 Assessments: "View all assessments",
+                Findings: "All findings across assessments",
                 "Risk Profile": "Findings, risks, actions",
                 Intelligence: "ESG & risk scores, trend",
               };
@@ -419,12 +1081,119 @@ export default function SupplierDetailPage() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Assessments ({assessments?.total ?? 0})</h2>
-            <Link href="/assessments">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> New Assessment
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => { setShowSchedule((v) => !v); }}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                {existingSchedule ? "Edit Schedule" : "Schedule Reassessment"}
               </Button>
-            </Link>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => { setStartAssessment((v) => !v); setAssessError(null); }}
+              >
+                <FileText className="h-3.5 w-3.5" /> Start Assessment
+              </Button>
+            </div>
           </div>
+
+          {existingSchedule && !showSchedule && (
+            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm flex items-center gap-2 dark:border-emerald-800 dark:bg-emerald-950/30">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+              <span className="text-emerald-800 dark:text-emerald-300">
+                Reassessment scheduled every <strong>{existingSchedule.frequency_days} days</strong>
+                {existingSchedule.next_due_at && (
+                  <> — next due <strong>{new Date(existingSchedule.next_due_at).toLocaleDateString()}</strong></>
+                )}
+              </span>
+            </div>
+          )}
+
+          {showSchedule && (
+            <Card className="mb-4">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <p className="text-sm font-medium">Schedule Reassessment for {supplier.name}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Frequency</label>
+                    <select
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      value={scheduleFrequency}
+                      onChange={(e) => setScheduleFrequency(Number(e.target.value))}
+                    >
+                      <option value={30}>Monthly (30 days)</option>
+                      <option value={90}>Quarterly (90 days)</option>
+                      <option value={180}>Semi-annual (180 days)</option>
+                      <option value={365}>Annual (365 days)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Next due date (optional)</label>
+                    <input
+                      type="date"
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      value={scheduleNextDue}
+                      onChange={(e) => setScheduleNextDue(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {scheduleMutation.isError && (
+                  <p className="text-xs text-red-600">Failed to save schedule — a schedule may already exist for this supplier.</p>
+                )}
+                {scheduleMutation.isSuccess && (
+                  <p className="text-xs text-emerald-600">Schedule saved.</p>
+                )}
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={scheduleMutation.isPending} onClick={() => scheduleMutation.mutate()}>
+                    {scheduleMutation.isPending ? "Saving…" : "Save Schedule"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowSchedule(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {startAssessment && (
+            <Card className="mb-4">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <p className="text-sm font-medium">New Assessment for {supplier.name}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs text-muted-foreground mb-1">Title</label>
+                    <input
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      placeholder={`${supplier.name} ESG Assessment ${new Date().getFullYear()}`}
+                      value={assessTitle}
+                      onChange={(e) => setAssessTitle(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Type</label>
+                    <select
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      value={assessType}
+                      onChange={(e) => setAssessType(e.target.value)}
+                    >
+                      {["ESG", "Environmental", "Social", "Governance", "Compliance", "Financial"].map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {assessError && <p className="text-xs text-red-600">{assessError}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={!assessTitle || assessBusy} onClick={handleStartAssessment}>
+                    {assessBusy ? "Creating…" : "Create & Open"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setStartAssessment(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {assessmentsLoading ? (
             <div className="flex justify-center py-12"><Spinner size="lg" /></div>
@@ -477,6 +1246,85 @@ export default function SupplierDetailPage() {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── Findings Tab ──────────────────────────────────────────────────── */}
+      {tab === "Findings" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">
+              Findings ({supplierFindings?.length ?? 0})
+            </h2>
+          </div>
+          {findingsLoading ? (
+            <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+          ) : !supplierFindings?.length ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No findings for this supplier yet.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Findings are surfaced when assessments are run.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30 text-xs text-muted-foreground">
+                      <th className="px-4 py-3 text-left">Finding</th>
+                      <th className="px-4 py-3 text-left">Severity</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">Category</th>
+                      <th className="px-4 py-3 text-left hidden md:table-cell">Date</th>
+                      <th className="px-4 py-3 text-right">Assessment</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {supplierFindings.map((f) => {
+                      const sevColor: Record<string, string> = {
+                        Critical: "bg-red-100 text-red-800 border-red-200",
+                        High: "bg-orange-100 text-orange-800 border-orange-200",
+                        Medium: "bg-amber-100 text-amber-800 border-amber-200",
+                        Low: "bg-slate-100 text-slate-700 border-slate-200",
+                      };
+                      return (
+                        <tr key={f.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="font-medium line-clamp-1 max-w-sm">{f.title}</p>
+                            {f.description && (
+                              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1 max-w-sm">{f.description}</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${sevColor[f.severity] ?? "bg-slate-100 text-slate-700"}`}>
+                              {f.severity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden sm:table-cell">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                              {f.category || "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground">
+                            {f.created_at ? new Date(f.created_at).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <Link
+                              href={`/assessments/${f.assessment_id}`}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" /> View
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </CardContent>
@@ -594,17 +1442,55 @@ export default function SupplierDetailPage() {
                 </button>
               ))}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => recalcMutation.mutate()}
-              disabled={recalcMutation.isPending}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${recalcMutation.isPending ? "animate-spin" : ""}`} />
-              Recalculate
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleOfacScan}
+                disabled={ofacBusy}
+              >
+                <ShieldAlert className={`h-3.5 w-3.5 ${ofacBusy ? "animate-pulse" : ""}`} />
+                {ofacBusy ? "Scanning…" : "OFAC Scan"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => recalcMutation.mutate()}
+                disabled={recalcMutation.isPending}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${recalcMutation.isPending ? "animate-spin" : ""}`} />
+                Recalculate
+              </Button>
+            </div>
           </div>
+
+          {ofacResult && (
+            <Card className={ofacResult.matches_found > 0 ? "border-red-300 bg-red-50" : "border-emerald-300 bg-emerald-50"}>
+              <CardContent className="pt-4 pb-3">
+                {ofacResult.matches_found === 0 ? (
+                  <p className="text-sm font-medium text-emerald-700 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> No OFAC SDN matches found for {supplier.name}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {ofacResult.matches_found} potential OFAC match{ofacResult.matches_found > 1 ? "es" : ""}
+                    </p>
+                    {ofacResult.matches.slice(0, 5).map((m, i) => (
+                      <div key={i} className="text-xs text-red-800 border border-red-200 rounded p-2 bg-white/60">
+                        <p className="font-medium">{m.sdn_name} <span className="font-normal text-muted-foreground">({m.sdn_type})</span></p>
+                        {m.programs.length > 0 && <p className="text-red-600">Programs: {m.programs.join(", ")}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {ofacError && <p className="text-xs text-red-600">{ofacError}</p>}
 
           {/* Score sub-tab */}
           {intelligenceSubTab === "score" && (
@@ -832,8 +1718,58 @@ export default function SupplierDetailPage() {
                   </Card>
                   <p className="text-xs text-muted-foreground text-center">
                     Benchmarking is within your organization's supplier portfolio.
-                    Cross-organization benchmarking is planned for M31 (Regulatory Intelligence).
                   </p>
+
+                  {/* #87 Sector intelligence comparison */}
+                  {sectorProfile && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          Sector Risk Profile — {sectorProfile.section_name}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          NACE {supplier?.nace_code} · Industry-level E/S/G risk baseline
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                          {[
+                            { label: "Environmental", value: sectorProfile.environmental_risk },
+                            { label: "Social", value: sectorProfile.social_risk },
+                            { label: "Governance", value: sectorProfile.governance_risk },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="rounded-lg border p-2">
+                              <p className="text-muted-foreground">{label}</p>
+                              <p className={`font-semibold mt-0.5 ${
+                                value === "HIGH" ? "text-red-600" :
+                                value === "MEDIUM" ? "text-amber-600" : "text-emerald-600"
+                              }`}>{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {sectorProfile.key_risk_themes.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Key Risk Themes</p>
+                            <div className="flex flex-wrap gap-1">
+                              {sectorProfile.key_risk_themes.slice(0, 6).map((t) => (
+                                <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">{t}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {sectorProfile.applicable_frameworks.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Applicable Frameworks</p>
+                            <div className="flex flex-wrap gap-1">
+                              {sectorProfile.applicable_frameworks.slice(0, 6).map((f) => (
+                                <span key={f} className="rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px]">{f}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               )}
             </div>
@@ -899,6 +1835,18 @@ export default function SupplierDetailPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* ── Network Tab ───────────────────────────────────────────────────── */}
+      {tab === "Network" && (
+        <div className="space-y-4">
+          <NetworkTab supplierId={id} />
+        </div>
+      )}
+
+      {/* ── Portal Tab (#89 supplier portal conversation thread) ──────── */}
+      {tab === "Portal" && (
+        <SupplierPortalTab supplierId={id} supplierName={supplier.name} />
       )}
 
       {/* Edit Modal */}

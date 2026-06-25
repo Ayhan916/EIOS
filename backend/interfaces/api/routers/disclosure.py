@@ -580,6 +580,37 @@ async def recalculate_coverage(
 # ── Disclosure Workspace ──────────────────────────────────────────────────────
 
 
+@router.get("/gaps")
+async def list_org_compliance_gaps(
+    severity: str | None = None,
+    include_resolved: bool = False,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+):
+    """List all open compliance gaps for the org (lightweight, for dashboard use)."""
+    gap_repo = SQLComplianceGapRepository(session)
+    gaps = await gap_repo.list_for_org(
+        current_user.organization_id,
+        severity=severity,
+        include_resolved=include_resolved,
+        limit=limit,
+    )
+    return [
+        {
+            "id": g.id,
+            "description": g.description,
+            "severity": g.severity,
+            "gap_type": g.gap_type,
+            "regulation_requirement_id": g.regulation_requirement_id,
+            "supplier_id": g.supplier_id,
+            "is_resolved": g.is_resolved,
+            "calculated_at": g.calculated_at.isoformat() if g.calculated_at else None,
+        }
+        for g in gaps
+    ]
+
+
 @router.get("/workspace/{requirement_id}", response_model=DisclosureWorkspaceResponse)
 async def disclosure_workspace(
     requirement_id: str,

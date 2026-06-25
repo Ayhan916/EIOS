@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "eios.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "eios.labels" . | nindent 4 }}
+data:
+  ENVIRONMENT: {{ .Values.backend.env.ENVIRONMENT | quote }}
+  LOG_LEVEL: {{ .Values.backend.env.LOG_LEVEL | quote }}
+  WORKERS: {{ .Values.backend.env.WORKERS | quote }}
+  LLM_PROVIDER: {{ .Values.backend.env.LLM_PROVIDER | quote }}
+  LLM_MODEL: {{ .Values.backend.env.LLM_MODEL | quote }}
+  LLM_MONTHLY_TOKEN_BUDGET: {{ .Values.backend.env.LLM_MONTHLY_TOKEN_BUDGET | quote }}
+  EMBEDDING_MODEL: {{ .Values.backend.env.EMBEDDING_MODEL | quote }}
+  S3_ENABLED: {{ .Values.backend.env.S3_ENABLED | quote }}
+  S3_BUCKET: {{ .Values.backend.env.S3_BUCKET | quote }}
+  S3_REGION: {{ .Values.backend.env.S3_REGION | quote }}
+  {{- if .Values.observability.otelEndpoint }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.observability.otelEndpoint | quote }}
+  OTEL_SERVICE_NAME: "eios-backend"
+  {{- end }}

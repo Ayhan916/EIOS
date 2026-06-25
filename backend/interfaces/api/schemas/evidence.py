@@ -48,3 +48,22 @@ class DocumentUploadResponse(BaseModel):
     chunks_created: int
     warnings: list[str] = []
     parser_used: str = ""
+    # M45.2 — async path extras (None when sync ingestion was used)
+    task_id: str | None = None
+    s3_object_key: str | None = None
+
+
+class IngestionStatusResponse(BaseModel):
+    """Polling response for async Celery ingestion (M45.2)."""
+    evidence_id: str
+    task_id: str | None
+    task_state: str          # PENDING | STARTED | SUCCESS | FAILURE | RETRY
+    ingestion_status: str    # evidence record's current ingestion_status
+    result: dict | None = None  # task result payload once SUCCESS
+
+
+class EvidenceDownloadResponse(BaseModel):
+    evidence_id: str
+    file_name: str | None
+    presigned_url: str
+    expires_in_seconds: int

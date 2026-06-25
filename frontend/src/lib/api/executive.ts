@@ -121,3 +121,95 @@ export async function deleteReportSchedule(id: string): Promise<void> {
     throw new Error(body.detail ?? res.statusText);
   }
 }
+
+// ── M50: Command Center ───────────────────────────────────────────────────────
+
+export interface PriorityAction {
+  type: string;
+  title: string;
+  severity: "critical" | "high" | "medium";
+  href: string;
+  count: number;
+}
+
+export interface PendingDecision {
+  id: string;
+  title: string;
+  priority: string;
+  due_date: string | null;
+}
+
+export interface CommandCenterData {
+  esg_health_score: number;
+  health_label: "Excellent" | "Good" | "Needs Attention" | "Critical";
+  priority_actions: PriorityAction[];
+  pending_decisions: PendingDecision[];
+  pending_decisions_count: number;
+  yoy: {
+    avg_esg_delta: number | null;
+    prior_avg_esg: number | null;
+    current_avg_esg: number | null;
+  };
+  ceo: {
+    total_scored_suppliers: number;
+    critical_risk_suppliers: number;
+    open_findings: number;
+    overdue_actions: number;
+  };
+  cfo: {
+    taxonomy_alignment_pct: number | null;
+    green_revenue_pct: number | null;
+  };
+  cso: {
+    latest_emissions_tco2e: number | null;
+    kpi_on_track: number;
+    kpi_at_risk: number;
+    kpi_missed: number;
+  };
+  cco: {
+    soc2_readiness_pct: number | null;
+    soc2_implemented: number;
+    soc2_total: number;
+    open_critical_findings: number;
+  };
+}
+
+export async function getCommandCenter(): Promise<CommandCenterData> {
+  return request(`${BASE}/command-center`);
+}
+
+// ── M50: Board Portal (public) ────────────────────────────────────────────────
+
+export async function getBoardPortalData(token: string): Promise<{
+  report_id: string;
+  title: string;
+  period_start: string;
+  period_end: string;
+  generated_at: string | null;
+  report_version: string;
+  executive_summary: string;
+  allowed_sections: string[];
+  expires_at: string;
+  shared_with_email: string | null;
+  supplier_snapshot: Record<string, unknown> | null;
+  sections: Record<string, Record<string, unknown> | null>;
+}> {
+  const res = await fetch(`/api/v1/board/${token}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(body.detail ?? res.statusText);
+  }
+  return res.json();
+}
+
+export function createShareLink(reportId: string, body: {
+  expires_in_hours?: number;
+  allowed_sections?: string[];
+  shared_with_email?: string | null;
+}): Promise<{ token: string; expires_at: string; report_id: string; board_url: string }> {
+  return request(`/api/v1/executive/reports/${reportId}/share-link`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}

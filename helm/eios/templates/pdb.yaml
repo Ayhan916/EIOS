@@ -1,0 +1,33 @@
+{{- if .Values.podDisruptionBudget.backend.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "eios.fullname" . }}-backend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "eios.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.backend.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "eios.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+{{- end }}
+---
+{{- if .Values.podDisruptionBudget.celeryWorker.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "eios.fullname" . }}-celery-worker
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "eios.labels" . | nindent 4 }}
+    app.kubernetes.io/component: celery-worker
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.celeryWorker.minAvailable }}
+  selector:
+    matchLabels:
+      {{- include "eios.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: celery-worker
+{{- end }}

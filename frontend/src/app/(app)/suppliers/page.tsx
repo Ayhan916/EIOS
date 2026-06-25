@@ -1,24 +1,48 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Plus,
   Search,
   Briefcase,
   Globe,
-  AlertTriangle,
+  LayoutGrid,
+  LayoutList,
   ChevronLeft,
   ChevronRight,
   X,
 } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 import { listSuppliers, createSupplier } from "@/lib/api/suppliers";
+import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import type { SupplierCreate, SupplierTier } from "@/types/api";
+
+interface SupplierScore {
+  id: string;
+  esg_score: number | null;
+  risk_score: number | null;
+  risk_level: string | null;
+  assessment_count: number;
+  finding_count: number;
+  questionnaire_pct: number | null;
+  ofac_status: string | null;
+}
 
 const TIER_OPTIONS: { value: SupplierTier | ""; label: string }[] = [
   { value: "", label: "All Tiers" },
@@ -34,6 +58,14 @@ const STATUS_OPTIONS = [
   { value: "Inactive", label: "Inactive" },
 ];
 
+const RISK_LEVEL_COLORS: Record<string, string> = {
+  Critical: "bg-red-100 text-red-800",
+  High:     "bg-orange-100 text-orange-800",
+  Medium:   "bg-amber-100 text-amber-800",
+  Low:      "bg-emerald-100 text-emerald-800",
+  Moderate: "bg-amber-100 text-amber-800",
+};
+
 function tierBadge(tier: string) {
   const colors: Record<string, string> = {
     "Tier 1": "bg-blue-100 text-blue-800",
@@ -42,9 +74,7 @@ function tierBadge(tier: string) {
     Other: "bg-gray-100 text-gray-700",
   };
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[tier] ?? "bg-gray-100 text-gray-700"}`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${colors[tier] ?? "bg-gray-100 text-gray-700"}`}>
       {tier}
     </span>
   );
@@ -52,76 +82,169 @@ function tierBadge(tier: string) {
 
 function statusBadge(s: string) {
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-        s === "Active"
-          ? "bg-emerald-100 text-emerald-800"
-          : "bg-slate-100 text-slate-600"
-      }`}
-    >
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${s === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
       {s}
     </span>
   );
 }
 
+function OfacBadge({ status }: { status: string | null }) {
+  if (!status || status === "none") return <span className="text-xs text-muted-foreground/50">—</span>;
+  const colors: Record<string, string> = {
+    none: "bg-emerald-50 text-emerald-700",
+    low: "bg-amber-50 text-amber-700",
+    medium: "bg-orange-100 text-orange-700",
+    high: "bg-red-100 text-red-800",
+    sanctioned: "bg-red-600 text-white",
+  };
+  const labels: Record<string, string> = {
+    none: "Clear",
+    low: "Low",
+    medium: "Medium",
+    high: "High",
+    sanctioned: "Sanctioned",
+  };
+  const key = status.toLowerCase();
+  return (
+    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${colors[key] ?? "bg-slate-100 text-slate-600"}`}>
+      {labels[key] ?? status}
+    </span>
+  );
+}
+
+function QuestionnairePct({ pct }: { pct: number | null }) {
+  if (pct == null) return <span className="text-xs text-muted-foreground/50">—</span>;
+  const color = pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-slate-300";
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      </div>
+      <span className="text-xs tabular-nums text-muted-foreground">{pct}%</span>
+    </div>
+  );
+}
+
+function EsgScoreDistribution({ scores }: { scores: SupplierScore[] }) {
+  const withScore = scores.filter((s) => s.esg_score != null);
+  if (withScore.length === 0) return null;
+
+  const buckets = [
+    { label: "0–25", min: 0, max: 25, color: "#ef4444" },
+    { label: "26–50", min: 26, max: 50, color: "#f97316" },
+    { label: "51–75", min: 51, max: 75, color: "#f59e0b" },
+    { label: "76–100", min: 76, max: 100, color: "#10b981" },
+  ];
+
+  const data = buckets.map((b) => ({
+    label: b.label,
+    count: withScore.filter((s) => s.esg_score! >= b.min && s.esg_score! <= b.max).length,
+    color: b.color,
+  }));
+
+  return (
+    <Card>
+      <CardContent className="pt-4 pb-3">
+        <p className="text-xs font-semibold text-muted-foreground mb-2">ESG Score Distribution ({withScore.length} scored)</p>
+        <ResponsiveContainer width="100%" height={90}>
+          <BarChart data={data} margin={{ top: 0, right: 8, bottom: 0, left: -20 }}>
+            <XAxis dataKey="label" tick={{ fontSize: 10 }} />
+            <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
+            <Tooltip
+              formatter={(v: number) => [`${v} suppliers`, "Count"]}
+              contentStyle={{ fontSize: 11 }}
+            />
+            <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+              {data.map((d, idx) => (
+                <Cell key={idx} fill={d.color} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EsgScorePill({ score, riskLevel }: { score: number | null; riskLevel: string | null }) {
+  if (score === null) return <span className="text-xs text-muted-foreground/50">—</span>;
+  const color = score >= 70 ? "text-emerald-700 bg-emerald-50" : score >= 40 ? "text-amber-700 bg-amber-50" : "text-red-700 bg-red-50";
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-bold tabular-nums ${color}`}>
+        {score.toFixed(0)}
+      </span>
+      {riskLevel && (
+        <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${RISK_LEVEL_COLORS[riskLevel] ?? "bg-slate-100 text-slate-600"}`}>
+          {riskLevel}
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function SuppliersPage() {
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [tierFilter, setTierFilter] = useState("");
+  const [search, setSearch] = useState(() => searchParams.get("country") || searchParams.get("industry") || "");
+  const [tierFilter, setTierFilter] = useState(() => searchParams.get("tier") || "");
   const [statusFilter, setStatusFilter] = useState("");
+  const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [showCreate, setShowCreate] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
-  // Form state
+  useEffect(() => {
+    const country = searchParams.get("country");
+    const industry = searchParams.get("industry");
+    const tier = searchParams.get("tier");
+    if (country) { setSearch(country); setSearchInput(country); }
+    else if (industry) { setSearch(industry); setSearchInput(industry); }
+    if (tier) setTierFilter(tier);
+  }, [searchParams]);
+
   const [form, setForm] = useState<SupplierCreate>({
-    name: "",
-    legal_name: "",
-    country: "",
-    industry: "",
-    nace_code: "",
-    website: "",
-    supplier_tier: "Tier 1",
-    notes: "",
+    name: "", legal_name: "", country: "", industry: "",
+    nace_code: "", website: "", supplier_tier: "Tier 1", notes: "",
   });
 
   const PAGE_SIZE = 15;
 
   const { data, isLoading } = useQuery({
     queryKey: ["suppliers", { page, page_size: PAGE_SIZE, search, tierFilter, statusFilter }],
-    queryFn: () =>
-      listSuppliers({
-        page,
-        page_size: PAGE_SIZE,
-        search: search || undefined,
-        supplier_tier: tierFilter || undefined,
-        status: statusFilter || undefined,
-      }),
+    queryFn: () => listSuppliers({ page, page_size: PAGE_SIZE, search: search || undefined, supplier_tier: tierFilter || undefined, status: statusFilter || undefined }),
   });
+
+  const { data: scoreData } = useQuery<SupplierScore[]>({
+    queryKey: ["supplier-scores-overview"],
+    queryFn: async () => { const r = await apiClient.get("/api/v1/executive/suppliers"); return r.data; },
+    staleTime: 60_000,
+  });
+
+  const scoreMap = new Map<string, SupplierScore>(
+    (scoreData ?? []).map((s) => [s.id, s])
+  );
 
   const createMutation = useMutation({
     mutationFn: createSupplier,
-    onSuccess: () => {
+    onSuccess: async (newSupplier) => {
       queryClient.invalidateQueries({ queryKey: ["suppliers"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-scores-overview"] });
       setShowCreate(false);
       setCreateError(null);
-      setForm({
-        name: "",
-        legal_name: "",
-        country: "",
-        industry: "",
-        nace_code: "",
-        website: "",
-        supplier_tier: "Tier 1",
-        notes: "",
-      });
+      setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" });
+      // #159 Auto-trigger OFAC scan if rule is enabled in automation settings
+      try {
+        const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
+        if (stored?.supplier_ofac_scan?.enabled !== false && newSupplier?.id) {
+          await apiClient.post(`/api/v1/integrations/sanctions/ofac/scan/supplier/${newSupplier.id}`);
+        }
+      } catch { /* silent — OFAC scan failure should not block supplier creation */ }
     },
     onError: (err: unknown) => {
-      const msg =
-        err instanceof Error ? err.message : "Failed to create supplier";
-      setCreateError(msg);
+      setCreateError(err instanceof Error ? err.message : "Failed to create supplier");
     },
   });
 
@@ -134,9 +257,6 @@ export default function SuppliersPage() {
   const suppliers = data?.items ?? [];
   const total = data?.total ?? 0;
   const totalPages = data ? Math.ceil(total / PAGE_SIZE) : 1;
-
-  // Summary cards (computed from current page when no API aggregate)
-  const activeCount = data?.items.filter((s) => s.supplier_status === "Active").length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -166,62 +286,101 @@ export default function SuppliersPage() {
               className="pl-9 w-64"
             />
           </div>
-          <Button type="submit" variant="secondary">
-            Search
-          </Button>
+          <Button type="submit" variant="secondary">Search</Button>
         </form>
         <select
           value={tierFilter}
           onChange={(e) => { setTierFilter(e.target.value); setPage(1); }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          {TIER_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+          {TIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          {STATUS_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
+          {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
         </select>
         {(search || tierFilter || statusFilter) && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setSearch(""); setSearchInput(""); setTierFilter(""); setStatusFilter(""); setPage(1); }}
-            className="gap-1 text-muted-foreground"
-          >
+          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setSearchInput(""); setTierFilter(""); setStatusFilter(""); setPage(1); }} className="gap-1 text-muted-foreground">
             <X className="h-3 w-3" /> Clear
           </Button>
         )}
-        <span className="ml-auto text-sm text-muted-foreground">
-          {total} supplier{total !== 1 ? "s" : ""}
-        </span>
+        <div className="ml-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{total} supplier{total !== 1 ? "s" : ""}</span>
+          <div className="flex items-center rounded-md border border-border overflow-hidden">
+            <button onClick={() => setViewMode("table")} className={`p-1.5 transition-colors ${viewMode === "table" ? "bg-slate-800 text-white" : "text-muted-foreground hover:bg-muted"}`} title="Table view">
+              <LayoutList className="h-4 w-4" />
+            </button>
+            <button onClick={() => setViewMode("grid")} className={`p-1.5 transition-colors ${viewMode === "grid" ? "bg-slate-800 text-white" : "text-muted-foreground hover:bg-muted"}`} title="Grid view">
+              <LayoutGrid className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Table */}
+      {/* ESG Score Distribution */}
+      {scoreData && scoreData.length > 0 && <EsgScoreDistribution scores={scoreData} />}
+
+      {/* Content */}
       {isLoading ? (
         <div className="flex justify-center py-12"><Spinner size="lg" /></div>
       ) : suppliers.length === 0 ? (
         <Card>
-          <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
-            <Briefcase className="h-10 w-10 text-muted-foreground/40" />
-            <p className="text-muted-foreground">
-              {search || tierFilter || statusFilter
-                ? "No suppliers match your filters."
-                : "No suppliers yet. Add your first supplier to begin ESG due diligence."}
-            </p>
-            {!search && !tierFilter && !statusFilter && (
-              <Button onClick={() => setShowCreate(true)} className="mt-2 gap-2">
-                <Plus className="h-4 w-4" /> Add Supplier
-              </Button>
-            )}
+          <CardContent className="p-0">
+            <EmptyState
+              icon={Briefcase}
+              title={search || tierFilter || statusFilter ? "No suppliers match your filters" : "No suppliers yet"}
+              description={search || tierFilter || statusFilter
+                ? "Try adjusting or clearing your filters to find suppliers."
+                : "Here's what you can do next: add your first supplier to start tracking ESG due diligence, run assessments, and surface risks."}
+              actions={!search && !tierFilter && !statusFilter ? [
+                { label: "Add Supplier", onClick: () => setShowCreate(true), variant: "primary" },
+                { label: "Import CSV", href: "/suppliers", variant: "outline" },
+              ] : undefined}
+            />
           </CardContent>
         </Card>
+      ) : viewMode === "grid" ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {suppliers.map((s) => {
+              const sc = scoreMap.get(s.id);
+              return (
+                <Link key={s.id} href={`/suppliers/${s.id}`} className="block">
+                  <Card className="h-full transition-shadow hover:shadow-md hover:border-blue-300">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <p className="font-semibold text-sm leading-tight line-clamp-2">{s.name}</p>
+                        {tierBadge(s.supplier_tier)}
+                      </div>
+                      {s.country && (
+                        <p className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
+                          <Globe className="h-3 w-3 shrink-0" /> {s.country}
+                        </p>
+                      )}
+                      {s.industry && <p className="text-xs text-muted-foreground mb-2 line-clamp-1">{s.industry}</p>}
+                      <div className="mt-3 flex items-center justify-between">
+                        {statusBadge(s.supplier_status)}
+                        {sc && <EsgScorePill score={sc.esg_score} riskLevel={sc.risk_level} />}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })}
+          </div>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" /></Button>
+                <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}><ChevronRight className="h-4 w-4" /></Button>
+              </div>
+            </div>
+          )}
+        </>
       ) : (
         <Card>
           <CardContent className="p-0">
@@ -230,73 +389,73 @@ export default function SuppliersPage() {
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Country</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Industry</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Country</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Industry</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tier</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">ESG Score</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">Questionnaire</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">OFAC</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Assessments</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Findings</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">NACE</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {suppliers.map((s) => (
-                    <tr key={s.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <Link
-                          href={`/suppliers/${s.id}`}
-                          className="font-medium text-foreground hover:text-blue-600 hover:underline"
-                        >
-                          {s.name}
-                        </Link>
-                        {s.legal_name && s.legal_name !== s.name && (
-                          <p className="text-xs text-muted-foreground">{s.legal_name}</p>
-                        )}
-                      </td>
-                      <td className="px-4 py-3">
-                        {s.country ? (
-                          <span className="flex items-center gap-1 text-muted-foreground">
-                            <Globe className="h-3 w-3" /> {s.country}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground/50">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-muted-foreground">
-                        {s.industry || <span className="text-muted-foreground/50">—</span>}
-                      </td>
-                      <td className="px-4 py-3">{tierBadge(s.supplier_tier)}</td>
-                      <td className="px-4 py-3">{statusBadge(s.supplier_status)}</td>
-                      <td className="px-4 py-3 text-muted-foreground font-mono text-xs">
-                        {s.nace_code || <span className="text-muted-foreground/50">—</span>}
-                      </td>
-                    </tr>
-                  ))}
+                  {suppliers.map((s) => {
+                    const sc = scoreMap.get(s.id);
+                    return (
+                      <tr key={s.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3">
+                          <Link href={`/suppliers/${s.id}`} className="font-medium text-foreground hover:text-blue-600 hover:underline">
+                            {s.name}
+                          </Link>
+                          {s.legal_name && s.legal_name !== s.name && (
+                            <p className="text-xs text-muted-foreground">{s.legal_name}</p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 hidden sm:table-cell">
+                          {s.country ? (
+                            <span className="flex items-center gap-1 text-muted-foreground">
+                              <Globe className="h-3 w-3" /> {s.country}
+                            </span>
+                          ) : <span className="text-muted-foreground/50">—</span>}
+                        </td>
+                        <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
+                          {s.industry || <span className="text-muted-foreground/50">—</span>}
+                        </td>
+                        <td className="px-4 py-3">{tierBadge(s.supplier_tier)}</td>
+                        <td className="px-4 py-3">
+                          <EsgScorePill score={sc?.esg_score ?? null} riskLevel={sc?.risk_level ?? null} />
+                        </td>
+                        <td className="px-4 py-3 hidden xl:table-cell">
+                          <QuestionnairePct pct={sc?.questionnaire_pct ?? null} />
+                        </td>
+                        <td className="px-4 py-3 hidden xl:table-cell">
+                          <OfacBadge status={sc?.ofac_status ?? null} />
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground tabular-nums">
+                          {sc ? sc.assessment_count : "—"}
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs tabular-nums">
+                          {sc ? (
+                            <span className={sc.finding_count > 0 ? "text-amber-700 font-medium" : "text-muted-foreground"}>
+                              {sc.finding_count}
+                            </span>
+                          ) : "—"}
+                        </td>
+                        <td className="px-4 py-3">{statusBadge(s.supplier_status)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-
-            {/* Pagination */}
             {totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                <p className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
-                </p>
+                <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    disabled={page === 1}
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                    disabled={page >= totalPages}
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" /></Button>
+                  <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}><ChevronRight className="h-4 w-4" /></Button>
                 </div>
               </div>
             )}
@@ -310,67 +469,37 @@ export default function SuppliersPage() {
           <div className="w-full max-w-lg rounded-xl bg-background p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Add Supplier</h2>
-              <button
-                onClick={() => { setShowCreate(false); setCreateError(null); }}
-                className="text-muted-foreground hover:text-foreground"
-              >
+              <button onClick={() => { setShowCreate(false); setCreateError(null); }} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
-
             <div className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium">Name *</label>
-                <Input
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Supplier legal entity name"
-                />
+                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Supplier legal entity name" />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Legal Name</label>
-                <Input
-                  value={form.legal_name ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))}
-                  placeholder="Full legal name (if different)"
-                />
+                <Input value={form.legal_name ?? ""} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} placeholder="Full legal name (if different)" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Country</label>
-                  <Input
-                    value={form.country ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                    placeholder="DE, US, FR…"
-                  />
+                  <Input value={form.country ?? ""} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE, US, FR…" />
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium">NACE Code</label>
-                  <Input
-                    value={form.nace_code ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, nace_code: e.target.value }))}
-                    placeholder="C24.10"
-                  />
+                  <Input value={form.nace_code ?? ""} onChange={(e) => setForm((f) => ({ ...f, nace_code: e.target.value }))} placeholder="C24.10" />
                 </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Industry</label>
-                <Input
-                  value={form.industry ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))}
-                  placeholder="Steel Manufacturing, Agriculture…"
-                />
+                <Input value={form.industry ?? ""} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} placeholder="Steel Manufacturing, Agriculture…" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="mb-1 block text-sm font-medium">Supplier Tier</label>
-                  <select
-                    value={form.supplier_tier}
-                    onChange={(e) =>
-                      setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))
-                    }
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                  >
+                  <select value={form.supplier_tier} onChange={(e) => setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                     <option value="Tier 1">Tier 1</option>
                     <option value="Tier 2">Tier 2</option>
                     <option value="Tier 3">Tier 3</option>
@@ -379,55 +508,25 @@ export default function SuppliersPage() {
                 </div>
                 <div>
                   <label className="mb-1 block text-sm font-medium">Website</label>
-                  <Input
-                    value={form.website ?? ""}
-                    onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
-                    placeholder="https://…"
-                  />
+                  <Input value={form.website ?? ""} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://…" />
                 </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">Notes</label>
-                <textarea
-                  value={form.notes ?? ""}
-                  onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                  rows={3}
-                  placeholder="Internal notes…"
-                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <textarea value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Internal notes…" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-
-            {createError && (
-              <p className="mt-3 text-sm text-red-600">{createError}</p>
-            )}
-
+            {createError && <p className="mt-3 text-sm text-red-600">{createError}</p>}
             <div className="mt-5 flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => { setShowCreate(false); setCreateError(null); }}
-              >
-                Cancel
-              </Button>
+              <Button variant="outline" onClick={() => { setShowCreate(false); setCreateError(null); }}>Cancel</Button>
               <Button
                 onClick={() => {
-                  if (!form.name.trim()) {
-                    setCreateError("Name is required");
-                    return;
-                  }
-                  createMutation.mutate({
-                    ...form,
-                    legal_name: form.legal_name || undefined,
-                    nace_code: form.nace_code || undefined,
-                    website: form.website || undefined,
-                    notes: form.notes || undefined,
-                  });
+                  if (!form.name.trim()) { setCreateError("Name is required"); return; }
+                  createMutation.mutate({ ...form, legal_name: form.legal_name || undefined, nace_code: form.nace_code || undefined, website: form.website || undefined, notes: form.notes || undefined });
                 }}
                 disabled={createMutation.isPending}
               >
-                {createMutation.isPending ? (
-                  <Spinner size="sm" className="mr-2" />
-                ) : null}
+                {createMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
                 Create Supplier
               </Button>
             </div>

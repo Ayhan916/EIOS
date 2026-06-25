@@ -8,13 +8,120 @@ import {
   Briefcase,
   CheckCircle2,
   Clock,
+  DollarSign,
   FileText,
+  Flame,
   GitPullRequest,
+  Leaf,
+  ListChecks,
   Plus,
+  Radio,
   ShieldAlert,
+  ShieldCheck,
+  Target,
   TrendingUp,
+  Zap,
 } from "lucide-react";
+
+// ── #108 Onboarding checklist ─────────────────────────────────────────────────
+
+const SETUP_TASK_KEY = "eios_setup_tasks";
+
+const CHECKLIST_ITEMS = [
+  { key: "added_supplier",        label: "Add your first supplier",       href: "/suppliers" },
+  { key: "ran_assessment",        label: "Run an ESG assessment",          href: "/assessments/new" },
+  { key: "reviewed_finding",      label: "Review a finding",               href: "/findings" },
+  { key: "configured_integration",label: "Configure an integration",       href: "/settings/integrations" },
+  { key: "set_objective",         label: "Set a sustainability objective",  href: "/sustainability/objectives" },
+  { key: "uploaded_evidence",     label: "Upload evidence",                href: "/evidence" },
+  { key: "set_notifications",     label: "Configure notification rules",   href: "/settings/notifications" },
+  { key: "viewed_reports",        label: "Generate your first report",     href: "/reports" },
+];
+
+function OnboardingChecklist() {
+  const [done, setDone] = useState<Set<string>>(new Set());
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem(SETUP_TASK_KEY);
+      setDone(new Set(raw ? JSON.parse(raw) : []));
+      if (localStorage.getItem("eios_checklist_dismissed")) setDismissed(true);
+    } catch { /* ignore */ }
+  }, []);
+
+  function markDone(key: string) {
+    setDone((prev) => {
+      const next = new Set(prev);
+      next.add(key);
+      localStorage.setItem(SETUP_TASK_KEY, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  function dismiss() {
+    localStorage.setItem("eios_checklist_dismissed", "1");
+    setDismissed(true);
+  }
+
+  const completedCount = CHECKLIST_ITEMS.filter((i) => done.has(i.key)).length;
+  if (dismissed || completedCount === CHECKLIST_ITEMS.length) return null;
+  const pct = Math.round((completedCount / CHECKLIST_ITEMS.length) * 100);
+
+  return (
+    <Card className="border-blue-200 bg-blue-50/40">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-blue-600" />
+            Get started with EIOS
+          </CardTitle>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {completedCount} of {CHECKLIST_ITEMS.length} tasks complete · {pct}%
+          </p>
+        </div>
+        <button onClick={dismiss} className="text-xs text-muted-foreground hover:text-foreground">
+          Dismiss
+        </button>
+      </CardHeader>
+      <CardContent>
+        <div className="mb-3 h-1.5 rounded-full bg-blue-100 overflow-hidden">
+          <div className="h-full rounded-full bg-blue-500 transition-all" style={{ width: `${pct}%` }} />
+        </div>
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+          {CHECKLIST_ITEMS.map((item) => {
+            const isChecked = done.has(item.key);
+            return (
+              <div key={item.key} className="flex items-center gap-2">
+                <button
+                  onClick={() => markDone(item.key)}
+                  className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
+                    isChecked ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"
+                  }`}
+                  aria-label={isChecked ? "Done" : "Mark done"}
+                >
+                  {isChecked && <CheckCircle2 className="h-3 w-3 text-white" />}
+                </button>
+                <Link
+                  href={item.href}
+                  onClick={() => markDone(item.key)}
+                  className={`text-sm hover:underline ${isChecked ? "text-muted-foreground line-through" : "text-foreground"}`}
+                >
+                  {item.label}
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { getDashboard } from "@/lib/api/dashboard";
+import apiClient from "@/lib/api/client";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -110,6 +217,385 @@ function HBar({
   );
 }
 
+// ── Risk Heatmap Widget ───────────────────────────────────────────────────────
+
+function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
+  const router = useRouter();
+  const counts: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
+  for (const r of risks) {
+    if (r.risk_level in counts) counts[r.risk_level]++;
+  }
+
+  type Cell = { label: string; riskLevel: string; count: number; bg: string; text: string } | null;
+  const grid: Cell[][] = [
+    // row=High Likelihood
+    [null, null, { label: "Critical", riskLevel: "Critical", count: counts.Critical, bg: "bg-red-500 hover:bg-red-600", text: "text-white" }],
+    // row=Medium Likelihood
+    [null, { label: "Medium", riskLevel: "Medium", count: counts.Medium, bg: "bg-amber-400 hover:bg-amber-500", text: "text-white" }, { label: "High", riskLevel: "High", count: counts.High, bg: "bg-orange-500 hover:bg-orange-600", text: "text-white" }],
+    // row=Low Likelihood
+    [{ label: "Low", riskLevel: "Low", count: counts.Low, bg: "bg-emerald-500 hover:bg-emerald-600", text: "text-white" }, null, null],
+  ];
+  const rowLabels = ["High", "Medium", "Low"];
+  const colLabels = ["Low Impact", "Medium Impact", "High Impact"];
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldAlert className="h-4 w-4 text-orange-500" />
+            Risk Heatmap
+          </CardTitle>
+          <CardDescription>{total} risks · click cell to filter</CardDescription>
+        </div>
+        <button
+          onClick={() => router.push("/risks")}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          View all <ArrowRight className="h-3 w-3" />
+        </button>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <div className="min-w-[320px]">
+            {/* Column headers */}
+            <div className="flex mb-1 pl-16">
+              {colLabels.map((c) => (
+                <div key={c} className="flex-1 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
+                  {c}
+                </div>
+              ))}
+            </div>
+            {/* Grid rows */}
+            {grid.map((row, ri) => (
+              <div key={ri} className="flex items-center mb-1">
+                <div className="w-16 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex-shrink-0 text-right pr-2">
+                  {rowLabels[ri]}
+                </div>
+                {row.map((cell, ci) =>
+                  cell ? (
+                    <button
+                      key={ci}
+                      onClick={() => router.push(`/risks?risk_level=${cell.riskLevel}`)}
+                      className={`flex-1 mx-0.5 h-14 rounded-lg ${cell.bg} ${cell.text} transition-colors flex flex-col items-center justify-center cursor-pointer`}
+                    >
+                      <span className="text-xl font-bold leading-none">{cell.count}</span>
+                      <span className="text-[10px] font-medium mt-0.5 opacity-90">{cell.label}</span>
+                    </button>
+                  ) : (
+                    <div key={ci} className="flex-1 mx-0.5 h-14 rounded-lg bg-muted/30 border border-dashed border-muted-foreground/20" />
+                  )
+                )}
+              </div>
+            ))}
+            {/* X-axis label */}
+            <div className="text-center text-[10px] text-muted-foreground mt-1 pl-16">
+              Impact →
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Compliance Gap Widget ─────────────────────────────────────────────────────
+
+function ComplianceGapCard({ readiness }: { readiness: Record<string, number> }) {
+  const entries = Object.entries(readiness).sort((a, b) => a[1] - b[1]);
+  if (entries.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-blue-500" />
+            Compliance Coverage
+          </CardTitle>
+          <CardDescription>Framework coverage by control tests</CardDescription>
+        </div>
+        <Link href="/operating-system/compliance-operations" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          Details <ArrowRight className="h-3 w-3" />
+        </Link>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {entries.map(([framework, pct]) => {
+          const color = pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-red-500";
+          const textColor = pct >= 80 ? "text-emerald-600" : pct >= 50 ? "text-amber-600" : "text-red-600";
+          return (
+            <div key={framework}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs font-medium">{framework}</span>
+                <span className={`text-xs font-bold ${textColor}`}>{Math.round(pct)}%</span>
+              </div>
+              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                <div className={`h-full rounded-full ${color} transition-all`} style={{ width: `${Math.min(pct, 100)}%` }} />
+              </div>
+            </div>
+          );
+        })}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Financial ESG Widget ──────────────────────────────────────────────────────
+
+interface FinancialTile {
+  label: string;
+  value: string;
+  icon: React.ElementType;
+  colorClass: string;
+  href: string;
+}
+
+function FinancialEsgCard({
+  taxonomyPct,
+  greenRevenuePct,
+  carbonCost,
+}: {
+  taxonomyPct: number | null;
+  greenRevenuePct: number | null;
+  carbonCost: number | null;
+}) {
+  const tiles: FinancialTile[] = [
+    {
+      label: "Taxonomy Alignment",
+      value: taxonomyPct != null ? `${taxonomyPct.toFixed(1)}%` : "—",
+      icon: Leaf,
+      colorClass: taxonomyPct != null && taxonomyPct >= 30 ? "text-emerald-600" : "text-amber-600",
+      href: "/financial-esg/taxonomy",
+    },
+    {
+      label: "Green Revenue",
+      value: greenRevenuePct != null ? `${greenRevenuePct.toFixed(1)}%` : "—",
+      icon: TrendingUp,
+      colorClass: greenRevenuePct != null && greenRevenuePct >= 20 ? "text-emerald-600" : "text-slate-600",
+      href: "/financial-esg",
+    },
+    {
+      label: "Carbon Cost Exposure",
+      value: carbonCost != null ? `€${(carbonCost / 1000).toFixed(0)}k` : "—",
+      icon: Zap,
+      colorClass: carbonCost != null && carbonCost > 0 ? "text-orange-600" : "text-slate-600",
+      href: "/financial-esg/carbon-economics",
+    },
+  ];
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-emerald-600" />
+            Financial ESG
+          </CardTitle>
+          <CardDescription>Taxonomy, green revenue & carbon exposure</CardDescription>
+        </div>
+        <Button variant="ghost" size="sm" asChild>
+          <Link href="/financial-esg" className="gap-1 text-xs">
+            Details <ArrowRight className="h-3 w-3" />
+          </Link>
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-3 gap-4">
+          {tiles.map((t) => (
+            <Link key={t.label} href={t.href} className="group text-center rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+              <t.icon className={`mx-auto mb-1.5 h-5 w-5 ${t.colorClass}`} />
+              <p className={`text-xl font-bold ${t.colorClass}`}>{t.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t.label}</p>
+            </Link>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Pending Decisions Widget ──────────────────────────────────────────────────
+
+interface PendingDecision {
+  id: string;
+  title: string;
+  priority: string;
+  due_date: string | null;
+}
+
+function PendingDecisionsCard({
+  decisions,
+  count,
+}: {
+  decisions: PendingDecision[];
+  count: number;
+}) {
+  const router = useRouter();
+  const priorityBadge = (p: string) => {
+    if (p === "Critical") return "bg-red-100 text-red-700";
+    if (p === "High") return "bg-orange-100 text-orange-700";
+    if (p === "Medium") return "bg-amber-100 text-amber-700";
+    return "bg-slate-100 text-slate-600";
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <ListChecks className="h-4 w-4 text-blue-500" />
+            Pending Decisions
+          </CardTitle>
+          <CardDescription>
+            {count} open recommendation{count !== 1 ? "s" : ""} awaiting action
+          </CardDescription>
+        </div>
+        <button
+          onClick={() => router.push("/recommendations")}
+          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          View all <ArrowRight className="h-3 w-3" />
+        </button>
+      </CardHeader>
+      <CardContent>
+        {decisions.length === 0 ? (
+          <div className="py-6 text-center text-sm text-muted-foreground">
+            No open decisions — all clear.
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {decisions.map((d) => (
+              <div
+                key={d.id}
+                className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-muted/40 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{d.title}</p>
+                  {d.due_date && (
+                    <p className="mt-0.5 text-xs text-muted-foreground flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      Due {formatDate(d.due_date)}
+                    </p>
+                  )}
+                </div>
+                <span
+                  className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${priorityBadge(d.priority)}`}
+                >
+                  {d.priority}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── External Signal Feed Widget ───────────────────────────────────────────────
+
+interface RiskSignal {
+  id: string;
+  signal_type: string;
+  severity: string;
+  description: string;
+  source_name: string;
+  observed_at: string;
+  supplier_id: string;
+  country_code: string;
+}
+
+function SignalFeedCard({ signals }: { signals: RiskSignal[] }) {
+  const sevColor: Record<string, string> = {
+    Critical: "bg-red-100 text-red-700",
+    High: "bg-orange-100 text-orange-700",
+    Medium: "bg-amber-100 text-amber-700",
+    Low: "bg-slate-100 text-slate-600",
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Radio className="h-4 w-4 text-blue-500 animate-pulse" />
+            External Risk Signals
+          </CardTitle>
+          <CardDescription>Latest {signals.length} active intelligence signals</CardDescription>
+        </div>
+        <Link href="/surveillance" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          View all <ArrowRight className="h-3 w-3" />
+        </Link>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          {signals.map((s) => (
+            <div
+              key={s.id}
+              className="flex items-start gap-3 rounded-lg border border-border px-3 py-2.5"
+            >
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium line-clamp-1">{s.description}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {s.signal_type.replace(/_/g, " ")} · {s.source_name}
+                  {s.country_code ? ` · ${s.country_code}` : ""}
+                  {" · "}{formatDate(s.observed_at)}
+                </p>
+              </div>
+              <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${sevColor[s.severity] ?? "bg-slate-100 text-slate-600"}`}>
+                {s.severity}
+              </span>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── #110 Demo data seeder ─────────────────────────────────────────────────────
+
+const DEMO_KEY = "eios_demo_seeded";
+
+function DemoDataButton() {
+  const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && localStorage.getItem(DEMO_KEY)) setDone(true);
+  }, []);
+
+  async function seed() {
+    setLoading(true);
+    try {
+      await apiClient.post("/api/v1/demo/seed");
+      localStorage.setItem(DEMO_KEY, "1");
+      setDone(true);
+      window.location.reload();
+    } catch {
+      setLoading(false);
+    }
+  }
+
+  if (done) return null;
+
+  return (
+    <button
+      onClick={seed}
+      disabled={loading}
+      className="flex items-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+    >
+      {loading ? (
+        <span className="h-3 w-3 rounded-full border border-slate-400 border-t-transparent animate-spin" />
+      ) : (
+        <Zap className="h-3 w-3" />
+      )}
+      {loading ? "Loading demo data…" : "Load demo data"}
+    </button>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DashboardPage() {
@@ -119,6 +605,33 @@ export default function DashboardPage() {
     queryKey: ["dashboard"],
     queryFn: getDashboard,
     staleTime: 30_000,
+  });
+
+  const { data: cc } = useQuery({
+    queryKey: ["command-center-dashboard"],
+    queryFn: async () => {
+      const res = await apiClient.get("/api/v1/executive/command-center");
+      return res.data;
+    },
+    staleTime: 300_000,
+  });
+
+  const { data: orgRisks } = useQuery({
+    queryKey: ["org-risks-heatmap"],
+    queryFn: async () => {
+      const res = await apiClient.get("/api/v1/executive/risks?limit=500");
+      return res.data as Array<{ risk_level: string }>;
+    },
+    staleTime: 120_000,
+  });
+
+  const { data: riskSignals } = useQuery({
+    queryKey: ["dashboard-risk-signals"],
+    queryFn: async () => {
+      const res = await apiClient.get("/api/v1/external-intelligence/signals?limit=7");
+      return (res.data as { signals: RiskSignal[]; total: number }).signals;
+    },
+    staleTime: 120_000,
   });
 
   if (isLoading) {
@@ -165,16 +678,20 @@ export default function DashboardPage() {
             Portfolio Dashboard · ESG Due Diligence & Risk Intelligence
           </p>
         </div>
-        <Button asChild>
-          <Link href="/assessments/new">
-            <Plus className="h-4 w-4" />
-            New Assessment
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* #110 Demo data mode */}
+          <DemoDataButton />
+          <Button asChild>
+            <Link href="/assessments/new">
+              <Plus className="h-4 w-4" />
+              New Assessment
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* ── KPI strip ──────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <KpiCard
           label="Total Assessments"
           value={data.total_assessments}
@@ -211,7 +728,61 @@ export default function DashboardPage() {
           }
           sub={`${data.critical_finding_count} critical`}
         />
+        <KpiCard
+          label="ESG Health"
+          value={cc ? `${cc.esg_health_score}/100` : "—"}
+          icon={Target}
+          valueClass={
+            !cc ? "text-muted-foreground"
+            : cc.esg_health_score >= 80 ? "text-emerald-600"
+            : cc.esg_health_score >= 65 ? "text-blue-600"
+            : cc.esg_health_score >= 50 ? "text-amber-600"
+            : "text-red-600"
+          }
+          sub={cc?.health_label ?? ""}
+        />
+        <KpiCard
+          label="Carbon Intensity"
+          value={
+            cc?.cso?.latest_emissions_tco2e != null
+              ? `${cc.cso.latest_emissions_tco2e.toLocaleString()} t`
+              : "—"
+          }
+          icon={Flame}
+          valueClass={cc?.cso?.latest_emissions_tco2e != null ? "text-orange-600" : "text-muted-foreground"}
+          sub="tCO₂e (latest year)"
+        />
       </div>
+
+      {/* #108 Onboarding checklist */}
+      <OnboardingChecklist />
+
+      {/* ── Pending Decisions (Item 10) ────────────────────────────────────── */}
+      {cc && cc.pending_decisions_count > 0 && (
+        <PendingDecisionsCard
+          decisions={cc.pending_decisions}
+          count={cc.pending_decisions_count}
+        />
+      )}
+
+      {/* ── Financial ESG summary (only when data available) ───────────────── */}
+      {cc?.cfo && (cc.cfo.taxonomy_alignment_pct != null || cc.cfo.green_revenue_pct != null) && (
+        <FinancialEsgCard
+          taxonomyPct={cc.cfo.taxonomy_alignment_pct}
+          greenRevenuePct={cc.cfo.green_revenue_pct}
+          carbonCost={null}
+        />
+      )}
+
+      {/* ── Risk Heatmap + Compliance Gap ─────────────────────────────────── */}
+      {orgRisks && orgRisks.length > 0 && (
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <RiskHeatmapCard risks={orgRisks} />
+          {cc?.esg_summary?.compliance_readiness && Object.keys(cc.esg_summary.compliance_readiness).length > 0 && (
+            <ComplianceGapCard readiness={cc.esg_summary.compliance_readiness} />
+          )}
+        </div>
+      )}
 
       {/* ── Middle row: Action breakdown + Findings breakdown ──────────────── */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -469,6 +1040,11 @@ export default function DashboardPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* ── External Risk Signals (Item 25) ────────────────────────────────── */}
+      {riskSignals && riskSignals.length > 0 && (
+        <SignalFeedCard signals={riskSignals} />
       )}
 
       {/* ── Bottom row: Recent assessments + Timeline ──────────────────────── */}

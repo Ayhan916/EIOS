@@ -158,6 +158,24 @@ from .ai_governance import (
     AIAssuranceReportModel,
     AIRegulationMappingModel,
 )
+from .mfa import MFABackupCodeModel
+from .ghg import GHGEmissionFactorModel, GHGCalculationModel
+from .evidence_version import EvidenceVersionModel
+from .m46_3 import (
+    RemediationMilestoneModel,
+    AssessmentScheduleModel,
+    SupplierCertificateModel,
+    RiskDraftModel,
+)
+from .region import DataResidencyAuditLogModel
+from .regulatory_calendar import RegulatoryDeadlineModel
+from .framework_mapping import ControlFrameworkMappingModel
+from .org_settings import OrganizationSettingsModel
+from .custom_role import CustomRoleModel
+from .board_access_token import BoardAccessTokenModel
+from .soc2_control import Soc2ControlModel
+from .pentest_finding import PentestFindingModel
+from .production_checklist import ProductionChecklistItemModel
 from .sustainability import (
     SustainabilityObjectiveModel,
     ESGTargetModel,
@@ -327,6 +345,23 @@ __all__ = [
     "ISSBSustainabilityMappingModel",
     "PerformanceForecastModel",
     "ScenarioAnalysisModel",
+    "MFABackupCodeModel",
+    "GHGEmissionFactorModel",
+    "GHGCalculationModel",
+    "EvidenceVersionModel",
+    "RemediationMilestoneModel",
+    "AssessmentScheduleModel",
+    "SupplierCertificateModel",
+    "RiskDraftModel",
+    "DataResidencyAuditLogModel",
+    "RegulatoryDeadlineModel",
+    "ControlFrameworkMappingModel",
+    "OrganizationSettingsModel",
+    "CustomRoleModel",
+    "BoardAccessTokenModel",
+    "Soc2ControlModel",
+    "PentestFindingModel",
+    "ProductionChecklistItemModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

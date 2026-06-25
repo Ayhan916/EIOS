@@ -147,6 +147,41 @@ jobs:
         run: npm run lint
         continue-on-error: true   # advisory until lint baseline is set
 
+  # ── Helm lint ─────────────────────────────────────────────────────────────
+  helm-lint:
+    name: Helm Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: "3.14.0"
+
+      - name: Add Bitnami repo (required for subchart deps)
+        run: helm repo add bitnami https://charts.bitnami.com/bitnami
+
+      - name: Update chart dependencies
+        run: helm dependency update ./helm/eios
+
+      - name: Lint default values
+        run: helm lint ./helm/eios --strict
+
+      - name: Lint production values
+        run: helm lint ./helm/eios -f helm/eios/values.prod.yaml --strict
+
+      - name: Template render check (default)
+        run: helm template eios ./helm/eios > /dev/null
+
+      - name: Template render check (prod)
+        run: |
+          helm template eios ./helm/eios \
+            -f helm/eios/values.prod.yaml \
+            --set secrets.secretKey=ci-placeholder \
+            > /dev/null
+
   # ── Docker build verification ─────────────────────────────────────────────
   docker-build:
     name: Docker Build Check
@@ -164,6 +199,62 @@ jobs:
             --tag eios-frontend:ci \
             --build-arg NEXT_PUBLIC_API_URL=http://localhost:8000 \
             --no-cache
+
+  # ── Publish images to GHCR (main branch only) ─────────────────────────────
+  publish-images:
+    name: Publish Docker Images
+    runs-on: ubuntu-latest
+    needs: [backend-quality, frontend-quality, docker-build, helm-lint]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata (backend)
+        id: meta-backend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/eios-backend
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Extract metadata (frontend)
+        id: meta-frontend
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/eios-frontend
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ steps.meta-backend.outputs.tags }}
+          labels: ${{ steps.meta-backend.outputs.labels }}
+
+      - name: Build and push frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ steps.meta-frontend.outputs.tags }}
+          labels: ${{ steps.meta-frontend.outputs.labels }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://app.eios.io/api/v1
 
   # ── Smoke test — verify health endpoint after compose up ──────────────────
   smoke-test:

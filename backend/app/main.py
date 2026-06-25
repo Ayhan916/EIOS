@@ -18,11 +18,13 @@ from fastapi.responses import JSONResponse
 
 from app.middleware import (
     MetricsCounterMiddleware,
+    RateLimiterMiddleware,
     RequestBodySizeLimitMiddleware,
     RequestIDMiddleware,
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
 )
+from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
 from infrastructure.embeddings.deps import init_embedding_provider
 from infrastructure.llm.deps import init_llm_provider
 from interfaces.api.routers import (
@@ -48,6 +50,7 @@ from interfaces.api.routers import (
     health_router,
     knowledge_router,
     metrics_router,
+    mfa_router,
     notifications_router,
     organizations_router,
     recommendations_router,
@@ -70,6 +73,13 @@ from interfaces.api.routers import (
     sustainability_router,
     financial_esg_router,
     strategy_router,
+    ghg_router,
+    m46_3_router,
+    region_router,
+    regulatory_reporting_router,
+    integrations_router,
+    commercial_router,
+    security_audit_router,
 )
 from shared.config import settings
 
@@ -146,11 +156,14 @@ async def _check_overdue_loop() -> None:
 
 _log_level = getattr(logging, settings.log_level.upper(), logging.INFO)
 
+from infrastructure.observability.tracing import OtelStructlogProcessor  # noqa: E402
+
 structlog.configure(
     processors=[
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),
+        OtelStructlogProcessor(),  # M46: inject trace_id + span_id into every log line
         structlog.processors.JSONRenderer()
         if not settings.is_development
         else structlog.dev.ConsoleRenderer(),
@@ -173,7 +186,24 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Fail fast on production misconfiguration before accepting any traffic
     settings.validate_production()
 
-    logger.info("eios_startup", environment=settings.environment, version="0.20.0")
+    logger.info("eios_startup", environment=settings.environment, version="0.23.0")
+
+    # M46 — OTel tracing (must run before any requests are served)
+    from infrastructure.observability.tracing import configure_tracing  # noqa: PLC0415
+    configure_tracing(app)
+
+    from infrastructure.redis.client import init_redis  # noqa: PLC0415
+    from infrastructure.redis.blacklist import init_redis_blacklist  # noqa: PLC0415
+    await init_redis()
+    await init_redis_blacklist()
+
+    # Wire production SSO validators (M45.1 — G-002)
+    from infrastructure.sso.saml_validator import ProductionSAMLValidator  # noqa: PLC0415
+    from infrastructure.sso.oidc_validator import ProductionOIDCValidator   # noqa: PLC0415
+    app.state.saml_validator = ProductionSAMLValidator()
+    app.state.oidc_validator = ProductionOIDCValidator()
+    logger.info("sso_validators_ready")
+
     init_embedding_provider()
     logger.info("embedding_provider_ready", model=settings.embedding_model)
 
@@ -258,6 +288,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         _intelligence_scheduler_task.cancel()
     if _agent_scheduler_task is not None:
         _agent_scheduler_task.cancel()
+
+    from infrastructure.redis.client import close_redis  # noqa: PLC0415
+    from infrastructure.redis.blacklist import close_redis_blacklist  # noqa: PLC0415
+    await close_redis()
+    await close_redis_blacklist()
     logger.info("eios_shutdown")
 
 
@@ -266,7 +301,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(
     title="EIOS — Enterprise Intelligence Operating System",
     description="ESG Due Diligence and Risk Intelligence Platform API",
-    version="0.20.0",
+    version="0.22.0",
     lifespan=lifespan,
     # Hide docs in production — expose via VPN or behind auth proxy if needed
     docs_url="/docs" if not settings.is_production else None,
@@ -277,10 +312,13 @@ app = FastAPI(
 # Execution order: RequestID → RequestLogging → SecurityHeaders → MetricsCounter → CORS → route
 
 app.add_middleware(MetricsCounterMiddleware)
+app.add_middleware(RateLimiterMiddleware)
 app.add_middleware(RequestBodySizeLimitMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(RequestIDMiddleware)
+# M47: region enforcement runs after auth sets request.state.organization_id
+app.add_middleware(RegionEnforcementMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -354,3 +392,11 @@ app.include_router(ai_governance_router, prefix=API_V1)
 app.include_router(sustainability_router, prefix=API_V1)
 app.include_router(financial_esg_router, prefix=API_V1)
 app.include_router(strategy_router, prefix=API_V1)
+app.include_router(mfa_router, prefix=API_V1)
+app.include_router(ghg_router, prefix=API_V1)
+app.include_router(m46_3_router, prefix=API_V1)
+app.include_router(region_router, prefix=API_V1)
+app.include_router(regulatory_reporting_router, prefix=API_V1)
+app.include_router(integrations_router, prefix=API_V1)
+app.include_router(commercial_router, prefix=API_V1)
+app.include_router(security_audit_router, prefix=API_V1)

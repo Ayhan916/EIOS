@@ -1,0 +1,124 @@
+# Prometheus Alert Rules for EIOS (M46)
+# Load via prometheus.yml: rule_files: [/etc/prometheus/alert_rules.yml]
+# Requires Alertmanager to be configured separately for routing (PagerDuty, Slack, email).
+
+groups:
+  - name: eios_availability
+    rules:
+      - alert: EIOSHighErrorRate
+        expr: |
+          (
+            sum(rate(eios_http_requests_total{status_code=~"5.."}[5m]))
+            /
+            sum(rate(eios_http_requests_total[5m]))
+          ) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "EIOS 5xx error rate above 1%"
+          description: >
+            5xx error rate is {{ $value | humanizePercentage }} over the last 5 minutes.
+            Check application logs for the root cause.
+          runbook: "https://github.com/your-org/eios/wiki/runbooks/high-error-rate"
+
+      - alert: EIOSHighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(eios_http_request_duration_seconds_bucket[5m])) by (le, endpoint)
+          ) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "EIOS P99 latency above 2s"
+          description: >
+            P99 request latency on endpoint {{ $labels.endpoint }} is
+            {{ $value | humanizeDuration }} over the last 5 minutes.
+
+      - alert: EIOSServiceDown
+        expr: up{job="eios-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: backend
+        annotations:
+          summary: "EIOS backend is unreachable"
+          description: "Prometheus cannot scrape {{ $labels.instance }}. Service may be down."
+
+  - name: eios_database
+    rules:
+      - alert: EIOSDbConnectionPoolExhausted
+        expr: eios_db_pool_checked_out >= 18
+        for: 3m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "DB connection pool near exhaustion"
+          description: >
+            {{ $value }} of 20 pool connections are checked out.
+            Scale DB_POOL_SIZE or investigate slow queries.
+
+      - alert: EIOSReplicationLagHigh
+        expr: eios_replication_lag_bytes > 67108864
+        for: 5m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "PostgreSQL replication lag > 64 MiB"
+          description: >
+            Read replica is {{ $value | humanize1024 }}B behind the primary.
+            Read-only queries may return stale data.
+
+  - name: eios_redis
+    rules:
+      - alert: EIOSRedisBlacklistUnavailable
+        # Custom gauge — set to 0 by Celery maintenance task when ping fails
+        expr: eios_redis_blacklist_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          team: infra
+        annotations:
+          summary: "JWT blacklist Redis is down"
+          description: >
+            The noeviction Redis instance for JWT revocation is unreachable.
+            Revoked tokens may be accepted. Immediate attention required.
+
+  - name: eios_backup
+    rules:
+      - alert: EIOSBackupStale
+        # Custom gauge — set to 1 by Celery maintenance task when backup > 25h old
+        expr: eios_backup_stale == 1
+        for: 30m
+        labels:
+          severity: warning
+          team: infra
+        annotations:
+          summary: "PostgreSQL backup is older than 25 hours"
+          description: >
+            Last successful pg_basebackup is more than 25 hours old.
+            Check the postgres-backup container and pg_backup.sh logs.
+
+  - name: eios_llm
+    rules:
+      - alert: EIOSLLMErrorRateHigh
+        expr: |
+          (
+            rate(eios_llm_errors_total[10m])
+            /
+            rate(eios_llm_calls_total[10m])
+          ) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          team: backend
+        annotations:
+          summary: "LLM error rate above 10%"
+          description: >
+            {{ $value | humanizePercentage }} of LLM calls are failing.
+            Check the LLM provider API key and rate limits.

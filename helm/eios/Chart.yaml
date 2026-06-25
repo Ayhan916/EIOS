@@ -1,0 +1,30 @@
+apiVersion: v2
+name: eios
+description: Enterprise Intelligence Operating System — full-stack Helm chart
+type: application
+version: 0.23.0
+appVersion: "0.23.0"
+
+keywords:
+  - eios
+  - esg
+  - enterprise
+  - sustainability
+
+maintainers:
+  - name: EIOS Engineering
+    email: engineering@eios.io
+
+dependencies:
+  # PostgreSQL (Bitnami) — used in staging; production uses managed DB (RDS / CloudSQL).
+  # Disable with: --set postgresql.enabled=false
+  - name: postgresql
+    version: "15.x.x"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled
+
+  # PgBouncer — session-mode connection pooler (REQUIRED for RLS SET LOCAL).
+  - name: pgbouncer
+    version: "1.x.x"
+    repository: "https://helm.pgbouncer.io"
+    condition: pgbouncer.enabled

@@ -39,4 +39,10 @@ class UserModel(BaseModel):
     business_unit_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     region_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
+    # M45 — MFA fields
+    mfa_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Fernet-encrypted TOTP secret (base32). Null until MFA is set up.
+    encrypted_mfa_secret: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    mfa_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     organization: Mapped[OrganizationModel | None] = relationship(back_populates="users")
