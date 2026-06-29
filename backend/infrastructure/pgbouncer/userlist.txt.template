@@ -1,0 +1,9 @@
+# PgBouncer userlist.txt — TEMPLATE (M45.3)
+#
+# Replace placeholders before deploying.
+# Generate MD5 hash: echo -n "md5$(printf '%s%s' 'PASSWORD' 'USERNAME' | md5sum | awk '{print $1}')"
+#
+# Format: "username" "md5<hash>"
+#
+"eios" "md5REPLACE_WITH_HASH_OF_EIOS_PASSWORD_PLUS_eios"
+"pgbouncer" "md5REPLACE_WITH_HASH_OF_PGBOUNCER_ADMIN_PASSWORD_PLUS_pgbouncer"

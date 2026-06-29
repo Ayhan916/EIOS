@@ -1,0 +1,209 @@
+# EIOS Helm Chart — default values (development / staging)
+# Override per environment: helm upgrade eios ./helm/eios -f values.prod.yaml
+
+global:
+  imageRegistry: ""          # e.g. ghcr.io/your-org — prepended to all image names
+  imagePullSecrets: []
+
+# ── Image configuration ───────────────────────────────────────────────────────
+image:
+  backend:
+    repository: eios-backend
+    tag: latest
+    pullPolicy: IfNotPresent
+  frontend:
+    repository: eios-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+
+# ── Backend ───────────────────────────────────────────────────────────────────
+backend:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 512Mi
+    limits:
+      cpu: 1000m
+      memory: 1Gi
+  env:
+    ENVIRONMENT: development
+    LOG_LEVEL: INFO
+    WORKERS: "2"
+    LLM_PROVIDER: anthropic
+    LLM_MODEL: claude-sonnet-4-6
+    LLM_MONTHLY_TOKEN_BUDGET: "0"
+    EMBEDDING_MODEL: BAAI/bge-small-en-v1.5
+    S3_ENABLED: "false"
+    S3_BUCKET: eios-documents
+    S3_REGION: us-east-1
+
+  # Liveness and readiness probes
+  livenessProbe:
+    httpGet:
+      path: /health
+      port: 8000
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: 8000
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend:
+  replicaCount: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# ── Celery worker ─────────────────────────────────────────────────────────────
+celery:
+  worker:
+    replicaCount: 1
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+  beat:
+    enabled: true
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+# ── Redis ─────────────────────────────────────────────────────────────────────
+redis:
+  enabled: true    # set false to use external Redis
+  persistence:
+    enabled: true
+    size: 2Gi
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  # allkeys-lru for rate-limit / session Redis (DB 0+2)
+  config: |
+    maxmemory 512mb
+    maxmemory-policy allkeys-lru
+    appendonly yes
+
+redisBlacklist:
+  enabled: true    # dedicated noeviction Redis for JWT blacklist
+  persistence:
+    enabled: true
+    size: 1Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+  # noeviction REQUIRED — revoked tokens must never be silently dropped
+  config: |
+    maxmemory-policy noeviction
+    appendonly yes
+
+# ── PostgreSQL (Bitnami subchart) ─────────────────────────────────────────────
+postgresql:
+  enabled: true    # disable in prod (use RDS / CloudSQL)
+  auth:
+    username: eios
+    password: eios_dev
+    database: eios_db
+  primary:
+    persistence:
+      size: 10Gi
+
+# ── PgBouncer (subchart) ──────────────────────────────────────────────────────
+pgbouncer:
+  enabled: false   # enable when postgresql.enabled=false (prod external DB)
+
+# ── External secrets (production) ────────────────────────────────────────────
+# When existingSecret is set, the chart reads credentials from it instead of
+# creating a Secret from values. Recommended for production (External Secrets Operator).
+existingSecret: ""   # e.g. "eios-credentials"
+
+# ── Secrets (dev/staging only — never commit real values) ────────────────────
+secrets:
+  secretKey: "change-me-in-production-use-existingSecret-instead"
+  databaseUrl: ""     # auto-derived from postgresql subchart when postgresql.enabled=true
+  redisUrl: ""        # auto-derived from redis when redis.enabled=true
+  redisBlacklistUrl: ""
+  anthropicApiKey: ""
+  openaiApiKey: ""
+  awsAccessKeyId: ""
+  awsSecretAccessKey: ""
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  host: eios.local
+  tls:
+    enabled: false
+    secretName: eios-tls
+
+# ── HPA ───────────────────────────────────────────────────────────────────────
+autoscaling:
+  backend:
+    enabled: false   # enable in production
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    targetMemoryUtilizationPercentage: 80
+  celeryWorker:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+
+# ── Service accounts ──────────────────────────────────────────────────────────
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+# ── Pod disruption budgets ────────────────────────────────────────────────────
+podDisruptionBudget:
+  backend:
+    enabled: false
+    minAvailable: 1
+  frontend:
+    enabled: false
+    minAvailable: 1
+  celeryWorker:
+    enabled: false
+    minAvailable: 1
+
+# ── Node selector / affinity / tolerations ───────────────────────────────────
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# ── Observability (M46) ───────────────────────────────────────────────────────
+observability:
+  otelEndpoint: ""   # e.g. http://jaeger-collector:4318
+  prometheusAnnotations: true
