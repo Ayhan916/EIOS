@@ -65,11 +65,15 @@ import {
   upsertOwnership,
   listESGMetrics,
   recordESGMetric,
+  listESGRatings,
+  createESGRating,
+  deleteESGRating,
   type SupplierLocation,
   type SupplierContact,
   type SupplierCertification,
   type SupplierOwnership,
   type SupplierESGMetric,
+  type ExternalESGRating,
 } from "@/lib/api/supplier-extensions";
 import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1422,9 +1426,315 @@ function ESGMetricsTab({ supplierId }: { supplierId: string }) {
   );
 }
 
+// ── ESG Ratings Tab (KAN-90) ──────────────────────────────────────────────────
+
+const PROVIDER_META: Record<string, { label: string; color: string; maxScore?: number }> = {
+  ECOVADIS:       { label: "EcoVadis",        color: "bg-orange-100 text-orange-800",  maxScore: 100 },
+  MSCI:           { label: "MSCI ESG",         color: "bg-blue-100 text-blue-800" },
+  SUSTAINALYTICS: { label: "Sustainalytics",   color: "bg-teal-100 text-teal-800" },
+  CDP:            { label: "CDP",              color: "bg-green-100 text-green-800" },
+  ISS_ESG:        { label: "ISS-ESG",          color: "bg-purple-100 text-purple-800" },
+  REFINITIV:      { label: "Refinitiv",        color: "bg-sky-100 text-sky-800" },
+  SP_GLOBAL:      { label: "S&P Global ESG",   color: "bg-red-100 text-red-800" },
+  BLOOMBERG_ESG:  { label: "Bloomberg ESG",    color: "bg-slate-100 text-slate-700" },
+  FTSE_RUSSELL:   { label: "FTSE Russell",     color: "bg-indigo-100 text-indigo-800" },
+  MOODY_ESG:      { label: "Moody's ESG",      color: "bg-amber-100 text-amber-800" },
+  OTHER:          { label: "Other",            color: "bg-gray-100 text-gray-700" },
+};
+
+function ESGRatingsTab({ supplierId }: { supplierId: string }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({
+    provider: "ECOVADIS",
+    rating_date: "",
+    score: "",
+    max_score: "",
+    score_pct: "",
+    grade: "",
+    percentile: "",
+    peer_group: "",
+    environmental_score: "",
+    social_score: "",
+    governance_score: "",
+    ethics_score: "",
+    sustainable_procurement_score: "",
+    valid_until: "",
+    report_url: "",
+    methodology_version: "",
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: ratings = [], isLoading } = useQuery<ExternalESGRating[]>({
+    queryKey: ["supplier-esg-ratings", supplierId],
+    queryFn: () => listESGRatings(supplierId),
+  });
+
+  async function handleCreate() {
+    if (!form.rating_date) { setError("Rating date is required"); return; }
+    setSaving(true); setError(null);
+    try {
+      await createESGRating(supplierId, {
+        provider: form.provider,
+        rating_date: form.rating_date,
+        score: form.score ? parseFloat(form.score) : undefined,
+        max_score: form.max_score ? parseFloat(form.max_score) : undefined,
+        score_pct: form.score_pct ? parseFloat(form.score_pct) : undefined,
+        grade: form.grade || undefined,
+        percentile: form.percentile ? parseFloat(form.percentile) : undefined,
+        peer_group: form.peer_group || undefined,
+        environmental_score: form.environmental_score ? parseFloat(form.environmental_score) : undefined,
+        social_score: form.social_score ? parseFloat(form.social_score) : undefined,
+        governance_score: form.governance_score ? parseFloat(form.governance_score) : undefined,
+        ethics_score: form.ethics_score ? parseFloat(form.ethics_score) : undefined,
+        sustainable_procurement_score: form.sustainable_procurement_score ? parseFloat(form.sustainable_procurement_score) : undefined,
+        valid_until: form.valid_until || undefined,
+        report_url: form.report_url || undefined,
+        methodology_version: form.methodology_version || undefined,
+        notes: form.notes || undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["supplier-esg-ratings", supplierId] });
+      setShowForm(false);
+      setForm({ provider: "ECOVADIS", rating_date: "", score: "", max_score: "", score_pct: "", grade: "", percentile: "", peer_group: "", environmental_score: "", social_score: "", governance_score: "", ethics_score: "", sustainable_procurement_score: "", valid_until: "", report_url: "", methodology_version: "", notes: "" });
+    } catch { setError("Failed to save rating"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(ratingId: string) {
+    try {
+      await deleteESGRating(supplierId, ratingId);
+      qc.invalidateQueries({ queryKey: ["supplier-esg-ratings", supplierId] });
+    } catch { /* ignore */ }
+  }
+
+  function scoreBar(pct: number | null) {
+    if (pct === null) return null;
+    const color = pct >= 75 ? "bg-green-500" : pct >= 50 ? "bg-amber-500" : "bg-red-500";
+    return (
+      <div className="mt-1 h-1.5 w-full rounded-full bg-muted">
+        <div className={`h-1.5 rounded-full ${color}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+      </div>
+    );
+  }
+
+  const latestByProvider = Object.values(
+    ratings.reduce<Record<string, ExternalESGRating>>((acc, r) => {
+      if (!acc[r.provider] || r.rating_date > acc[r.provider].rating_date) acc[r.provider] = r;
+      return acc;
+    }, {})
+  );
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">External ESG Ratings ({ratings.length})</h3>
+          {latestByProvider.length > 0 && (
+            <p className="text-xs text-muted-foreground mt-0.5">{latestByProvider.length} provider{latestByProvider.length !== 1 ? "s" : ""} tracked</p>
+          )}
+        </div>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ Add Rating"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Provider *</label>
+                <select
+                  value={form.provider}
+                  onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {Object.entries(PROVIDER_META).map(([k, v]) => (
+                    <option key={k} value={k}>{v.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Rating Date *</label>
+                <input type="date" value={form.rating_date} onChange={(e) => setForm((f) => ({ ...f, rating_date: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Score</label>
+                <Input type="number" value={form.score} onChange={(e) => setForm((f) => ({ ...f, score: e.target.value }))} placeholder="62" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Max Score</label>
+                <Input type="number" value={form.max_score} onChange={(e) => setForm((f) => ({ ...f, max_score: e.target.value }))} placeholder="100" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Score % (0–100)</label>
+                <Input type="number" value={form.score_pct} onChange={(e) => setForm((f) => ({ ...f, score_pct: e.target.value }))} placeholder="62" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Grade / Tier</label>
+                <Input value={form.grade} onChange={(e) => setForm((f) => ({ ...f, grade: e.target.value }))} placeholder="GOLD / AA / CDP_A" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Percentile (0–100)</label>
+                <Input type="number" value={form.percentile} onChange={(e) => setForm((f) => ({ ...f, percentile: e.target.value }))} placeholder="82" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Peer Group</label>
+                <Input value={form.peer_group} onChange={(e) => setForm((f) => ({ ...f, peer_group: e.target.value }))} placeholder="Automotive Components" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">E-Score</label>
+                <Input type="number" value={form.environmental_score} onChange={(e) => setForm((f) => ({ ...f, environmental_score: e.target.value }))} placeholder="65" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">S-Score</label>
+                <Input type="number" value={form.social_score} onChange={(e) => setForm((f) => ({ ...f, social_score: e.target.value }))} placeholder="60" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">G-Score</label>
+                <Input type="number" value={form.governance_score} onChange={(e) => setForm((f) => ({ ...f, governance_score: e.target.value }))} placeholder="58" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ethics Score (EcoVadis)</label>
+                <Input type="number" value={form.ethics_score} onChange={(e) => setForm((f) => ({ ...f, ethics_score: e.target.value }))} placeholder="55" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Valid Until</label>
+                <input type="date" value={form.valid_until} onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Report URL</label>
+                <Input value={form.report_url} onChange={(e) => setForm((f) => ({ ...f, report_url: e.target.value }))} placeholder="https://ecovadis.com/..." />
+              </div>
+              <div className="col-span-2">
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Methodology Version</label>
+                <Input value={form.methodology_version} onChange={(e) => setForm((f) => ({ ...f, methodology_version: e.target.value }))} placeholder="EcoVadis 2024" />
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Rating"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : ratings.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <TrendingUp className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No external ESG ratings recorded yet.</p>
+            <p className="mt-1 text-xs text-muted-foreground">Add scores from EcoVadis, MSCI, Sustainalytics, CDP, or other providers.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Latest per provider summary */}
+          {latestByProvider.length > 1 && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Latest per Provider</p>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {latestByProvider.map((r) => {
+                  const meta = PROVIDER_META[r.provider] ?? PROVIDER_META.OTHER;
+                  return (
+                    <Card key={r.provider} className={r.is_expired ? "border-red-200 opacity-60" : ""}>
+                      <CardContent className="pt-3 pb-3 space-y-1">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.color}`}>{meta.label}</span>
+                        <div className="flex items-end gap-2">
+                          {r.score_pct !== null ? (
+                            <span className="text-xl font-bold">{r.score_pct.toFixed(0)}<span className="text-xs font-normal text-muted-foreground">%</span></span>
+                          ) : r.grade ? (
+                            <span className="text-xl font-bold">{r.grade}</span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">—</span>
+                          )}
+                          {r.percentile !== null && (
+                            <span className="text-xs text-muted-foreground mb-0.5">P{r.percentile.toFixed(0)}</span>
+                          )}
+                        </div>
+                        {scoreBar(r.score_pct)}
+                        <p className="text-[10px] text-muted-foreground">{r.rating_date}</p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* All ratings */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">All Ratings</p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {ratings.map((r) => {
+                const meta = PROVIDER_META[r.provider] ?? PROVIDER_META.OTHER;
+                return (
+                  <Card key={r.id} className={r.is_expired ? "border-red-200" : ""}>
+                    <CardContent className="pt-4 space-y-2">
+                      <div className="flex items-start justify-between">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta.color}`}>{meta.label}</span>
+                        <button onClick={() => handleDelete(r.id)} className="text-muted-foreground hover:text-red-500 transition-colors text-xs">✕</button>
+                      </div>
+
+                      {/* Main score */}
+                      <div className="flex items-center gap-2">
+                        {r.score_pct !== null && (
+                          <span className="text-lg font-bold">{r.score_pct.toFixed(1)}<span className="text-xs font-normal text-muted-foreground">%</span></span>
+                        )}
+                        {r.grade && <span className="rounded bg-muted px-1.5 py-0.5 text-xs font-semibold">{r.grade}</span>}
+                        {r.is_expired && <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">EXPIRED</span>}
+                      </div>
+                      {scoreBar(r.score_pct)}
+
+                      {/* Sub-scores */}
+                      {(r.environmental_score !== null || r.social_score !== null || r.governance_score !== null) && (
+                        <div className="grid grid-cols-3 gap-1 pt-1">
+                          {[["E", r.environmental_score], ["S", r.social_score], ["G", r.governance_score]].map(([label, val]) => (
+                            <div key={label as string} className="text-center">
+                              <p className="text-[10px] text-muted-foreground">{label as string}</p>
+                              <p className="text-xs font-semibold">{val !== null ? (val as number).toFixed(0) : "—"}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {r.percentile !== null && (
+                        <p className="text-xs text-muted-foreground">P{r.percentile.toFixed(0)} {r.peer_group ? `· ${r.peer_group}` : ""}</p>
+                      )}
+                      <p className="text-[10px] text-muted-foreground">Rated: {r.rating_date}</p>
+                      {r.valid_until && (
+                        <p className={`text-[10px] ${r.is_expired ? "text-red-500" : r.days_until_expiry !== null && r.days_until_expiry <= 90 ? "text-amber-600" : "text-muted-foreground"}`}>
+                          Valid until: {r.valid_until}{r.days_until_expiry !== null && !r.is_expired ? ` (${r.days_until_expiry}d)` : ""}
+                        </p>
+                      )}
+                      {r.report_url && (
+                        <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-blue-600 hover:underline">
+                          <ExternalLink className="h-3 w-3" /> Report
+                        </a>
+                      )}
+                      {r.methodology_version && <p className="text-[10px] text-muted-foreground">{r.methodology_version}</p>}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics"] as const;
+const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics", "ESG Ratings"] as const;
 type Tab = typeof TABS[number];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -3064,6 +3374,11 @@ export default function SupplierDetailPage() {
       {/* ── ESG Metrics Tab (KAN-89) ──────────────────────────────────── */}
       {tab === "ESG Metrics" && (
         <ESGMetricsTab supplierId={id} />
+      )}
+
+      {/* ── ESG Ratings Tab (KAN-90) ─────────────────────────────────── */}
+      {tab === "ESG Ratings" && (
+        <ESGRatingsTab supplierId={id} />
       )}
 
       {/* Edit Modal */}

@@ -11,6 +11,7 @@ from domain.supplier_extensions import (
     CertificationType,
     ContactRole,
     ESGMetricType,
+    ESGRatingProvider,
     LocationType,
     OwnershipType,
 )
@@ -284,3 +285,85 @@ class SupplierESGMetricResponse(EntityResponse):
     verification_standard: str | None
     evidence_id: str | None
     notes: str | None
+
+
+# ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
+
+class ExternalESGRatingCreate(BaseModel):
+    provider: ESGRatingProvider
+    rating_date: date
+    score: float | None = None
+    max_score: float | None = None
+    score_pct: float | None = Field(default=None, ge=0, le=100)
+    grade: str | None = Field(default=None, max_length=30)
+    percentile: float | None = Field(default=None, ge=0, le=100)
+    peer_group: str | None = Field(default=None, max_length=300)
+    environmental_score: float | None = None
+    social_score: float | None = None
+    governance_score: float | None = None
+    ethics_score: float | None = None
+    sustainable_procurement_score: float | None = None
+    valid_until: date | None = None
+    report_url: str | None = Field(default=None, max_length=1000)
+    methodology_version: str | None = Field(default=None, max_length=100)
+    evidence_id: str | None = None
+    notes: str | None = None
+
+
+class ExternalESGRatingResponse(EntityResponse):
+    supplier_id: str
+    organization_id: str
+    provider: str
+    rating_date: date
+    score: float | None
+    max_score: float | None
+    score_pct: float | None
+    grade: str | None
+    percentile: float | None
+    peer_group: str | None
+    environmental_score: float | None
+    social_score: float | None
+    governance_score: float | None
+    ethics_score: float | None
+    sustainable_procurement_score: float | None
+    valid_until: date | None
+    is_expired: bool
+    days_until_expiry: int | None
+    report_url: str | None
+    methodology_version: str | None
+    evidence_id: str | None
+    notes: str | None
+
+    @classmethod
+    def from_model(cls, m: Any) -> "ExternalESGRatingResponse":
+        from datetime import date as date_type
+        today = date_type.today()
+        is_expired = m.valid_until is not None and m.valid_until < today
+        days = (m.valid_until - today).days if m.valid_until is not None else None
+        return cls(
+            id=m.id,
+            created_at=m.created_at,
+            updated_at=m.updated_at,
+            supplier_id=m.supplier_id,
+            organization_id=m.organization_id,
+            provider=m.provider,
+            rating_date=m.rating_date,
+            score=m.score,
+            max_score=m.max_score,
+            score_pct=m.score_pct,
+            grade=m.grade,
+            percentile=m.percentile,
+            peer_group=m.peer_group,
+            environmental_score=m.environmental_score,
+            social_score=m.social_score,
+            governance_score=m.governance_score,
+            ethics_score=m.ethics_score,
+            sustainable_procurement_score=m.sustainable_procurement_score,
+            valid_until=m.valid_until,
+            is_expired=is_expired,
+            days_until_expiry=days,
+            report_url=m.report_url,
+            methodology_version=m.methodology_version,
+            evidence_id=m.evidence_id,
+            notes=m.notes,
+        )

@@ -208,3 +208,99 @@ class TestDomainEvents:
         e1 = DomainEvent.supplier_location_created("o", "s", "l", "PLANT")
         e2 = DomainEvent.supplier_location_created("o", "s", "l", "PLANT")
         assert e1.event_id != e2.event_id
+
+
+# ── External ESG Rating Tests (KAN-90) ────────────────────────────────────────
+
+from domain.supplier_extensions import ESGRatingProvider, ExternalESGRating
+
+
+class TestExternalESGRating:
+    def test_ecovadis_rating_with_grade(self) -> None:
+        rating = ExternalESGRating(
+            supplier_id="s1",
+            organization_id="org1",
+            provider=ESGRatingProvider.ECOVADIS,
+            rating_date=date(2024, 3, 15),
+            score=62.0,
+            max_score=100.0,
+            score_pct=62.0,
+            grade="GOLD",
+            percentile=82.0,
+            peer_group="Automotive Components",
+            environmental_score=65.0,
+            social_score=60.0,
+            governance_score=58.0,
+            valid_until=date(2025, 3, 15),
+        )
+        assert rating.provider == ESGRatingProvider.ECOVADIS
+        assert rating.score_pct == 62.0
+        assert rating.grade == "GOLD"
+        assert rating.percentile == 82.0
+
+    def test_msci_rating_letter_grade(self) -> None:
+        rating = ExternalESGRating(
+            supplier_id="s1",
+            organization_id="org1",
+            provider=ESGRatingProvider.MSCI,
+            rating_date=date(2024, 1, 10),
+            grade="AA",
+            score_pct=78.5,
+        )
+        assert rating.provider == ESGRatingProvider.MSCI
+        assert rating.grade == "AA"
+        assert rating.score is None
+        assert rating.max_score is None
+
+    def test_expired_rating_detected(self) -> None:
+        rating = ExternalESGRating(
+            supplier_id="s1",
+            organization_id="org1",
+            provider=ESGRatingProvider.SUSTAINALYTICS,
+            rating_date=date(2021, 6, 1),
+            valid_until=date(2022, 6, 1),
+            score_pct=45.0,
+        )
+        assert rating.is_expired is True
+        assert rating.days_until_expiry is not None
+        assert rating.days_until_expiry < 0
+
+    def test_no_expiry_date_never_expired(self) -> None:
+        rating = ExternalESGRating(
+            supplier_id="s1",
+            organization_id="org1",
+            provider=ESGRatingProvider.CDP,
+            rating_date=date(2024, 11, 1),
+            grade="CDP_A",
+        )
+        assert rating.is_expired is False
+        assert rating.days_until_expiry is None
+
+    def test_kafka_event_for_rating(self) -> None:
+        from infrastructure.kafka.events import DomainEvent, SupplierEventType
+        event = DomainEvent.supplier_esg_rating_received(
+            organization_id="org1",
+            supplier_id="sup1",
+            rating_id="r1",
+            provider="ECOVADIS",
+            rating_date="2024-03-15",
+            score_pct=62.0,
+            grade="GOLD",
+        )
+        assert event.event_type == SupplierEventType.ESG_RATING_RECEIVED
+        assert event.payload["provider"] == "ECOVADIS"
+        assert event.payload["score_pct"] == 62.0
+        assert event.payload["grade"] == "GOLD"
+        payload_bytes = event.to_json()
+        assert b"esg_rating.received" in payload_bytes
+        assert b"ECOVADIS" in payload_bytes
+
+    def test_all_providers_valid(self) -> None:
+        for p in ESGRatingProvider:
+            r = ExternalESGRating(
+                supplier_id="s1",
+                organization_id="org1",
+                provider=p,
+                rating_date=date(2024, 1, 1),
+            )
+            assert r.provider == p

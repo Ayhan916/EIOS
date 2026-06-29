@@ -21,6 +21,7 @@ from domain.supplier_extensions import (
     CertificationType,
     ContactRole,
     ESGMetricType,
+    ESGRatingProvider,
     LocationType,
     OwnershipType,
     SupplierCertification,
@@ -35,6 +36,7 @@ from infrastructure.persistence.models.supplier_extensions import (
     SupplierCertificationModel,
     SupplierContactModel,
     SupplierESGMetricModel,
+    SupplierExternalESGRatingModel,
     SupplierLocationModel,
     SupplierOwnershipModel,
 )
@@ -546,3 +548,123 @@ class SupplierESGMetricService:
         )
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
+
+
+# ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
+
+class SupplierExternalESGRatingService:
+    def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
+        self._session = session
+        self._kafka = kafka
+
+    async def record(
+        self,
+        organization_id: str,
+        supplier_id: str,
+        provider: ESGRatingProvider,
+        rating_date: date,
+        *,
+        score: float | None = None,
+        max_score: float | None = None,
+        score_pct: float | None = None,
+        grade: str | None = None,
+        percentile: float | None = None,
+        peer_group: str | None = None,
+        environmental_score: float | None = None,
+        social_score: float | None = None,
+        governance_score: float | None = None,
+        ethics_score: float | None = None,
+        sustainable_procurement_score: float | None = None,
+        valid_until: date | None = None,
+        report_url: str | None = None,
+        methodology_version: str | None = None,
+        evidence_id: str | None = None,
+        notes: str | None = None,
+        actor_id: str | None = None,
+    ) -> SupplierExternalESGRatingModel:
+        # Auto-compute score_pct if score + max_score given but pct not provided
+        computed_pct = score_pct
+        if computed_pct is None and score is not None and max_score and max_score > 0:
+            computed_pct = round(score / max_score * 100, 2)
+
+        now = _now()
+        model = SupplierExternalESGRatingModel(
+            id=_uid(),
+            supplier_id=supplier_id,
+            organization_id=organization_id,
+            provider=provider.value,
+            rating_date=rating_date,
+            score=score,
+            max_score=max_score,
+            score_pct=computed_pct,
+            grade=grade,
+            percentile=percentile,
+            peer_group=peer_group,
+            environmental_score=environmental_score,
+            social_score=social_score,
+            governance_score=governance_score,
+            ethics_score=ethics_score,
+            sustainable_procurement_score=sustainable_procurement_score,
+            valid_until=valid_until,
+            report_url=report_url,
+            methodology_version=methodology_version,
+            evidence_id=evidence_id,
+            notes=notes,
+            created_at=now,
+            updated_at=now,
+            created_by=actor_id,
+        )
+        self._session.add(model)
+        await self._session.flush()
+
+        await self._kafka.publish_supplier_event(
+            DomainEvent.supplier_esg_rating_received(
+                organization_id=organization_id,
+                supplier_id=supplier_id,
+                rating_id=model.id,
+                provider=provider.value,
+                rating_date=str(rating_date),
+                score_pct=computed_pct,
+                grade=grade,
+                actor_id=actor_id,
+            )
+        )
+        return model
+
+    async def list_for_supplier(
+        self,
+        organization_id: str,
+        supplier_id: str,
+        provider: ESGRatingProvider | None = None,
+    ) -> list[SupplierExternalESGRatingModel]:
+        stmt = (
+            select(SupplierExternalESGRatingModel)
+            .where(
+                SupplierExternalESGRatingModel.organization_id == organization_id,
+                SupplierExternalESGRatingModel.supplier_id == supplier_id,
+            )
+            .order_by(
+                SupplierExternalESGRatingModel.rating_date.desc(),
+                SupplierExternalESGRatingModel.provider,
+            )
+        )
+        if provider is not None:
+            stmt = stmt.where(SupplierExternalESGRatingModel.provider == provider.value)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def get(
+        self, organization_id: str, rating_id: str
+    ) -> SupplierExternalESGRatingModel | None:
+        model = await self._session.get(SupplierExternalESGRatingModel, rating_id)
+        if model is None or model.organization_id != organization_id:
+            return None
+        return model
+
+    async def delete(self, organization_id: str, rating_id: str) -> bool:
+        model = await self.get(organization_id, rating_id)
+        if model is None:
+            return False
+        await self._session.delete(model)
+        await self._session.flush()
+        return True

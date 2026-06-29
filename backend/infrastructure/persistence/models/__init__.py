@@ -177,13 +177,6 @@ from .soc2_control import Soc2ControlModel
 from .pentest_finding import PentestFindingModel
 from .production_checklist import ProductionChecklistItemModel
 from .supplier_digital_twin import SupplierDigitalTwinModel, IntelligenceTimelineEventModel
-from .supplier_extensions import (
-    SupplierLocationModel,
-    SupplierContactModel,
-    SupplierCertificationModel,
-    SupplierOwnershipModel,
-    SupplierESGMetricModel,
-)
 from .sustainability import (
     SustainabilityObjectiveModel,
     ESGTargetModel,
@@ -372,11 +365,6 @@ __all__ = [
     "ProductionChecklistItemModel",
     "SupplierDigitalTwinModel",
     "IntelligenceTimelineEventModel",
-    "SupplierLocationModel",
-    "SupplierContactModel",
-    "SupplierCertificationModel",
-    "SupplierOwnershipModel",
-    "SupplierESGMetricModel",
     "assessment_evidence",
     "control_requirement",
     "control_risk",

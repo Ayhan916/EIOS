@@ -38,6 +38,9 @@ class SupplierEventType(str, Enum):
     ESG_METRIC_UPDATED = "supplier.esg_metric.updated"
     # ESG Twin cascade triggers
     SUPPLIER_ESG_UPDATED = "supplier.esg.updated"
+    # External ESG Ratings (KAN-90)
+    ESG_RATING_RECEIVED = "supplier.esg_rating.received"
+    ESG_RATING_DELETED = "supplier.esg_rating.deleted"
 
 
 @dataclass
@@ -159,5 +162,33 @@ class DomainEvent:
                 "supplier_id": supplier_id,
                 "is_state_owned": is_state_owned,
                 "parent_company_country": parent_company_country,
+            },
+        )
+
+    @classmethod
+    def supplier_esg_rating_received(
+        cls,
+        organization_id: str,
+        supplier_id: str,
+        rating_id: str,
+        provider: str,
+        rating_date: str,
+        score_pct: float | None,
+        grade: str | None,
+        actor_id: str | None = None,
+    ) -> "DomainEvent":
+        return cls(
+            event_type=SupplierEventType.ESG_RATING_RECEIVED,
+            aggregate_type="Supplier",
+            aggregate_id=supplier_id,
+            organization_id=organization_id,
+            actor_id=actor_id,
+            payload={
+                "rating_id": rating_id,
+                "supplier_id": supplier_id,
+                "provider": provider,
+                "rating_date": rating_date,
+                "score_pct": score_pct,
+                "grade": grade,
             },
         )

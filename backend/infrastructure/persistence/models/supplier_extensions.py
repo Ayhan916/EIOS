@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, UniqueConstraint, JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -167,5 +167,49 @@ class SupplierESGMetricModel(BaseModel):
     data_source: Mapped[str | None] = mapped_column(String(300), nullable=True)
     is_third_party_verified: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     verification_standard: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    evidence_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+
+class SupplierExternalESGRatingModel(BaseModel):
+    """External ESG rating from a third-party provider (EcoVadis, MSCI, Sustainalytics, etc.)."""
+
+    __tablename__ = "supplier_external_esg_ratings"
+    __table_args__ = (
+        UniqueConstraint(
+            "supplier_id", "organization_id", "provider", "rating_date",
+            name="uq_esg_rating_supplier_provider_date",
+        ),
+        Index("ix_sext_esg_supplier", "supplier_id"),
+        Index("ix_sext_esg_org", "organization_id"),
+        Index("ix_sext_esg_provider", "provider"),
+        Index("ix_sext_esg_date", "rating_date"),
+        Index("ix_sext_esg_valid_until", "valid_until"),
+    )
+
+    supplier_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False)
+    rating_date: Mapped[date] = mapped_column(Date, nullable=False)
+    # Numeric scores
+    score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    max_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    score_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Grade / tier
+    grade: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    # Peer benchmarking
+    percentile: Mapped[float | None] = mapped_column(Float, nullable=True)
+    peer_group: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    # Sub-scores
+    environmental_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    social_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    governance_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    ethics_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    sustainable_procurement_score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Validity
+    valid_until: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # Source
+    report_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    methodology_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
     evidence_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

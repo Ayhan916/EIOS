@@ -21,6 +21,7 @@ from application.supplier_twin.service import (
     SupplierCertificationService,
     SupplierContactService,
     SupplierESGMetricService,
+    SupplierExternalESGRatingService,
     SupplierLocationService,
     SupplierOwnershipService,
 )
@@ -28,6 +29,7 @@ from domain.supplier_extensions import (
     CertificationType,
     ContactRole,
     ESGMetricType,
+    ESGRatingProvider,
     LocationType,
     OwnershipType,
 )
@@ -40,6 +42,8 @@ from interfaces.api.deps import (
     scope_gate,
 )
 from interfaces.api.schemas.supplier_extensions import (
+    ExternalESGRatingCreate,
+    ExternalESGRatingResponse,
     SupplierCertificationCreate,
     SupplierCertificationResponse,
     SupplierContactCreate,
@@ -381,3 +385,83 @@ async def record_esg_metric(
     )
     await db.commit()
     return SupplierESGMetricResponse.model_validate(model)
+
+
+# ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
+
+@router.get("/{supplier_id}/esg-ratings", response_model=list[ExternalESGRatingResponse])
+async def list_esg_ratings(
+    supplier_id: str,
+    provider: ESGRatingProvider | None = Query(default=None),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    kafka: KafkaEventProducer = Depends(get_kafka_producer),
+) -> list[ExternalESGRatingResponse]:
+    await _assert_supplier_access(supplier_id, current_user.organization_id or "", db)
+    svc = SupplierExternalESGRatingService(db, kafka)
+    models = await svc.list_for_supplier(
+        current_user.organization_id or "", supplier_id, provider
+    )
+    return [ExternalESGRatingResponse.from_model(m) for m in models]
+
+
+@router.post(
+    "/{supplier_id}/esg-ratings",
+    response_model=ExternalESGRatingResponse,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_analyst)],
+)
+async def create_esg_rating(
+    supplier_id: str,
+    body: ExternalESGRatingCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    kafka: KafkaEventProducer = Depends(get_kafka_producer),
+) -> ExternalESGRatingResponse:
+    await _assert_supplier_access(supplier_id, current_user.organization_id or "", db)
+    svc = SupplierExternalESGRatingService(db, kafka)
+    model = await svc.record(
+        organization_id=current_user.organization_id or "",
+        supplier_id=supplier_id,
+        provider=body.provider,
+        rating_date=body.rating_date,
+        score=body.score,
+        max_score=body.max_score,
+        score_pct=body.score_pct,
+        grade=body.grade,
+        percentile=body.percentile,
+        peer_group=body.peer_group,
+        environmental_score=body.environmental_score,
+        social_score=body.social_score,
+        governance_score=body.governance_score,
+        ethics_score=body.ethics_score,
+        sustainable_procurement_score=body.sustainable_procurement_score,
+        valid_until=body.valid_until,
+        report_url=body.report_url,
+        methodology_version=body.methodology_version,
+        evidence_id=body.evidence_id,
+        notes=body.notes,
+        actor_id=current_user.id,
+    )
+    await db.commit()
+    return ExternalESGRatingResponse.from_model(model)
+
+
+@router.delete(
+    "/{supplier_id}/esg-ratings/{rating_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    dependencies=[Depends(require_analyst)],
+)
+async def delete_esg_rating(
+    supplier_id: str,
+    rating_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    kafka: KafkaEventProducer = Depends(get_kafka_producer),
+) -> None:
+    await _assert_supplier_access(supplier_id, current_user.organization_id or "", db)
+    svc = SupplierExternalESGRatingService(db, kafka)
+    deleted = await svc.delete(current_user.organization_id or "", rating_id)
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rating not found")
+    await db.commit()

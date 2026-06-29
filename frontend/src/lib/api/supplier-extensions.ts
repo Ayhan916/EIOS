@@ -242,3 +242,73 @@ export async function recordESGMetric(
   const res = await apiClient.post(`/api/v1/suppliers/${supplierId}/esg-metrics`, body);
   return res.data;
 }
+
+// ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
+
+export interface ExternalESGRating {
+  id: string;
+  supplier_id: string;
+  organization_id: string;
+  provider: string;
+  rating_date: string;
+  score: number | null;
+  max_score: number | null;
+  score_pct: number | null;
+  grade: string | null;
+  percentile: number | null;
+  peer_group: string | null;
+  environmental_score: number | null;
+  social_score: number | null;
+  governance_score: number | null;
+  ethics_score: number | null;
+  sustainable_procurement_score: number | null;
+  valid_until: string | null;
+  is_expired: boolean;
+  days_until_expiry: number | null;
+  report_url: string | null;
+  methodology_version: string | null;
+  evidence_id: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function listESGRatings(
+  supplierId: string,
+  provider?: string
+): Promise<ExternalESGRating[]> {
+  const params = provider ? `?provider=${provider}` : "";
+  const res = await apiClient.get(`/api/v1/suppliers/${supplierId}/esg-ratings${params}`);
+  return res.data;
+}
+
+export async function createESGRating(
+  supplierId: string,
+  body: {
+    provider: string;
+    rating_date: string;
+    score?: number;
+    max_score?: number;
+    score_pct?: number;
+    grade?: string;
+    percentile?: number;
+    peer_group?: string;
+    environmental_score?: number;
+    social_score?: number;
+    governance_score?: number;
+    ethics_score?: number;
+    sustainable_procurement_score?: number;
+    valid_until?: string;
+    report_url?: string;
+    methodology_version?: string;
+    evidence_id?: string;
+    notes?: string;
+  }
+): Promise<ExternalESGRating> {
+  const res = await apiClient.post(`/api/v1/suppliers/${supplierId}/esg-ratings`, body);
+  return res.data;
+}
+
+export async function deleteESGRating(supplierId: string, ratingId: string): Promise<void> {
+  await apiClient.delete(`/api/v1/suppliers/${supplierId}/esg-ratings/${ratingId}`);
+}

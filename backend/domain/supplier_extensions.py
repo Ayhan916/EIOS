@@ -254,3 +254,65 @@ class SupplierESGMetric(BaseEntity):
     verification_standard: str | None = None
     evidence_id: str | None = None
     notes: str | None = None
+
+
+# ── KAN-90 — External ESG Ratings ────────────────────────────────────────────
+
+class ESGRatingProvider(str, Enum):
+    ECOVADIS = "ECOVADIS"
+    MSCI = "MSCI"
+    SUSTAINALYTICS = "SUSTAINALYTICS"
+    CDP = "CDP"
+    ISS_ESG = "ISS_ESG"
+    REFINITIV = "REFINITIV"
+    SP_GLOBAL = "SP_GLOBAL"
+    BLOOMBERG_ESG = "BLOOMBERG_ESG"
+    FTSE_RUSSELL = "FTSE_RUSSELL"
+    MOODY_ESG = "MOODY_ESG"
+    OTHER = "OTHER"
+
+
+@dataclass(slots=True, kw_only=True)
+class ExternalESGRating(BaseEntity):
+    """An external ESG rating received from a third-party provider (EcoVadis, MSCI, etc.)."""
+
+    supplier_id: str
+    organization_id: str
+    provider: ESGRatingProvider
+    rating_date: date
+    # Numeric score (provider-specific scale — stored alongside percentage for comparability)
+    score: float | None = None
+    max_score: float | None = None
+    score_pct: float | None = None        # 0–100 normalised, computed if score+max_score given
+    # Tier / letter grade (EcoVadis: Bronze/Silver/Gold/Platinum; MSCI: AAA–CCC)
+    grade: str | None = None
+    # Peer benchmarking
+    percentile: float | None = None       # 0–100
+    peer_group: str | None = None
+    # Sub-scores (environment / social / governance)
+    environmental_score: float | None = None
+    social_score: float | None = None
+    governance_score: float | None = None
+    # EcoVadis-specific sub-topic scores
+    ethics_score: float | None = None
+    sustainable_procurement_score: float | None = None
+    # Validity / expiry
+    valid_until: date | None = None
+    # Source metadata
+    report_url: str | None = None
+    methodology_version: str | None = None
+    # Optional link to an uploaded evidence file
+    evidence_id: str | None = None
+    notes: str | None = None
+
+    @property
+    def is_expired(self) -> bool:
+        if self.valid_until is None:
+            return False
+        return self.valid_until < datetime.now(UTC).date()
+
+    @property
+    def days_until_expiry(self) -> int | None:
+        if self.valid_until is None:
+            return None
+        return (self.valid_until - datetime.now(UTC).date()).days
