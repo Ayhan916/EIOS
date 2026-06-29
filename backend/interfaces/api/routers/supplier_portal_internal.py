@@ -55,7 +55,12 @@ async def invite_supplier_user(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
-    from application.supplier_portal.supplier_auth_service import invite_supplier_user
+    from application.supplier_portal.supplier_auth_service import invite_supplier_user  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier import SupplierModel  # noqa: PLC0415
+    from infrastructure.persistence.models.organization import OrganizationModel  # noqa: PLC0415
+    from infrastructure.celery.tasks.email import send_supplier_invitation_email  # noqa: PLC0415
+    from shared.config import settings  # noqa: PLC0415
+    from sqlalchemy import select  # noqa: PLC0415
 
     raw_token = await invite_supplier_user(
         supplier_id=body.supplier_id,
@@ -66,7 +71,30 @@ async def invite_supplier_user(
         session=session,
     )
     await session.commit()
-    return {"invite_token": raw_token, "message": "Invitation created — send token to supplier"}
+
+    # Queue invitation email (G-009) — fire-and-forget; skips if SMTP not configured
+    try:
+        supplier_row = (
+            await session.execute(select(SupplierModel).where(SupplierModel.id == body.supplier_id))
+        ).scalar_one_or_none()
+        org_row = (
+            await session.execute(
+                select(OrganizationModel).where(OrganizationModel.id == current_user.organization_id)
+            )
+        ).scalar_one_or_none()
+        supplier_name = supplier_row.name if supplier_row else body.supplier_id
+        org_name = org_row.name if org_row else (current_user.organization_id or "")
+        invite_url = f"{settings.app_base_url}/supplier/accept?token={raw_token}"
+        send_supplier_invitation_email(
+            to_email=body.email,
+            supplier_name=supplier_name,
+            organization_name=org_name,
+            invite_url=invite_url,
+        )
+    except Exception:
+        pass  # email failure never blocks the invitation creation
+
+    return {"invite_token": raw_token, "message": "Invitation created — email queued"}
 
 
 # ── Evidence Requests ─────────────────────────────────────────────────────────
@@ -148,6 +176,31 @@ async def review_submission(
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return EvidenceSubmissionResponse.model_validate(sub)
+
+
+# ── Questionnaire Assignments listing ────────────────────────────────────────
+
+@router.get(
+    "/questionnaires/assignments",
+    response_model=list[QuestionnaireAssignmentResponse],
+    dependencies=[_ADMIN],
+)
+async def list_questionnaire_assignments(
+    supplier_id: str | None = None,
+    session: AsyncSession = Depends(get_db),
+    current_user=Depends(get_current_user),
+) -> list[QuestionnaireAssignmentResponse]:
+    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
+    from sqlalchemy import select
+
+    stmt = select(QuestionnaireAssignmentModel).where(
+        QuestionnaireAssignmentModel.organization_id == current_user.organization_id
+    )
+    if supplier_id:
+        stmt = stmt.where(QuestionnaireAssignmentModel.supplier_id == supplier_id)
+    stmt = stmt.order_by(QuestionnaireAssignmentModel.assigned_at.desc().nulls_last()).limit(50)
+    rows = (await session.execute(stmt)).scalars().all()
+    return [QuestionnaireAssignmentResponse.model_validate(r) for r in rows]
 
 
 # ── Questionnaire Templates ───────────────────────────────────────────────────

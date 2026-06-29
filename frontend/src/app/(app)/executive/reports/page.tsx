@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileText, Plus, Download, Trash2, AlertCircle } from "lucide-react";
+import { FileText, Plus, Download, Trash2, AlertCircle, Share2, Check, Loader2 } from "lucide-react";
 import {
   generateBoardReport,
   listBoardReports,
   deleteBoardReport,
   boardReportPdfUrl,
+  createShareLink,
 } from "@/lib/api/executive";
 import type { BoardReportRequest } from "@/types/api";
 import {
@@ -39,6 +40,29 @@ function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
   });
   const [kpiDays, setKpiDays] = useState<30 | 90 | 365>(90);
   const [error, setError] = useState<string | null>(null);
+
+  // #126 Customizable slide selection
+  const SLIDES = [
+    { key: "executive_summary",  label: "Executive Summary" },
+    { key: "esg_health",         label: "ESG Health Score" },
+    { key: "risk_heatmap",       label: "Risk Heatmap" },
+    { key: "supplier_portfolio", label: "Supplier Portfolio" },
+    { key: "compliance_status",  label: "Compliance Status" },
+    { key: "sustainability",     label: "Sustainability KPIs" },
+    { key: "financial_esg",      label: "Financial ESG" },
+    { key: "pending_decisions",  label: "Pending Decisions" },
+  ];
+  const [selectedSlides, setSelectedSlides] = useState<Set<string>>(
+    new Set(SLIDES.map((s) => s.key))
+  );
+  function toggleSlide(key: string) {
+    setSelectedSlides((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) { if (next.size > 1) next.delete(key); }
+      else next.add(key);
+      return next;
+    });
+  }
 
   const { mutate, isPending } = useMutation({
     mutationFn: (body: BoardReportRequest) => generateBoardReport(body),
@@ -113,6 +137,34 @@ function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
             </div>
           </div>
 
+          {/* #126 Slide selection */}
+          <div>
+            <p className="text-sm font-medium mb-2">Slides to include</p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {SLIDES.map((s) => {
+                const checked = selectedSlides.has(s.key);
+                return (
+                  <button
+                    key={s.key}
+                    type="button"
+                    onClick={() => toggleSlide(s.key)}
+                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-left text-xs font-medium transition-colors ${
+                      checked
+                        ? "border-primary bg-primary/5 text-primary"
+                        : "border-border text-muted-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded border ${checked ? "border-primary bg-primary" : "border-slate-300"}`}>
+                      {checked && <span className="block h-1.5 w-1.5 rounded-sm bg-white" />}
+                    </span>
+                    {s.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">{selectedSlides.size} of {SLIDES.length} slides selected</p>
+          </div>
+
           {error && (
             <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
               <AlertCircle className="h-4 w-4 shrink-0" />
@@ -134,6 +186,86 @@ function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Share link button ─────────────────────────────────────────────────────────
+
+function ShareLinkButton({ reportId }: { reportId: string }) {
+  const [sharing, setSharing] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    setSharing(true);
+    try {
+      const res = await createShareLink(reportId, { expires_in_hours: 168 });
+      const url = `${window.location.origin}${res.board_url}`;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    } catch {
+      // clipboard fallback: not critical
+    } finally {
+      setSharing(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleShare}
+      disabled={sharing}
+      className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50"
+      title="Share with board (copies portal link)"
+    >
+      {sharing ? (
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+      ) : copied ? (
+        <Check className="h-3.5 w-3.5 text-emerald-500" />
+      ) : (
+        <Share2 className="h-3.5 w-3.5" />
+      )}
+      {copied ? "Copied!" : "Share"}
+    </button>
+  );
+}
+
+// ── PPTX download button ──────────────────────────────────────────────────────
+
+function PptxButton({ reportId, title }: { reportId: string; title: string }) {
+  const [busy, setBusy] = useState(false);
+
+  async function handleDownload() {
+    setBusy(true);
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
+      const res = await fetch(`/api/v1/commercial/executive/reports/${reportId}/pptx`, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error("Download failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title.replace(/\s+/g, "_").toLowerCase()}.pptx`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      // silent — PPTX endpoint may require commercial tier
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={busy}
+      className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium hover:bg-slate-50 disabled:opacity-50"
+      title="Download as PowerPoint"
+    >
+      {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+      PPTX
+    </button>
   );
 }
 
@@ -195,7 +327,8 @@ function ReportList() {
                 </p>
               </div>
             </div>
-            <div className="ml-4 flex shrink-0 gap-2">
+            <div className="ml-4 flex shrink-0 gap-2 flex-wrap">
+              <PptxButton reportId={r.id} title={r.title} />
               <a
                 href={boardReportPdfUrl(r.id)}
                 target="_blank"
@@ -204,6 +337,7 @@ function ReportList() {
               >
                 <Download className="h-3.5 w-3.5" /> PDF
               </a>
+              <ShareLinkButton reportId={r.id} />
               {isAdmin && (
                 <button
                   onClick={() => doDelete(r.id)}

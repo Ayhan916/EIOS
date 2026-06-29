@@ -12,16 +12,20 @@ import {
   CheckCircle2,
   Clock,
   FileText,
+  GitBranch,
+  Network,
   ShieldAlert,
   BarChart3,
   Edit2,
   Archive,
+  Printer,
   ExternalLink,
   ChevronRight,
   TrendingUp,
   TrendingDown,
   Minus,
   RefreshCw,
+  Share2,
   Target,
   Users,
 } from "lucide-react";
@@ -32,6 +36,7 @@ import {
   updateSupplier,
   archiveSupplier,
 } from "@/lib/api/suppliers";
+import { getSectorProfileByNace } from "@/lib/api/sector_intelligence";
 import {
   getSupplierIntelligence,
   recalculateSupplierScore,
@@ -39,6 +44,34 @@ import {
   getSupplierBenchmark,
   getSupplierHeatmap,
 } from "@/lib/api/supplier-scores";
+import {
+  collectIntelligence,
+  getSupplierTwin,
+  getSupplierTwinTimeline,
+  processSupplierSignals,
+  type CollectIntelligenceResponse,
+  type SupplierDigitalTwin,
+  type IntelligenceTimelineEvent,
+} from "@/lib/api/supplier-twin";
+import {
+  listLocations,
+  createLocation,
+  deleteLocation,
+  listContacts,
+  createContact,
+  listCertifications,
+  createCertification,
+  getOwnership,
+  upsertOwnership,
+  listESGMetrics,
+  recordESGMetric,
+  type SupplierLocation,
+  type SupplierContact,
+  type SupplierCertification,
+  type SupplierOwnership,
+  type SupplierESGMetric,
+} from "@/lib/api/supplier-extensions";
+import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -134,9 +167,1264 @@ function TrendBadge({ trend, delta }: { trend: string; delta: number }) {
   );
 }
 
+// ── Twin Event Card ───────────────────────────────────────────────────────────
+
+function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const severityColors: Record<string, string> = {
+    CRITICAL: "border-red-300 bg-red-50",
+    HIGH: "border-orange-300 bg-orange-50",
+    MEDIUM: "border-amber-300 bg-amber-50",
+    LOW: "border-slate-200 bg-slate-50",
+    INFO: "border-blue-200 bg-blue-50",
+  };
+  const severityBadge: Record<string, string> = {
+    CRITICAL: "bg-red-600 text-white",
+    HIGH: "bg-orange-500 text-white",
+    MEDIUM: "bg-amber-500 text-black",
+    LOW: "bg-slate-400 text-white",
+    INFO: "bg-blue-500 text-white",
+  };
+  const categoryIcons: Record<string, React.ReactNode> = {
+    ESG: <BarChart3 className="h-3.5 w-3.5" />,
+    COMPLIANCE: <CheckCircle2 className="h-3.5 w-3.5" />,
+    FINANCIAL: <TrendingDown className="h-3.5 w-3.5" />,
+    GEOPOLITICAL: <Globe className="h-3.5 w-3.5" />,
+    CYBER: <ShieldAlert className="h-3.5 w-3.5" />,
+    HUMAN_RIGHTS: <Users className="h-3.5 w-3.5" />,
+    ENVIRONMENTAL: <Globe className="h-3.5 w-3.5" />,
+    OPERATIONAL: <Network className="h-3.5 w-3.5" />,
+  };
+
+  return (
+    <div className={`rounded-xl border p-4 ${severityColors[event.severity] ?? "border-border bg-card"}`}>
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 mt-0.5">
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${severityBadge[event.severity] ?? "bg-slate-400 text-white"}`}>
+            {event.severity}
+          </span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              {categoryIcons[event.event_category] ?? <AlertTriangle className="h-3.5 w-3.5" />}
+              {event.event_category}
+            </span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              {new Date(event.occurred_at).toLocaleDateString()}
+            </span>
+          </div>
+          <p className="mt-1 font-semibold text-sm">{event.title}</p>
+          {event.source_name && (
+            <div className="mt-1">
+              {event.source_url ? (
+                <a
+                  href={event.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  {event.source_name}
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                  <Globe className="h-3 w-3" />
+                  {event.source_name}
+                </span>
+              )}
+            </div>
+          )}
+          <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{event.summary}</p>
+
+          {/* Health impact */}
+          {event.twin_dimension_affected && event.health_delta !== 0 && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs">
+              <span className="text-muted-foreground">Impact:</span>
+              <span className="font-mono font-semibold text-red-600">
+                {event.health_delta.toFixed(0)} pts
+              </span>
+              <span className="text-muted-foreground">on</span>
+              <span className="font-medium">{event.twin_dimension_affected.replace("_health", "").replace("_", " ").toUpperCase()}</span>
+            </div>
+          )}
+
+          {/* Expand button */}
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="mt-2 text-xs text-blue-600 hover:text-blue-800"
+          >
+            {expanded ? "Hide details ↑" : "Why does this matter? ↓"}
+          </button>
+
+          {expanded && (
+            <div className="mt-3 space-y-3 border-t border-border pt-3">
+              {event.why_important && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Why important</p>
+                  <p className="text-xs">{event.why_important}</p>
+                </div>
+              )}
+              {event.regulatory_impact && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Regulatory impact</p>
+                  <p className="text-xs">{event.regulatory_impact}</p>
+                </div>
+              )}
+              {event.recommended_action && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Recommended action</p>
+                  <p className="text-xs whitespace-pre-line">{event.recommended_action}</p>
+                </div>
+              )}
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span>Confidence: {Math.round(event.confidence * 100)}%</span>
+                {event.signal_id && <span>Signal: {event.signal_id.slice(0, 8)}…</span>}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Network Tab ───────────────────────────────────────────────────────────────
+
+function NetworkTab({ supplierId }: { supplierId: string }) {
+  const { data: rels, isLoading: relsLoading } = useQuery({
+    queryKey: ["supplier-network-rels", supplierId],
+    queryFn: async () => {
+      const res = await apiClient.get(
+        `/api/v1/network/relationships?supplier_id=${supplierId}&limit=50`
+      );
+      return res.data;
+    },
+    refetchInterval: 60_000,
+  });
+
+  const { data: exposures, isLoading: expLoading } = useQuery({
+    queryKey: ["supplier-network-exposures", supplierId],
+    queryFn: async () => {
+      const res = await apiClient.get(
+        `/api/v1/network/exposure-signals?impacted_supplier_id=${supplierId}&exposure_status=ACTIVE&limit=10`
+      );
+      return res.data;
+    },
+    refetchInterval: 60_000,
+  });
+
+  const { data: criticality, isLoading: critLoading } = useQuery({
+    queryKey: ["supplier-criticality", supplierId],
+    queryFn: async () => {
+      try {
+        const res = await apiClient.get(`/api/v1/network/criticality/${supplierId}`);
+        return res.data;
+      } catch {
+        return null;
+      }
+    },
+    refetchInterval: 300_000,
+  });
+
+  return (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+      {/* Criticality */}
+      <Card className="border-slate-800 bg-slate-900 text-slate-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <ShieldAlert className="h-4 w-4" />
+            Supplier Criticality
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {critLoading ? (
+            <div className="flex justify-center p-4"><Spinner /></div>
+          ) : criticality ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Classification</span>
+                <span className={`text-sm font-bold ${
+                  criticality.criticality === "CRITICAL" ? "text-red-400" :
+                  criticality.criticality === "HIGH" ? "text-orange-400" :
+                  criticality.criticality === "MEDIUM" ? "text-yellow-400" : "text-green-400"
+                }`}>{criticality.criticality}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Score</span>
+                <span className="text-sm text-slate-200">{Math.round(criticality.criticality_score * 100)}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Degree Centrality</span>
+                <span className="text-sm text-slate-200">{Math.round(criticality.degree_centrality * 100)}%</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Inbound / Outbound</span>
+                <span className="text-sm text-slate-200">{criticality.inbound_degree} / {criticality.outbound_degree}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-slate-400">Component Size</span>
+                <span className="text-sm text-slate-200">{criticality.connected_component_size}</span>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 py-4 text-center">
+              No criticality data yet. Compute centrality from the Network dashboard.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Relationships */}
+      <Card className="border-slate-800 bg-slate-900 text-slate-100">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <Share2 className="h-4 w-4" />
+            Relationships ({relsLoading ? "…" : (rels?.length ?? 0)})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {relsLoading ? (
+            <div className="flex justify-center p-4"><Spinner /></div>
+          ) : !rels?.length ? (
+            <p className="text-sm text-slate-500 py-4 text-center">No relationships found.</p>
+          ) : (
+            <div className="divide-y divide-slate-800">
+              {rels.map((r: any) => (
+                <div key={r.id} className="py-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-medium text-slate-300">
+                      {r.supplier_id === supplierId
+                        ? `→ ${r.related_supplier_id.slice(0, 8)}…`
+                        : `← ${r.supplier_id.slice(0, 8)}…`}
+                    </span>
+                    <span className="rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
+                      {r.relationship_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="ml-auto text-xs text-slate-500">
+                      {Math.round(r.confidence * 100)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Exposure Signals */}
+      <Card className="border-slate-800 bg-slate-900 text-slate-100 lg:col-span-2">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            <GitBranch className="h-4 w-4 text-orange-400" />
+            Network Exposure Signals ({expLoading ? "…" : (exposures?.length ?? 0)})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {expLoading ? (
+            <div className="flex justify-center p-4"><Spinner /></div>
+          ) : !exposures?.length ? (
+            <p className="text-sm text-slate-500 py-4 text-center">
+              No active exposure signals for this supplier.
+            </p>
+          ) : (
+            <div className="divide-y divide-slate-800">
+              {exposures.map((e: any) => (
+                <div key={e.id} className="py-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                      e.severity === "CRITICAL" ? "bg-red-600 text-white" :
+                      e.severity === "HIGH" ? "bg-orange-500 text-white" :
+                      e.severity === "MEDIUM" ? "bg-yellow-500 text-black" : "bg-blue-500 text-white"
+                    }`}>{e.severity}</span>
+                    <span className="text-sm font-medium text-slate-200">
+                      {e.exposure_type.replace(/_/g, " ")}
+                    </span>
+                    <span className="ml-auto text-xs text-slate-500">
+                      {Math.round(e.confidence * 100)}% · {e.path_length} hop(s)
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-slate-400 truncate">{e.rationale}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">
+                    From: {e.origin_supplier_id.slice(0, 8)}…
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Portal Tab ────────────────────────────────────────────────────────────────
+
+function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; supplierName: string }) {
+  const [newMessage, setNewMessage] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const qc = useQueryClient();
+
+  const { data: conversations = [], isLoading } = useQuery<{
+    id: string; subject: string | null; created_at: string;
+    message_count: number; last_message_at: string | null;
+  }[]>({
+    queryKey: ["portal-conversations", supplierId],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/supplier-portal/internal/conversations?supplier_id=${supplierId}`);
+        return r.data ?? [];
+      } catch { return []; }
+    },
+    retry: false,
+  });
+
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+
+  const { data: messages = [] } = useQuery<{
+    id: string; content: string; sender_type: string; sent_at: string;
+  }[]>({
+    queryKey: ["portal-messages", activeConvId],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/supplier-portal/internal/conversations/${activeConvId}/messages`);
+        return r.data ?? [];
+      } catch { return []; }
+    },
+    enabled: !!activeConvId,
+    retry: false,
+  });
+
+  async function sendMessage() {
+    if (!newMessage.trim()) return;
+    setSending(true); setSendError(null);
+    try {
+      if (!activeConvId) {
+        const r = await apiClient.post("/api/v1/supplier-portal/internal/conversations", {
+          supplier_id: supplierId, subject: `Message to ${supplierName}`,
+        });
+        const convId = r.data.id;
+        await apiClient.post("/api/v1/supplier-portal/internal/messages", {
+          conversation_id: convId, content: newMessage,
+        });
+        qc.invalidateQueries({ queryKey: ["portal-conversations", supplierId] });
+        setActiveConvId(convId);
+      } else {
+        await apiClient.post("/api/v1/supplier-portal/internal/messages", {
+          conversation_id: activeConvId, content: newMessage,
+        });
+        qc.invalidateQueries({ queryKey: ["portal-messages", activeConvId] });
+      }
+      setNewMessage("");
+    } catch { setSendError("Failed to send"); }
+    finally { setSending(false); }
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Conversations</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {isLoading && <div className="flex justify-center py-6"><Spinner /></div>}
+          {!isLoading && conversations.length === 0 && (
+            <p className="px-4 py-6 text-sm text-muted-foreground">No conversations yet.</p>
+          )}
+          <div className="divide-y divide-border">
+            {conversations.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setActiveConvId(c.id)}
+                className={`w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors ${activeConvId === c.id ? "bg-muted/60" : ""}`}
+              >
+                <p className="text-sm font-medium truncate">{c.subject || "No subject"}</p>
+                <p className="text-xs text-muted-foreground">
+                  {c.message_count} message{c.message_count !== 1 ? "s" : ""}
+                  {c.last_message_at && ` · ${new Date(c.last_message_at).toLocaleDateString()}`}
+                </p>
+              </button>
+            ))}
+          </div>
+          <div className="p-3 border-t border-border">
+            <button
+              onClick={() => setActiveConvId(null)}
+              className="text-xs text-blue-600 hover:text-blue-800"
+            >
+              + New conversation
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">
+            {activeConvId
+              ? conversations.find((c) => c.id === activeConvId)?.subject ?? "Conversation"
+              : `New message to ${supplierName}`}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {activeConvId && (
+            <div className="max-h-64 overflow-y-auto space-y-2 rounded-lg border border-border bg-muted/20 p-3">
+              {messages.length === 0 ? (
+                <p className="text-xs text-muted-foreground text-center py-4">No messages yet.</p>
+              ) : (
+                messages.map((m) => (
+                  <div key={m.id} className={`flex ${m.sender_type === "internal" ? "justify-end" : "justify-start"}`}>
+                    <div className={`max-w-xs rounded-lg px-3 py-2 text-sm ${m.sender_type === "internal" ? "bg-blue-600 text-white" : "bg-background border border-border"}`}>
+                      <p>{m.content}</p>
+                      <p className={`text-[10px] mt-0.5 ${m.sender_type === "internal" ? "text-blue-200" : "text-muted-foreground"}`}>
+                        {new Date(m.sent_at).toLocaleString()}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+          <div className="flex gap-2">
+            <textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Write a message…"
+              rows={3}
+              className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            />
+            <Button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="self-end">
+              {sending ? "…" : "Send"}
+            </Button>
+          </div>
+          {sendError && <p className="text-xs text-red-500">{sendError}</p>}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// ── Locations Tab ─────────────────────────────────────────────────────────────
+
+function LocationsTab({ supplierId }: { supplierId: string }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ location_type: "PLANT", name: "", country: "", city: "", address: "", employee_count: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: locations = [], isLoading } = useQuery<SupplierLocation[]>({
+    queryKey: ["supplier-locations", supplierId],
+    queryFn: () => listLocations(supplierId),
+  });
+
+  async function handleCreate() {
+    if (!form.name.trim()) { setError("Name is required"); return; }
+    setSaving(true); setError(null);
+    try {
+      await createLocation(supplierId, {
+        location_type: form.location_type,
+        name: form.name,
+        country: form.country || undefined,
+        city: form.city || undefined,
+        address: form.address || undefined,
+        employee_count: form.employee_count ? parseInt(form.employee_count) : undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["supplier-locations", supplierId] });
+      setShowForm(false);
+      setForm({ location_type: "PLANT", name: "", country: "", city: "", address: "", employee_count: "" });
+    } catch { setError("Failed to create location"); }
+    finally { setSaving(false); }
+  }
+
+  async function handleDelete(locationId: string) {
+    try {
+      await deleteLocation(supplierId, locationId);
+      qc.invalidateQueries({ queryKey: ["supplier-locations", supplierId] });
+    } catch { /* ignore */ }
+  }
+
+  const locationTypeColors: Record<string, string> = {
+    PLANT: "bg-blue-100 text-blue-800",
+    WAREHOUSE: "bg-purple-100 text-purple-800",
+    OFFICE: "bg-slate-100 text-slate-700",
+    R_AND_D: "bg-violet-100 text-violet-800",
+    DISTRIBUTION_CENTER: "bg-amber-100 text-amber-800",
+    SUPPLIER_HUB: "bg-teal-100 text-teal-800",
+    OTHER: "bg-gray-100 text-gray-700",
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Supplier Locations ({locations.length})</h3>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ Add Location"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Type *</label>
+                <select
+                  value={form.location_type}
+                  onChange={(e) => setForm((f) => ({ ...f, location_type: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {["PLANT", "WAREHOUSE", "OFFICE", "R_AND_D", "DISTRIBUTION_CENTER", "SUPPLIER_HUB", "OTHER"].map((t) => (
+                    <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Name *</label>
+                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Manufacturing Plant" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Country</label>
+                <Input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">City</label>
+                <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} placeholder="Munich" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Address</label>
+                <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Street address" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Employee Count</label>
+                <Input type="number" value={form.employee_count} onChange={(e) => setForm((f) => ({ ...f, employee_count: e.target.value }))} placeholder="0" />
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Location"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : locations.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <Globe className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No locations recorded yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {locations.map((loc) => (
+            <Card key={loc.id}>
+              <CardContent className="pt-4 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${locationTypeColors[loc.location_type] ?? "bg-gray-100 text-gray-700"}`}>
+                      {loc.location_type.replace(/_/g, " ")}
+                    </span>
+                    {loc.is_primary && (
+                      <span className="ml-1 inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">PRIMARY</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => handleDelete(loc.id)}
+                    className="text-muted-foreground hover:text-red-500 transition-colors text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="text-sm font-medium">{loc.name}</p>
+                {(loc.city || loc.country) && (
+                  <p className="text-xs text-muted-foreground">{[loc.city, loc.country].filter(Boolean).join(", ")}</p>
+                )}
+                {loc.address && <p className="text-xs text-muted-foreground">{loc.address}</p>}
+                {loc.employee_count != null && (
+                  <p className="text-xs text-muted-foreground">{loc.employee_count.toLocaleString()} employees</p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Contacts Tab ──────────────────────────────────────────────────────────────
+
+function ContactsTab({ supplierId }: { supplierId: string }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", role: "ACCOUNT_MANAGER", job_title: "", department: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: contacts = [], isLoading } = useQuery<SupplierContact[]>({
+    queryKey: ["supplier-contacts", supplierId],
+    queryFn: () => listContacts(supplierId),
+  });
+
+  async function handleCreate() {
+    if (!form.first_name.trim()) { setError("First name is required"); return; }
+    setSaving(true); setError(null);
+    try {
+      await createContact(supplierId, {
+        first_name: form.first_name,
+        last_name: form.last_name || undefined,
+        email: form.email || undefined,
+        phone: form.phone || undefined,
+        role: form.role,
+        job_title: form.job_title || undefined,
+        department: form.department || undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["supplier-contacts", supplierId] });
+      setShowForm(false);
+      setForm({ first_name: "", last_name: "", email: "", phone: "", role: "ACCOUNT_MANAGER", job_title: "", department: "" });
+    } catch { setError("Failed to create contact"); }
+    finally { setSaving(false); }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Supplier Contacts ({contacts.length})</h3>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ Add Contact"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">First Name *</label>
+                <Input value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} placeholder="John" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Last Name</label>
+                <Input value={form.last_name} onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} placeholder="Doe" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Role *</label>
+                <select
+                  value={form.role}
+                  onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {["ACCOUNT_MANAGER", "ESG_CONTACT", "COMPLIANCE_OFFICER", "TECHNICAL_CONTACT", "EXECUTIVE", "FINANCE_CONTACT", "LEGAL_CONTACT", "OTHER"].map((r) => (
+                    <option key={r} value={r}>{r.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Job Title</label>
+                <Input value={form.job_title} onChange={(e) => setForm((f) => ({ ...f, job_title: e.target.value }))} placeholder="Head of ESG" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Email</label>
+                <Input type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} placeholder="john@supplier.com" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Phone</label>
+                <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+49 89 123456" />
+              </div>
+              <div className="col-span-2">
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Department</label>
+                <Input value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} placeholder="Sustainability" />
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Contact"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : contacts.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <Users className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No contacts recorded yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {contacts.map((c) => (
+            <Card key={c.id}>
+              <CardContent className="pt-4 space-y-1">
+                {c.is_primary && (
+                  <span className="inline-flex rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-800">PRIMARY</span>
+                )}
+                <p className="text-sm font-semibold">{c.full_name}</p>
+                <p className="text-xs text-muted-foreground">{c.role.replace(/_/g, " ")}{c.job_title ? ` · ${c.job_title}` : ""}</p>
+                {c.department && <p className="text-xs text-muted-foreground">{c.department}</p>}
+                {c.email && (
+                  <a href={`mailto:${c.email}`} className="text-xs text-blue-600 hover:underline block">{c.email}</a>
+                )}
+                {c.phone && <p className="text-xs text-muted-foreground">{c.phone}</p>}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Certifications Tab ────────────────────────────────────────────────────────
+
+function CertificationsTab({ supplierId }: { supplierId: string }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ cert_type: "ISO_14001", issuing_body: "", certificate_number: "", valid_from: "", valid_until: "", scope_description: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: certs = [], isLoading } = useQuery<SupplierCertification[]>({
+    queryKey: ["supplier-certifications", supplierId],
+    queryFn: () => listCertifications(supplierId),
+  });
+
+  async function handleCreate() {
+    setSaving(true); setError(null);
+    try {
+      await createCertification(supplierId, {
+        cert_type: form.cert_type,
+        issuing_body: form.issuing_body || undefined,
+        certificate_number: form.certificate_number || undefined,
+        valid_from: form.valid_from || undefined,
+        valid_until: form.valid_until || undefined,
+        scope_description: form.scope_description || undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["supplier-certifications", supplierId] });
+      setShowForm(false);
+      setForm({ cert_type: "ISO_14001", issuing_body: "", certificate_number: "", valid_from: "", valid_until: "", scope_description: "" });
+    } catch { setError("Failed to create certification"); }
+    finally { setSaving(false); }
+  }
+
+  function expiryBadge(cert: SupplierCertification) {
+    if (cert.is_expired) {
+      return <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-800">EXPIRED</span>;
+    }
+    if (cert.days_until_expiry !== null && cert.days_until_expiry <= 90) {
+      return <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">EXPIRING SOON</span>;
+    }
+    if (cert.valid_until) {
+      return <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">VALID</span>;
+    }
+    return null;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Certifications ({certs.length})</h3>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ Add Certification"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Certification Type *</label>
+                <select
+                  value={form.cert_type}
+                  onChange={(e) => setForm((f) => ({ ...f, cert_type: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {["ISO_14001", "ISO_9001", "ISO_45001", "ISO_50001", "SA8000", "IATF_16949", "REACH_COMPLIANT", "ROHS_COMPLIANT", "CONFLICT_MINERALS_FREE", "ECOVADIS_BRONZE", "ECOVADIS_SILVER", "ECOVADIS_GOLD", "ECOVADIS_PLATINUM", "B_CORP", "FSSC_22000", "OTHER"].map((t) => (
+                    <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Issuing Body</label>
+                <Input value={form.issuing_body} onChange={(e) => setForm((f) => ({ ...f, issuing_body: e.target.value }))} placeholder="TÜV SÜD" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Certificate Number</label>
+                <Input value={form.certificate_number} onChange={(e) => setForm((f) => ({ ...f, certificate_number: e.target.value }))} placeholder="DE-12345-2024" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Scope</label>
+                <Input value={form.scope_description} onChange={(e) => setForm((f) => ({ ...f, scope_description: e.target.value }))} placeholder="Manufacturing operations" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Valid From</label>
+                <Input type="date" value={form.valid_from} onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Valid Until</label>
+                <Input type="date" value={form.valid_until} onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))} />
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Certification"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : certs.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No certifications recorded yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {certs.map((cert) => (
+            <Card key={cert.id} className={cert.is_expired ? "border-red-200" : ""}>
+              <CardContent className="pt-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-semibold">{cert.cert_type.replace(/_/g, " ")}</span>
+                  {expiryBadge(cert)}
+                </div>
+                {cert.issuing_body && <p className="text-xs text-muted-foreground">{cert.issuing_body}</p>}
+                {cert.certificate_number && <p className="text-xs font-mono text-muted-foreground">{cert.certificate_number}</p>}
+                {cert.scope_description && <p className="text-xs text-muted-foreground">{cert.scope_description}</p>}
+                <div className="text-xs text-muted-foreground">
+                  {cert.valid_from && <span>From: {cert.valid_from}</span>}
+                  {cert.valid_from && cert.valid_until && <span> · </span>}
+                  {cert.valid_until && <span>Until: {cert.valid_until}</span>}
+                  {cert.days_until_expiry !== null && !cert.is_expired && (
+                    <span className="ml-1 text-amber-600">({cert.days_until_expiry}d left)</span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Ownership Tab ─────────────────────────────────────────────────────────────
+
+function OwnershipTab({ supplierId }: { supplierId: string }) {
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState({
+    ownership_type: "PRIVATE",
+    parent_company_name: "",
+    parent_company_country: "",
+    ultimate_parent_name: "",
+    ultimate_parent_country: "",
+    is_state_owned: false,
+    state_ownership_pct: "",
+    publicly_listed: false,
+    stock_exchange: "",
+    ticker_symbol: "",
+    lei_code: "",
+    duns_number: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: ownership, isLoading } = useQuery<SupplierOwnership | null>({
+    queryKey: ["supplier-ownership", supplierId],
+    queryFn: () => getOwnership(supplierId),
+  });
+
+  function startEdit() {
+    if (ownership) {
+      setForm({
+        ownership_type: ownership.ownership_type,
+        parent_company_name: ownership.parent_company_name ?? "",
+        parent_company_country: ownership.parent_company_country ?? "",
+        ultimate_parent_name: ownership.ultimate_parent_name ?? "",
+        ultimate_parent_country: ownership.ultimate_parent_country ?? "",
+        is_state_owned: ownership.is_state_owned,
+        state_ownership_pct: ownership.state_ownership_pct?.toString() ?? "",
+        publicly_listed: ownership.publicly_listed,
+        stock_exchange: ownership.stock_exchange ?? "",
+        ticker_symbol: ownership.ticker_symbol ?? "",
+        lei_code: ownership.lei_code ?? "",
+        duns_number: ownership.duns_number ?? "",
+      });
+    }
+    setEditing(true);
+  }
+
+  async function handleSave() {
+    setSaving(true); setError(null);
+    try {
+      await upsertOwnership(supplierId, {
+        ownership_type: form.ownership_type,
+        parent_company_name: form.parent_company_name || undefined,
+        parent_company_country: form.parent_company_country || undefined,
+        ultimate_parent_name: form.ultimate_parent_name || undefined,
+        ultimate_parent_country: form.ultimate_parent_country || undefined,
+        is_state_owned: form.is_state_owned,
+        state_ownership_pct: form.state_ownership_pct ? parseFloat(form.state_ownership_pct) : undefined,
+        publicly_listed: form.publicly_listed,
+        stock_exchange: form.stock_exchange || undefined,
+        ticker_symbol: form.ticker_symbol || undefined,
+        lei_code: form.lei_code || undefined,
+        duns_number: form.duns_number || undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["supplier-ownership", supplierId] });
+      setEditing(false);
+    } catch { setError("Failed to save ownership data"); }
+    finally { setSaving(false); }
+  }
+
+  if (isLoading) {
+    return <div className="flex justify-center py-8"><Spinner /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold">Ownership Structure</h3>
+        <Button size="sm" onClick={editing ? () => setEditing(false) : startEdit}>
+          {editing ? "Cancel" : (ownership ? "Edit" : "+ Add Ownership")}
+        </Button>
+      </div>
+
+      {editing && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ownership Type *</label>
+                <select
+                  value={form.ownership_type}
+                  onChange={(e) => setForm((f) => ({ ...f, ownership_type: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {["PRIVATE", "PUBLIC", "STATE_OWNED", "SUBSIDIARY", "JOINT_VENTURE", "COOPERATIVE", "FAMILY_OWNED", "UNKNOWN"].map((t) => (
+                    <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Parent Company</label>
+                <Input value={form.parent_company_name} onChange={(e) => setForm((f) => ({ ...f, parent_company_name: e.target.value }))} placeholder="Acme Holdings GmbH" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Parent Country</label>
+                <Input value={form.parent_company_country} onChange={(e) => setForm((f) => ({ ...f, parent_company_country: e.target.value }))} placeholder="DE" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ultimate Parent</label>
+                <Input value={form.ultimate_parent_name} onChange={(e) => setForm((f) => ({ ...f, ultimate_parent_name: e.target.value }))} placeholder="Global Corp Inc." />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ultimate Parent Country</label>
+                <Input value={form.ultimate_parent_country} onChange={(e) => setForm((f) => ({ ...f, ultimate_parent_country: e.target.value }))} placeholder="US" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">LEI Code</label>
+                <Input value={form.lei_code} onChange={(e) => setForm((f) => ({ ...f, lei_code: e.target.value }))} placeholder="5493001KJTIIGC8Y1R12" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">D-U-N-S Number</label>
+                <Input value={form.duns_number} onChange={(e) => setForm((f) => ({ ...f, duns_number: e.target.value }))} placeholder="12-345-6789" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Stock Exchange</label>
+                <Input value={form.stock_exchange} onChange={(e) => setForm((f) => ({ ...f, stock_exchange: e.target.value }))} placeholder="NYSE" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ticker Symbol</label>
+                <Input value={form.ticker_symbol} onChange={(e) => setForm((f) => ({ ...f, ticker_symbol: e.target.value }))} placeholder="ACME" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">State Ownership %</label>
+                <Input type="number" value={form.state_ownership_pct} onChange={(e) => setForm((f) => ({ ...f, state_ownership_pct: e.target.value }))} placeholder="0" />
+              </div>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <input type="checkbox" checked={form.is_state_owned} onChange={(e) => setForm((f) => ({ ...f, is_state_owned: e.target.checked }))} className="rounded" />
+                  State Owned
+                </label>
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <input type="checkbox" checked={form.publicly_listed} onChange={(e) => setForm((f) => ({ ...f, publicly_listed: e.target.checked }))} className="rounded" />
+                  Publicly Listed
+                </label>
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setEditing(false); setError(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!editing && !ownership && (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <Briefcase className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No ownership data recorded yet.</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!editing && ownership && (
+        <Card>
+          <CardContent className="pt-4">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div>
+                <dt className="text-xs text-muted-foreground">Ownership Type</dt>
+                <dd className="font-medium">{ownership.ownership_type.replace(/_/g, " ")}</dd>
+              </div>
+              {ownership.parent_company_name && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Parent Company</dt>
+                  <dd className="font-medium">{ownership.parent_company_name} {ownership.parent_company_country && <span className="text-muted-foreground">({ownership.parent_company_country})</span>}</dd>
+                </div>
+              )}
+              {ownership.ultimate_parent_name && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">Ultimate Parent</dt>
+                  <dd className="font-medium">{ownership.ultimate_parent_name} {ownership.ultimate_parent_country && <span className="text-muted-foreground">({ownership.ultimate_parent_country})</span>}</dd>
+                </div>
+              )}
+              <div>
+                <dt className="text-xs text-muted-foreground">State Owned</dt>
+                <dd className={`font-medium ${ownership.is_state_owned ? "text-amber-600" : "text-muted-foreground"}`}>
+                  {ownership.is_state_owned ? `Yes ${ownership.state_ownership_pct != null ? `(${ownership.state_ownership_pct}%)` : ""}` : "No"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs text-muted-foreground">Publicly Listed</dt>
+                <dd className="font-medium">
+                  {ownership.publicly_listed
+                    ? `Yes${ownership.stock_exchange ? ` · ${ownership.stock_exchange}` : ""}${ownership.ticker_symbol ? ` : ${ownership.ticker_symbol}` : ""}`
+                    : "No"}
+                </dd>
+              </div>
+              {ownership.lei_code && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">LEI</dt>
+                  <dd className="font-mono text-xs">{ownership.lei_code}</dd>
+                </div>
+              )}
+              {ownership.duns_number && (
+                <div>
+                  <dt className="text-xs text-muted-foreground">D-U-N-S</dt>
+                  <dd className="font-mono text-xs">{ownership.duns_number}</dd>
+                </div>
+              )}
+            </dl>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// ── ESG Metrics Tab ───────────────────────────────────────────────────────────
+
+function ESGMetricsTab({ supplierId }: { supplierId: string }) {
+  const qc = useQueryClient();
+  const [showForm, setShowForm] = useState(false);
+  const [yearFilter, setYearFilter] = useState<string>("");
+  const [form, setForm] = useState({
+    reporting_year: new Date().getFullYear().toString(),
+    metric_type: "GHG_SCOPE1_TONNES_CO2E",
+    value: "",
+    unit: "tCO2e",
+    esrs_reference: "",
+    gri_reference: "",
+    data_source: "",
+    is_third_party_verified: false,
+    notes: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const { data: metrics = [], isLoading } = useQuery<SupplierESGMetric[]>({
+    queryKey: ["supplier-esg-metrics", supplierId, yearFilter],
+    queryFn: () => listESGMetrics(supplierId, yearFilter ? parseInt(yearFilter) : undefined),
+  });
+
+  async function handleCreate() {
+    if (!form.value) { setError("Value is required"); return; }
+    setSaving(true); setError(null);
+    try {
+      await recordESGMetric(supplierId, {
+        reporting_year: parseInt(form.reporting_year),
+        metric_type: form.metric_type,
+        value: parseFloat(form.value),
+        unit: form.unit || undefined,
+        esrs_reference: form.esrs_reference || undefined,
+        gri_reference: form.gri_reference || undefined,
+        data_source: form.data_source || undefined,
+        is_third_party_verified: form.is_third_party_verified,
+        notes: form.notes || undefined,
+      });
+      qc.invalidateQueries({ queryKey: ["supplier-esg-metrics", supplierId] });
+      setShowForm(false);
+      setForm({ reporting_year: new Date().getFullYear().toString(), metric_type: "GHG_SCOPE1_TONNES_CO2E", value: "", unit: "tCO2e", esrs_reference: "", gri_reference: "", data_source: "", is_third_party_verified: false, notes: "" });
+    } catch { setError("Failed to record metric"); }
+    finally { setSaving(false); }
+  }
+
+  const categoryColors: Record<string, string> = {
+    GHG: "bg-blue-100 text-blue-800",
+    ENERGY: "bg-yellow-100 text-yellow-800",
+    WATER: "bg-cyan-100 text-cyan-800",
+    WASTE: "bg-orange-100 text-orange-800",
+    SOCIAL: "bg-purple-100 text-purple-800",
+    GOVERNANCE: "bg-slate-100 text-slate-700",
+  };
+
+  function metricCategory(metricType: string): string {
+    if (metricType.startsWith("GHG")) return "GHG";
+    if (metricType.startsWith("ENERGY")) return "ENERGY";
+    if (metricType.startsWith("WATER")) return "WATER";
+    if (metricType.startsWith("WASTE")) return "WASTE";
+    if (["FEMALE_LEADERSHIP_PCT", "GENDER_PAY_GAP_PCT", "INJURY_RATE_PER_1M_HOURS", "LOST_TIME_INJURY_RATE", "FATALITIES", "CHILD_LABOUR_INCIDENTS", "FORCED_LABOUR_INCIDENTS", "COLLECTIVE_BARGAINING_COVERAGE_PCT", "EMPLOYEE_TRAINING_HOURS"].includes(metricType)) return "SOCIAL";
+    return "GOVERNANCE";
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-3">
+        <h3 className="text-sm font-semibold flex-1">ESG Metrics ({metrics.length})</h3>
+        <select
+          value={yearFilter}
+          onChange={(e) => setYearFilter(e.target.value)}
+          className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+        >
+          <option value="">All Years</option>
+          {[2025, 2024, 2023, 2022, 2021].map((y) => (
+            <option key={y} value={y.toString()}>{y}</option>
+          ))}
+        </select>
+        <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          {showForm ? "Cancel" : "+ Record Metric"}
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Metric Type *</label>
+                <select
+                  value={form.metric_type}
+                  onChange={(e) => setForm((f) => ({ ...f, metric_type: e.target.value }))}
+                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                >
+                  {["GHG_SCOPE1_TONNES_CO2E", "GHG_SCOPE2_TONNES_CO2E", "GHG_SCOPE3_TONNES_CO2E", "GHG_INTENSITY_TONNE_PER_REVENUE", "ENERGY_TOTAL_MWH", "ENERGY_RENEWABLE_PCT", "WATER_WITHDRAWAL_M3", "WATER_RECYCLED_PCT", "WASTE_TOTAL_TONNES", "WASTE_RECYCLED_PCT", "HAZARDOUS_WASTE_TONNES", "FEMALE_LEADERSHIP_PCT", "GENDER_PAY_GAP_PCT", "INJURY_RATE_PER_1M_HOURS", "LOST_TIME_INJURY_RATE", "FATALITIES", "CHILD_LABOUR_INCIDENTS", "FORCED_LABOUR_INCIDENTS", "COLLECTIVE_BARGAINING_COVERAGE_PCT", "EMPLOYEE_TRAINING_HOURS", "SUPPLY_CHAIN_DUE_DILIGENCE_COVERAGE_PCT", "SUPPLIERS_AUDITED_PCT", "SUPPLIERS_WITH_CODE_OF_CONDUCT_PCT", "CUSTOM"].map((t) => (
+                    <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Reporting Year *</label>
+                <Input type="number" value={form.reporting_year} onChange={(e) => setForm((f) => ({ ...f, reporting_year: e.target.value }))} placeholder="2024" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Value *</label>
+                <Input type="number" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} placeholder="0.0" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Unit</label>
+                <Input value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} placeholder="tCO2e" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">ESRS Reference</label>
+                <Input value={form.esrs_reference} onChange={(e) => setForm((f) => ({ ...f, esrs_reference: e.target.value }))} placeholder="E1-5" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">GRI Reference</label>
+                <Input value={form.gri_reference} onChange={(e) => setForm((f) => ({ ...f, gri_reference: e.target.value }))} placeholder="GRI 305-1" />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">Data Source</label>
+                <Input value={form.data_source} onChange={(e) => setForm((f) => ({ ...f, data_source: e.target.value }))} placeholder="Annual sustainability report" />
+              </div>
+              <div className="flex items-center gap-2 pt-4">
+                <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
+                  <input type="checkbox" checked={form.is_third_party_verified} onChange={(e) => setForm((f) => ({ ...f, is_third_party_verified: e.target.checked }))} className="rounded" />
+                  Third-party verified
+                </label>
+              </div>
+            </div>
+            {error && <p className="text-xs text-red-500">{error}</p>}
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Record Metric"}</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center py-8"><Spinner /></div>
+      ) : metrics.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center">
+            <BarChart3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">No ESG metrics recorded yet.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          {metrics.map((m) => {
+            const cat = metricCategory(m.metric_type);
+            return (
+              <Card key={m.id}>
+                <CardContent className="pt-4 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${categoryColors[cat] ?? "bg-gray-100 text-gray-700"}`}>{cat}</span>
+                    {m.is_third_party_verified && (
+                      <span className="inline-flex rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-semibold text-green-800">VERIFIED</span>
+                    )}
+                  </div>
+                  <p className="text-xs font-medium text-muted-foreground">{m.metric_type.replace(/_/g, " ")}</p>
+                  <p className="text-lg font-bold">
+                    {m.value.toLocaleString()} <span className="text-xs font-normal text-muted-foreground">{m.unit}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">FY {m.reporting_year}</p>
+                  {(m.esrs_reference || m.gri_reference) && (
+                    <p className="text-[10px] text-muted-foreground">
+                      {[m.esrs_reference, m.gri_reference].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                  {m.data_source && <p className="text-[10px] text-muted-foreground truncate">{m.data_source}</p>}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Assessments", "Risk Profile", "Intelligence"] as const;
+const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics"] as const;
 type Tab = typeof TABS[number];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -151,6 +1439,32 @@ export default function SupplierDetailPage() {
   const [editError, setEditError] = useState<string | null>(null);
   const [confirmArchive, setConfirmArchive] = useState(false);
   const [intelligenceSubTab, setIntelligenceSubTab] = useState<"score" | "history" | "benchmark" | "heatmap">("score");
+
+  // Start Assessment dialog
+  const [startAssessment, setStartAssessment] = useState(false);
+  const [assessTitle, setAssessTitle] = useState("");
+  const [assessType, setAssessType] = useState("ESG");
+  const [assessBusy, setAssessBusy] = useState(false);
+  const [assessError, setAssessError] = useState<string | null>(null);
+
+  // Schedule Reassessment
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [scheduleFrequency, setScheduleFrequency] = useState(90);
+  const [scheduleNextDue, setScheduleNextDue] = useState("");
+
+  // OFAC scan
+  const [ofacBusy, setOfacBusy] = useState(false);
+  const [ofacResult, setOfacResult] = useState<{ matches_found: number; matches: { sdn_name: string; sdn_type: string; programs: string[] }[] } | null>(null);
+  const [ofacError, setOfacError] = useState<string | null>(null);
+
+  // Global intelligence collection
+  const [collecting, setCollecting] = useState(false);
+  const [collectResult, setCollectResult] = useState<CollectIntelligenceResponse | null>(null);
+  const [collectError, setCollectError] = useState<string | null>(null);
+
+  // Due diligence
+  const [ddBusy, setDdBusy] = useState(false);
+  const [ddError, setDdError] = useState<string | null>(null);
 
   const { data: supplier, isLoading } = useQuery({
     queryKey: ["supplier", id],
@@ -185,13 +1499,101 @@ export default function SupplierDetailPage() {
   const { data: benchmark } = useQuery({
     queryKey: ["supplier-benchmark", id],
     queryFn: () => getSupplierBenchmark(id),
-    enabled: !!id && tab === "Intelligence" && intelligenceSubTab === "benchmark",
+    enabled: !!id && (tab === "Overview" || (tab === "Intelligence" && intelligenceSubTab === "benchmark")),
+    staleTime: 300_000,
   });
 
   const { data: heatmap } = useQuery({
     queryKey: ["supplier-heatmap", id],
     queryFn: () => getSupplierHeatmap(id),
     enabled: !!id && tab === "Intelligence" && intelligenceSubTab === "heatmap",
+  });
+
+  const { data: sectorProfile } = useQuery({
+    queryKey: ["sector-profile-nace", supplier?.nace_code],
+    queryFn: () => getSectorProfileByNace(supplier!.nace_code!),
+    enabled: !!supplier?.nace_code && tab === "Intelligence" && intelligenceSubTab === "benchmark",
+    staleTime: 600_000,
+    retry: false,
+  });
+
+  // ── Digital Twin queries ───────────────────────────────────────────────────
+  const { data: twin, isLoading: twinLoading, refetch: refetchTwin } = useQuery({
+    queryKey: ["supplier-twin", id],
+    queryFn: () => getSupplierTwin(id),
+    enabled: !!id && tab === "Twin",
+    staleTime: 60_000,
+  });
+
+  const { data: twinTimeline, isLoading: timelineLoading, refetch: refetchTimeline } = useQuery({
+    queryKey: ["supplier-twin-timeline", id],
+    queryFn: () => getSupplierTwinTimeline(id, { limit: 50 }),
+    enabled: !!id && tab === "Twin",
+    staleTime: 60_000,
+  });
+
+  const [processingSignals, setProcessingSignals] = useState(false);
+  const [processResult, setProcessResult] = useState<string | null>(null);
+
+  const { data: dueDiligence, refetch: refetchDD } = useQuery<{
+    supplier_id: string; overall_risk: string; csddd_score: number;
+    human_rights_score: number; environmental_score: number;
+    active_findings: number; critical_findings: number;
+    open_recommendations: number; last_updated: string | null;
+  } | null>({
+    queryKey: ["supplier-due-diligence", id],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/due-diligence/suppliers/${id}`);
+        return r.data;
+      } catch { return null; }
+    },
+    enabled: !!id && tab === "Overview",
+    retry: false,
+  });
+
+  const { data: certificates } = useQuery<{
+    id: string; certificate_type: string; issuer: string | null;
+    valid_from: string | null; valid_until: string | null; status: string;
+  }[]>({
+    queryKey: ["supplier-certificates", id],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/suppliers/${id}/certificates`);
+        return r.data;
+      } catch { return []; }
+    },
+    enabled: !!id && tab === "Overview",
+    staleTime: 300_000,
+    retry: false,
+  });
+
+  const { data: questionnaireProgress } = useQuery<{
+    supplier_id: string; questionnaire_pct: number;
+  } | null>({
+    queryKey: ["supplier-questionnaire-pct", id],
+    queryFn: async () => {
+      try {
+        const r = await apiClient.get(`/api/v1/executive/suppliers?limit=500`);
+        const row = (r.data?.items ?? r.data ?? []).find((s: { id: string }) => s.id === id);
+        return row ? { supplier_id: id, questionnaire_pct: row.questionnaire_pct ?? 0 } : null;
+      } catch { return null; }
+    },
+    enabled: !!id && tab === "Overview",
+    staleTime: 300_000,
+    retry: false,
+  });
+
+  const { data: supplierFindings, isLoading: findingsLoading } = useQuery<{
+    id: string; title: string; description: string; severity: string;
+    category: string; status: string; assessment_id: string; created_at: string | null;
+  }[]>({
+    queryKey: ["supplier-findings", id],
+    queryFn: async () => {
+      const r = await apiClient.get(`/api/v1/executive/findings?supplier_id=${id}&limit=200`);
+      return r.data;
+    },
+    enabled: !!id && tab === "Findings",
   });
 
   const updateMutation = useMutation({
@@ -224,6 +1626,31 @@ export default function SupplierDetailPage() {
     },
   });
 
+  const { data: existingSchedule } = useQuery<{ id: string; frequency_days: number; next_due_at: string; is_active: boolean } | null>({
+    queryKey: ["supplier-schedule", id],
+    queryFn: async () => {
+      const r = await apiClient.get(`/api/v1/assessments/schedules?supplier_id=${id}&active_only=false`);
+      return r.data?.[0] ?? null;
+    },
+    enabled: !!id && tab === "Assessments",
+  });
+
+  const scheduleMutation = useMutation({
+    mutationFn: async () => {
+      const body: Record<string, unknown> = {
+        supplier_id: id,
+        frequency_days: scheduleFrequency,
+      };
+      if (scheduleNextDue) body.next_due_at = new Date(scheduleNextDue).toISOString();
+      const r = await apiClient.post("/api/v1/assessments/schedules", body);
+      return r.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["supplier-schedule", id] });
+      setShowSchedule(false);
+    },
+  });
+
   if (isLoading) {
     return <div className="flex justify-center py-20"><Spinner size="lg" /></div>;
   }
@@ -249,6 +1676,62 @@ export default function SupplierDetailPage() {
       notes: supplier!.notes,
     });
     setEditing(true);
+  }
+
+  async function handleStartAssessment() {
+    if (!assessTitle) return;
+    setAssessBusy(true);
+    setAssessError(null);
+    try {
+      const r = await apiClient.post("/api/v1/assessments/", {
+        title: assessTitle,
+        description: `Assessment for ${supplier!.name}`,
+        assessment_type: assessType,
+        scope: "",
+        supplier_id: id,
+      });
+      queryClient.invalidateQueries({ queryKey: ["supplier-assessments", id] });
+      setStartAssessment(false);
+      setAssessTitle("");
+      router.push(`/assessments/${r.data.id}`);
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setAssessError(msg ?? "Failed to create assessment");
+    } finally {
+      setAssessBusy(false);
+    }
+  }
+
+  async function handleOfacScan() {
+    setOfacBusy(true);
+    setOfacError(null);
+    setOfacResult(null);
+    try {
+      const r = await apiClient.post(`/api/v1/integrations/sanctions/ofac/scan/supplier/${id}`);
+      setOfacResult(r.data);
+      // #151 Auto-create finding when OFAC matches found
+      if (r.data?.matches_found > 0) {
+        try {
+          const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
+          if (stored?.ofac_match_finding?.enabled !== false) {
+            await apiClient.post("/api/v1/automations/trigger", {
+              rule_id: "ofac_match_finding",
+              entity_type: "supplier",
+              entity_id: id,
+              payload: {
+                matches: r.data.matches,
+                severity: stored?.ofac_match_finding?.config?.finding_severity ?? "HIGH",
+              },
+            });
+          }
+        } catch { /* silent */ }
+      }
+    } catch (e: unknown) {
+      const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setOfacError(msg ?? "OFAC scan failed");
+    } finally {
+      setOfacBusy(false);
+    }
   }
 
   return (
@@ -277,6 +1760,9 @@ export default function SupplierDetailPage() {
           <div className="flex items-center gap-2">
             {tierBadge(supplier.supplier_tier)}
             {statusBadge(supplier.supplier_status)}
+            <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 print:hidden">
+              <Printer className="h-3.5 w-3.5" /> Export PDF
+            </Button>
             <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
               <Edit2 className="h-3.5 w-3.5" /> Edit
             </Button>
@@ -386,14 +1872,180 @@ export default function SupplierDetailPage() {
           </Card>
 
           <div className="space-y-4">
-            {(["Assessments", "Risk Profile", "Intelligence"] as Tab[]).map((t) => {
+            {/* ── Benchmark Summary Card (Item 19) ─────────────────────────── */}
+            {benchmark && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <BarChart3 className="h-4 w-4 text-violet-500" />
+                      Peer Benchmark
+                    </span>
+                    <button
+                      onClick={() => { setTab("Intelligence"); setIntelligenceSubTab("benchmark"); }}
+                      className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      Full view →
+                    </button>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-muted-foreground">Risk Score</span>
+                    <span className="text-lg font-bold tabular-nums">{benchmark.risk_score?.toFixed(0) ?? "—"}</span>
+                  </div>
+                  {benchmark.sector_percentile != null && (
+                    <div>
+                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>Sector percentile</span>
+                        <span className="font-medium text-foreground">{benchmark.sector_percentile.toFixed(0)}th</span>
+                      </div>
+                      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-violet-500 rounded-full"
+                          style={{ width: `${benchmark.sector_percentile}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                  {benchmark.peer_comparison && (
+                    <p className="text-xs text-muted-foreground">{benchmark.peer_comparison}</p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* #88 Questionnaire progress bar */}
+            {questionnaireProgress != null && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-1.5">
+                    <FileText className="h-4 w-4 text-blue-500" /> Portal Questionnaire
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Completion</span>
+                    <span className="font-semibold">{questionnaireProgress.questionnaire_pct}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        questionnaireProgress.questionnaire_pct >= 100 ? "bg-emerald-500" :
+                        questionnaireProgress.questionnaire_pct >= 50 ? "bg-amber-500" : "bg-red-400"
+                      }`}
+                      style={{ width: `${questionnaireProgress.questionnaire_pct}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* #85-86 Due Diligence card */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <GitBranch className="h-4 w-4 text-orange-500" />
+                    Due Diligence
+                  </span>
+                  <button
+                    onClick={async () => {
+                      setDdBusy(true); setDdError(null);
+                      try {
+                        await apiClient.post("/api/v1/due-diligence/reports/generate", {
+                          supplier_id: id, report_types: ["CSDDD", "HUMAN_RIGHTS", "ENVIRONMENTAL"],
+                        });
+                        refetchDD();
+                      } catch { setDdError("Failed to run"); }
+                      finally { setDdBusy(false); }
+                    }}
+                    disabled={ddBusy}
+                    className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
+                  >
+                    {ddBusy ? "Running…" : "Run"}
+                  </button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {ddError && <p className="text-xs text-red-500 mb-2">{ddError}</p>}
+                {dueDiligence ? (
+                  <div className="space-y-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Overall Risk</span>
+                      <span className={`font-semibold ${dueDiligence.overall_risk === "Critical" || dueDiligence.overall_risk === "High" ? "text-red-600" : dueDiligence.overall_risk === "Medium" ? "text-amber-600" : "text-emerald-600"}`}>
+                        {dueDiligence.overall_risk}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">CSDDD Score</span>
+                      <span className="font-medium">{dueDiligence.csddd_score?.toFixed(0) ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Human Rights</span>
+                      <span className="font-medium">{dueDiligence.human_rights_score?.toFixed(0) ?? "—"}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Active Findings</span>
+                      <span className={`font-semibold ${dueDiligence.active_findings > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        {dueDiligence.active_findings}
+                      </span>
+                    </div>
+                    {dueDiligence.last_updated && (
+                      <p className="text-muted-foreground">
+                        Updated {new Date(dueDiligence.last_updated).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-xs text-muted-foreground">No due diligence report yet. Click Run to generate.</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* #90 Certificate expiry widget */}
+            {certificates && certificates.length > 0 && (
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm flex items-center gap-1.5">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Certificates
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-1.5">
+                  {certificates.slice(0, 4).map((cert) => {
+                    const expiryDate = cert.valid_until ? new Date(cert.valid_until) : null;
+                    const daysLeft = expiryDate ? Math.floor((expiryDate.getTime() - Date.now()) / 86_400_000) : null;
+                    const expired = daysLeft != null && daysLeft < 0;
+                    const expiring = daysLeft != null && daysLeft >= 0 && daysLeft < 90;
+                    return (
+                      <div key={cert.id} className="flex items-center justify-between text-xs">
+                        <span className="truncate max-w-[120px]" title={cert.certificate_type}>{cert.certificate_type}</span>
+                        {daysLeft == null ? (
+                          <span className="text-muted-foreground">No expiry</span>
+                        ) : expired ? (
+                          <span className="text-red-600 font-semibold">Expired</span>
+                        ) : expiring ? (
+                          <span className="text-amber-600 font-semibold">{daysLeft}d left</span>
+                        ) : (
+                          <span className="text-emerald-600">{daysLeft}d left</span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            {(["Assessments", "Findings", "Risk Profile", "Intelligence"] as Tab[]).map((t) => {
               const icons: Record<string, React.ReactNode> = {
                 Assessments: <FileText className="h-8 w-8 text-blue-500" />,
-                "Risk Profile": <AlertTriangle className="h-8 w-8 text-amber-500" />,
+                Findings: <AlertTriangle className="h-8 w-8 text-red-500" />,
+                "Risk Profile": <ShieldAlert className="h-8 w-8 text-amber-500" />,
                 Intelligence: <Target className="h-8 w-8 text-violet-500" />,
               };
               const subtitles: Record<string, string> = {
                 Assessments: "View all assessments",
+                Findings: "All findings across assessments",
                 "Risk Profile": "Findings, risks, actions",
                 Intelligence: "ESG & risk scores, trend",
               };
@@ -419,12 +2071,119 @@ export default function SupplierDetailPage() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-base font-semibold">Assessments ({assessments?.total ?? 0})</h2>
-            <Link href="/assessments">
-              <Button variant="outline" size="sm" className="gap-1.5">
-                <FileText className="h-3.5 w-3.5" /> New Assessment
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1.5"
+                onClick={() => { setShowSchedule((v) => !v); }}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                {existingSchedule ? "Edit Schedule" : "Schedule Reassessment"}
               </Button>
-            </Link>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => { setStartAssessment((v) => !v); setAssessError(null); }}
+              >
+                <FileText className="h-3.5 w-3.5" /> Start Assessment
+              </Button>
+            </div>
           </div>
+
+          {existingSchedule && !showSchedule && (
+            <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm flex items-center gap-2 dark:border-emerald-800 dark:bg-emerald-950/30">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+              <span className="text-emerald-800 dark:text-emerald-300">
+                Reassessment scheduled every <strong>{existingSchedule.frequency_days} days</strong>
+                {existingSchedule.next_due_at && (
+                  <> — next due <strong>{new Date(existingSchedule.next_due_at).toLocaleDateString()}</strong></>
+                )}
+              </span>
+            </div>
+          )}
+
+          {showSchedule && (
+            <Card className="mb-4">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <p className="text-sm font-medium">Schedule Reassessment for {supplier.name}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Frequency</label>
+                    <select
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      value={scheduleFrequency}
+                      onChange={(e) => setScheduleFrequency(Number(e.target.value))}
+                    >
+                      <option value={30}>Monthly (30 days)</option>
+                      <option value={90}>Quarterly (90 days)</option>
+                      <option value={180}>Semi-annual (180 days)</option>
+                      <option value={365}>Annual (365 days)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Next due date (optional)</label>
+                    <input
+                      type="date"
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      value={scheduleNextDue}
+                      onChange={(e) => setScheduleNextDue(e.target.value)}
+                    />
+                  </div>
+                </div>
+                {scheduleMutation.isError && (
+                  <p className="text-xs text-red-600">Failed to save schedule — a schedule may already exist for this supplier.</p>
+                )}
+                {scheduleMutation.isSuccess && (
+                  <p className="text-xs text-emerald-600">Schedule saved.</p>
+                )}
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={scheduleMutation.isPending} onClick={() => scheduleMutation.mutate()}>
+                    {scheduleMutation.isPending ? "Saving…" : "Save Schedule"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowSchedule(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {startAssessment && (
+            <Card className="mb-4">
+              <CardContent className="pt-4 pb-4 space-y-3">
+                <p className="text-sm font-medium">New Assessment for {supplier.name}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <label className="block text-xs text-muted-foreground mb-1">Title</label>
+                    <input
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      placeholder={`${supplier.name} ESG Assessment ${new Date().getFullYear()}`}
+                      value={assessTitle}
+                      onChange={(e) => setAssessTitle(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-muted-foreground mb-1">Type</label>
+                    <select
+                      className="w-full rounded border px-3 py-1.5 text-sm bg-background"
+                      value={assessType}
+                      onChange={(e) => setAssessType(e.target.value)}
+                    >
+                      {["ESG", "Environmental", "Social", "Governance", "Compliance", "Financial"].map((t) => (
+                        <option key={t}>{t}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                {assessError && <p className="text-xs text-red-600">{assessError}</p>}
+                <div className="flex gap-2">
+                  <Button size="sm" disabled={!assessTitle || assessBusy} onClick={handleStartAssessment}>
+                    {assessBusy ? "Creating…" : "Create & Open"}
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => setStartAssessment(false)}>Cancel</Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {assessmentsLoading ? (
             <div className="flex justify-center py-12"><Spinner size="lg" /></div>
@@ -477,6 +2236,85 @@ export default function SupplierDetailPage() {
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── Findings Tab ──────────────────────────────────────────────────── */}
+      {tab === "Findings" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold">
+              Findings ({supplierFindings?.length ?? 0})
+            </h2>
+          </div>
+          {findingsLoading ? (
+            <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+          ) : !supplierFindings?.length ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">No findings for this supplier yet.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Findings are surfaced when assessments are run.</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-muted/30 text-xs text-muted-foreground">
+                      <th className="px-4 py-3 text-left">Finding</th>
+                      <th className="px-4 py-3 text-left">Severity</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">Category</th>
+                      <th className="px-4 py-3 text-left hidden md:table-cell">Date</th>
+                      <th className="px-4 py-3 text-right">Assessment</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {supplierFindings.map((f) => {
+                      const sevColor: Record<string, string> = {
+                        Critical: "bg-red-100 text-red-800 border-red-200",
+                        High: "bg-orange-100 text-orange-800 border-orange-200",
+                        Medium: "bg-amber-100 text-amber-800 border-amber-200",
+                        Low: "bg-slate-100 text-slate-700 border-slate-200",
+                      };
+                      return (
+                        <tr key={f.id} className="hover:bg-muted/20 transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="font-medium line-clamp-1 max-w-sm">{f.title}</p>
+                            {f.description && (
+                              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1 max-w-sm">{f.description}</p>
+                            )}
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${sevColor[f.severity] ?? "bg-slate-100 text-slate-700"}`}>
+                              {f.severity}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden sm:table-cell">
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
+                              {f.category || "—"}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground">
+                            {f.created_at ? new Date(f.created_at).toLocaleDateString() : "—"}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <Link
+                              href={`/assessments/${f.assessment_id}`}
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                            >
+                              <ExternalLink className="h-3 w-3" /> View
+                            </Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </CardContent>
@@ -594,17 +2432,107 @@ export default function SupplierDetailPage() {
                 </button>
               ))}
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={() => recalcMutation.mutate()}
-              disabled={recalcMutation.isPending}
-            >
-              <RefreshCw className={`h-3.5 w-3.5 ${recalcMutation.isPending ? "animate-spin" : ""}`} />
-              Recalculate
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={handleOfacScan}
+                disabled={ofacBusy}
+              >
+                <ShieldAlert className={`h-3.5 w-3.5 ${ofacBusy ? "animate-pulse" : ""}`} />
+                {ofacBusy ? "Scanning…" : "OFAC Scan"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={() => recalcMutation.mutate()}
+                disabled={recalcMutation.isPending}
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${recalcMutation.isPending ? "animate-spin" : ""}`} />
+                Recalculate
+              </Button>
+              <Button
+                variant="default"
+                size="sm"
+                className="gap-1.5"
+                disabled={collecting}
+                onClick={async () => {
+                  setCollecting(true);
+                  setCollectResult(null);
+                  setCollectError(null);
+                  try {
+                    const r = await collectIntelligence();
+                    setCollectResult(r);
+                    refetchTwin?.();
+                    refetchTimeline?.();
+                  } catch {
+                    setCollectError("Collection failed — check backend logs");
+                  } finally {
+                    setCollecting(false);
+                  }
+                }}
+              >
+                <Globe className={`h-3.5 w-3.5 ${collecting ? "animate-spin" : ""}`} />
+                {collecting ? "Collecting…" : "Collect Intelligence"}
+              </Button>
+            </div>
           </div>
+
+          {collectError && (
+            <div className="rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700">{collectError}</div>
+          )}
+          {collectResult && (
+            <Card className={collectResult.signals_created > 0 ? "border-blue-300 bg-blue-50" : "border-slate-200 bg-slate-50"}>
+              <CardContent className="pt-4 pb-3 space-y-2">
+                <p className={`text-sm font-semibold flex items-center gap-2 ${collectResult.signals_created > 0 ? "text-blue-800" : "text-slate-600"}`}>
+                  <Globe className="h-4 w-4" />
+                  {collectResult.message}
+                </p>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span className="font-medium">Sources live: {collectResult.sources_ok}/{collectResult.sources_attempted}</span>
+                  <span>EU Sanctions · OFAC · UN SC · World Bank · GDELT News</span>
+                </div>
+                <div className="flex flex-wrap gap-4 text-xs text-muted-foreground border-t pt-1.5">
+                  <span>Entities screened: {collectResult.entities_checked.toLocaleString()}</span>
+                  <span>New signals: <strong>{collectResult.signals_created}</strong></span>
+                  <span>Twins updated: {collectResult.twins_updated}</span>
+                  <span>Events: {collectResult.events_created}</span>
+                  <span>{collectResult.duration_seconds.toFixed(1)}s</span>
+                </div>
+                {collectResult.errors.length > 0 && (
+                  <p className="text-xs text-amber-700">⚠ {collectResult.errors.join(" | ")}</p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {ofacResult && (
+            <Card className={ofacResult.matches_found > 0 ? "border-red-300 bg-red-50" : "border-emerald-300 bg-emerald-50"}>
+              <CardContent className="pt-4 pb-3">
+                {ofacResult.matches_found === 0 ? (
+                  <p className="text-sm font-medium text-emerald-700 flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" /> No OFAC SDN matches found for {supplier.name}
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    <p className="text-sm font-semibold text-red-700 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4" />
+                      {ofacResult.matches_found} potential OFAC match{ofacResult.matches_found > 1 ? "es" : ""}
+                    </p>
+                    {ofacResult.matches.slice(0, 5).map((m, i) => (
+                      <div key={i} className="text-xs text-red-800 border border-red-200 rounded p-2 bg-white/60">
+                        <p className="font-medium">{m.sdn_name} <span className="font-normal text-muted-foreground">({m.sdn_type})</span></p>
+                        {m.programs.length > 0 && <p className="text-red-600">Programs: {m.programs.join(", ")}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {ofacError && <p className="text-xs text-red-600">{ofacError}</p>}
 
           {/* Score sub-tab */}
           {intelligenceSubTab === "score" && (
@@ -832,8 +2760,58 @@ export default function SupplierDetailPage() {
                   </Card>
                   <p className="text-xs text-muted-foreground text-center">
                     Benchmarking is within your organization's supplier portfolio.
-                    Cross-organization benchmarking is planned for M31 (Regulatory Intelligence).
                   </p>
+
+                  {/* #87 Sector intelligence comparison */}
+                  {sectorProfile && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base">
+                          Sector Risk Profile — {sectorProfile.section_name}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          NACE {supplier?.nace_code} · Industry-level E/S/G risk baseline
+                        </p>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-3 gap-3 text-center text-xs">
+                          {[
+                            { label: "Environmental", value: sectorProfile.environmental_risk },
+                            { label: "Social", value: sectorProfile.social_risk },
+                            { label: "Governance", value: sectorProfile.governance_risk },
+                          ].map(({ label, value }) => (
+                            <div key={label} className="rounded-lg border p-2">
+                              <p className="text-muted-foreground">{label}</p>
+                              <p className={`font-semibold mt-0.5 ${
+                                value === "HIGH" ? "text-red-600" :
+                                value === "MEDIUM" ? "text-amber-600" : "text-emerald-600"
+                              }`}>{value}</p>
+                            </div>
+                          ))}
+                        </div>
+                        {sectorProfile.key_risk_themes.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Key Risk Themes</p>
+                            <div className="flex flex-wrap gap-1">
+                              {sectorProfile.key_risk_themes.slice(0, 6).map((t) => (
+                                <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">{t}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {sectorProfile.applicable_frameworks.length > 0 && (
+                          <div>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Applicable Frameworks</p>
+                            <div className="flex flex-wrap gap-1">
+                              {sectorProfile.applicable_frameworks.slice(0, 6).map((f) => (
+                                <span key={f} className="rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px]">{f}</span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
                 </>
               )}
             </div>
@@ -899,6 +2877,193 @@ export default function SupplierDetailPage() {
             </Card>
           )}
         </div>
+      )}
+
+      {/* ── Twin Tab ──────────────────────────────────────────────────────── */}
+      {tab === "Twin" && (
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold">Supplier Digital Twin</h2>
+              <p className="text-xs text-muted-foreground">
+                Continuously updated from external intelligence sources
+              </p>
+            </div>
+            <button
+              onClick={async () => {
+                setProcessingSignals(true);
+                setProcessResult(null);
+                try {
+                  const r = await processSupplierSignals(id);
+                  setProcessResult(r.message);
+                  refetchTwin();
+                  refetchTimeline();
+                } catch { setProcessResult("Failed to process signals"); }
+                finally { setProcessingSignals(false); }
+              }}
+              disabled={processingSignals}
+              className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${processingSignals ? "animate-spin" : ""}`} />
+              {processingSignals ? "Processing…" : "Sync Intelligence"}
+            </button>
+          </div>
+          {processResult && (
+            <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+              {processResult}
+            </p>
+          )}
+
+          {twinLoading ? (
+            <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+          ) : twin ? (
+            <>
+              {/* Overall Health Banner */}
+              <div className={`rounded-xl border p-4 flex items-center justify-between ${
+                twin.overall_health < 40 ? "border-red-300 bg-red-50" :
+                twin.overall_health < 60 ? "border-orange-300 bg-orange-50" :
+                twin.overall_health < 75 ? "border-amber-300 bg-amber-50" :
+                "border-emerald-300 bg-emerald-50"
+              }`}>
+                <div>
+                  <p className={`text-3xl font-bold tabular-nums ${
+                    twin.overall_health < 40 ? "text-red-700" :
+                    twin.overall_health < 60 ? "text-orange-700" :
+                    twin.overall_health < 75 ? "text-amber-700" : "text-emerald-700"
+                  }`}>{twin.overall_health.toFixed(0)}</p>
+                  <p className="text-xs text-muted-foreground">Overall Health Score</p>
+                </div>
+                <div className="text-right space-y-1">
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    twin.health_trend === "IMPROVING" ? "bg-emerald-100 text-emerald-800" :
+                    twin.health_trend === "DETERIORATING" ? "bg-red-100 text-red-800" :
+                    "bg-slate-100 text-slate-700"
+                  }`}>
+                    {twin.health_trend === "IMPROVING" ? <TrendingUp className="h-3 w-3" /> :
+                     twin.health_trend === "DETERIORATING" ? <TrendingDown className="h-3 w-3" /> :
+                     <Minus className="h-3 w-3" />}
+                    {twin.health_trend}
+                  </span>
+                  <p className="text-xs text-muted-foreground">{twin.event_count} events processed</p>
+                  {twin.last_event_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Last event {new Date(twin.last_event_at).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Health Dimensions Grid */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                {twin.dimensions.map((dim) => (
+                  <div
+                    key={dim.name}
+                    className={`rounded-xl border p-4 ${
+                      dim.status === "CRITICAL" ? "border-red-200 bg-red-50" :
+                      dim.status === "AT_RISK" ? "border-orange-200 bg-orange-50" :
+                      dim.status === "MODERATE" ? "border-amber-200 bg-amber-50" :
+                      "border-emerald-200 bg-emerald-50"
+                    }`}
+                  >
+                    <p className="text-xs font-medium text-muted-foreground mb-2">{dim.label}</p>
+                    <p className={`text-2xl font-bold tabular-nums ${
+                      dim.status === "CRITICAL" ? "text-red-700" :
+                      dim.status === "AT_RISK" ? "text-orange-700" :
+                      dim.status === "MODERATE" ? "text-amber-700" : "text-emerald-700"
+                    }`}>{dim.score.toFixed(0)}</p>
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-white/60 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          dim.status === "CRITICAL" ? "bg-red-500" :
+                          dim.status === "AT_RISK" ? "bg-orange-500" :
+                          dim.status === "MODERATE" ? "bg-amber-500" : "bg-emerald-500"
+                        }`}
+                        style={{ width: `${dim.score}%` }}
+                      />
+                    </div>
+                    <p className={`mt-1.5 text-[10px] font-semibold ${
+                      dim.status === "CRITICAL" ? "text-red-600" :
+                      dim.status === "AT_RISK" ? "text-orange-600" :
+                      dim.status === "MODERATE" ? "text-amber-600" : "text-emerald-600"
+                    }`}>{dim.status.replace("_", " ")}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Intelligence Timeline */}
+              <div>
+                <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-blue-500" />
+                  Intelligence Timeline
+                  {timelineLoading && <Spinner size="sm" />}
+                </h3>
+                {!twinTimeline?.events.length ? (
+                  <Card>
+                    <CardContent className="py-10 text-center">
+                      <Target className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
+                      <p className="text-sm text-muted-foreground">No intelligence events yet.</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Click "Sync Intelligence" to process external signals into the twin.
+                      </p>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="space-y-3">
+                    {twinTimeline.events.map((event) => (
+                      <TwinEventCard key={event.id} event={event} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <Card>
+              <CardContent className="py-10 text-center">
+                <Target className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
+                <p className="text-muted-foreground">Twin not yet initialized.</p>
+                <p className="mt-1 text-xs text-muted-foreground">Click "Sync Intelligence" to initialize this supplier's Digital Twin.</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* ── Network Tab ───────────────────────────────────────────────────── */}
+      {tab === "Network" && (
+        <div className="space-y-4">
+          <NetworkTab supplierId={id} />
+        </div>
+      )}
+
+      {/* ── Portal Tab (#89 supplier portal conversation thread) ──────── */}
+      {tab === "Portal" && (
+        <SupplierPortalTab supplierId={id} supplierName={supplier.name} />
+      )}
+
+      {/* ── Locations Tab (KAN-85) ────────────────────────────────────── */}
+      {tab === "Locations" && (
+        <LocationsTab supplierId={id} />
+      )}
+
+      {/* ── Contacts Tab (KAN-86) ─────────────────────────────────────── */}
+      {tab === "Contacts" && (
+        <ContactsTab supplierId={id} />
+      )}
+
+      {/* ── Certifications Tab (KAN-87) ───────────────────────────────── */}
+      {tab === "Certifications" && (
+        <CertificationsTab supplierId={id} />
+      )}
+
+      {/* ── Ownership Tab (KAN-88) ────────────────────────────────────── */}
+      {tab === "Ownership" && (
+        <OwnershipTab supplierId={id} />
+      )}
+
+      {/* ── ESG Metrics Tab (KAN-89) ──────────────────────────────────── */}
+      {tab === "ESG Metrics" && (
+        <ESGMetricsTab supplierId={id} />
       )}
 
       {/* Edit Modal */}

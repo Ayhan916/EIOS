@@ -1,18 +1,32 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from pydantic import BaseModel
+from sqlalchemy import update
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.risk import Risk
 from domain.user import User
+from infrastructure.persistence.models.risk import RiskModel
 from infrastructure.persistence.repositories import SQLAssessmentRepository, SQLRiskRepository
 from interfaces.api.deps import (
     get_assessment_repo,
     get_current_user,
+    get_db,
     get_risk_repo,
     require_admin,
     require_analyst,
     scope_gate,
 )
 from interfaces.api.routers.api_platform import dispatch_webhook_event
+from interfaces.api.schemas.finding import FindingResponse
 from interfaces.api.schemas.risk import RiskCreate, RiskResponse
+
+
+class RiskPatch(BaseModel):
+    status: str | None = None       # Active | Reviewed | Archived
+    risk_level: str | None = None   # Critical | High | Medium | Low
+    owner: str | None = None        # free-text assignee (email/name)
 
 router = APIRouter(
     prefix="/risks",
@@ -100,6 +114,75 @@ async def get_risk(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found")
     await _assert_risk_org_access(risk, current_user.organization_id, assessment_repo)
     return RiskResponse.model_validate(risk)
+
+
+@router.patch(
+    "/{risk_id}",
+    response_model=RiskResponse,
+    dependencies=[Depends(require_analyst)],
+    summary="Update risk status, level, or owner inline",
+)
+async def patch_risk(
+    risk_id: str,
+    body: RiskPatch,
+    current_user: User = Depends(get_current_user),
+    repo: SQLRiskRepository = Depends(get_risk_repo),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    session: AsyncSession = Depends(get_db),
+) -> RiskResponse:
+    existing = await repo.get_by_id(risk_id)
+    if existing is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found")
+    await _assert_risk_org_access(existing, current_user.organization_id, assessment_repo)
+
+    _VALID_STATUSES = {"Active", "Reviewed", "Archived"}
+    _VALID_LEVELS = {"Critical", "High", "Medium", "Low"}
+
+    values: dict = {"updated_at": datetime.now(timezone.utc)}
+    if body.status is not None:
+        if body.status not in _VALID_STATUSES:
+            raise HTTPException(status_code=422, detail=f"status must be one of {_VALID_STATUSES}")
+        values["status"] = body.status
+    if body.risk_level is not None:
+        if body.risk_level not in _VALID_LEVELS:
+            raise HTTPException(status_code=422, detail=f"risk_level must be one of {_VALID_LEVELS}")
+        values["risk_level"] = body.risk_level
+    if body.owner is not None:
+        values["owner"] = body.owner or None
+
+    await session.execute(update(RiskModel).where(RiskModel.id == risk_id).values(**values))
+    await session.commit()
+
+    updated = await repo.get_by_id(risk_id)
+    return RiskResponse.model_validate(updated)
+
+
+@router.get(
+    "/{risk_id}/findings",
+    response_model=list[FindingResponse],
+    summary="List findings linked to a risk via risk_finding association",
+)
+async def list_risk_findings(
+    risk_id: str,
+    current_user: User = Depends(get_current_user),
+    repo: SQLRiskRepository = Depends(get_risk_repo),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+) -> list[FindingResponse]:
+    from infrastructure.persistence.models.finding import FindingModel
+    from infrastructure.persistence.models.associations import risk_finding
+    from infrastructure.persistence.database import AsyncSessionFactory
+    from sqlalchemy import select
+    risk = await repo.get_by_id(risk_id)
+    if risk is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found")
+    await _assert_risk_org_access(risk, current_user.organization_id, assessment_repo)
+    async with AsyncSessionFactory() as session:
+        rows = (await session.execute(
+            select(FindingModel)
+            .join(risk_finding, FindingModel.id == risk_finding.c.finding_id)
+            .where(risk_finding.c.risk_id == risk_id)
+        )).scalars().all()
+    return [FindingResponse.model_validate(f) for f in rows]
 
 
 @router.delete(

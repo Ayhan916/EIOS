@@ -12,16 +12,216 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      # Enable WAL for streaming replication to the read replica (M45.3)
+      POSTGRES_INITDB_ARGS: "--wal-level=replica"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    command: >
+      postgres
+      -c wal_level=replica
+      -c max_wal_senders=5
+      -c max_replication_slots=5
+      -c hot_standby=on
+      -c archive_mode=on
+      -c archive_command='cp %p /var/lib/postgresql/wal_archive/%f'
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
       timeout: 5s
       retries: 10
-    # Not exposed to host — backend reaches it over the internal network
     expose:
       - "5432"
+    networks:
+      - internal
+
+  # Streaming replication read replica (M45.3).
+  # Routes read-heavy analytics/reporting queries away from the primary.
+  # DATABASE_READONLY_URL in backend points here.
+  postgres-replica:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_replica_data:/var/lib/postgresql/data
+    command: >
+      bash -c "
+        if [ ! -s /var/lib/postgresql/data/PG_VERSION ]; then
+          pg_basebackup -h postgres -U ${POSTGRES_USER} -D /var/lib/postgresql/data -Xs -R -P
+        fi
+        postgres -c hot_standby=on -c hot_standby_feedback=on
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "5432"
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory 2gb
+      --maxmemory-policy allkeys-lru
+      --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "6379"
+    networks:
+      - internal
+
+  # Dedicated noeviction Redis for JWT blacklist (M45.2).
+  # MUST use noeviction — token revocation is a security control and keys must never be evicted.
+  redis-blacklist:
+    image: redis:7-alpine
+    restart: unless-stopped
+    volumes:
+      - redis_blacklist_data:/data
+    command: >
+      redis-server
+      --appendonly yes
+      --maxmemory-policy noeviction
+      --requirepass ${REDIS_BLACKLIST_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_BLACKLIST_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    expose:
+      - "6379"
+    networks:
+      - internal
+
+  # PgBouncer — session-mode connection pooler (M45.3).
+  # IMPORTANT: session mode is required because EIOS uses SET LOCAL for RLS org isolation.
+  # Transaction mode would drop the SET LOCAL context between statements.
+  # App connects to pgbouncer:6432 which proxies to postgres:5432.
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+      POOL_MODE: session
+      MAX_CLIENT_CONN: "1000"
+      DEFAULT_POOL_SIZE: "20"
+      RESERVE_POOL_SIZE: "5"
+      SERVER_IDLE_TIMEOUT: "600"
+      SERVER_LIFETIME: "3600"
+      ADMIN_USERS: pgbouncer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    expose:
+      - "6432"
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "6432"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Celery worker — background task processing (M45.2)
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A infrastructure.celery.app worker --loglevel=info --pool=solo
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}
+      DATABASE_READONLY_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-replica:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      REDIS_BLACKLIST_URL: redis://:${REDIS_BLACKLIST_PASSWORD}@redis-blacklist:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/2
+      S3_ENABLED: ${S3_ENABLED:-false}
+      S3_BUCKET: ${S3_BUCKET:-eios-documents}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
+    networks:
+      - internal
+
+  # Celery Beat — periodic task scheduler (M45.3 maintenance tasks)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: celery -A infrastructure.celery.app beat --loglevel=info
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}
+      DATABASE_READONLY_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-replica:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/2
+      S3_ENABLED: ${S3_ENABLED:-false}
+      S3_BUCKET: ${S3_BUCKET:-eios-documents}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      SECRET_KEY: ${SECRET_KEY}
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - internal
+
+  # Scheduled pg_basebackup container (M45.3).
+  # Runs pg_backup.sh once per day; uploads to S3 when S3_ENABLED=true.
+  # Uses supercronic for cron-in-docker without cron daemon.
+  postgres-backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGDATABASE: ${POSTGRES_DB}
+      BACKUP_DIR: /var/backups/eios/postgres
+      S3_BUCKET: ${S3_BUCKET:-eios-backups}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+    volumes:
+      - postgres_backup_data:/var/backups/eios/postgres
+      - ./backend/scripts/backup/pg_backup.sh:/usr/local/bin/pg_backup.sh:ro
+    # Run backup daily at 02:00 UTC
+    command: >
+      sh -c "
+        apk add --no-cache aws-cli &&
+        echo '0 2 * * * pg_backup.sh --s3 >> /var/log/pg_backup.log 2>&1' | crontab - &&
+        crond -f -l 2
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - internal
 
@@ -32,7 +232,22 @@ services:
     restart: unless-stopped
     environment:
       ENVIRONMENT: production
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      # Route app traffic through PgBouncer (M45.3)
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@pgbouncer:6432/${POSTGRES_DB}
+      # Read-only traffic goes directly to the replica (no PgBouncer needed for reads)
+      DATABASE_READONLY_URL: postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres-replica:5432/${POSTGRES_DB}
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      REDIS_BLACKLIST_URL: redis://:${REDIS_BLACKLIST_PASSWORD}@redis-blacklist:6379/0
+      # S3 / object storage (M45.2) — set S3_ENABLED=true to activate async ingestion
+      S3_ENABLED: ${S3_ENABLED:-false}
+      S3_BUCKET: ${S3_BUCKET:-eios-documents}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_ENDPOINT_URL: ${S3_ENDPOINT_URL:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      # Celery broker (M45.2) — shares the rate-limit Redis DB=2
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD}@redis:6379/2
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD}@redis:6379/2
       SECRET_KEY: ${SECRET_KEY}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       LLM_PROVIDER: ${LLM_PROVIDER:-anthropic}
@@ -44,7 +259,11 @@ services:
       WORKERS: ${BACKEND_WORKERS:-2}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
-      postgres:
+      pgbouncer:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      redis-blacklist:
         condition: service_healthy
     expose:
       - "8000"
@@ -99,6 +318,14 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  postgres_replica_data:
+    driver: local
+  postgres_backup_data:
+    driver: local
+  redis_data:
+    driver: local
+  redis_blacklist_data:
     driver: local
 
 networks:

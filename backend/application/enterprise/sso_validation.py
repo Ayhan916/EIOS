@@ -201,7 +201,7 @@ _SSO_MAX_PER_WINDOW = 20
 
 
 def check_sso_rate_limit(enterprise_id: str, remote_ip: str) -> bool:
-    """Return True if the request is within rate limits, False if it should be rejected."""
+    """In-process fallback rate limit for SSO callbacks (single-worker only)."""
     key = f"{enterprise_id}:{remote_ip}"
     now = _time.time()
     with _sso_rate_lock:
@@ -214,3 +214,31 @@ def check_sso_rate_limit(enterprise_id: str, remote_ip: str) -> bool:
             return False
         _sso_rate_store[key] = (window_start, count + 1)
         return True
+
+
+async def async_check_sso_rate_limit(enterprise_id: str, remote_ip: str) -> bool:
+    """Redis-backed sliding-window rate limit for SSO callbacks.
+
+    Falls back to the in-process implementation when Redis is unavailable.
+    Keyed as sso:{enterprise_id}:{remote_ip}.
+    """
+    from infrastructure.redis.client import get_redis  # noqa: PLC0415
+
+    redis = get_redis()
+    if redis is None:
+        return check_sso_rate_limit(enterprise_id, remote_ip)
+
+    key = f"sso:{enterprise_id}:{remote_ip}"
+    now = _time.time()
+    window_start = now - _SSO_WINDOW_SECONDS
+    try:
+        pipe = redis.pipeline()
+        pipe.zremrangebyscore(key, 0, window_start)
+        pipe.zcard(key)
+        pipe.zadd(key, {f"{now:.6f}": now})
+        pipe.expire(key, _SSO_WINDOW_SECONDS + 1)
+        results = await pipe.execute()
+        count_before = results[1]
+        return count_before < _SSO_MAX_PER_WINDOW
+    except Exception:
+        return check_sso_rate_limit(enterprise_id, remote_ip)

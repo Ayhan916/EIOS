@@ -5,16 +5,17 @@ Each dependency provides a repository scoped to the request's database transacti
 The transaction commits at request end (on success) and rolls back on exception.
 """
 
-from collections.abc import AsyncGenerator, Callable
+from collections.abc import AsyncGenerator, Callable, Generator
 
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 
 from domain.enums import UserRole, has_min_role
 from domain.user import User
-from infrastructure.persistence.database import AsyncSessionFactory
+from infrastructure.persistence.database import AsyncSessionFactory, SyncSessionFactory
 from infrastructure.persistence.repositories import (
     SQLAgentRunRepository,
     SQLApiKeyRepository,
@@ -44,7 +45,8 @@ from infrastructure.persistence.repositories import (
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
 from infrastructure.persistence.repositories.report import SQLReportRepository
 from application.api_platform.key_service import hash_api_key, is_api_key_token
-from shared.security import decode_token
+from shared.rls import async_set_rls_context
+from shared.security import decode_external_audit_token, decode_token, is_token_blacklisted
 
 _bearer = HTTPBearer(auto_error=False)
 _bearer_required = HTTPBearer(auto_error=True)
@@ -53,6 +55,17 @@ _bearer_required = HTTPBearer(auto_error=True)
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionFactory() as session, session.begin():
         yield session
+
+
+def get_sync_db() -> Generator[Session, None, None]:
+    """Sync session for strategy services that use session.query() (psycopg2 engine)."""
+    with SyncSessionFactory() as session:
+        try:
+            yield session
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
 
 
 async def get_assessment_repo(
@@ -186,6 +199,7 @@ async def get_current_user(
     credentials: HTTPAuthorizationCredentials | None = Depends(_bearer),
     repo: SQLUserRepository = Depends(get_user_repo),
     api_key_repo: SQLApiKeyRepository = Depends(get_api_key_repo),
+    session: AsyncSession = Depends(get_db),
 ) -> User:
     _unauth = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -252,6 +266,10 @@ async def get_current_user(
             is_active=True,
             password_hash="",
         )
+        await async_set_rls_context(session, api_key.organization_id)
+        request.state.organization_id = api_key.organization_id
+        request.state.user_id = synthetic.id
+        request.state.data_residency = await _fetch_data_residency(session, api_key.organization_id)
         return synthetic
 
     # ── JWT path ──────────────────────────────────────────────────────────────
@@ -267,6 +285,11 @@ async def get_current_user(
             detail="Token expired",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
+    except jwt.InvalidAudienceError:
+        # Token has a non-standard audience — check if it's an external audit token
+        user = await _handle_external_audit_token(token)
+        await async_set_rls_context(session, user.organization_id)
+        return user
     except jwt.InvalidTokenError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -281,6 +304,15 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    # Check token blacklist (logout / token rotation)
+    jti = payload.get("jti")
+    if jti and await is_token_blacklisted(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     user = await repo.get_by_id(payload["sub"])
     if user is None or not user.is_active:
         raise HTTPException(
@@ -288,7 +320,74 @@ async def get_current_user(
             detail="User not found or inactive",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    await async_set_rls_context(session, user.organization_id)
+    request.state.organization_id = user.organization_id
+    request.state.user_id = user.id
+    request.state.data_residency = await _fetch_data_residency(session, user.organization_id)
     return user
+
+
+async def _fetch_data_residency(session: AsyncSession, organization_id: str | None) -> str | None:
+    """Return the data_residency tag for the given org, or None if unknown."""
+    if not organization_id:
+        return None
+    try:
+        from sqlalchemy import select  # noqa: PLC0415
+        from infrastructure.persistence.models.organization import OrganizationModel  # noqa: PLC0415
+        org = (await session.execute(
+            select(OrganizationModel.data_residency).where(OrganizationModel.id == organization_id)
+        )).scalar_one_or_none()
+        return org  # scalar is the data_residency string or None
+    except Exception:
+        return None
+
+
+async def _handle_external_audit_token(token: str) -> User:
+    """Decode an external audit JWT and return a synthetic read-only User.
+
+    No database lookup — all identity comes from the verified token payload.
+    Raises 401 on invalid/expired/revoked tokens.
+    """
+    _unauth = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = decode_external_audit_token(token)
+    except jwt.ExpiredSignatureError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token expired",
+            headers={"WWW-Authenticate": "Bearer"},
+        ) from exc
+    except jwt.InvalidTokenError as exc:
+        raise _unauth from exc
+
+    if payload.get("type") != "access" or payload.get("role") != "external_auditor":
+        raise _unauth
+
+    jti = payload.get("jti")
+    if jti and await is_token_blacklisted(jti):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token has been revoked",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    from domain.enums import EntityStatus, UserRole  # noqa: PLC0415
+    from domain.user import User as DomainUser  # noqa: PLC0415
+
+    return DomainUser(
+        id=payload["sub"],
+        status=EntityStatus.ACTIVE,
+        email=payload.get("label", "external-auditor"),
+        display_name=payload.get("label"),
+        role=UserRole.EXTERNAL_AUDITOR.value,
+        organization_id=payload.get("org_id", ""),
+        is_active=True,
+        password_hash="",
+    )
 
 
 def require_role(min_role: UserRole) -> Callable:
@@ -320,6 +419,34 @@ require_analyst: Callable = require_role(UserRole.ANALYST)
 require_reviewer: Callable = require_role(UserRole.REVIEWER)
 require_executive: Callable = require_role(UserRole.EXECUTIVE)
 require_admin: Callable = require_role(UserRole.ADMIN)
+
+
+def require_external_auditor_or_internal(min_internal_role: UserRole = UserRole.VIEWER) -> Callable:
+    """Allow external auditors OR internal users with at least min_internal_role.
+
+    Use on read-only endpoints that external audit firms should access (e.g. compliance
+    gap lists, risk registers, finding details) while keeping write paths internal-only.
+    API key users bypass role checks as usual.
+    """
+
+    async def _check(
+        request: Request,
+        current_user: User = Depends(get_current_user),
+    ) -> User:
+        if getattr(request.state, "api_key_id", None) is not None:
+            return current_user
+        if current_user.role == UserRole.EXTERNAL_AUDITOR.value:
+            return current_user
+        if not has_min_role(current_user.role, min_internal_role):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=(
+                    f"Role '{min_internal_role.value}' or 'external_auditor' is required"
+                ),
+            )
+        return current_user
+
+    return _check
 
 
 async def get_board_report_repo(

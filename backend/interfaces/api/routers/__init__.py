@@ -40,6 +40,16 @@ from .ai_governance import router as ai_governance_router
 from .sustainability import router as sustainability_router
 from .financial_esg import router as financial_esg_router
 from .strategy import router as strategy_router
+from .mfa import router as mfa_router
+from .ghg import router as ghg_router
+from .m46_3 import router as m46_3_router
+from .region import router as region_router
+from .regulatory_reporting import router as regulatory_reporting_router
+from .integrations import router as integrations_router
+from .commercial import router as commercial_router
+from .security_audit import router as security_audit_router
+from .supplier_twin import router as supplier_twin_router
+from .supplier_extensions import router as supplier_extensions_router
 
 __all__ = [
     "agents_router",
@@ -86,4 +96,14 @@ __all__ = [
     "sustainability_router",
     "financial_esg_router",
     "strategy_router",
+    "mfa_router",
+    "ghg_router",
+    "m46_3_router",
+    "region_router",
+    "regulatory_reporting_router",
+    "integrations_router",
+    "commercial_router",
+    "security_audit_router",
+    "supplier_twin_router",
+    "supplier_extensions_router",
 ]

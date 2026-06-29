@@ -54,6 +54,10 @@ class UserRole(str, Enum):
     REVIEWER = "reviewer"
     EXECUTIVE = "executive"
     ADMIN = "admin"
+    # Out-of-hierarchy role — time-limited read-only access for external auditors.
+    # Not included in _ROLE_ORDER so has_min_role() always returns False for this role,
+    # preventing accidental access escalation through internal role checks.
+    EXTERNAL_AUDITOR = "external_auditor"
 
 
 _ROLE_ORDER: dict[str, int] = {
@@ -66,9 +70,18 @@ _ROLE_ORDER: dict[str, int] = {
 
 
 def has_min_role(user_role: str, min_role: UserRole) -> bool:
-    """Return True if user_role meets or exceeds min_role."""
+    """Return True if user_role meets or exceeds min_role in the internal hierarchy.
+
+    EXTERNAL_AUDITOR is not in _ROLE_ORDER, so:
+    - has_min_role(any, EXTERNAL_AUDITOR) always returns False
+    - has_min_role("external_auditor", any) always returns False
+    Use require_external_auditor_or_internal() for endpoints that accept both.
+    """
     user_order = _ROLE_ORDER.get(user_role, 0)
-    return user_order >= _ROLE_ORDER[min_role]
+    min_order = _ROLE_ORDER.get(min_role)
+    if min_order is None:
+        return False
+    return user_order >= min_order
 
 
 class ActionStatus(str, Enum):

@@ -34,6 +34,8 @@ class TestProductionValidation:
             environment="production",
             secret_key="a-very-long-and-secure-secret-key-for-testing-purposes",
             allowed_origins=["https://app.eios.io"],
+            redis_url="redis://:secret@redis.internal:6379/0",
+            redis_blacklist_url="redis://:secret@redis-blacklist.internal:6379/0",
         )
         s.validate_production()  # must not raise
 

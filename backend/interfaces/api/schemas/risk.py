@@ -31,3 +31,5 @@ class RiskResponse(EntityResponse):
     confidence: str
     reasoning: str | None = None
     uncertainty: str | None = None
+    status: str = "Active"
+    owner: str | None = None

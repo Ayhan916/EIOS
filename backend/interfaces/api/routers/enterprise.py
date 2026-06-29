@@ -466,16 +466,15 @@ async def saml_callback(
     via the injected SAMLAssertionValidator before any group claims are trusted.
     Groups come ONLY from the validated assertion — never from request body fields.
     """
-    from fastapi import Request as _Request  # noqa: PLC0415
     from application.enterprise.sso_validation import (  # noqa: PLC0415
-        MockSAMLValidator, SSOValidationError, ValidatedIdentity, check_sso_rate_limit
+        MockSAMLValidator, SSOValidationError, ValidatedIdentity, async_check_sso_rate_limit
     )
     from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
     import uuid as _uuid  # noqa: PLC0415
     from datetime import UTC, datetime  # noqa: PLC0415
 
     client_ip = request.client.host if request.client else "unknown"
-    if not check_sso_rate_limit(enterprise_id, client_ip):
+    if not await async_check_sso_rate_limit(enterprise_id, client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="SSO rate limit exceeded",
@@ -488,9 +487,6 @@ async def saml_callback(
     if idp.provider_type != "saml":
         raise HTTPException(status_code=400, detail="Identity provider is not a SAML provider")
 
-    # Production: inject a real SAMLAssertionValidator via DI or config.
-    # Default: MockSAMLValidator that constructs ValidatedIdentity from idp config.
-    # In production replace this with a proper validator before go-live.
     validator = getattr(request.app.state, "saml_validator", None) or MockSAMLValidator(
         result=ValidatedIdentity(
             external_id=body.user_id,
@@ -511,6 +507,7 @@ async def saml_callback(
             certificates=idp.certificates,
             group_attribute=idp.config.get("group_attribute", "groups"),
         )
+        validated.idp_id = body.idp_id  # production validator leaves this empty
     except SSOValidationError as exc:
         session.add(AuditEventModel(
             id=str(_uuid.uuid4()),
@@ -552,14 +549,14 @@ async def oidc_callback(
     trusting any group claims.  Groups come ONLY from validated token claims.
     """
     from application.enterprise.sso_validation import (  # noqa: PLC0415
-        MockOIDCValidator, SSOValidationError, ValidatedIdentity, check_sso_rate_limit
+        MockOIDCValidator, SSOValidationError, ValidatedIdentity, async_check_sso_rate_limit
     )
     from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
     import uuid as _uuid  # noqa: PLC0415
     from datetime import UTC, datetime  # noqa: PLC0415
 
     client_ip = request.client.host if request.client else "unknown"
-    if not check_sso_rate_limit(enterprise_id, client_ip):
+    if not await async_check_sso_rate_limit(enterprise_id, client_ip):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="SSO rate limit exceeded",
@@ -592,6 +589,7 @@ async def oidc_callback(
             jwks_uri=idp.metadata_url,
             group_claim=idp.config.get("group_claim", "groups"),
         )
+        validated.idp_id = body.idp_id  # production validator leaves this empty
     except SSOValidationError as exc:
         session.add(AuditEventModel(
             id=str(_uuid.uuid4()),
