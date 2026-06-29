@@ -3,10 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarClock, FileText, Plus, Search } from "lucide-react";
-import { EmptyState } from "@/components/ui/empty-state";
+import { Plus, Search } from "lucide-react";
 import { listAssessments } from "@/lib/api/assessments";
-import apiClient from "@/lib/api/client";
 import { formatDateTime, severityColor } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,19 +28,6 @@ export default function AssessmentsPage() {
         search: search || undefined,
         status: status || undefined,
       }),
-  });
-
-  const { data: scheduledSupplierIds } = useQuery<Set<string>>({
-    queryKey: ["assessment-schedules-supplier-ids"],
-    queryFn: async () => {
-      try {
-        const r = await apiClient.get("/api/v1/assessments/schedules?active_only=true&limit=200");
-        const ids = new Set<string>((r.data ?? []).map((s: { supplier_id: string }) => s.supplier_id).filter(Boolean));
-        return ids;
-      } catch { return new Set(); }
-    },
-    staleTime: 300_000,
-    retry: false,
   });
 
   function applySearch() {
@@ -122,32 +107,6 @@ export default function AssessmentsPage() {
         </CardContent>
       </Card>
 
-      {/* Status summary */}
-      {data && data.total > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Pending", cls: "text-amber-600 bg-amber-50", status: "pending" },
-            { label: "Reviewed", cls: "text-blue-600 bg-blue-50", status: "reviewed" },
-            { label: "Active", cls: "text-emerald-600 bg-emerald-50", status: "active" },
-            { label: "Archived", cls: "text-slate-500 bg-slate-50", status: "archived" },
-          ].map(({ label, cls, status: s }) => {
-            const count = data.items.filter((a) => a.status === s).length;
-            const total_pct = data.total > 0 ? Math.round((count / data.total) * 100) : 0;
-            return (
-              <Card key={s} className="cursor-pointer" onClick={() => { setStatus(s); setPage(1); }}>
-                <CardContent className="pt-3 pb-3">
-                  <p className={`text-lg font-bold ${cls.split(" ")[0]}`}>{count}</p>
-                  <p className="text-xs text-muted-foreground">{label}</p>
-                  <div className="mt-1.5 h-1 rounded-full bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full ${cls.split(" ")[1]}`} style={{ width: `${total_pct}%` }} />
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      )}
-
       {/* Table */}
       <Card>
         <CardHeader className="pb-0">
@@ -161,15 +120,12 @@ export default function AssessmentsPage() {
               <Spinner size="lg" />
             </div>
           ) : !data?.items.length ? (
-            <EmptyState
-              icon={FileText}
-              title="No assessments yet"
-              description="Here's what you can do next: select a supplier and run an ESG assessment to evaluate their environmental, social, and governance practices."
-              actions={[
-                { label: "Run First Assessment", href: "/assessments/new", variant: "primary" },
-                { label: "Add a Supplier First", href: "/suppliers", variant: "outline" },
-              ]}
-            />
+            <div className="py-12 text-center">
+              <p className="text-muted-foreground">No assessments found.</p>
+              <Button variant="link" asChild className="mt-2">
+                <Link href="/assessments/new">Run your first assessment</Link>
+              </Button>
+            </div>
           ) : (
             <>
               <div className="overflow-x-auto">
@@ -184,9 +140,6 @@ export default function AssessmentsPage() {
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
                         Status
-                      </th>
-                      <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Schedule
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
                         Quality
@@ -222,15 +175,6 @@ export default function AssessmentsPage() {
                           <span className="capitalize rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
                             {a.status}
                           </span>
-                        </td>
-                        <td className="py-3 pr-4">
-                          {a.supplier_id && scheduledSupplierIds?.has(a.supplier_id) ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                              <CalendarClock className="h-3 w-3" /> Scheduled
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">—</span>
-                          )}
                         </td>
                         <td className="py-3 pr-4">
                           {qualityBadge(a.quality_score)}

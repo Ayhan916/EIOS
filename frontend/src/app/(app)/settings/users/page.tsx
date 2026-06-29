@@ -222,7 +222,6 @@ export default function UsersSettingsPage() {
                 <th className="px-4 py-3">User</th>
                 <th className="px-4 py-3">Role</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">MFA</th>
                 <th className="px-4 py-3">Last Login</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -280,17 +279,6 @@ export default function UsersSettingsPage() {
                       <span className="inline-flex items-center gap-1 text-xs text-red-500">
                         <UserX className="h-3.5 w-3.5" />
                         Inactive
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    {u.mfa_enabled ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        <ShieldCheck className="h-3 w-3" /> Enrolled
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                        <ShieldOff className="h-3 w-3" /> Not set
                       </span>
                     )}
                   </td>

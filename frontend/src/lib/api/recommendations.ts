@@ -1,16 +1,6 @@
 import apiClient from "./client";
 import type { RecommendationResponse, RecommendationUpdate } from "@/types/api";
 
-export async function createRecommendation(body: {
-  title: string;
-  description: string;
-  priority: string;
-  assessment_id: string;
-}): Promise<RecommendationResponse> {
-  const res = await apiClient.post<RecommendationResponse>("/recommendations/", body);
-  return res.data;
-}
-
 export async function listRecommendations(
   assessmentId: string
 ): Promise<RecommendationResponse[]> {

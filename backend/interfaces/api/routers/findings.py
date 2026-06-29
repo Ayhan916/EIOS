@@ -22,7 +22,6 @@ from interfaces.api.schemas.finding import (
     FindingEvidenceLinkResponse,
     FindingResponse,
 )
-from interfaces.api.schemas.risk import RiskResponse
 
 router = APIRouter(
     prefix="/findings",
@@ -122,104 +121,6 @@ async def list_finding_evidence_links(
     await _assert_finding_org_access(finding, current_user.organization_id, assessment_repo)
     links = await link_repo.list_by_finding(finding_id)
     return [FindingEvidenceLinkResponse.model_validate(lnk) for lnk in links]
-
-
-@router.get(
-    "/{finding_id}/risks",
-    response_model=list[RiskResponse],
-    summary="List risks linked to a finding via risk_finding association",
-)
-async def list_finding_risks(
-    finding_id: str,
-    current_user: User = Depends(get_current_user),
-    repo: SQLFindingRepository = Depends(get_finding_repo),
-    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
-) -> list[RiskResponse]:
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from interfaces.api.deps import get_db
-    from infrastructure.persistence.models.finding import FindingModel
-    from infrastructure.persistence.models.risk import RiskModel
-    from sqlalchemy import select
-    finding = await repo.get_by_id(finding_id)
-    if finding is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
-    await _assert_finding_org_access(finding, current_user.organization_id, assessment_repo)
-    # Load via ORM relationship using a raw query on the association table
-    from infrastructure.persistence.models.associations import risk_finding
-    from infrastructure.persistence.database import AsyncSessionFactory
-    async with AsyncSessionFactory() as session:
-        rows = (await session.execute(
-            select(RiskModel)
-            .join(risk_finding, RiskModel.id == risk_finding.c.risk_id)
-            .where(risk_finding.c.finding_id == finding_id)
-        )).scalars().all()
-    return [RiskResponse.model_validate(r) for r in rows]
-
-
-@router.post(
-    "/{finding_id}/risks/{risk_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Link a risk to a finding",
-)
-async def link_finding_risk(
-    finding_id: str,
-    risk_id: str,
-    current_user: User = Depends(get_current_user),
-    repo: SQLFindingRepository = Depends(get_finding_repo),
-    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
-) -> None:
-    finding = await repo.get_by_id(finding_id)
-    if finding is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
-    await _assert_finding_org_access(finding, current_user.organization_id, assessment_repo)
-    from infrastructure.persistence.models.associations import risk_finding
-    from infrastructure.persistence.database import AsyncSessionFactory
-    from sqlalchemy import select, insert
-    from infrastructure.persistence.models.risk import RiskModel
-    async with AsyncSessionFactory() as session:
-        risk_row = (await session.execute(
-            select(RiskModel).where(RiskModel.id == risk_id)
-        )).scalar_one_or_none()
-        if risk_row is None:
-            raise HTTPException(status_code=404, detail="Risk not found")
-        existing = (await session.execute(
-            select(risk_finding).where(
-                risk_finding.c.risk_id == risk_id,
-                risk_finding.c.finding_id == finding_id,
-            )
-        )).first()
-        if not existing:
-            await session.execute(insert(risk_finding).values(risk_id=risk_id, finding_id=finding_id))
-            await session.commit()
-
-
-@router.delete(
-    "/{finding_id}/risks/{risk_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Unlink a risk from a finding",
-)
-async def unlink_finding_risk(
-    finding_id: str,
-    risk_id: str,
-    current_user: User = Depends(get_current_user),
-    repo: SQLFindingRepository = Depends(get_finding_repo),
-    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
-) -> None:
-    finding = await repo.get_by_id(finding_id)
-    if finding is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Finding not found")
-    await _assert_finding_org_access(finding, current_user.organization_id, assessment_repo)
-    from infrastructure.persistence.models.associations import risk_finding
-    from infrastructure.persistence.database import AsyncSessionFactory
-    from sqlalchemy import delete as sa_delete
-    async with AsyncSessionFactory() as session:
-        await session.execute(
-            sa_delete(risk_finding).where(
-                risk_finding.c.risk_id == risk_id,
-                risk_finding.c.finding_id == finding_id,
-            )
-        )
-        await session.commit()
 
 
 @router.delete(

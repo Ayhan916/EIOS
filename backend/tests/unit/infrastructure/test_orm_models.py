@@ -442,29 +442,6 @@ EXPECTED_ENTITY_TABLES = {
     "scenario_comparisons",
     "stress_test_templates",
     "forecast_window_policies",
-    # M45 — MFA
-    "mfa_backup_codes",
-    # M46.2 — Enterprise Data Layer
-    "ghg_emission_factors",
-    "ghg_calculations",
-    "evidence_versions",
-    # M46.3 — Scheduling & Alerts
-    "remediation_milestones",
-    "assessment_schedules",
-    "supplier_certificates",
-    "risk_drafts",
-    # M47 — Multi-Region Data Residency
-    "data_residency_audit_log",
-    # M47 — Regulatory Reporting
-    "regulatory_deadlines",
-    "control_framework_mappings",
-    # M48.2 — Commercial Readiness
-    "organization_settings",
-    "custom_roles",
-    "board_access_tokens",
-    "soc2_controls",
-    "pentest_findings",
-    "production_checklist_items",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -503,7 +480,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 231  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42, +20 M43, +21 M44, +5 M44.1, +1 M45, +3 M46.2, +4 M46.3, +3 M47, +3 M48.2, +3 M49
+        assert len(Base.metadata.tables) == 214  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42, +20 M43, +21 M44, +5 M44.1
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

@@ -145,19 +145,7 @@ async def get_metrics() -> MetricsResponse:
 
 @router.get("/metrics/prometheus", response_class=PlainTextResponse, include_in_schema=True)
 async def get_metrics_prometheus() -> str:
-    """Prometheus text-format metrics for scraping by Prometheus or Grafana Agent.
-
-    Includes:
-      - In-process counters (requests, LLM, webhooks, reports)
-      - Histogram/Counter/Gauge from prometheus_client (M46: latency, active requests)
-      - Copilot metrics (M33)
-      - Module-level counter blobs (M34/M36/M37/M38/M39/M42)
-    """
-    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY  # noqa: PLC0415
-
-    # All prometheus_client-registered metrics (histograms, counters, gauges from M46 + M33)
-    prom_bytes = generate_latest(REGISTRY)
-
+    """Prometheus text-format metrics for scraping by Prometheus or Grafana Agent."""
     uptime = round(time.time() - _start_time, 1)
     env = settings.environment
     lines = [
@@ -236,6 +224,4 @@ async def get_metrics_prometheus() -> str:
     from application.sustainability.metrics import sustainability_counters
     lines.extend(sustainability_counters.to_prometheus_lines(env))
 
-    # Prepend prometheus_client registry output (M46 histograms + copilot metrics)
-    hand_crafted = "\n".join(lines)
-    return prom_bytes.decode("utf-8") + "\n" + hand_crafted
+    return "\n".join(lines)

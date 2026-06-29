@@ -175,26 +175,6 @@ async def list_sector_benchmark_profiles(
 # ── Signals ───────────────────────────────────────────────────────────────────
 
 @router.get(
-    "/signals",
-    response_model=SignalListResponse,
-    dependencies=[_READ],
-)
-async def list_org_signals(
-    limit: int = 20,
-    severity: str | None = None,
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_db),
-) -> SignalListResponse:
-    signals = await list_active_signals(
-        session,
-        organization_id=current_user.organization_id,
-        severity=severity,
-        limit=limit,
-    )
-    return SignalListResponse(signals=[_signal_to_response(s) for s in signals], total=len(signals))
-
-
-@router.get(
     "/signals/supplier/{supplier_id}",
     response_model=SignalListResponse,
     dependencies=[_READ],

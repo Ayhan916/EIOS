@@ -31,9 +31,6 @@ class EvidenceModel(BaseModel):
     file_name: Mapped[str | None] = mapped_column(String(500), nullable=True)
     file_size_bytes: Mapped[int | None] = mapped_column(Integer, nullable=True)
     file_mime_type: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    # M45.2 — S3 object storage + Celery async ingestion
-    s3_object_key: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    ingestion_job_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     assessments: Mapped[list[AssessmentModel]] = relationship(
         secondary=assessment_evidence, back_populates="evidence"

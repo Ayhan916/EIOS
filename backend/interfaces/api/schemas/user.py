@@ -22,7 +22,6 @@ class UserResponse(BaseModel):
     updated_at: datetime
     last_login_at: datetime | None = None
     notification_preferences: dict = {}
-    mfa_enabled: bool = False
 
 
 class NotificationPreferencesUpdate(BaseModel):

@@ -13,17 +13,14 @@ import {
   Download,
   FileText,
   GitPullRequest,
-  Lightbulb,
-  Loader2,
   MessageSquare,
   Pencil,
-  Send,
   ShieldAlert,
+  Lightbulb,
   Trash2,
   UserCheck,
   XCircle,
 } from "lucide-react";
-import apiClient from "@/lib/api/client";
 import {
   getAssessment,
   submitForReview,
@@ -41,7 +38,7 @@ import {
 } from "@/lib/api/comments";
 import { getAssessmentEvidenceInsights, listFindings } from "@/lib/api/findings";
 import { listRisks } from "@/lib/api/risks";
-import { createRecommendation, listRecommendations, updateRecommendation } from "@/lib/api/recommendations";
+import { listRecommendations, updateRecommendation } from "@/lib/api/recommendations";
 import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
@@ -91,22 +88,6 @@ function SeverityDot({ level }: { level: string }) {
     <span className={`inline-flex items-center gap-1.5 rounded-full ${c.bg} ${c.text} px-2.5 py-0.5 text-xs font-semibold capitalize`}>
       <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
       {level}
-    </span>
-  );
-}
-
-function FindingStatusBadge({ status }: { status?: string | null }) {
-  if (!status) return null;
-  const meta: Record<string, string> = {
-    Open:       "bg-slate-100 text-slate-700",
-    InProgress: "bg-blue-100 text-blue-700",
-    Resolved:   "bg-amber-100 text-amber-700",
-    Verified:   "bg-emerald-100 text-emerald-700",
-    Dismissed:  "bg-slate-100 text-slate-400",
-  };
-  return (
-    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${meta[status] ?? "bg-slate-100 text-slate-600"}`}>
-      {status}
     </span>
   );
 }
@@ -217,128 +198,6 @@ function ActionStatusBadge({ status }: { status: ActionStatus }) {
     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.className}`}>
       {meta.label}
     </span>
-  );
-}
-
-// ── Risk list with inline Create Recommendation ───────────────────────────────
-
-function RiskList({ risks, assessmentId, onRecCreated }: {
-  risks: { id: string; title: string; description: string; reasoning?: string | null; risk_level: string; probability?: number | null; impact?: number | null; category?: string | null }[];
-  assessmentId: string;
-  onRecCreated: () => void;
-}) {
-  const [openRiskId, setOpenRiskId] = useState<string | null>(null);
-  const [recTitle, setRecTitle] = useState("");
-  const [recDesc, setRecDesc] = useState("");
-  const [recPriority, setRecPriority] = useState("Medium");
-  const [recBusy, setRecBusy] = useState(false);
-  const [recError, setRecError] = useState<string | null>(null);
-  const [recDone, setRecDone] = useState<string | null>(null);
-
-  function openForm(risk: typeof risks[0]) {
-    setOpenRiskId(risk.id);
-    setRecTitle(`Mitigate: ${risk.title}`);
-    setRecDesc(risk.description || "");
-    setRecPriority(risk.risk_level === "Critical" || risk.risk_level === "High" ? risk.risk_level : "Medium");
-    setRecError(null);
-    setRecDone(null);
-  }
-
-  async function handleCreate(riskId: string) {
-    if (!recTitle.trim() || !recDesc.trim()) { setRecError("Title and description are required."); return; }
-    setRecBusy(true);
-    setRecError(null);
-    try {
-      await createRecommendation({ title: recTitle.trim(), description: recDesc.trim(), priority: recPriority, assessment_id: assessmentId });
-      setRecDone(riskId);
-      onRecCreated();
-      setTimeout(() => { setOpenRiskId(null); setRecDone(null); }, 1500);
-    } catch {
-      setRecError("Failed to create recommendation.");
-    } finally {
-      setRecBusy(false);
-    }
-  }
-
-  return (
-    <div className="space-y-3">
-      {risks.map((r) => (
-        <Card key={r.id}>
-          <CardContent className="pt-4 pb-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{r.title}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{r.description}</p>
-                {r.reasoning && (
-                  <p className="mt-2 text-xs text-muted-foreground border-l-2 border-border pl-3 italic">{r.reasoning}</p>
-                )}
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {r.probability != null && (
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">Probability: {Math.round(r.probability * 100)}%</span>
-                  )}
-                  {r.impact != null && (
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">Impact: {Math.round(r.impact * 100)}%</span>
-                  )}
-                  {r.category && (
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">{r.category}</span>
-                  )}
-                </div>
-                {/* Inline create recommendation form */}
-                {openRiskId === r.id ? (
-                  <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/40 p-3 space-y-2">
-                    <p className="text-xs font-semibold text-blue-800">Create Recommendation</p>
-                    <input
-                      className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
-                      placeholder="Recommendation title"
-                      value={recTitle}
-                      onChange={(e) => setRecTitle(e.target.value)}
-                    />
-                    <textarea
-                      rows={2}
-                      className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-ring"
-                      placeholder="Description / action steps…"
-                      value={recDesc}
-                      onChange={(e) => setRecDesc(e.target.value)}
-                    />
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={recPriority}
-                        onChange={(e) => setRecPriority(e.target.value)}
-                        className="rounded-md border border-border bg-background px-2 py-1 text-xs"
-                      >
-                        {["Critical", "High", "Medium", "Low"].map((p) => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                      {recDone === r.id ? (
-                        <span className="flex items-center gap-1 text-xs text-emerald-700 font-medium"><CheckCircle2 className="h-3.5 w-3.5" /> Created</span>
-                      ) : (
-                        <>
-                          <Button size="sm" className="h-7 text-xs" disabled={recBusy} onClick={() => handleCreate(r.id)}>
-                            {recBusy ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                            Create
-                          </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpenRiskId(null)}>Cancel</Button>
-                        </>
-                      )}
-                    </div>
-                    {recError && <p className="text-xs text-red-600">{recError}</p>}
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => openForm(r)}
-                    className="mt-3 text-xs text-blue-600 hover:underline font-medium flex items-center gap-1"
-                  >
-                    <Lightbulb className="h-3 w-3" /> Create Recommendation
-                  </button>
-                )}
-              </div>
-              <div className="flex-shrink-0">
-                <SeverityDot level={r.risk_level} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
   );
 }
 
@@ -461,50 +320,6 @@ export default function AssessmentDetailPage({
     queryFn: listUsers,
   });
 
-  // ── Questionnaire state ────────────────────────────────────────────────────────
-  const [showQForm, setShowQForm] = useState(false);
-  const [qTemplateId, setQTemplateId] = useState("");
-  const [qDueDate, setQDueDate] = useState("");
-
-  const { data: qTemplates } = useQuery({
-    queryKey: ["questionnaire-templates"],
-    queryFn: async () => {
-      const res = await apiClient.get("/api/v1/supplier-portal/internal/questionnaires/templates");
-      return res.data as Array<{ id: string; template_name: string; version: string }>;
-    },
-    staleTime: 300_000,
-  });
-
-  const { data: qAssignments, refetch: refetchQAssignments } = useQuery({
-    queryKey: ["questionnaire-assignments", assessment?.supplier_id],
-    queryFn: async () => {
-      const res = await apiClient.get(
-        `/api/v1/supplier-portal/internal/questionnaires/assignments?supplier_id=${assessment!.supplier_id}`
-      );
-      return res.data as Array<{
-        id: string; questionnaire_status: string; due_date: string | null; score: number | null; template_id: string; completion_pct: number | null;
-      }>;
-    },
-    enabled: !!assessment?.supplier_id,
-    staleTime: 60_000,
-  });
-
-  const sendQMutation = useMutation({
-    mutationFn: async () => {
-      await apiClient.post("/api/v1/supplier-portal/internal/questionnaires/assign", {
-        template_id: qTemplateId,
-        supplier_id: assessment!.supplier_id,
-        due_date: qDueDate || null,
-      });
-    },
-    onSuccess: () => {
-      setShowQForm(false);
-      setQTemplateId("");
-      setQDueDate("");
-      refetchQAssignments();
-    },
-  });
-
   // ── Review workflow handlers ──────────────────────────────────────────────────
 
   async function handleSubmitForReview() {
@@ -548,20 +363,6 @@ export default function AssessmentDetailPage({
       queryClient.invalidateQueries({ queryKey: ["activity", id] });
       setShowActionPanel("");
       setReviewComment("");
-      // #163 Auto-update ESG score when assessment approved/completed
-      if (actionType === "approve") {
-        try {
-          const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
-          if (stored?.esg_score_update?.enabled !== false && assessment?.supplier_id) {
-            await apiClient.post(`/api/v1/automations/trigger`, {
-              rule_id: "esg_score_update",
-              entity_type: "assessment",
-              entity_id: id,
-              payload: { supplier_id: assessment.supplier_id, recalculate_org_score: stored?.esg_score_update?.config?.recalculate_org_score ?? true },
-            });
-          }
-        } catch { /* silent */ }
-      }
     } catch (err) {
       setReviewError(extractErrorMessage(err));
     } finally {
@@ -667,21 +468,16 @@ export default function AssessmentDetailPage({
               {assessment.description}
             </p>
           </div>
-          <div className="flex-shrink-0 flex items-start gap-3">
-            {qualityPct != null && (
-              <div className="text-right">
-                <p className="text-xs text-muted-foreground">Quality Score</p>
-                <p className={`text-2xl font-bold ${
-                  qualityPct >= 70 ? "text-emerald-600" : qualityPct >= 40 ? "text-amber-600" : "text-red-600"
-                }`}>
-                  {qualityPct}%
-                </p>
-              </div>
-            )}
-            <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 print:hidden">
-              <Download className="h-3.5 w-3.5" /> Export PDF
-            </Button>
-          </div>
+          {qualityPct != null && (
+            <div className="flex-shrink-0 text-right">
+              <p className="text-xs text-muted-foreground">Quality Score</p>
+              <p className={`text-2xl font-bold ${
+                qualityPct >= 70 ? "text-emerald-600" : qualityPct >= 40 ? "text-amber-600" : "text-red-600"
+              }`}>
+                {qualityPct}%
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Meta strip */}
@@ -702,113 +498,6 @@ export default function AssessmentDetailPage({
           )}
         </div>
       </div>
-
-      {/* ── Questionnaire Panel (Item 34 + 35) ─────────────────────────────── */}
-      {assessment.supplier_id && (
-        <div className="rounded-lg border border-border bg-muted/20 px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 min-w-0">
-              <Send className="h-4 w-4 text-blue-500 flex-shrink-0" />
-              <div className="min-w-0">
-                <p className="text-sm font-medium">Supplier Questionnaire</p>
-                {qAssignments && qAssignments.length > 0 ? (
-                  <div className="flex flex-col gap-2 mt-1">
-                    {qAssignments.map((a) => {
-                      const statusCls: Record<string, string> = {
-                        pending: "bg-slate-100 text-slate-700",
-                        submitted: "bg-blue-100 text-blue-700",
-                        approved: "bg-emerald-100 text-emerald-700",
-                        rejected: "bg-red-100 text-red-700",
-                      };
-                      const pct = a.completion_pct ?? (a.questionnaire_status === "submitted" || a.questionnaire_status === "approved" ? 100 : a.questionnaire_status === "pending" ? 0 : null);
-                      return (
-                        <div key={a.id} className="space-y-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${statusCls[a.questionnaire_status] ?? "bg-slate-100 text-slate-600"}`}>
-                              {a.questionnaire_status}
-                            </span>
-                            {a.score != null && (
-                              <span className="text-[10px] text-muted-foreground">Score: <strong>{a.score.toFixed(0)}</strong></span>
-                            )}
-                            {a.due_date && (
-                              <span className="text-[10px] text-muted-foreground">Due {new Date(a.due_date).toLocaleDateString()}</span>
-                            )}
-                            {pct != null && (
-                              <span className="text-[10px] font-medium text-blue-700">{pct.toFixed(0)}% complete</span>
-                            )}
-                          </div>
-                          {pct != null && (
-                            <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-500" : pct >= 50 ? "bg-blue-500" : "bg-amber-400"}`}
-                                style={{ width: `${Math.min(pct, 100)}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-0.5">No questionnaire sent yet</p>
-                )}
-              </div>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="gap-1.5 flex-shrink-0"
-              onClick={() => setShowQForm((v) => !v)}
-            >
-              <Send className="h-3.5 w-3.5" />
-              Send Questionnaire
-            </Button>
-          </div>
-
-          {showQForm && (
-            <div className="mt-3 border-t border-border pt-3 space-y-2">
-              <div className="flex flex-wrap gap-2 items-end">
-                <div className="flex-1 min-w-48">
-                  <p className="text-xs text-muted-foreground mb-1">Template</p>
-                  <select
-                    className="w-full h-8 rounded border border-input bg-background px-2 text-xs"
-                    value={qTemplateId}
-                    onChange={(e) => setQTemplateId(e.target.value)}
-                  >
-                    <option value="">Select template…</option>
-                    {(qTemplates ?? []).map((t) => (
-                      <option key={t.id} value={t.id}>{t.template_name} v{t.version}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground mb-1">Due date (optional)</p>
-                  <input
-                    type="date"
-                    className="h-8 rounded border border-input bg-background px-2 text-xs"
-                    value={qDueDate}
-                    onChange={(e) => setQDueDate(e.target.value)}
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  disabled={!qTemplateId || sendQMutation.isPending}
-                  onClick={() => sendQMutation.mutate()}
-                  className="h-8"
-                >
-                  {sendQMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Send"}
-                </Button>
-              </div>
-              {sendQMutation.isError && (
-                <p className="text-xs text-red-600">Failed to send — check template and supplier.</p>
-              )}
-              {sendQMutation.isSuccess && (
-                <p className="text-xs text-emerald-600">✓ Questionnaire sent successfully.</p>
-              )}
-            </div>
-          )}
-        </div>
-      )}
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -960,9 +649,8 @@ export default function AssessmentDetailPage({
                           )}
                         </div>
                       </div>
-                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <div className="flex-shrink-0">
                         <SeverityDot level={f.severity} />
-                        <FindingStatusBadge status={f.status} />
                       </div>
                     </div>
                   </CardContent>
@@ -979,7 +667,45 @@ export default function AssessmentDetailPage({
           ) : !risks?.length ? (
             <p className="py-12 text-center text-muted-foreground">No risks identified.</p>
           ) : (
-            <RiskList risks={risks} assessmentId={id} onRecCreated={() => queryClient.invalidateQueries({ queryKey: ["recommendations", id] })} />
+            <div className="space-y-3">
+              {risks.map((r) => (
+                <Card key={r.id}>
+                  <CardContent className="pt-4 pb-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-foreground">{r.title}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{r.description}</p>
+                        {r.reasoning && (
+                          <p className="mt-2 text-xs text-muted-foreground border-l-2 border-border pl-3 italic">
+                            {r.reasoning}
+                          </p>
+                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {r.probability != null && (
+                            <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">
+                              Probability: {Math.round(r.probability * 100)}%
+                            </span>
+                          )}
+                          {r.impact != null && (
+                            <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">
+                              Impact: {Math.round(r.impact * 100)}%
+                            </span>
+                          )}
+                          {r.category && (
+                            <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">
+                              {r.category}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex-shrink-0">
+                        <SeverityDot level={r.risk_level} />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </TabsContent>
 

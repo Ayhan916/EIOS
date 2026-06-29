@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2, Mail } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getNotificationPreferences,
@@ -94,7 +94,7 @@ export default function NotificationSettingsPage() {
             </div>
             <button
               role="switch"
-              aria-checked={!!prefs[key]}
+              aria-checked={prefs[key]}
               onClick={() => toggle(key)}
               className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
                 prefs[key] ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
@@ -108,53 +108,6 @@ export default function NotificationSettingsPage() {
             </button>
           </div>
         ))}
-      </div>
-
-      {/* #134 Weekly ESG digest */}
-      <div>
-        <div className="mb-3 flex items-center gap-2">
-          <Mail className="h-4 w-4 text-blue-500" />
-          <h2 className="text-sm font-semibold">Weekly ESG Digest</h2>
-        </div>
-        <div className="rounded-lg border border-border divide-y divide-border">
-          <div className="flex items-start justify-between gap-4 p-4">
-            <div>
-              <p className="text-sm font-medium">Weekly summary email</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Receive a weekly ESG portfolio digest: top risks, KPI changes, pending actions, and compliance status.
-              </p>
-            </div>
-            <button
-              role="switch"
-              aria-checked={prefs.email_weekly_digest ?? false}
-              onClick={() => setPrefs({ ...prefs, email_weekly_digest: !(prefs.email_weekly_digest ?? false) })}
-              className={`mt-0.5 relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${
-                prefs.email_weekly_digest ? "bg-blue-600" : "bg-slate-300 dark:bg-slate-700"
-              }`}
-            >
-              <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition-transform ${
-                prefs.email_weekly_digest ? "translate-x-4" : "translate-x-0"
-              }`} />
-            </button>
-          </div>
-          {prefs.email_weekly_digest && (
-            <div className="flex items-center justify-between gap-4 p-4">
-              <div>
-                <p className="text-sm font-medium">Send on</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Which weekday to receive the digest.</p>
-              </div>
-              <select
-                value={prefs.digest_day ?? "Monday"}
-                onChange={(e) => setPrefs({ ...prefs, digest_day: e.target.value as typeof prefs.digest_day })}
-                className="rounded-md border border-input bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                {["Monday","Tuesday","Wednesday","Thursday","Friday"].map((d) => (
-                  <option key={d} value={d}>{d}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
       </div>
 
       {error && <p className="text-sm text-destructive">{error}</p>}

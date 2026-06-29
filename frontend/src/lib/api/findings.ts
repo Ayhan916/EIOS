@@ -3,7 +3,6 @@ import type {
   EvidenceInsightsResponse,
   FindingEvidenceLinkResponse,
   FindingResponse,
-  RiskResponse,
 } from "@/types/api";
 
 export async function listFindings(
@@ -21,16 +20,6 @@ export async function getFindingEvidenceLinks(
   const res = await apiClient.get<FindingEvidenceLinkResponse[]>(
     `/findings/${findingId}/evidence-links`
   );
-  return res.data;
-}
-
-export async function getFinding(findingId: string): Promise<FindingResponse> {
-  const res = await apiClient.get<FindingResponse>(`/findings/${findingId}`);
-  return res.data;
-}
-
-export async function getFindingLinkedRisks(findingId: string): Promise<RiskResponse[]> {
-  const res = await apiClient.get<RiskResponse[]>(`/findings/${findingId}/risks`);
   return res.data;
 }
 

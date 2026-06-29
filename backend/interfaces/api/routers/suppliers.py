@@ -10,7 +10,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -56,97 +56,9 @@ router = APIRouter(
 )
 
 
-_MAX_SYNC_ROWS = 100  # rows above this threshold are processed async via Celery
-
-
 def _assert_org_access(supplier_org_id: str, user_org_id: str | None) -> None:
     if user_org_id is None or supplier_org_id != user_org_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
-
-
-# ── Bulk import (G-008) ───────────────────────────────────────────────────────
-
-
-@router.post(
-    "/bulk-import",
-    status_code=status.HTTP_202_ACCEPTED,
-    dependencies=[Depends(require_analyst)],
-    summary="Bulk import suppliers from CSV",
-)
-async def bulk_import_suppliers(
-    file: UploadFile = File(..., description="CSV file with supplier data"),
-    dry_run: bool = Query(default=False, description="Validate without persisting"),
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    """Import suppliers from a CSV file.
-
-    CSV must have a header row. Required column: `name`.
-    Optional columns: legal_name, country, industry, nace_code, website, supplier_tier, notes.
-
-    - ≤100 rows: processed synchronously, result returned immediately.
-    - >100 rows: dispatched to Celery, returns {"task_id": "...", "status": "processing"}.
-    - `dry_run=true`: validates and counts without writing to the database.
-    """
-    if not current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
-
-    if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="File must be a CSV")
-
-    content_bytes = await file.read()
-    try:
-        csv_content = content_bytes.decode("utf-8-sig")  # strip BOM if present
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="CSV must be UTF-8 encoded")
-
-    # Count rows to decide sync vs async
-    import csv, io  # noqa: PLC0415
-    row_count = sum(1 for _ in csv.reader(io.StringIO(csv_content))) - 1  # subtract header
-
-    if row_count <= _MAX_SYNC_ROWS or dry_run:
-        from infrastructure.celery.tasks.bulk_import import process_csv_sync  # noqa: PLC0415
-        result = process_csv_sync(
-            csv_content=csv_content,
-            organization_id=current_user.organization_id,
-            actor_id=current_user.id,
-            dry_run=dry_run,
-        )
-        logger.info("bulk_import_sync", **{k: v for k, v in result.items() if k != "errors"})
-        return result
-    else:
-        from infrastructure.celery.tasks.bulk_import import bulk_import_suppliers_task  # noqa: PLC0415
-        task = bulk_import_suppliers_task.delay(
-            csv_content=csv_content,
-            organization_id=current_user.organization_id,
-            actor_id=current_user.id,
-            dry_run=False,
-        )
-        logger.info("bulk_import_async", task_id=task.id, row_count=row_count)
-        return {"task_id": task.id, "status": "processing", "total_rows": row_count}
-
-
-@router.get(
-    "/bulk-import/{task_id}",
-    summary="Poll bulk import task status",
-)
-async def get_bulk_import_status(
-    task_id: str,
-    current_user: User = Depends(get_current_user),
-) -> dict:
-    """Poll the result of an async bulk import task."""
-    from celery.result import AsyncResult  # noqa: PLC0415
-    from infrastructure.celery.app import celery_app  # noqa: PLC0415
-
-    result = AsyncResult(task_id, app=celery_app)
-    if result.state == "PENDING":
-        return {"task_id": task_id, "status": "pending"}
-    if result.state == "STARTED":
-        return {"task_id": task_id, "status": "processing"}
-    if result.state == "FAILURE":
-        return {"task_id": task_id, "status": "failed", "error": str(result.result)}
-    if result.state == "SUCCESS":
-        return {"task_id": task_id, "status": "complete", **result.result}
-    return {"task_id": task_id, "status": result.state.lower()}
 
 
 # ── CRUD ──────────────────────────────────────────────────────────────────────

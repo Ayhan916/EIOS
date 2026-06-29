@@ -24,7 +24,7 @@ from application.strategy import (
     template_service,
 )
 from application.strategy.digital_twin_service import StrategyError
-from interfaces.api.deps import get_sync_db
+from interfaces.api.deps import get_db
 from interfaces.api.schemas.strategy import (
     AssumptionCreate,
     AssumptionResponse,
@@ -96,12 +96,12 @@ def _err(exc: StrategyError) -> HTTPException:
 # ── Digital Twin ──────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/digital-twin", response_model=list[DigitalTwinResponse])
-def list_twins(org_id: str, db: Session = Depends(get_sync_db)):
+def list_twins(org_id: str, db: Session = Depends(get_db)):
     return digital_twin_service.list_digital_twins(org_id, db)
 
 
 @router.post("/{org_id}/digital-twin", response_model=DigitalTwinResponse, status_code=201)
-def create_twin(org_id: str, body: DigitalTwinCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_twin(org_id: str, body: DigitalTwinCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = digital_twin_service.create_digital_twin(
             org_id, body.name, _actor(request), db,
@@ -125,7 +125,7 @@ def create_twin(org_id: str, body: DigitalTwinCreate, request: Request, db: Sess
 
 
 @router.get("/{org_id}/digital-twin/{twin_id}/snapshots", response_model=list[SnapshotResponse])
-def list_snapshots(org_id: str, twin_id: str, db: Session = Depends(get_sync_db)):
+def list_snapshots(org_id: str, twin_id: str, db: Session = Depends(get_db)):
     try:
         return digital_twin_service.list_snapshots(org_id, twin_id, db)
     except StrategyError as e:
@@ -133,7 +133,7 @@ def list_snapshots(org_id: str, twin_id: str, db: Session = Depends(get_sync_db)
 
 
 @router.post("/{org_id}/digital-twin/{twin_id}/snapshots", response_model=SnapshotResponse, status_code=201)
-def create_snapshot(org_id: str, twin_id: str, body: SnapshotCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_snapshot(org_id: str, twin_id: str, body: SnapshotCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = digital_twin_service.create_snapshot(
             org_id, twin_id, body.snapshot_type, body.snapshot_period, _actor(request), db,
@@ -152,12 +152,12 @@ def create_snapshot(org_id: str, twin_id: str, body: SnapshotCreate, request: Re
 # ── Strategic Plans ───────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/plans", response_model=list[StrategicPlanResponse])
-def list_plans(org_id: str, db: Session = Depends(get_sync_db)):
+def list_plans(org_id: str, db: Session = Depends(get_db)):
     return planning_service.list_plans(org_id, db)
 
 
 @router.post("/{org_id}/plans", response_model=StrategicPlanResponse, status_code=201)
-def create_plan(org_id: str, body: StrategicPlanCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_plan(org_id: str, body: StrategicPlanCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = planning_service.create_plan(
             org_id, body.title, body.planning_horizon, _actor(request), db,
@@ -174,7 +174,7 @@ def create_plan(org_id: str, body: StrategicPlanCreate, request: Request, db: Se
 
 
 @router.get("/{org_id}/plans/{plan_id}/objectives", response_model=list[StrategicObjectiveResponse])
-def list_objectives(org_id: str, plan_id: str, db: Session = Depends(get_sync_db)):
+def list_objectives(org_id: str, plan_id: str, db: Session = Depends(get_db)):
     try:
         return planning_service.list_objectives(org_id, plan_id, db)
     except StrategyError as e:
@@ -182,7 +182,7 @@ def list_objectives(org_id: str, plan_id: str, db: Session = Depends(get_sync_db
 
 
 @router.post("/{org_id}/plans/{plan_id}/objectives", response_model=StrategicObjectiveResponse, status_code=201)
-def create_objective(org_id: str, plan_id: str, body: StrategicObjectiveCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_objective(org_id: str, plan_id: str, body: StrategicObjectiveCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = planning_service.create_objective(
             org_id, plan_id, body.title, body.objective_type, _actor(request), db,
@@ -205,12 +205,12 @@ def create_objective(org_id: str, plan_id: str, body: StrategicObjectiveCreate, 
 # ── Scenarios ─────────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/scenarios", response_model=list[ScenarioResponse])
-def list_scenarios(org_id: str, db: Session = Depends(get_sync_db)):
+def list_scenarios(org_id: str, db: Session = Depends(get_db)):
     return scenario_service.list_scenarios(org_id, db)
 
 
 @router.post("/{org_id}/scenarios", response_model=ScenarioResponse, status_code=201)
-def create_scenario(org_id: str, body: ScenarioCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_scenario(org_id: str, body: ScenarioCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = scenario_service.create_scenario(
             org_id, body.name, body.scenario_type, _actor(request), db,
@@ -227,7 +227,7 @@ def create_scenario(org_id: str, body: ScenarioCreate, request: Request, db: Ses
 
 
 @router.get("/{org_id}/scenarios/{scenario_id}/assumptions", response_model=list[AssumptionResponse])
-def list_assumptions(org_id: str, scenario_id: str, db: Session = Depends(get_sync_db)):
+def list_assumptions(org_id: str, scenario_id: str, db: Session = Depends(get_db)):
     try:
         return scenario_service.list_assumptions(org_id, scenario_id, db)
     except StrategyError as e:
@@ -235,7 +235,7 @@ def list_assumptions(org_id: str, scenario_id: str, db: Session = Depends(get_sy
 
 
 @router.post("/{org_id}/scenarios/{scenario_id}/assumptions", response_model=AssumptionResponse, status_code=201)
-def create_assumption(org_id: str, scenario_id: str, body: AssumptionCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_assumption(org_id: str, scenario_id: str, body: AssumptionCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = scenario_service.create_assumption(
             org_id, scenario_id, body.assumption_key, body.assumption_label,
@@ -253,7 +253,7 @@ def create_assumption(org_id: str, scenario_id: str, body: AssumptionCreate, req
 
 
 @router.post("/{org_id}/scenarios/{scenario_id}/execute", response_model=ExecutionResponse, status_code=201)
-def execute_scenario(org_id: str, scenario_id: str, body: ExecutionCreate, request: Request, db: Session = Depends(get_sync_db)):
+def execute_scenario(org_id: str, scenario_id: str, body: ExecutionCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = scenario_service.execute_scenario(
             org_id, scenario_id, _actor(request), db,
@@ -268,19 +268,19 @@ def execute_scenario(org_id: str, scenario_id: str, body: ExecutionCreate, reque
 
 
 @router.get("/{org_id}/executions", response_model=list[ExecutionResponse])
-def list_executions(org_id: str, db: Session = Depends(get_sync_db)):
+def list_executions(org_id: str, db: Session = Depends(get_db)):
     return scenario_service.list_executions(org_id, db)
 
 
 # ── Stress Tests ──────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/stress-tests/climate", response_model=list[ClimateStressTestResponse])
-def list_climate_tests(org_id: str, db: Session = Depends(get_sync_db)):
+def list_climate_tests(org_id: str, db: Session = Depends(get_db)):
     return stress_test_service.list_climate_stress_tests(org_id, db)
 
 
 @router.post("/{org_id}/stress-tests/climate", response_model=ClimateStressTestResponse, status_code=201)
-def create_climate_test(org_id: str, body: ClimateStressTestCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_climate_test(org_id: str, body: ClimateStressTestCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = stress_test_service.create_climate_stress_test(
             org_id, body.test_name, body.stress_type, _actor(request), db,
@@ -299,12 +299,12 @@ def create_climate_test(org_id: str, body: ClimateStressTestCreate, request: Req
 
 
 @router.get("/{org_id}/stress-tests/supplier-shock", response_model=list[SupplierShockResponse])
-def list_supplier_shocks(org_id: str, db: Session = Depends(get_sync_db)):
+def list_supplier_shocks(org_id: str, db: Session = Depends(get_db)):
     return stress_test_service.list_supplier_shocks(org_id, db)
 
 
 @router.post("/{org_id}/stress-tests/supplier-shock", response_model=SupplierShockResponse, status_code=201)
-def create_supplier_shock(org_id: str, body: SupplierShockCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_supplier_shock(org_id: str, body: SupplierShockCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = stress_test_service.create_supplier_shock(
             org_id, body.scenario_name, body.shock_type, body.shock_severity, _actor(request), db,
@@ -321,12 +321,12 @@ def create_supplier_shock(org_id: str, body: SupplierShockCreate, request: Reque
 
 
 @router.get("/{org_id}/stress-tests/financial", response_model=list[FinancialStressTestResponse])
-def list_financial_tests(org_id: str, db: Session = Depends(get_sync_db)):
+def list_financial_tests(org_id: str, db: Session = Depends(get_db)):
     return stress_test_service.list_financial_stress_tests(org_id, db)
 
 
 @router.post("/{org_id}/stress-tests/financial", response_model=FinancialStressTestResponse, status_code=201)
-def create_financial_test(org_id: str, body: FinancialStressTestCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_financial_test(org_id: str, body: FinancialStressTestCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = stress_test_service.create_financial_stress_test(
             org_id, body.test_name, body.stress_type, _actor(request), db,
@@ -346,12 +346,12 @@ def create_financial_test(org_id: str, body: FinancialStressTestCreate, request:
 # ── Pathways ──────────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/pathways", response_model=list[TransitionPathwayResponse])
-def list_pathways(org_id: str, db: Session = Depends(get_sync_db)):
+def list_pathways(org_id: str, db: Session = Depends(get_db)):
     return pathway_service.list_pathways(org_id, db)
 
 
 @router.post("/{org_id}/pathways", response_model=TransitionPathwayResponse, status_code=201)
-def create_pathway(org_id: str, body: TransitionPathwayCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_pathway(org_id: str, body: TransitionPathwayCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = pathway_service.create_pathway(
             org_id, body.pathway_name, body.pathway_type, body.target_year, _actor(request), db,
@@ -368,7 +368,7 @@ def create_pathway(org_id: str, body: TransitionPathwayCreate, request: Request,
 
 
 @router.get("/{org_id}/pathways/{pathway_id}/net-zero", response_model=list[NetZeroPathwayResponse])
-def list_net_zero(org_id: str, pathway_id: str, db: Session = Depends(get_sync_db)):
+def list_net_zero(org_id: str, pathway_id: str, db: Session = Depends(get_db)):
     try:
         return pathway_service.list_net_zero_pathways(org_id, pathway_id, db)
     except StrategyError as e:
@@ -376,7 +376,7 @@ def list_net_zero(org_id: str, pathway_id: str, db: Session = Depends(get_sync_d
 
 
 @router.post("/{org_id}/pathways/{pathway_id}/net-zero", response_model=NetZeroPathwayResponse, status_code=201)
-def create_net_zero(org_id: str, pathway_id: str, body: NetZeroPathwayCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_net_zero(org_id: str, pathway_id: str, body: NetZeroPathwayCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = pathway_service.create_net_zero_pathway(
             org_id, pathway_id, body.net_zero_year, _actor(request), db,
@@ -395,12 +395,12 @@ def create_net_zero(org_id: str, pathway_id: str, body: NetZeroPathwayCreate, re
 # ── Forecasts ─────────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/forecasts/models", response_model=list[ForecastModelResponse])
-def list_forecast_models(org_id: str, db: Session = Depends(get_sync_db)):
+def list_forecast_models(org_id: str, db: Session = Depends(get_db)):
     return forecast_service.list_forecast_models(org_id, db)
 
 
 @router.post("/{org_id}/forecasts/models", response_model=ForecastModelResponse, status_code=201)
-def create_forecast_model(org_id: str, body: ForecastModelCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_forecast_model(org_id: str, body: ForecastModelCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = forecast_service.create_forecast_model(
             org_id, body.model_name, body.methodology, _actor(request), db,
@@ -417,12 +417,12 @@ def create_forecast_model(org_id: str, body: ForecastModelCreate, request: Reque
 
 
 @router.get("/{org_id}/forecasts/results", response_model=list[ForecastResultResponse])
-def list_forecast_results(org_id: str, db: Session = Depends(get_sync_db)):
+def list_forecast_results(org_id: str, db: Session = Depends(get_db)):
     return forecast_service.list_forecast_results(org_id, db)
 
 
 @router.post("/{org_id}/forecasts/run", response_model=ForecastResultResponse, status_code=201)
-def run_forecast(org_id: str, body: ForecastRunCreate, request: Request, db: Session = Depends(get_sync_db)):
+def run_forecast(org_id: str, body: ForecastRunCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = forecast_service.run_forecast(
             org_id, body.forecast_model_id, body.forecast_type, body.target_metric,
@@ -440,12 +440,12 @@ def run_forecast(org_id: str, body: ForecastRunCreate, request: Request, db: Ses
 # ── Board Simulation ──────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/board-simulations", response_model=list[BoardSimulationResponse])
-def list_board_simulations(org_id: str, db: Session = Depends(get_sync_db)):
+def list_board_simulations(org_id: str, db: Session = Depends(get_db)):
     return board_simulation_service.list_board_simulations(org_id, db)
 
 
 @router.post("/{org_id}/board-simulations", response_model=BoardSimulationResponse, status_code=201)
-def create_board_simulation(org_id: str, body: BoardSimulationCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_board_simulation(org_id: str, body: BoardSimulationCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = board_simulation_service.create_board_simulation(
             org_id, body.simulation_name, _actor(request), db,
@@ -464,12 +464,12 @@ def create_board_simulation(org_id: str, body: BoardSimulationCreate, request: R
 # ── Reports ───────────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/reports", response_model=list[StrategicReportResponse])
-def list_reports(org_id: str, db: Session = Depends(get_sync_db)):
+def list_reports(org_id: str, db: Session = Depends(get_db)):
     return reporting_service.list_reports(org_id, db)
 
 
 @router.post("/{org_id}/reports", response_model=StrategicReportResponse, status_code=201)
-def generate_report(org_id: str, body: StrategicReportCreate, request: Request, db: Session = Depends(get_sync_db)):
+def generate_report(org_id: str, body: StrategicReportCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = reporting_service.generate_strategic_report(
             org_id, body.report_title, body.report_period, _actor(request), db,
@@ -485,7 +485,7 @@ def generate_report(org_id: str, body: StrategicReportCreate, request: Request, 
 
 
 @router.post("/{org_id}/reports/{report_id}/finalize", response_model=StrategicReportResponse)
-def finalize_report(org_id: str, report_id: str, request: Request, db: Session = Depends(get_sync_db)):
+def finalize_report(org_id: str, report_id: str, request: Request, db: Session = Depends(get_db)):
     try:
         rec = reporting_service.finalize_report(org_id, report_id, _actor(request), db)
         db.commit()
@@ -498,19 +498,19 @@ def finalize_report(org_id: str, report_id: str, request: Request, db: Session =
 # ── Rollup ────────────────────────────────────────────────────────────────────
 
 @router.get("/{org_id}/rollup", response_model=StrategyRollupResponse)
-def strategy_rollup(org_id: str, db: Session = Depends(get_sync_db)):
+def strategy_rollup(org_id: str, db: Session = Depends(get_db)):
     return rollup_service.strategy_rollup(org_id, db)
 
 
 # ── M44.1: Scenario Templates ─────────────────────────────────────────────────
 
 @router.get("/{org_id}/templates/scenarios", response_model=list[ScenarioTemplateResponse])
-def list_scenario_templates(org_id: str, db: Session = Depends(get_sync_db)):
+def list_scenario_templates(org_id: str, db: Session = Depends(get_db)):
     return template_service.list_scenario_templates(org_id, db)
 
 
 @router.post("/{org_id}/templates/scenarios", response_model=ScenarioTemplateResponse, status_code=201)
-def create_scenario_template(org_id: str, body: ScenarioTemplateCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_scenario_template(org_id: str, body: ScenarioTemplateCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = template_service.create_scenario_template(
             org_id, body.template_name, body.template_type, body.scenario_type, _actor(request), db,
@@ -528,7 +528,7 @@ def create_scenario_template(org_id: str, body: ScenarioTemplateCreate, request:
 @router.post("/{org_id}/templates/scenarios/{template_id}/instantiate", response_model=ScenarioResponse, status_code=201)
 def instantiate_scenario_from_template(
     org_id: str, template_id: str, body: TemplateInstantiateCreate,
-    request: Request, db: Session = Depends(get_sync_db)
+    request: Request, db: Session = Depends(get_db)
 ):
     try:
         rec = template_service.instantiate_from_template(
@@ -546,12 +546,12 @@ def instantiate_scenario_from_template(
 # ── M44.1: Stress Test Templates ─────────────────────────────────────────────
 
 @router.get("/{org_id}/templates/stress-tests", response_model=list[StressTestTemplateResponse])
-def list_stress_test_templates(org_id: str, db: Session = Depends(get_sync_db)):
+def list_stress_test_templates(org_id: str, db: Session = Depends(get_db)):
     return template_service.list_stress_test_templates(org_id, db)
 
 
 @router.post("/{org_id}/templates/stress-tests", response_model=StressTestTemplateResponse, status_code=201)
-def create_stress_test_template(org_id: str, body: StressTestTemplateCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_stress_test_template(org_id: str, body: StressTestTemplateCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = template_service.create_stress_test_template(
             org_id, body.template_name, body.template_type, _actor(request), db,
@@ -569,12 +569,12 @@ def create_stress_test_template(org_id: str, body: StressTestTemplateCreate, req
 # ── M44.1: Strategy Methodologies ─────────────────────────────────────────────
 
 @router.get("/{org_id}/methodologies", response_model=list[StrategyMethodologyResponse])
-def list_methodologies(org_id: str, db: Session = Depends(get_sync_db)):
+def list_methodologies(org_id: str, db: Session = Depends(get_db)):
     return methodology_service.list_methodologies(org_id, db)
 
 
 @router.post("/{org_id}/methodologies", response_model=StrategyMethodologyResponse, status_code=201)
-def create_methodology(org_id: str, body: StrategyMethodologyCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_methodology(org_id: str, body: StrategyMethodologyCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = methodology_service.create_methodology(
             org_id, body.methodology_name, _actor(request), db,
@@ -591,7 +591,7 @@ def create_methodology(org_id: str, body: StrategyMethodologyCreate, request: Re
 
 
 @router.post("/{org_id}/methodologies/{methodology_id}/approve", response_model=StrategyMethodologyResponse)
-def approve_methodology(org_id: str, methodology_id: str, request: Request, db: Session = Depends(get_sync_db)):
+def approve_methodology(org_id: str, methodology_id: str, request: Request, db: Session = Depends(get_db)):
     try:
         rec = methodology_service.approve_methodology(org_id, methodology_id, _actor(request), db)
         db.commit()
@@ -602,7 +602,7 @@ def approve_methodology(org_id: str, methodology_id: str, request: Request, db: 
 
 
 @router.post("/{org_id}/methodologies/{methodology_id}/deprecate", response_model=StrategyMethodologyResponse)
-def deprecate_methodology(org_id: str, methodology_id: str, request: Request, db: Session = Depends(get_sync_db)):
+def deprecate_methodology(org_id: str, methodology_id: str, request: Request, db: Session = Depends(get_db)):
     try:
         rec = methodology_service.deprecate_methodology(org_id, methodology_id, _actor(request), db)
         db.commit()
@@ -615,12 +615,12 @@ def deprecate_methodology(org_id: str, methodology_id: str, request: Request, db
 # ── M44.1: Scenario Comparisons ───────────────────────────────────────────────
 
 @router.get("/{org_id}/comparisons", response_model=list[ScenarioComparisonResponse])
-def list_comparisons(org_id: str, db: Session = Depends(get_sync_db)):
+def list_comparisons(org_id: str, db: Session = Depends(get_db)):
     return comparison_service.list_comparisons(org_id, db)
 
 
 @router.post("/{org_id}/comparisons", response_model=ScenarioComparisonResponse, status_code=201)
-def create_comparison(org_id: str, body: ScenarioComparisonCreate, request: Request, db: Session = Depends(get_sync_db)):
+def create_comparison(org_id: str, body: ScenarioComparisonCreate, request: Request, db: Session = Depends(get_db)):
     try:
         rec = comparison_service.compare_scenarios(
             org_id, body.comparison_name, body.scenario_ids, _actor(request), db,
@@ -636,13 +636,13 @@ def create_comparison(org_id: str, body: ScenarioComparisonCreate, request: Requ
 # ── M44.1: Forecast Window Policies ───────────────────────────────────────────
 
 @router.get("/{org_id}/forecast-window-policies", response_model=list[ForecastWindowPolicyResponse])
-def list_forecast_window_policies(org_id: str, db: Session = Depends(get_sync_db)):
+def list_forecast_window_policies(org_id: str, db: Session = Depends(get_db)):
     return forecast_service.list_forecast_window_policies(org_id, db)
 
 
 @router.post("/{org_id}/forecast-window-policies", response_model=ForecastWindowPolicyResponse, status_code=201)
 def create_forecast_window_policy(
-    org_id: str, body: ForecastWindowPolicyCreate, request: Request, db: Session = Depends(get_sync_db)
+    org_id: str, body: ForecastWindowPolicyCreate, request: Request, db: Session = Depends(get_db)
 ):
     try:
         rec = forecast_service.create_forecast_window_policy(

@@ -12,7 +12,6 @@ export interface UserResponse {
   created_at: string;
   updated_at: string;
   last_login_at: string | null;
-  mfa_enabled: boolean;
 }
 
 export interface UserUpdate {
@@ -279,8 +278,6 @@ export interface RiskResponse extends EntityResponse {
   confidence: string;
   reasoning: string | null;
   uncertainty: string | null;
-  status: string;
-  owner: string | null;
 }
 
 export type ActionStatus = "open" | "in_progress" | "resolved" | "verified";
@@ -581,9 +578,6 @@ export interface NotificationPreferences {
   email_action_overdue: boolean;
   email_assessment_approved: boolean;
   email_recommendation_assigned: boolean;
-  // #134 Weekly ESG digest
-  email_weekly_digest?: boolean;
-  digest_day?: "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday";
 }
 
 export interface ApiError {
@@ -828,133 +822,3 @@ export interface ReportScheduleRequest {
   next_run_at: string;
   report_config?: Record<string, unknown>;
 }
-
-// ── M30 API Platform ──────────────────────────────────────────────────────────
-
-export interface ServiceAccountResponse {
-  id: string;
-  organization_id: string;
-  name: string;
-  description: string;
-  is_active: boolean;
-  created_at: string;
-  created_by: string | null;
-}
-
-export interface ServiceAccountCreate {
-  name: string;
-  description?: string;
-}
-
-export interface ApiKeyCreatedResponse {
-  id: string;
-  name: string;
-  key_prefix: string;
-  raw_key: string;
-  scopes: string[];
-  rate_limit_per_minute: number;
-  rate_limit_per_hour: number;
-  created_at: string;
-}
-
-export interface ApiKeyResponse {
-  id: string;
-  name: string;
-  description: string;
-  key_prefix: string;
-  scopes: string[];
-  is_active: boolean;
-  service_account_id: string | null;
-  last_used_at: string | null;
-  requests_total: number;
-  rate_limit_per_minute: number;
-  rate_limit_per_hour: number;
-  revoked_at: string | null;
-  created_at: string;
-}
-
-export interface ApiKeyCreate {
-  name: string;
-  description?: string;
-  service_account_id?: string | null;
-  scopes: string[];
-  rate_limit_per_minute?: number;
-  rate_limit_per_hour?: number;
-}
-
-export interface ApiKeyUsageSummary {
-  id: string;
-  name: string;
-  key_prefix: string;
-  requests_total: number;
-  last_used_at: string | null;
-  is_active: boolean;
-}
-
-export interface WebhookResponse {
-  id: string;
-  name: string;
-  target_url: string;
-  events: string[];
-  is_active: boolean;
-  failure_count: number;
-  last_triggered_at: string | null;
-  created_at: string;
-}
-
-export interface WebhookCreate {
-  name: string;
-  target_url: string;
-  events: string[];
-  secret: string;
-}
-
-export interface WebhookUpdate {
-  name?: string;
-  target_url?: string;
-  events?: string[];
-  is_active?: boolean;
-}
-
-export interface WebhookDeliveryResponse {
-  id: string;
-  subscription_id: string;
-  event_type: string;
-  delivery_status: string;
-  response_code: number | null;
-  duration_ms: number | null;
-  retry_count: number;
-  error_message: string | null;
-  delivered_at: string | null;
-  created_at: string;
-}
-
-export const API_SCOPES = [
-  "assessments:read",
-  "assessments:write",
-  "suppliers:read",
-  "suppliers:write",
-  "findings:read",
-  "risks:read",
-  "recommendations:read",
-  "executive:read",
-  "reports:read",
-] as const;
-
-export type ApiScope = (typeof API_SCOPES)[number];
-
-export const WEBHOOK_EVENT_TYPES = [
-  "assessment.created",
-  "assessment.approved",
-  "finding.created",
-  "risk.created",
-  "recommendation.created",
-  "recommendation.assigned",
-  "workflow.completed",
-  "supplier.created",
-  "supplier.risk_changed",
-  "board_report.generated",
-  "notification.created",
-] as const;
-
-export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];

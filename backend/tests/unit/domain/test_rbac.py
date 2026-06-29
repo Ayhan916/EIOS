@@ -27,27 +27,10 @@ class TestUserRoleEnum:
             UserRole("superuser")
 
 
-_HIERARCHICAL_ROLES = [
-    UserRole.VIEWER,
-    UserRole.ANALYST,
-    UserRole.REVIEWER,
-    UserRole.EXECUTIVE,
-    UserRole.ADMIN,
-]
-
-
 class TestHasMinRole:
-    def test_admin_meets_all_hierarchical_roles(self) -> None:
-        for min_role in _HIERARCHICAL_ROLES:
+    def test_admin_meets_all_roles(self) -> None:
+        for min_role in UserRole:
             assert has_min_role("admin", min_role)
-
-    def test_admin_does_not_meet_external_auditor(self) -> None:
-        # EXTERNAL_AUDITOR is out-of-hierarchy — has_min_role never grants it
-        assert not has_min_role("admin", UserRole.EXTERNAL_AUDITOR)
-
-    def test_external_auditor_meets_no_hierarchical_role(self) -> None:
-        for min_role in _HIERARCHICAL_ROLES:
-            assert not has_min_role("external_auditor", min_role)
 
     def test_viewer_meets_only_viewer(self) -> None:
         assert has_min_role("viewer", UserRole.VIEWER)
