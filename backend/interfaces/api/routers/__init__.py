@@ -51,6 +51,7 @@ from .security_audit import router as security_audit_router
 from .supplier_twin import router as supplier_twin_router
 from .supplier_extensions import router as supplier_extensions_router
 from .material import router as material_router
+from .product import router as product_router
 
 __all__ = [
     "agents_router",
@@ -108,4 +109,5 @@ __all__ = [
     "supplier_twin_router",
     "supplier_extensions_router",
     "material_router",
+    "product_router",
 ]

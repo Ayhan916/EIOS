@@ -192,6 +192,10 @@ from .material import (
     MaterialComplianceFlagModel,
     MaterialSustainabilityMetricModel,
 )
+from .product import (
+    ProductModel,
+    ProductBOMItemModel,
+)
 from .sustainability import (
     SustainabilityObjectiveModel,
     ESGTargetModel,

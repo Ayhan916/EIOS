@@ -43,6 +43,16 @@ class SupplierEventType(str, Enum):
     ESG_RATING_DELETED = "supplier.esg_rating.deleted"
 
 
+class ProductEventType(str, Enum):
+    # Product core (KAN-98)
+    PRODUCT_CREATED = "product.created"
+    PRODUCT_UPDATED = "product.updated"
+    PRODUCT_ARCHIVED = "product.archived"
+    # BOM (KAN-99)
+    BOM_ITEM_ADDED = "product.bom.item_added"
+    BOM_ITEM_REMOVED = "product.bom.item_removed"
+
+
 class MaterialEventType(str, Enum):
     # Material core (KAN-91)
     MATERIAL_CREATED = "material.created"
@@ -208,6 +218,46 @@ class DomainEvent:
                 "rating_date": rating_date,
                 "score_pct": score_pct,
                 "grade": grade,
+            },
+        )
+
+    @classmethod
+    def product_created(
+        cls,
+        organization_id: str,
+        product_id: str,
+        product_type: str,
+        name: str,
+        actor_id: str | None = None,
+    ) -> "DomainEvent":
+        return cls(
+            event_type=ProductEventType.PRODUCT_CREATED,
+            aggregate_type="Product",
+            aggregate_id=product_id,
+            organization_id=organization_id,
+            actor_id=actor_id,
+            payload={"product_id": product_id, "product_type": product_type, "name": name},
+        )
+
+    @classmethod
+    def product_bom_item_added(
+        cls,
+        organization_id: str,
+        product_id: str,
+        material_id: str,
+        weight_pct: float | None,
+        actor_id: str | None = None,
+    ) -> "DomainEvent":
+        return cls(
+            event_type=ProductEventType.BOM_ITEM_ADDED,
+            aggregate_type="Product",
+            aggregate_id=product_id,
+            organization_id=organization_id,
+            actor_id=actor_id,
+            payload={
+                "product_id": product_id,
+                "material_id": material_id,
+                "weight_pct": weight_pct,
             },
         )
 

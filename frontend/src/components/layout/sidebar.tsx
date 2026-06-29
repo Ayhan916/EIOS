@@ -43,6 +43,7 @@ import {
   Plug2,
   Puzzle,
   ShieldAlert,
+  Package,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -119,6 +120,11 @@ const navItems = [
     label: "Materials",
     href: "/materials",
     icon: FlaskConical,
+  },
+  {
+    label: "Products",
+    href: "/products",
+    icon: Package,
   },
   {
     label: "Assessments",
