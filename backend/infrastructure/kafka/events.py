@@ -43,6 +43,24 @@ class SupplierEventType(str, Enum):
     ESG_RATING_DELETED = "supplier.esg_rating.deleted"
 
 
+class MaterialEventType(str, Enum):
+    # Material core (KAN-91)
+    MATERIAL_CREATED = "material.created"
+    MATERIAL_UPDATED = "material.updated"
+    MATERIAL_ARCHIVED = "material.archived"
+    # Composition / BOM (KAN-92)
+    COMPOSITION_ADDED = "material.composition.added"
+    COMPOSITION_REMOVED = "material.composition.removed"
+    # Sourcing (KAN-93)
+    SOURCING_ADDED = "material.sourcing.added"
+    SOURCING_REMOVED = "material.sourcing.removed"
+    # Compliance (KAN-94)
+    COMPLIANCE_FLAG_SET = "material.compliance.flag_set"
+    COMPLIANCE_STATUS_CHANGED = "material.compliance.status_changed"
+    # Sustainability (KAN-95)
+    SUSTAINABILITY_METRIC_RECORDED = "material.sustainability.metric_recorded"
+
+
 @dataclass
 class DomainEvent:
     """Base domain event published to Kafka.
@@ -190,5 +208,67 @@ class DomainEvent:
                 "rating_date": rating_date,
                 "score_pct": score_pct,
                 "grade": grade,
+            },
+        )
+
+    @classmethod
+    def material_created(
+        cls,
+        organization_id: str,
+        material_id: str,
+        material_type: str,
+        name: str,
+        actor_id: str | None = None,
+    ) -> "DomainEvent":
+        return cls(
+            event_type=MaterialEventType.MATERIAL_CREATED,
+            aggregate_type="Material",
+            aggregate_id=material_id,
+            organization_id=organization_id,
+            actor_id=actor_id,
+            payload={"material_id": material_id, "material_type": material_type, "name": name},
+        )
+
+    @classmethod
+    def material_compliance_flag_set(
+        cls,
+        organization_id: str,
+        material_id: str,
+        regulation: str,
+        compliance_status: str,
+        actor_id: str | None = None,
+    ) -> "DomainEvent":
+        return cls(
+            event_type=MaterialEventType.COMPLIANCE_FLAG_SET,
+            aggregate_type="Material",
+            aggregate_id=material_id,
+            organization_id=organization_id,
+            actor_id=actor_id,
+            payload={
+                "material_id": material_id,
+                "regulation": regulation,
+                "compliance_status": compliance_status,
+            },
+        )
+
+    @classmethod
+    def material_sourcing_added(
+        cls,
+        organization_id: str,
+        material_id: str,
+        supplier_id: str,
+        country_of_origin: str | None,
+        actor_id: str | None = None,
+    ) -> "DomainEvent":
+        return cls(
+            event_type=MaterialEventType.SOURCING_ADDED,
+            aggregate_type="Material",
+            aggregate_id=material_id,
+            organization_id=organization_id,
+            actor_id=actor_id,
+            payload={
+                "material_id": material_id,
+                "supplier_id": supplier_id,
+                "country_of_origin": country_of_origin,
             },
         )

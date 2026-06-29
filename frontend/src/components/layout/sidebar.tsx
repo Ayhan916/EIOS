@@ -116,6 +116,11 @@ const navItems = [
     icon: Briefcase,
   },
   {
+    label: "Materials",
+    href: "/materials",
+    icon: FlaskConical,
+  },
+  {
     label: "Assessments",
     href: "/assessments",
     icon: FileText,

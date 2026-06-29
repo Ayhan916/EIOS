@@ -82,6 +82,7 @@ from interfaces.api.routers import (
     security_audit_router,
     supplier_twin_router,
     supplier_extensions_router,
+    material_router,
 )
 from shared.config import settings
 
@@ -409,3 +410,4 @@ app.include_router(commercial_router, prefix=API_V1)
 app.include_router(security_audit_router, prefix=API_V1)
 app.include_router(supplier_twin_router, prefix=API_V1)
 app.include_router(supplier_extensions_router, prefix=API_V1)
+app.include_router(material_router, prefix=API_V1)

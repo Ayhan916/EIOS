@@ -177,6 +177,21 @@ from .soc2_control import Soc2ControlModel
 from .pentest_finding import PentestFindingModel
 from .production_checklist import ProductionChecklistItemModel
 from .supplier_digital_twin import SupplierDigitalTwinModel, IntelligenceTimelineEventModel
+from .supplier_extensions import (
+    SupplierLocationModel,
+    SupplierContactModel,
+    SupplierCertificationModel,
+    SupplierOwnershipModel,
+    SupplierESGMetricModel,
+    SupplierExternalESGRatingModel,
+)
+from .material import (
+    MaterialModel,
+    MaterialCompositionModel,
+    MaterialSourcingModel,
+    MaterialComplianceFlagModel,
+    MaterialSustainabilityMetricModel,
+)
 from .sustainability import (
     SustainabilityObjectiveModel,
     ESGTargetModel,
