@@ -84,6 +84,11 @@ from interfaces.api.routers import (
     supplier_extensions_router,
     material_router,
     product_router,
+    dpp_router,
+    supply_chain_events_router,
+    erp_router,
+    supply_chain_compliance_router,
+    scope3_router,
 )
 from shared.config import settings
 
@@ -93,6 +98,8 @@ _overdue_task: asyncio.Task | None = None
 _webhook_recovery_task: asyncio.Task | None = None
 _intelligence_scheduler_task: asyncio.Task | None = None
 _agent_scheduler_task: asyncio.Task | None = None
+_outbox_task: asyncio.Task | None = None
+_consumer_task: asyncio.Task | None = None
 
 
 async def _check_overdue_loop() -> None:
@@ -275,7 +282,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     from application.external_intelligence.scheduler import run_intelligence_scheduler  # noqa: PLC0415
     from application.agent_monitoring.scheduler import run_agent_scheduler  # noqa: PLC0415
 
-    global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task, _agent_scheduler_task
+    global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task, _agent_scheduler_task, _outbox_task, _consumer_task
     _overdue_task = asyncio.create_task(_check_overdue_loop())
     logger.info("overdue_task_started")
     _webhook_recovery_task = asyncio.create_task(run_webhook_recovery_loop())
@@ -285,7 +292,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _agent_scheduler_task = asyncio.create_task(run_agent_scheduler())
     logger.info("agent_scheduler_started")
 
+    # M5 — Supply Chain Event Bus
+    from application.supply_chain.handlers import SupplyChainHandlers  # noqa: PLC0415
+    from infrastructure.kafka.consumer import get_kafka_consumer  # noqa: PLC0415
+    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
+
+    _sc_consumer = get_kafka_consumer()
+    _sc_handlers = SupplyChainHandlers(AsyncSessionFactory)
+    _sc_handlers.register_all(_sc_consumer)
+    await _sc_consumer.start()
+    logger.info("supply_chain_consumer_started")
+
+    async def _outbox_loop() -> None:
+        from application.supply_chain.outbox import OutboxPublisher  # noqa: PLC0415
+        while True:
+            try:
+                async with AsyncSessionFactory() as _session:
+                    publisher = OutboxPublisher(_session, None)  # type: ignore[arg-type]
+                    count = await publisher.run_once()
+                    if count:
+                        logger.info("outbox_published", count=count)
+            except Exception as _exc:
+                logger.error("outbox_loop_error", error=str(_exc))
+            await asyncio.sleep(settings.kafka_outbox_poll_interval_s)
+
+    async def _consumer_loop() -> None:
+        from infrastructure.kafka.consumer import get_kafka_consumer as _get  # noqa: PLC0415
+        _c = _get()
+        await _c.consume_loop(on_event_log=None)
+
+    _outbox_task = asyncio.create_task(_outbox_loop())
+    _consumer_task = asyncio.create_task(_consumer_loop())
+    logger.info("supply_chain_event_bus_started")
+
     yield
+
+    if _outbox_task is not None:
+        _outbox_task.cancel()
+    if _consumer_task is not None:
+        _consumer_task.cancel()
+    await _sc_consumer.stop()
 
     if _overdue_task is not None:
         _overdue_task.cancel()
@@ -413,3 +459,8 @@ app.include_router(supplier_twin_router, prefix=API_V1)
 app.include_router(supplier_extensions_router, prefix=API_V1)
 app.include_router(material_router, prefix=API_V1)
 app.include_router(product_router, prefix=API_V1)
+app.include_router(dpp_router, prefix=API_V1)
+app.include_router(supply_chain_events_router, prefix=API_V1)
+app.include_router(erp_router, prefix=API_V1)
+app.include_router(supply_chain_compliance_router, prefix=API_V1)
+app.include_router(scope3_router, prefix=API_V1)

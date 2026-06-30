@@ -36,6 +36,8 @@ class MaterialModel(BaseModel):
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     material_type: Mapped[str] = mapped_column(String(30), nullable=False)
     material_status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE")
+    # ERP reference (M6) — matches ERP material number (e.g. SAP MATNR)
+    external_ref: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
     # Internal reference
     internal_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     # Chemical identifiers

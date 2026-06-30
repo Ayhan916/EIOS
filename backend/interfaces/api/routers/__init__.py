@@ -52,6 +52,11 @@ from .supplier_twin import router as supplier_twin_router
 from .supplier_extensions import router as supplier_extensions_router
 from .material import router as material_router
 from .product import router as product_router
+from .dpp import router as dpp_router
+from .supply_chain_events import router as supply_chain_events_router
+from .erp import router as erp_router
+from .supply_chain_compliance import router as supply_chain_compliance_router
+from .scope3 import router as scope3_router
 
 __all__ = [
     "agents_router",
@@ -110,4 +115,9 @@ __all__ = [
     "supplier_extensions_router",
     "material_router",
     "product_router",
+    "dpp_router",
+    "supply_chain_events_router",
+    "erp_router",
+    "supply_chain_compliance_router",
+    "scope3_router",
 ]

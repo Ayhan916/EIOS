@@ -14,6 +14,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.dpp.service import DPPService
 from application.product.service import ProductBOMService, ProductService
 from domain.product import ProductStatus, ProductType, TargetMarket
 from infrastructure.kafka.producer import KafkaEventProducer, get_kafka_producer
@@ -24,6 +25,7 @@ from interfaces.api.deps import (
     scope_gate,
 )
 from domain.user import User
+from interfaces.api.schemas.dpp import DPPListResponse, DPPResponse
 from interfaces.api.schemas.product import (
     ProductBOMItemCreate,
     ProductBOMItemResponse,
@@ -269,3 +271,15 @@ async def get_product_sustainability(
         current_user.organization_id, product_id, reporting_year=reporting_year
     )
     return ProductSustainabilitySummary(**data)
+
+
+@router.get("/{product_id}/dpp", response_model=list[DPPResponse])
+async def list_product_dpps(
+    product_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    kafka: KafkaEventProducer = Depends(get_kafka_producer),
+) -> list[DPPResponse]:
+    svc = DPPService(db, kafka)
+    items = await svc.list_for_product(current_user.organization_id, product_id)
+    return [DPPResponse.from_model(m) for m in items]

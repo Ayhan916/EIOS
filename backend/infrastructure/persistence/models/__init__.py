@@ -58,6 +58,7 @@ from .regulatory import (
     RequirementMappingModel,
     ComplianceGapModel,
     ComplianceReportModel,
+    ProductComplianceScanModel,
 )
 from .disclosure import (
     DisclosureFrameworkModel,
@@ -66,6 +67,7 @@ from .disclosure import (
     ReportingPackageModel,
 )
 from .due_diligence import DueDiligenceReportModel
+from .scope3 import ProductCarbonFootprintModel, Scope3InventoryModel
 from .copilot import CopilotConversationModel, CopilotMessageModel
 from .copilot_audit import (
     CopilotContradictionModel,
@@ -196,6 +198,9 @@ from .product import (
     ProductModel,
     ProductBOMItemModel,
 )
+from .dpp import DigitalProductPassportModel
+from .supply_chain_event import EventOutboxModel, EventLogModel
+from .erp import ERPConnectorModel, ERPSyncJobModel, ERPFieldMappingModel
 from .sustainability import (
     SustainabilityObjectiveModel,
     ESGTargetModel,
@@ -261,11 +266,14 @@ __all__ = [
     "RequirementMappingModel",
     "ComplianceGapModel",
     "ComplianceReportModel",
+    "ProductComplianceScanModel",
     "DisclosureFrameworkModel",
     "DisclosureRequirementModel",
     "DisclosureResponseModel",
     "ReportingPackageModel",
     "DueDiligenceReportModel",
+    "ProductCarbonFootprintModel",
+    "Scope3InventoryModel",
     "CopilotConversationModel",
     "CopilotMessageModel",
     "CopilotContradictionModel",

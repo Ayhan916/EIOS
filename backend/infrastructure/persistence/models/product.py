@@ -34,6 +34,8 @@ class ProductModel(BaseModel):
     name: Mapped[str] = mapped_column(String(500), nullable=False)
     product_type: Mapped[str] = mapped_column(String(20), nullable=False)
     product_status: Mapped[str] = mapped_column(String(20), nullable=False, default="DRAFT")
+    # ERP reference (M6) — matches ERP product number for BOM resolution
+    external_ref: Mapped[str | None] = mapped_column(String(200), nullable=True, index=True)
     # Commercial identifiers
     sku: Mapped[str | None] = mapped_column(String(200), nullable=True)
     internal_code: Mapped[str | None] = mapped_column(String(100), nullable=True)

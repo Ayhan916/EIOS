@@ -104,7 +104,11 @@ class Settings(BaseSettings):
     kafka_supplier_topic: str = "eios.supplier.events"
     kafka_material_topic: str = "eios.material.events"
     kafka_product_topic: str = "eios.product.events"
+    kafka_dpp_topic: str = "eios.dpp.events"
     kafka_enabled: bool = True
+    # M5 — Supply Chain Event Bus
+    kafka_consumer_group: str = "eios-supply-chain-consumer"
+    kafka_outbox_poll_interval_s: float = 5.0
 
     # ── M47 — Multi-Region Data Residency ─────────────────────────────────────
     # The region this instance is deployed in. Used to detect cross-region access.

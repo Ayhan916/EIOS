@@ -122,3 +122,32 @@ class ComplianceReportModel(BaseModel):
     generated_by: Mapped[str] = mapped_column(String(36), nullable=False, default="")
     report_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     report_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+
+
+class ProductComplianceScanModel(BaseModel):
+    """Timestamped BOM-level compliance scan for a product against one regulation.
+
+    Scanned by comparing each BOM material's MaterialComplianceFlagModel entry.
+    scan_result: COMPLIANT | NON_COMPLIANT | PARTIAL | UNKNOWN
+    """
+
+    __tablename__ = "product_compliance_scans"
+    __table_args__ = (
+        Index("ix_pcs_org", "organization_id"),
+        Index("ix_pcs_product", "product_id"),
+        Index("ix_pcs_regulation", "regulation_code"),
+        Index("ix_pcs_result", "scan_result"),
+    )
+
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    product_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    regulation_code: Mapped[str] = mapped_column(String(50), nullable=False)
+    scan_result: Mapped[str] = mapped_column(String(20), nullable=False, default="UNKNOWN")
+    total_materials: Mapped[int] = mapped_column(nullable=False, default=0)
+    compliant_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    non_compliant_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    unknown_count: Mapped[int] = mapped_column(nullable=False, default=0)
+    flagged_material_ids: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    scan_version: Mapped[str] = mapped_column(String(10), nullable=False, default="1.0")
+    scanned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    scanned_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
