@@ -7,6 +7,7 @@ import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 interface OrgSettings {
   integrations_configured: string[];
@@ -69,6 +70,7 @@ const INTEGRATIONS: Array<{
 ];
 
 export default function IntegrationSettingsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   const { data: settings, isLoading } = useQuery<OrgSettings>({
@@ -111,10 +113,10 @@ export default function IntegrationSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Plug className="h-6 w-6" />
-          Integration Management
+          {t("sec.integrationsTitle")}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Configure webhooks and third-party connectors for automated workflows.
+          {t("sec.integrationsSubtitle")}
         </p>
       </div>
 
@@ -131,7 +133,7 @@ export default function IntegrationSettingsPage() {
                   <CardTitle className="text-base">{integration.label}</CardTitle>
                   {isConfigured && (
                     <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                      <CheckCircle2 className="h-3 w-3" /> Connected
+                      <CheckCircle2 className="h-3 w-3" /> {t("erp.connected")}
                     </span>
                   )}
                 </div>
@@ -181,7 +183,7 @@ export default function IntegrationSettingsPage() {
           className="gap-2"
         >
           {saveMutation.isPending ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
-          Save All Integrations
+          {t("common.save")}
         </Button>
         {saveMutation.isSuccess && (
           <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">

@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth/context";
 import { Play, Plus, X, GitBranch, Lightbulb } from "lucide-react";
 import { ScenarioRadarChart } from "@/components/charts/scenario-radar-chart";
 import type { ScenarioKpiPoint } from "@/components/charts/scenario-radar-chart";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ function CreateScenarioModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     name: "",
     scenario_type: "CLIMATE",
@@ -228,7 +230,7 @@ function CreateScenarioModal({
         {/* Footer */}
         <div className="flex justify-end gap-3 border-t px-6 py-4">
           <Button type="button" variant="outline" onClick={onClose}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -240,7 +242,7 @@ function CreateScenarioModal({
                 <Spinner className="h-4 w-4" /> Erstelle…
               </span>
             ) : (
-              "Szenario erstellen"
+              t("strategy.addScenario")
             )}
           </Button>
         </div>
@@ -361,6 +363,7 @@ function RunScenarioPanel({ scenarioId, orgId }: { scenarioId: string; orgId: st
 
 export default function ScenariosPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
   const [showCreate, setShowCreate] = useState(false);
   const queryClient = useQueryClient();
@@ -447,7 +450,7 @@ export default function ScenariosPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Aktiv</p>
+            <p className="text-sm text-muted-foreground">{t("common.active")}</p>
             <p className="mt-1 text-3xl font-bold text-green-600">{activeCount}</p>
           </CardContent>
         </Card>
@@ -469,13 +472,13 @@ export default function ScenariosPage() {
       {/* Scenario List */}
       <Card>
         <CardHeader>
-          <CardTitle>Szenarien</CardTitle>
+          <CardTitle>{t("strategy.scenariosTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(scenarios ?? []).length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <GitBranch className="h-10 w-10 text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">Noch keine Szenarien vorhanden</p>
+              <p className="text-sm font-medium text-slate-600">{t("strategy.noScenarios")}</p>
               <p className="text-xs text-muted-foreground max-w-xs">
                 Erstelle dein erstes Szenario manuell oder lade Beispiel-Szenarien, um direkt loszulegen.
               </p>
@@ -485,7 +488,7 @@ export default function ScenariosPage() {
                   className="bg-violet-600 hover:bg-violet-700"
                 >
                   <Plus className="mr-2 h-4 w-4" />
-                  Szenario erstellen
+                  {t("strategy.addScenario")}
                 </Button>
                 <Button
                   variant="outline"

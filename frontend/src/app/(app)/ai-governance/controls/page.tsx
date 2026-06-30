@@ -6,6 +6,7 @@ import { Shield } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -29,6 +30,7 @@ function typeColor(t: string) {
 }
 
 export default function AIControlsPage() {
+  const { t } = useLanguage();
   const { data: controls = [], isLoading } = useQuery<AIControl[]>({
     queryKey: ["ai-controls", ORG_ID],
     queryFn: async () => {
@@ -43,16 +45,16 @@ export default function AIControlsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">AI Controls</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("aiGov.controlsTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Governance controls applied to AI models
+          {t("aiGov.controlsSubtitle")}
         </p>
       </div>
 
       {controls.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <Shield className="mx-auto mb-3 h-10 w-10 opacity-30" />
-          <p className="text-sm">No controls defined yet.</p>
+          <p className="text-sm">{t("aiGov.noControls")}</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -69,7 +71,7 @@ export default function AIControlsPage() {
                   </p>
                 )}
                 {!c.is_active && (
-                  <Badge className="bg-slate-100 text-slate-500">Inactive</Badge>
+                  <Badge className="bg-slate-100 text-slate-500">{t("common.inactive")}</Badge>
                 )}
               </CardContent>
             </Card>

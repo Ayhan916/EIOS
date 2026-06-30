@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/lib/i18n/context";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -40,6 +41,7 @@ type JobState = "idle" | "submitted" | "polling" | "done" | "failed";
 
 export default function NewAssessmentPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [jobState, setJobState] = useState<JobState>("idle");
   const [jobId, setJobId] = useState<string | null>(null);
   const [assessmentId, setAssessmentId] = useState<string | null>(null);
@@ -181,7 +183,7 @@ export default function NewAssessmentPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">New Assessment</h1>
+        <h1 className="text-2xl font-bold">{t("assessments.newAssessment")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Launch an AI-powered ESG due diligence workflow
         </p>
@@ -261,7 +263,7 @@ export default function NewAssessmentPage() {
             variant="outline"
             onClick={() => router.back()}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import apiClient from "@/lib/api/client";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -86,6 +87,7 @@ function severityColor(s: string) {
 }
 
 export default function AIIncidentsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [unresolvedOnly, setUnresolvedOnly] = useState(false);
 
@@ -107,9 +109,9 @@ export default function AIIncidentsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Incidents</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("aiGov.incidentsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Hallucinations, policy violations, bias concerns
+            {t("aiGov.incidentsSubtitle")}
           </p>
         </div>
         <Button
@@ -124,7 +126,7 @@ export default function AIIncidentsPage() {
       {incidents.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <AlertTriangle className="mx-auto mb-3 h-10 w-10 opacity-30" />
-          <p className="text-sm">No incidents found.</p>
+          <p className="text-sm">{t("aiGov.noIncidents")}</p>
         </div>
       ) : (
         <div className="space-y-3">

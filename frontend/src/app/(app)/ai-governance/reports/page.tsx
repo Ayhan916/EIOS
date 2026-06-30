@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -22,6 +23,7 @@ function statusColor(s: string) {
 }
 
 export default function AssuranceReportsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -56,25 +58,25 @@ export default function AssuranceReportsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Assurance Reports</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("aiGov.reportsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Consolidated AI governance compliance snapshots
+            {t("aiGov.reportsSubtitle")}
           </p>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          <Plus className="mr-1 h-4 w-4" /> Generate Report
+          <Plus className="mr-1 h-4 w-4" /> {t("reports.generate")}
         </Button>
       </div>
 
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">New Assurance Report</CardTitle>
+            <CardTitle className="text-base">{t("reports.newReport")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Title</label>
+                <label className="text-xs font-medium text-muted-foreground">{t("common.title")}</label>
                 <input
                   className="w-full rounded border border-input px-3 py-2 text-sm"
                   placeholder="Q2 2026 AI Assurance"
@@ -107,10 +109,10 @@ export default function AssuranceReportsPage() {
                 onClick={() => generate.mutate()}
                 disabled={!form.title || !form.period_start || !form.period_end || generate.isPending}
               >
-                {generate.isPending ? "Generating…" : "Generate"}
+                {generate.isPending ? "Generating…" : t("reports.generate")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </CardContent>
@@ -120,7 +122,7 @@ export default function AssuranceReportsPage() {
       {reports.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <FileText className="mx-auto mb-3 h-10 w-10 opacity-30" />
-          <p className="text-sm">No assurance reports generated yet.</p>
+          <p className="text-sm">{t("reports.noReports")}</p>
         </div>
       ) : (
         <div className="space-y-3">

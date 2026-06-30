@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -202,6 +203,7 @@ function IntegrationCard({ integration }: { integration: Integration }) {
 }
 
 export default function IntegrationsPage() {
+  const { t } = useLanguage();
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
 
   const categories = ["all", ...Array.from(new Set(INTEGRATIONS.map((i) => i.category)))];
@@ -213,7 +215,7 @@ export default function IntegrationsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Integration Marketplace</h1>
+          <h1 className="text-2xl font-bold">{t("sec.integrationsTitle")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {INTEGRATIONS.length} integrations available — connect EIOS to your existing toolchain
           </p>
@@ -232,7 +234,7 @@ export default function IntegrationsPage() {
                 : "border-border text-muted-foreground hover:text-foreground hover:border-primary/40"
             }`}
           >
-            {cat === "all" ? `All (${INTEGRATIONS.length})` : cat}
+            {cat === "all" ? `${t("common.all")} (${INTEGRATIONS.length})` : cat}
           </button>
         ))}
       </div>

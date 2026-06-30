@@ -27,6 +27,7 @@ import {
 } from "recharts";
 import { listSuppliers, createSupplier } from "@/lib/api/suppliers";
 import apiClient from "@/lib/api/client";
+import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -184,6 +185,7 @@ function EsgScorePill({ score, riskLevel }: { score: number | null; riskLevel: s
 }
 
 export default function SuppliersPage() {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
@@ -263,14 +265,14 @@ export default function SuppliersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Suppliers</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("suppliers.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            ESG due diligence subjects — manage supplier risk profiles
+            {t("dashboard.supplierPortfolioDesc")}
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="gap-2">
           <Plus className="h-4 w-4" />
-          Add Supplier
+          {t("suppliers.newSupplier")}
         </Button>
       </div>
 
@@ -280,31 +282,37 @@ export default function SuppliersPage() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search suppliers..."
+              placeholder={t("suppliers.searchPlaceholder")}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               className="pl-9 w-64"
             />
           </div>
-          <Button type="submit" variant="secondary">Search</Button>
+          <Button type="submit" variant="secondary">{t("common.search")}</Button>
         </form>
         <select
           value={tierFilter}
           onChange={(e) => { setTierFilter(e.target.value); setPage(1); }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          {TIER_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          <option value="">{t("suppliers.allTiers")}</option>
+          <option value="Tier 1">Tier 1</option>
+          <option value="Tier 2">Tier 2</option>
+          <option value="Tier 3">Tier 3</option>
+          <option value="Other">{t("materials.other")}</option>
         </select>
         <select
           value={statusFilter}
           onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
           className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         >
-          {STATUS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          <option value="">{t("suppliers.allStatus")}</option>
+          <option value="Active">{t("common.active")}</option>
+          <option value="Inactive">{t("common.inactive")}</option>
         </select>
         {(search || tierFilter || statusFilter) && (
           <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setSearchInput(""); setTierFilter(""); setStatusFilter(""); setPage(1); }} className="gap-1 text-muted-foreground">
-            <X className="h-3 w-3" /> Clear
+            <X className="h-3 w-3" /> {t("common.close")}
           </Button>
         )}
         <div className="ml-auto flex items-center gap-2">
@@ -331,13 +339,13 @@ export default function SuppliersPage() {
           <CardContent className="p-0">
             <EmptyState
               icon={Briefcase}
-              title={search || tierFilter || statusFilter ? "No suppliers match your filters" : "No suppliers yet"}
+              title={search || tierFilter || statusFilter ? t("suppliers.noSuppliers") : t("suppliers.noSuppliers")}
               description={search || tierFilter || statusFilter
-                ? "Try adjusting or clearing your filters to find suppliers."
-                : "Here's what you can do next: add your first supplier to start tracking ESG due diligence, run assessments, and surface risks."}
+                ? t("suppliers.noSuppliersDesc")
+                : t("suppliers.noSuppliersDesc")}
               actions={!search && !tierFilter && !statusFilter ? [
-                { label: "Add Supplier", onClick: () => setShowCreate(true), variant: "primary" },
-                { label: "Import CSV", href: "/suppliers", variant: "outline" },
+                { label: t("suppliers.newSupplier"), onClick: () => setShowCreate(true), variant: "primary" },
+                { label: t("common.import"), href: "/suppliers", variant: "outline" },
               ] : undefined}
             />
           </CardContent>
@@ -373,7 +381,7 @@ export default function SuppliersPage() {
           </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
-              <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+              <p className="text-sm text-muted-foreground">{t("common.page")} {page} {t("common.of")} {totalPages}</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" /></Button>
                 <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}><ChevronRight className="h-4 w-4" /></Button>
@@ -388,16 +396,16 @@ export default function SuppliersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Name</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Country</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Industry</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Tier</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">ESG Score</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">Questionnaire</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">OFAC</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Assessments</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Findings</th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.name")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">{t("common.country")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">{t("common.industry")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("suppliers.tier")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("suppliers.esgScore")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">{t("suppliers.questionnaire")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">{t("suppliers.ofac")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">{t("assessments.title")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">{t("findings.title")}</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.status")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -452,7 +460,7 @@ export default function SuppliersPage() {
             </div>
             {totalPages > 1 && (
               <div className="flex items-center justify-between border-t border-border px-4 py-3">
-                <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+                <p className="text-sm text-muted-foreground">{t("common.page")} {page} {t("common.of")} {totalPages}</p>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}><ChevronLeft className="h-4 w-4" /></Button>
                   <Button variant="outline" size="sm" onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages}><ChevronRight className="h-4 w-4" /></Button>
@@ -468,23 +476,23 @@ export default function SuppliersPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-lg rounded-xl bg-background p-6 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Add Supplier</h2>
+              <h2 className="text-lg font-semibold">{t("suppliers.createTitle")}</h2>
               <button onClick={() => { setShowCreate(false); setCreateError(null); }} className="text-muted-foreground hover:text-foreground">
                 <X className="h-5 w-5" />
               </button>
             </div>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Name *</label>
-                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="Supplier legal entity name" />
+                <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
+                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("suppliers.namePlaceholder")} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Legal Name</label>
+                <label className="mb-1 block text-sm font-medium">{t("suppliers.legalName")}</label>
                 <Input value={form.legal_name ?? ""} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} placeholder="Full legal name (if different)" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Country</label>
+                  <label className="mb-1 block text-sm font-medium">{t("common.country")}</label>
                   <Input value={form.country ?? ""} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE, US, FR…" />
                 </div>
                 <div>
@@ -493,12 +501,12 @@ export default function SuppliersPage() {
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Industry</label>
+                <label className="mb-1 block text-sm font-medium">{t("common.industry")}</label>
                 <Input value={form.industry ?? ""} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} placeholder="Steel Manufacturing, Agriculture…" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Supplier Tier</label>
+                  <label className="mb-1 block text-sm font-medium">{t("suppliers.supplierTier")}</label>
                   <select value={form.supplier_tier} onChange={(e) => setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
                     <option value="Tier 1">Tier 1</option>
                     <option value="Tier 2">Tier 2</option>
@@ -507,27 +515,27 @@ export default function SuppliersPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Website</label>
+                  <label className="mb-1 block text-sm font-medium">{t("suppliers.website")}</label>
                   <Input value={form.website ?? ""} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://…" />
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Notes</label>
+                <label className="mb-1 block text-sm font-medium">{t("common.notes")}</label>
                 <textarea value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Internal notes…" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
             {createError && <p className="mt-3 text-sm text-red-600">{createError}</p>}
             <div className="mt-5 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => { setShowCreate(false); setCreateError(null); }}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setShowCreate(false); setCreateError(null); }}>{t("common.cancel")}</Button>
               <Button
                 onClick={() => {
-                  if (!form.name.trim()) { setCreateError("Name is required"); return; }
+                  if (!form.name.trim()) { setCreateError(t("common.required")); return; }
                   createMutation.mutate({ ...form, legal_name: form.legal_name || undefined, nace_code: form.nace_code || undefined, website: form.website || undefined, notes: form.notes || undefined });
                 }}
                 disabled={createMutation.isPending}
               >
                 {createMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
-                Create Supplier
+                {createMutation.isPending ? t("suppliers.creating") : t("suppliers.createTitle")}
               </Button>
             </div>
           </div>

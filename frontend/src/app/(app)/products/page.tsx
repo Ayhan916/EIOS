@@ -21,14 +21,14 @@ import {
   type Product,
   type ProductType,
 } from "@/lib/api/product";
+import { useLanguage } from "@/lib/i18n/context";
 
-const TYPE_LABELS: Record<string, string> = {
-  FINISHED_GOOD: "Finished Good",
-  SEMI_FINISHED: "Semi-Finished",
-  COMPONENT: "Component",
-  SPARE_PART: "Spare Part",
-  SERVICE: "Service",
-  OTHER: "Other",
+const TYPE_LABELS_KEYS: Record<string, string> = {
+  FINISHED_GOOD: "products.finishedGood",
+  SEMI_FINISHED: "products.semiFinished",
+  COMPONENT: "products.component",
+  SPARE_PART: "products.sparePart",
+  SERVICE: "products.service",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -41,6 +41,7 @@ const STATUS_COLORS: Record<string, string> = {
 const PAGE_SIZE = 50;
 
 export default function ProductsPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<ProductType | "">("");
   const [regulatedOnly, setRegulatedOnly] = useState(false);
@@ -79,7 +80,7 @@ export default function ProductsPage() {
         <div className="relative flex-1 min-w-56">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search name, SKU, GTIN…"
+            placeholder={t("products.searchName")}
             className="pl-9"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
@@ -90,9 +91,9 @@ export default function ProductsPage() {
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value as ProductType | ""); setOffset(0); }}
         >
-          <option value="">All Types</option>
-          {PRODUCT_TYPES.map((t) => (
-            <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>
+          <option value="">{t("products.allTypes")}</option>
+          {PRODUCT_TYPES.map((type) => (
+            <option key={type} value={type}>{TYPE_LABELS_KEYS[type] ? t(TYPE_LABELS_KEYS[type] as Parameters<typeof t>[0]) : type}</option>
           ))}
         </select>
         <label className="flex items-center gap-2 text-sm border rounded-md px-3 py-2 cursor-pointer">
@@ -112,8 +113,8 @@ export default function ProductsPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={Package}
-          title="No products found"
-          description="Add your first product to start managing BOM, compliance and carbon footprint."
+          title={t("products.noProducts")}
+          description={t("products.noProductsDesc")}
         />
       ) : (
         <>
@@ -139,7 +140,7 @@ export default function ProductsPage() {
                         </span>
                       </div>
                       <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
-                        <span>{TYPE_LABELS[p.product_type] ?? p.product_type}</span>
+                        <span>{TYPE_LABELS_KEYS[p.product_type] ? t(TYPE_LABELS_KEYS[p.product_type] as Parameters<typeof t>[0]) : p.product_type}</span>
                         {p.sku && <span>SKU: {p.sku}</span>}
                         {p.gtin && <span>GTIN: {p.gtin}</span>}
                         {p.category && <span>{p.category}</span>}
@@ -159,16 +160,16 @@ export default function ProductsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
               <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages} ({total} total)
+                {t("common.page")} {currentPage} {t("common.of")} {totalPages} ({total} {t("common.total")})
               </span>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" disabled={offset === 0}
                   onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}>
-                  <ChevronLeft className="h-4 w-4" /> Previous
+                  <ChevronLeft className="h-4 w-4" /> {t("common.previous")}
                 </Button>
                 <Button variant="outline" size="sm" disabled={offset + PAGE_SIZE >= total}
                   onClick={() => setOffset(offset + PAGE_SIZE)}>
-                  Next <ChevronRight className="h-4 w-4" />
+                  {t("common.next")} <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </div>

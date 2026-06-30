@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -34,6 +35,7 @@ function riskBadgeClass(level: string) {
 }
 
 function ModelCard({ m }: { m: AIModel }) {
+  const { t } = useLanguage();
   const { data: useCases = [] } = useQuery({
     queryKey: ["ai-use-cases", ORG_ID, m.id],
     queryFn: () => listUseCases(ORG_ID, m.id),
@@ -85,7 +87,7 @@ function ModelCard({ m }: { m: AIModel }) {
           <p className="text-xs text-muted-foreground line-clamp-2">{m.purpose}</p>
         )}
         {useCases.length > 0 && (
-          <p className="text-[10px] text-muted-foreground">{useCases.length} use case{useCases.length !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-muted-foreground">{useCases.length} {t("aiGov.useCasesTitle").toLowerCase()}{useCases.length !== 1 ? "s" : ""}</p>
         )}
         {/* #72 Drift alert badge */}
         {topDrift && (
@@ -108,6 +110,7 @@ function ModelCard({ m }: { m: AIModel }) {
 }
 
 export default function AIModelsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -135,27 +138,27 @@ export default function AIModelsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">AI Model Inventory</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("aiGov.modelsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Registered AI models and their approval status
+            {t("aiGov.modelsSubtitle")}
           </p>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          <Plus className="mr-1 h-4 w-4" /> Register Model
+          <Plus className="mr-1 h-4 w-4" /> {t("aiGov.addModel")}
         </Button>
       </div>
 
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Register New Model</CardTitle>
+            <CardTitle className="text-base">{t("aiGov.addModel")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                { key: "name", label: "Name", placeholder: "e.g. Risk Scorer v1" },
-                { key: "provider", label: "Provider", placeholder: "anthropic / openai / custom" },
-                { key: "model_version", label: "Version", placeholder: "claude-sonnet-4-6" },
+                { key: "name", label: t("aiGov.modelName"), placeholder: "e.g. Risk Scorer v1" },
+                { key: "provider", label: t("aiGov.provider"), placeholder: "anthropic / openai / custom" },
+                { key: "model_version", label: t("aiGov.version"), placeholder: "claude-sonnet-4-6" },
               ].map(({ key, label, placeholder }) => (
                 <div key={key} className="space-y-1">
                   <label className="text-xs font-medium text-muted-foreground">{label}</label>
@@ -170,7 +173,7 @@ export default function AIModelsPage() {
                 </div>
               ))}
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Model Type</label>
+                <label className="text-xs font-medium text-muted-foreground">{t("common.type")}</label>
                 <select
                   className="w-full rounded border border-input px-3 py-2 text-sm"
                   value={form.model_type}
@@ -188,10 +191,10 @@ export default function AIModelsPage() {
                 onClick={() => register.mutate()}
                 disabled={!form.name || register.isPending}
               >
-                {register.isPending ? "Saving…" : "Save"}
+                {register.isPending ? t("common.loading") : t("common.save")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </CardContent>
@@ -201,7 +204,7 @@ export default function AIModelsPage() {
       {models.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <Bot className="mx-auto mb-3 h-10 w-10 opacity-30" />
-          <p className="text-sm">No AI models registered yet.</p>
+          <p className="text-sm">{t("aiGov.noModels")}</p>
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">

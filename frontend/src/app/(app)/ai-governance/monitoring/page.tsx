@@ -6,6 +6,7 @@ import { listModels, listDriftAlerts } from "@/lib/api/ai-governance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -68,6 +69,7 @@ function ModelDriftSection({ modelId, modelName }: { modelId: string; modelName:
 }
 
 export default function AIMonitoringPage() {
+  const { t } = useLanguage();
   const { data: models = [], isLoading } = useQuery({
     queryKey: ["ai-models", ORG_ID],
     queryFn: () => listModels(ORG_ID),
@@ -79,10 +81,10 @@ export default function AIMonitoringPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
           <Activity className="h-6 w-6 text-primary" />
-          AI Model Monitoring
+          {t("aiGov.monitoringTitle")}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Drift alerts and performance signals across all registered AI models
+          {t("aiGov.monitoringSubtitle")}
         </p>
       </div>
 
@@ -91,7 +93,7 @@ export default function AIMonitoringPage() {
       ) : models.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <Activity className="mx-auto mb-3 h-10 w-10 opacity-30" />
-          <p className="text-sm">No AI models registered yet.</p>
+          <p className="text-sm">{t("aiGov.noModels")}</p>
         </div>
       ) : (
         <Card>

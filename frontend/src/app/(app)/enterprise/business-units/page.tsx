@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 function healthColor(score: number) {
   if (score >= 80) return "text-emerald-600";
@@ -44,6 +45,7 @@ function BUTreeNode({
   legalEntities: LegalEntity[];
   regions: EnterpriseRegion[];
 }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(true);
   const health = rollup?.compliance_readiness ?? null;
 
@@ -74,9 +76,9 @@ function BUTreeNode({
             </div>
           )}
           {bu.is_active ? (
-            <Badge variant="outline" className="border-emerald-300 text-emerald-700 text-[10px]">Active</Badge>
+            <Badge variant="outline" className="border-emerald-300 text-emerald-700 text-[10px]">{t("common.active")}</Badge>
           ) : (
-            <Badge variant="outline" className="border-slate-300 text-slate-500 text-[10px]">Inactive</Badge>
+            <Badge variant="outline" className="border-slate-300 text-slate-500 text-[10px]">{t("common.inactive")}</Badge>
           )}
           {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
         </div>
@@ -101,9 +103,9 @@ function BUTreeNode({
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 {[
-                  { label: "Suppliers", value: rollup.supplier_count },
-                  { label: "Open Findings", value: rollup.open_findings },
-                  { label: "Critical Risks", value: rollup.critical_risks },
+                  { label: t("nav.suppliers"), value: rollup.supplier_count },
+                  { label: t("dashboard.openFindings"), value: rollup.open_findings },
+                  { label: t("dashboard.criticalFindings"), value: rollup.critical_risks },
                 ].map(({ label, value }) => (
                   <div key={label} className="text-center rounded border bg-background p-2">
                     <p className="text-sm font-bold">{value}</p>
@@ -117,7 +119,7 @@ function BUTreeNode({
           {/* Matched regions */}
           {matchedRegions.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Regions</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("nav.regions")}</p>
               {matchedRegions.map((r) => (
                 <div key={r.id} className="flex items-center gap-2 rounded border bg-background px-3 py-2">
                   <Globe className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
@@ -149,7 +151,7 @@ function BUTreeNode({
           )}
 
           {!rollup && matchedRegions.length === 0 && legalEntities.length === 0 && (
-            <p className="text-xs text-muted-foreground italic">No linked regions or entities</p>
+            <p className="text-xs text-muted-foreground italic">{t("common.noData")}</p>
           )}
         </div>
       )}
@@ -158,6 +160,7 @@ function BUTreeNode({
 }
 
 function CreateBUModal({ enterpriseId, onClose }: { enterpriseId: string; onClose: () => void }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -179,10 +182,10 @@ function CreateBUModal({ enterpriseId, onClose }: { enterpriseId: string; onClos
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Add Business Unit</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("ent.addUnit")}</h2>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">Name *</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.unitName")} *</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={name}
@@ -191,7 +194,7 @@ function CreateBUModal({ enterpriseId, onClose }: { enterpriseId: string; onClos
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Description</label>
+            <label className="mb-1 block text-sm font-medium">{t("common.description")}</label>
             <textarea
               className="w-full rounded-lg border px-3 py-2 text-sm"
               rows={2}
@@ -211,14 +214,14 @@ function CreateBUModal({ enterpriseId, onClose }: { enterpriseId: string; onClos
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => mutate()}
             disabled={!name || isPending}
             className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Create"}
+            {isPending ? t("common.loading") : t("common.create")}
           </button>
         </div>
       </div>
@@ -258,6 +261,7 @@ function downloadRollupCSV(buRollups: BURollupItem[]) {
 }
 
 export default function BusinessUnitsPage() {
+  const { t } = useLanguage();
   const { data: enterprises } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -305,9 +309,9 @@ export default function BusinessUnitsPage() {
 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-semibold">Enterprise Hierarchy</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Business units, regions, and legal entities
+            {t("ent.businessUnitsSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -328,7 +332,7 @@ export default function BusinessUnitsPage() {
               className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-muted/50 transition-colors"
             >
               <Download className="h-4 w-4" />
-              Download Report
+              {t("common.download")}
             </button>
           )}
           <button
@@ -337,7 +341,7 @@ export default function BusinessUnitsPage() {
             className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
-            Add BU
+            {t("ent.addUnit")}
           </button>
         </div>
       </div>
@@ -353,7 +357,7 @@ export default function BusinessUnitsPage() {
                     {healthScore.score.toFixed(0)}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Grade: <span className="font-semibold">{healthScore.grade}</span>
+                    {t("dashboard.esgHealth")}: <span className="font-semibold">{healthScore.grade}</span>
                   </p>
                 </div>
                 <div className="space-y-1 min-w-48">
@@ -386,7 +390,7 @@ export default function BusinessUnitsPage() {
       ) : !units || units.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
-            No business units yet. Add one to start structuring your enterprise.
+            {t("ent.noUnitsDesc")}
           </CardContent>
         </Card>
       ) : (

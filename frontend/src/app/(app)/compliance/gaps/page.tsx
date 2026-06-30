@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { ShieldCheck, ShieldAlert, X, Link2 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   RadarChart,
   Radar,
@@ -32,6 +33,7 @@ function coverageColor(pct: number) {
 }
 
 function CoverageRadar({ ops }: { ops: ComplianceOperation[] }) {
+  const { t } = useLanguage();
   if (ops.length < 3) return null;
   const data = ops.slice(0, 10).map((op) => ({
     framework: op.framework_name.length > 14
@@ -42,7 +44,7 @@ function CoverageRadar({ ops }: { ops: ComplianceOperation[] }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Framework Coverage Radar</CardTitle>
+        <CardTitle className="text-base">{t("dashboard.frameworkCoverage")}</CardTitle>
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
@@ -74,6 +76,7 @@ function AssignControlPanel({
   controls: ESGControl[];
   onDone: () => void;
 }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [controlId, setControlId] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -98,11 +101,11 @@ function AssignControlPanel({
   return (
     <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/60 p-3 space-y-2">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-blue-700">Assign Control to Gap</p>
+        <p className="text-xs font-semibold text-blue-700">{t("esgOs.gap")}</p>
         <button onClick={onDone} className="text-slate-400 hover:text-slate-600"><X className="h-3.5 w-3.5" /></button>
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Select Control</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t("esgOs.controlsTitle")}</label>
         <select
           className="w-full rounded border border-input bg-background px-2 py-1.5 text-xs"
           value={controlId}
@@ -118,7 +121,7 @@ function AssignControlPanel({
       </div>
       {selectedControl && (
         <p className="text-xs text-muted-foreground">
-          Status: <span className="font-medium">{selectedControl.control_status}</span>
+          {t("common.status")}: <span className="font-medium">{selectedControl.control_status}</span>
           {" · "}Effectiveness: <span className="font-medium">{selectedControl.effectiveness_status}</span>
         </p>
       )}
@@ -130,10 +133,10 @@ function AssignControlPanel({
           disabled={!controlId || mut.isPending}
           onClick={() => mut.mutate()}
         >
-          {mut.isPending ? "Assigning…" : "Assign Control"}
+          {mut.isPending ? t("common.loading") : t("esgOs.addControl")}
         </Button>
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onDone}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </div>
@@ -141,6 +144,7 @@ function AssignControlPanel({
 }
 
 function GapRow({ op, controls }: { op: ComplianceOperation; controls: ESGControl[] }) {
+  const { t } = useLanguage();
   const [showAssign, setShowAssign] = useState(false);
 
   return (
@@ -174,7 +178,7 @@ function GapRow({ op, controls }: { op: ComplianceOperation; controls: ESGContro
               onClick={() => setShowAssign(true)}
             >
               <Link2 className="h-3 w-3" />
-              Assign Control
+              {t("esgOs.addControl")}
             </Button>
           )}
         </div>
@@ -182,7 +186,7 @@ function GapRow({ op, controls }: { op: ComplianceOperation; controls: ESGContro
 
       <div className="space-y-1">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Coverage</span>
+          <span>{t("dashboard.complianceCoverage")}</span>
           <span className="font-medium">{op.coverage_percent.toFixed(0)}%</span>
         </div>
         <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -201,6 +205,7 @@ function GapRow({ op, controls }: { op: ComplianceOperation; controls: ESGContro
 }
 
 export default function ComplianceGapsPage() {
+  const { t } = useLanguage();
   const { data: ops, isLoading: opsLoading } = useQuery({
     queryKey: ["compliance-operations"],
     queryFn: () => operatingSystemApi.listComplianceOperations({ limit: 100 }).then((r) => r.data),
@@ -246,17 +251,17 @@ export default function ComplianceGapsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Compliance Gap Analysis</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("esgOs.gapsTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Framework gaps across all compliance operations — assign controls to close gaps
+          {t("esgOs.gapsSubtitle")}
         </p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Open Gaps", value: totalGaps, color: totalGaps > 0 ? "text-red-600" : "text-emerald-600" },
-          { label: "Frameworks < 50% Coverage", value: criticalFrameworks, color: criticalFrameworks > 0 ? "text-amber-600" : "text-emerald-600" },
-          { label: "Avg Coverage", value: `${avgCoverage.toFixed(0)}%`, color: avgCoverage >= 70 ? "text-emerald-600" : "text-amber-600" },
+          { label: t("esgOs.gapsTitle"), value: totalGaps, color: totalGaps > 0 ? "text-red-600" : "text-emerald-600" },
+          { label: t("esgOs.framework"), value: criticalFrameworks, color: criticalFrameworks > 0 ? "text-amber-600" : "text-emerald-600" },
+          { label: t("dashboard.complianceCoverage"), value: `${avgCoverage.toFixed(0)}%`, color: avgCoverage >= 70 ? "text-emerald-600" : "text-amber-600" },
         ].map(({ label, value, color }) => (
           <Card key={label}>
             <CardContent className="pt-4 pb-3">
@@ -271,15 +276,15 @@ export default function ComplianceGapsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Framework Gaps</CardTitle>
+          <CardTitle className="text-base">{t("esgOs.gapsTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {opsLoading && <Spinner />}
           {!opsLoading && (ops ?? []).length === 0 && (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <ShieldCheck className="h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-600">No compliance operations found.</p>
-              <p className="text-xs text-muted-foreground">Add frameworks via Operating System → Compliance Operations.</p>
+              <p className="text-sm text-slate-600">{t("esgOs.noGaps")}</p>
+              <p className="text-xs text-muted-foreground">{t("esgOs.noGapsDesc")}</p>
             </div>
           )}
           <div className="space-y-3">

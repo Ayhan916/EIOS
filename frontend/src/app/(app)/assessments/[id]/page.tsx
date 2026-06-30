@@ -46,6 +46,7 @@ import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import type { ActionStatus, CommentResponse } from "@/types/api";
 import {
   extractErrorMessage,
@@ -227,6 +228,7 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
   assessmentId: string;
   onRecCreated: () => void;
 }) {
+  const { t } = useLanguage();
   const [openRiskId, setOpenRiskId] = useState<string | null>(null);
   const [recTitle, setRecTitle] = useState("");
   const [recDesc, setRecDesc] = useState("");
@@ -286,7 +288,7 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
                 {/* Inline create recommendation form */}
                 {openRiskId === r.id ? (
                   <div className="mt-3 rounded-lg border border-blue-200 bg-blue-50/40 p-3 space-y-2">
-                    <p className="text-xs font-semibold text-blue-800">Create Recommendation</p>
+                    <p className="text-xs font-semibold text-blue-800">{t("findings.createRecommendation")}</p>
                     <input
                       className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
                       placeholder="Recommendation title"
@@ -314,9 +316,9 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
                         <>
                           <Button size="sm" className="h-7 text-xs" disabled={recBusy} onClick={() => handleCreate(r.id)}>
                             {recBusy ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-                            Create
+                            {t("common.create")}
                           </Button>
-                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpenRiskId(null)}>Cancel</Button>
+                          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setOpenRiskId(null)}>{t("common.cancel")}</Button>
                         </>
                       )}
                     </div>
@@ -327,7 +329,7 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
                     onClick={() => openForm(r)}
                     className="mt-3 text-xs text-blue-600 hover:underline font-medium flex items-center gap-1"
                   >
-                    <Lightbulb className="h-3 w-3" /> Create Recommendation
+                    <Lightbulb className="h-3 w-3" /> {t("findings.createRecommendation")}
                   </button>
                 )}
               </div>
@@ -349,6 +351,7 @@ export default function AssessmentDetailPage({
 }) {
   const { id } = use(params);
   const { user } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   // ── Report state ────────────────────────────────────────────────────────────
@@ -641,7 +644,7 @@ export default function AssessmentDetailPage({
   if (!assessment) {
     return (
       <div className="py-24 text-center text-muted-foreground">
-        Assessment not found.
+        {t("error.notFound")}
       </div>
     );
   }
@@ -657,7 +660,7 @@ export default function AssessmentDetailPage({
         <Button variant="ghost" size="sm" asChild className="mb-4 -ml-1 gap-1">
           <Link href="/assessments">
             <ArrowLeft className="h-4 w-4" />
-            Back to assessments
+            {t("common.back")}
           </Link>
         </Button>
         <div className="flex items-start justify-between gap-4">
@@ -679,7 +682,7 @@ export default function AssessmentDetailPage({
               </div>
             )}
             <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 print:hidden">
-              <Download className="h-3.5 w-3.5" /> Export PDF
+              <Download className="h-3.5 w-3.5" /> {t("common.export")} PDF
             </Button>
           </div>
         </div>
@@ -812,27 +815,27 @@ export default function AssessmentDetailPage({
 
       <Tabs defaultValue="overview">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="overview">{t("common.overview")}</TabsTrigger>
           <TabsTrigger value="findings">
-            Findings {findings ? `(${findings.length})` : ""}
+            {t("findings.title")} {findings ? `(${findings.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="risks">
-            Risks {risks ? `(${risks.length})` : ""}
+            {t("risks.title")} {risks ? `(${risks.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="recommendations">
-            Actions {recs ? `(${recs.length})` : ""}
+            {t("nav.recommendations")} {recs ? `(${recs.length})` : ""}
           </TabsTrigger>
-          <TabsTrigger value="compliance">Compliance</TabsTrigger>
-          <TabsTrigger value="benchmark">Benchmark</TabsTrigger>
+          <TabsTrigger value="compliance">{t("nav.scCompliance")}</TabsTrigger>
+          <TabsTrigger value="benchmark">{t("nav.comparisons")}</TabsTrigger>
           <TabsTrigger value="evidence">
-            Evidence {evidenceInsights ? `(${evidenceInsights.total_evidence_links})` : ""}
+            {t("nav.evidence")} {evidenceInsights ? `(${evidenceInsights.total_evidence_links})` : ""}
           </TabsTrigger>
           <TabsTrigger value="reports">
-            Reports {reports ? `(${reports.length})` : ""}
+            {t("nav.reports")} {reports ? `(${reports.length})` : ""}
           </TabsTrigger>
           <TabsTrigger value="review" className="gap-1.5">
             <GitPullRequest className="h-3.5 w-3.5" />
-            Review
+            {t("assessments.reviewed")}
           </TabsTrigger>
         </TabsList>
 
@@ -843,7 +846,7 @@ export default function AssessmentDetailPage({
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <AlertTriangle className="h-4 w-4 text-amber-500" />
-                  <CardTitle className="text-sm font-medium">Findings</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("findings.title")}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -880,7 +883,7 @@ export default function AssessmentDetailPage({
           {compliance && (
             <Card className="mt-4">
               <CardHeader>
-                <CardTitle className="text-base">Compliance Snapshot</CardTitle>
+                <CardTitle className="text-base">{t("dashboard.complianceCoverage")}</CardTitle>
                 <CardDescription>
                   Verdict:{" "}
                   <span className={`font-semibold capitalize ${verdictColor(compliance.verdict.status)}`}>
@@ -891,7 +894,7 @@ export default function AssessmentDetailPage({
               <CardContent className="space-y-4">
                 <div>
                   <div className="mb-1.5 flex justify-between text-sm">
-                    <span className="text-muted-foreground">Overall coverage</span>
+                    <span className="text-muted-foreground">{t("dashboard.complianceCoverage")}</span>
                     <span className="font-medium">
                       {Math.round(compliance.overall_coverage_ratio * 100)}%
                     </span>
@@ -903,7 +906,7 @@ export default function AssessmentDetailPage({
                 </div>
                 <div>
                   <div className="mb-1.5 flex justify-between text-sm">
-                    <span className="text-muted-foreground">Mandatory coverage</span>
+                    <span className="text-muted-foreground">{t("dashboard.frameworkCoverage")}</span>
                     <span className="font-medium">
                       {Math.round(compliance.mandatory_coverage_ratio * 100)}%
                     </span>
@@ -1185,9 +1188,9 @@ export default function AssessmentDetailPage({
               {compliance.gaps.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Compliance Gaps</CardTitle>
+                    <CardTitle className="text-base">{t("esgOs.gapsTitle")}</CardTitle>
                     <CardDescription>
-                      Regulatory obligations not yet addressed
+                      {t("esgOs.noGapsDesc")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -1550,9 +1553,9 @@ export default function AssessmentDetailPage({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold">Executive Reports</h3>
+                <h3 className="font-semibold">{t("exec.reportsTitle")}</h3>
                 <p className="text-sm text-muted-foreground">
-                  Generate a PDF report capturing all findings, risks, recommendations, and evidence at this point in time.
+                  {t("exec.reportsSubtitle")}
                 </p>
               </div>
               <Button
@@ -1565,7 +1568,7 @@ export default function AssessmentDetailPage({
                 ) : (
                   <FileText className="h-4 w-4" />
                 )}
-                {generatingReport ? "Generating..." : "Generate Report"}
+                {generatingReport ? t("common.loading") : t("reports.generate")}
               </Button>
             </div>
 
@@ -1580,9 +1583,9 @@ export default function AssessmentDetailPage({
             ) : !reports?.length ? (
               <div className="rounded-lg border-2 border-dashed border-border py-16 text-center">
                 <FileText className="mx-auto h-10 w-10 text-muted-foreground/40 mb-3" />
-                <p className="text-sm text-muted-foreground">No reports generated yet.</p>
+                <p className="text-sm text-muted-foreground">{t("reports.noReports")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Click "Generate Report" to create an executive-ready PDF.
+                  {t("reports.generate")}
                 </p>
               </div>
             ) : (
@@ -1620,7 +1623,7 @@ export default function AssessmentDetailPage({
                           onClick={() => handleDownloadReport(report.id, report.title)}
                         >
                           <Download className="h-3.5 w-3.5" />
-                          Download PDF
+                          {t("reports.download")}
                         </Button>
                       </div>
                     </CardContent>
@@ -1637,32 +1640,32 @@ export default function AssessmentDetailPage({
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between gap-3">
-                <CardTitle className="text-base">Review Status</CardTitle>
+                <CardTitle className="text-base">{t("common.status")}</CardTitle>
                 <ReviewStatusBadge status={assessment.review_status ?? "Draft"} />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 text-sm">
                 <div>
-                  <p className="text-xs text-muted-foreground">Reviewer</p>
+                  <p className="text-xs text-muted-foreground">{t("inbox.assigned")}</p>
                   <p className="mt-0.5 font-medium">
                     {assessment.assigned_reviewer_id
                       ? (orgUsers?.find((u) => u.id === assessment.assigned_reviewer_id)?.display_name ??
                          assessment.assigned_reviewer_id)
-                      : <span className="text-muted-foreground italic">Not assigned</span>}
+                      : <span className="text-muted-foreground italic">{t("common.none")}</span>}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Due date</p>
+                  <p className="text-xs text-muted-foreground">{t("findings.dueDate")}</p>
                   <p className="mt-0.5 font-medium">
                     {assessment.review_due_date
                       ? formatDate(assessment.review_due_date)
-                      : <span className="text-muted-foreground italic">Not set</span>}
+                      : <span className="text-muted-foreground italic">{t("common.none")}</span>}
                   </p>
                 </div>
                 {assessment.approval_date && (
                   <div>
-                    <p className="text-xs text-muted-foreground">Approved on</p>
+                    <p className="text-xs text-muted-foreground">{t("inbox.approved")}</p>
                     <p className="mt-0.5 font-medium text-emerald-700">
                       {formatDate(assessment.approval_date)}
                     </p>
@@ -1685,10 +1688,10 @@ export default function AssessmentDetailPage({
                     className="gap-2"
                   >
                     <GitPullRequest className="h-4 w-4" />
-                    {reviewLoading ? "Submitting…" : "Submit for Review"}
+                    {reviewLoading ? t("common.loading") : t("assessments.reviewed")}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Transitions the assessment to In Review and notifies the assigned reviewer.
+                    {t("inbox.workflow")}
                   </p>
                 </div>
               )}
@@ -1703,10 +1706,10 @@ export default function AssessmentDetailPage({
                     className="gap-2"
                   >
                     <GitPullRequest className="h-4 w-4" />
-                    {reviewLoading ? "Submitting…" : "Resubmit for Review"}
+                    {reviewLoading ? t("common.loading") : t("dashboard.changesRequested")}
                   </Button>
                   <p className="text-xs text-muted-foreground">
-                    Resubmit after addressing the requested changes.
+                    {t("dashboard.changesRequested")}
                   </p>
                 </div>
               )}
@@ -1722,13 +1725,13 @@ export default function AssessmentDetailPage({
                       onClick={() => setShowAssignForm(true)}
                     >
                       <UserCheck className="h-3.5 w-3.5" />
-                      {assessment.assigned_reviewer_id ? "Reassign Reviewer" : "Assign Reviewer"}
+                      {assessment.assigned_reviewer_id ? t("inbox.assigned") : t("inbox.assigned")}
                     </Button>
                   ) : (
                     <div className="flex items-end gap-3">
                       <div className="flex-1 space-y-1">
                         <label className="text-xs font-medium text-muted-foreground">
-                          Select reviewer
+                          {t("assessments.selectSupplier")}
                         </label>
                         <select
                           value={selectedReviewerId}
@@ -1752,14 +1755,14 @@ export default function AssessmentDetailPage({
                         className="gap-1.5"
                       >
                         <Check className="h-3.5 w-3.5" />
-                        Assign
+                        {t("inbox.assigned")}
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
                         onClick={() => { setShowAssignForm(false); setSelectedReviewerId(""); }}
                       >
-                        Cancel
+                        {t("common.cancel")}
                       </Button>
                     </div>
                   )}
@@ -1771,7 +1774,7 @@ export default function AssessmentDetailPage({
                (assessment.review_status ?? "Draft") === "InReview" && (
                 <div className="border-t border-border pt-4 space-y-3">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                    Governance Decision
+                    {t("exec.pendingDecisions")}
                   </p>
                   {showActionPanel === "" ? (
                     <div className="flex flex-wrap gap-2">
@@ -1781,7 +1784,7 @@ export default function AssessmentDetailPage({
                         onClick={() => setShowActionPanel("approve")}
                       >
                         <CheckCircle2 className="h-3.5 w-3.5" />
-                        Approve
+                        {t("exec.approve")}
                       </Button>
                       <Button
                         size="sm"
@@ -1790,7 +1793,7 @@ export default function AssessmentDetailPage({
                         onClick={() => setShowActionPanel("request_changes")}
                       >
                         <MessageSquare className="h-3.5 w-3.5" />
-                        Request Changes
+                        {t("dashboard.changesRequested")}
                       </Button>
                       <Button
                         size="sm"
@@ -1799,7 +1802,7 @@ export default function AssessmentDetailPage({
                         onClick={() => setShowActionPanel("reject")}
                       >
                         <XCircle className="h-3.5 w-3.5" />
-                        Reject
+                        {t("exec.reject")}
                       </Button>
                     </div>
                   ) : (
@@ -1832,14 +1835,14 @@ export default function AssessmentDetailPage({
                               : "bg-amber-600 hover:bg-amber-700 text-white"
                           }
                         >
-                          {reviewLoading ? "Submitting…" : "Confirm"}
+                          {reviewLoading ? t("common.loading") : t("common.confirm")}
                         </Button>
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => { setShowActionPanel(""); setReviewComment(""); }}
                         >
-                          Cancel
+                          {t("common.cancel")}
                         </Button>
                       </div>
                     </div>
@@ -1853,8 +1856,8 @@ export default function AssessmentDetailPage({
           {reviewActions && reviewActions.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Decision History</CardTitle>
-                <CardDescription>Formal governance decisions on this assessment</CardDescription>
+                <CardTitle className="text-base">{t("common.details")}</CardTitle>
+                <CardDescription>{t("exec.decisionsSubtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {reviewActions.map((ra) => (
@@ -1884,7 +1887,7 @@ export default function AssessmentDetailPage({
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <MessageSquare className="h-4 w-4" />
-                Discussion
+                {t("inbox.subtitle")}
                 {comments && comments.filter((c) => !c.is_deleted).length > 0 && (
                   <span className="text-xs font-normal text-muted-foreground">
                     ({comments.filter((c) => !c.is_deleted).length})
@@ -1918,7 +1921,7 @@ export default function AssessmentDetailPage({
                     className="gap-1.5"
                   >
                     <MessageSquare className="h-3.5 w-3.5" />
-                    {commentSubmitting ? "Posting…" : "Comment"}
+                    {commentSubmitting ? t("common.loading") : t("common.notes")}
                   </Button>
                 </div>
               </div>
@@ -1963,14 +1966,14 @@ export default function AssessmentDetailPage({
                                   onClick={() => handleEditComment(comment)}
                                   disabled={!editingContent.trim()}
                                 >
-                                  Save
+                                  {t("common.save")}
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
                                   onClick={() => { setEditingCommentId(null); setEditingContent(""); }}
                                 >
-                                  Cancel
+                                  {t("common.cancel")}
                                 </Button>
                               </div>
                             </div>
@@ -1993,7 +1996,7 @@ export default function AssessmentDetailPage({
                                   className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                                 >
                                   <Pencil className="h-2.5 w-2.5" />
-                                  Edit
+                                  {t("common.edit")}
                                 </button>
                               )}
                               <button
@@ -2001,7 +2004,7 @@ export default function AssessmentDetailPage({
                                 className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-red-600 transition-colors ml-2"
                               >
                                 <Trash2 className="h-2.5 w-2.5" />
-                                Delete
+                                {t("common.delete")}
                               </button>
                             </div>
                           )}
@@ -2012,7 +2015,7 @@ export default function AssessmentDetailPage({
               ) : (
                 <div className="border-t border-border pt-4 text-center py-6">
                   <MessageSquare className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">No comments yet. Start the discussion.</p>
+                  <p className="text-sm text-muted-foreground">{t("common.noData")}</p>
                 </div>
               )}
             </CardContent>
@@ -2022,8 +2025,8 @@ export default function AssessmentDetailPage({
           {activity && activity.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Activity Timeline</CardTitle>
-                <CardDescription>Chronological audit of all review and collaboration events</CardDescription>
+                <CardTitle className="text-base">{t("ent.auditTitle")}</CardTitle>
+                <CardDescription>{t("ent.auditSubtitle")}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="relative space-y-0">

@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Plus, X, Puzzle } from "lucide-react";
 
 const SCENARIO_TEMPLATE_TYPES = [
@@ -43,6 +44,7 @@ const SEVERITY_LEVELS = [
 
 function CreateScenarioTemplateModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ template_name: "", template_type: "NET_ZERO", scenario_type: "CLIMATE", description: "", default_time_horizon_years: "5" });
   const [error, setError] = useState<string | null>(null);
 
@@ -73,7 +75,7 @@ function CreateScenarioTemplateModal({ orgId, onClose }: { orgId: string; onClos
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.name")} <span className="text-red-500">*</span></label>
             <input value={form.template_name} onChange={(e) => setForm((f) => ({ ...f, template_name: e.target.value }))} placeholder="z. B. SBTi 1.5°C Standard" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -91,7 +93,7 @@ function CreateScenarioTemplateModal({ orgId, onClose }: { orgId: string; onClos
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.description")}</label>
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
           </div>
           <div>
@@ -101,9 +103,9 @@ function CreateScenarioTemplateModal({ orgId, onClose }: { orgId: string; onClos
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-violet-600 hover:bg-violet-700">
-            {mut.isPending ? <Spinner className="h-4 w-4" /> : "Vorlage erstellen"}
+            {mut.isPending ? <Spinner className="h-4 w-4" /> : t("strategy.addTemplate")}
           </Button>
         </div>
       </div>
@@ -113,6 +115,7 @@ function CreateScenarioTemplateModal({ orgId, onClose }: { orgId: string; onClos
 
 function CreateStressTemplateModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ template_name: "", template_type: "CLIMATE", severity_level: "MEDIUM", methodology: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -142,17 +145,17 @@ function CreateStressTemplateModal({ orgId, onClose }: { orgId: string; onClose:
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.name")} <span className="text-red-500">*</span></label>
             <input value={form.template_name} onChange={(e) => setForm((f) => ({ ...f, template_name: e.target.value }))} placeholder="z. B. Extremes Wetterereignis" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Typ</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.type")}</label>
             <select value={form.template_type} onChange={(e) => setForm((f) => ({ ...f, template_type: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
               {STRESS_TEMPLATE_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Schweregrad</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">{t("common.severity")}</label>
             <div className="grid grid-cols-2 gap-2">
               {SEVERITY_LEVELS.map((s) => (
                 <button key={s.value} type="button" onClick={() => setForm((f) => ({ ...f, severity_level: s.value }))} className={`rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors ${form.severity_level === s.value ? `${s.color} border-orange-400` : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
@@ -168,9 +171,9 @@ function CreateStressTemplateModal({ orgId, onClose }: { orgId: string; onClose:
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-orange-600 hover:bg-orange-700">
-            {mut.isPending ? <Spinner className="h-4 w-4" /> : "Vorlage erstellen"}
+            {mut.isPending ? <Spinner className="h-4 w-4" /> : t("strategy.addTemplate")}
           </Button>
         </div>
       </div>
@@ -180,6 +183,7 @@ function CreateStressTemplateModal({ orgId, onClose }: { orgId: string; onClose:
 
 export default function TemplatesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
   const [modal, setModal] = useState<"scenario" | "stress" | null>(null);
 
@@ -192,8 +196,8 @@ export default function TemplatesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Templates</h1>
-          <p className="text-muted-foreground">Wiederverwendbare Szenario- und Stresstest-Vorlagen</p>
+          <h1 className="text-2xl font-bold">{t("strategy.templatesTitle")}</h1>
+          <p className="text-muted-foreground">{t("strategy.templatesSubtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setModal("stress")} className="flex items-center gap-2">
@@ -217,7 +221,7 @@ export default function TemplatesPage() {
                 <Puzzle className="h-8 w-8 text-slate-300" />
                 <p className="text-sm text-slate-500">Noch keine Szenario-Vorlagen</p>
                 <Button onClick={() => setModal("scenario")} size="sm" className="mt-1 bg-violet-600 hover:bg-violet-700">
-                  <Plus className="mr-1.5 h-3 w-3" />Erstellen
+                  <Plus className="mr-1.5 h-3 w-3" />{t("common.create")}
                 </Button>
               </div>
             ) : (
@@ -254,7 +258,7 @@ export default function TemplatesPage() {
                 <Puzzle className="h-8 w-8 text-slate-300" />
                 <p className="text-sm text-slate-500">Noch keine Stresstest-Vorlagen</p>
                 <Button onClick={() => setModal("stress")} size="sm" className="mt-1 bg-orange-600 hover:bg-orange-700">
-                  <Plus className="mr-1.5 h-3 w-3" />Erstellen
+                  <Plus className="mr-1.5 h-3 w-3" />{t("common.create")}
                 </Button>
               </div>
             ) : (

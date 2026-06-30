@@ -5,6 +5,7 @@ import { Globe } from "lucide-react";
 import { listRoadmaps, type NetZeroRoadmap } from "@/lib/api/sustainability";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -27,6 +28,7 @@ function statusBarColor(s: string) {
 // ── #60 Gantt Timeline ────────────────────────────────────────────────────────
 
 function GanttTimeline({ roadmaps }: { roadmaps: NetZeroRoadmap[] }) {
+  const { t } = useLanguage();
   if (roadmaps.length === 0) return null;
 
   const currentYear = new Date().getFullYear();
@@ -114,7 +116,7 @@ function GanttTimeline({ roadmaps }: { roadmaps: NetZeroRoadmap[] }) {
 
           {/* Legend */}
           <div className="flex items-center gap-4 pt-1 text-[10px] text-muted-foreground">
-            <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded bg-blue-400" /> Active</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded bg-blue-400" /> {t("common.active")}</span>
             <span className="flex items-center gap-1"><span className="inline-block h-2 w-4 rounded bg-emerald-500" /> Completed</span>
             <span className="flex items-center gap-1"><span className="inline-block h-3 w-px bg-red-500" /> Today</span>
           </div>
@@ -177,6 +179,7 @@ function RoadmapCard({ rm }: { rm: NetZeroRoadmap }) {
 }
 
 export default function RoadmapsPage() {
+  const { t } = useLanguage();
   const { data: roadmaps, isLoading } = useQuery({
     queryKey: ["roadmaps", ORG_ID],
     queryFn: () => listRoadmaps(ORG_ID),
@@ -205,13 +208,13 @@ export default function RoadmapsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Globe className="h-4 w-4 text-emerald-600" />
-            Roadmaps{roadmaps ? ` (${roadmaps.length})` : ""}
+            {t("sustain.roadmapsTitle")}{roadmaps ? ` (${roadmaps.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {!isLoading && (roadmaps ?? []).length === 0 && (
             <p className="text-sm text-muted-foreground">
-              No roadmaps yet. Create a net zero roadmap to plan your decarbonization trajectory.
+              {t("sustain.noRoadmaps")} {t("sustain.noRoadmapsDesc")}
             </p>
           )}
           <div className="space-y-4">

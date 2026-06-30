@@ -5,8 +5,10 @@ import { listCarbonCostModels, listRiskAssessments } from "@/lib/api/financial-e
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 export default function CarbonEconomicsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -34,8 +36,8 @@ export default function CarbonEconomicsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Carbon Economics</h1>
-        <p className="text-muted-foreground">Carbon cost models and risk assessments</p>
+        <h1 className="text-2xl font-bold">{t("finEsg.carbonEconTitle")}</h1>
+        <p className="text-muted-foreground">{t("finEsg.carbonEconSubtitle")}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -65,7 +67,7 @@ export default function CarbonEconomicsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-2 pr-4">Name</th>
+                    <th className="pb-2 pr-4">{t("common.name")}</th>
                     <th className="pb-2 pr-4">Year</th>
                     <th className="pb-2 pr-4">Emissions (tCO2e)</th>
                     <th className="pb-2 pr-4">Internal Price</th>
@@ -109,11 +111,11 @@ export default function CarbonEconomicsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-2 pr-4">Name</th>
+                    <th className="pb-2 pr-4">{t("common.name")}</th>
                     <th className="pb-2 pr-4">Composite Score</th>
                     <th className="pb-2 pr-4">Exposure Base</th>
                     <th className="pb-2 pr-4">Expected Loss</th>
-                    <th className="pb-2">Date</th>
+                    <th className="pb-2">{t("common.date")}</th>
                   </tr>
                 </thead>
                 <tbody>

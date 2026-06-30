@@ -8,8 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
 import { Plus, X, FileText, Lock } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 
 function CreateReportModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data: scenarios } = useQuery({ queryKey: ["strategy", "scenarios", orgId], queryFn: () => listScenarios(orgId) });
   const currentYear = new Date().getFullYear();
@@ -55,7 +57,7 @@ function CreateReportModal({ orgId, onClose }: { orgId: string; onClose: () => v
         </div>
         <form onSubmit={submit} className="space-y-5 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Titel <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.title")} <span className="text-red-500">*</span></label>
             <input value={form.report_title} onChange={(e) => setForm((f) => ({ ...f, report_title: e.target.value }))} placeholder="z. B. Strategie-Review Q4 2026" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           <div>
@@ -88,7 +90,7 @@ function CreateReportModal({ orgId, onClose }: { orgId: string; onClose: () => v
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-violet-600 hover:bg-violet-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Bericht erstellen"}
           </Button>
@@ -99,6 +101,7 @@ function CreateReportModal({ orgId, onClose }: { orgId: string; onClose: () => v
 }
 
 export default function ReportsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
   const [showCreate, setShowCreate] = useState(false);
@@ -118,18 +121,18 @@ export default function ReportsPage() {
           <p className="text-muted-foreground">Unveränderliche Szenario-Reports für Audit und Board</p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700">
-          <Plus className="h-4 w-4" />Neuer Bericht
+          <Plus className="h-4 w-4" />{t("reports.newReport")}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Gesamt</p><p className="mt-1 text-3xl font-bold">{(reports ?? []).length}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("common.total")}</p><p className="mt-1 text-3xl font-bold">{(reports ?? []).length}</p></CardContent></Card>
         <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Finalisiert</p><p className="mt-1 text-3xl font-bold text-blue-600">{finalized.length}</p></CardContent></Card>
         <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Entwurf</p><p className="mt-1 text-3xl font-bold text-slate-500">{drafts.length}</p></CardContent></Card>
       </div>
 
       <Card>
-        <CardHeader><CardTitle>Berichte</CardTitle></CardHeader>
+        <CardHeader><CardTitle>{t("reports.title")}</CardTitle></CardHeader>
         <CardContent>
           {(reports ?? []).length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDate } from "@/lib/utils";
 import apiClient from "@/lib/api/client";
+import { useLanguage } from "@/lib/i18n/context";
 
 const EFFECTIVENESS_COLORS: Record<string, string> = {
   EFFECTIVE: "bg-green-100 text-green-800",
@@ -24,6 +25,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ESGControlsPage() {
+  const { t } = useLanguage();
   const { data: controls, isLoading, error } = useQuery({
     queryKey: ["esg-controls"],
     queryFn: () => operatingSystemApi.listControls({ limit: 200 }).then((r) => r.data),
@@ -50,7 +52,7 @@ export default function ESGControlsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ShieldCheckIcon className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold">ESG Controls</h1>
+          <h1 className="text-2xl font-semibold">{t("esgOs.controlsTitle")}</h1>
         </div>
         <span className="text-sm text-muted-foreground">{controls?.length ?? 0} controls</span>
       </div>
@@ -58,7 +60,7 @@ export default function ESGControlsPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("common.total")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{controls?.length ?? 0}</p>
@@ -95,7 +97,7 @@ export default function ESGControlsPage() {
           <ControlRow key={ctrl.id} control={ctrl} />
         ))}
         {controls?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">No controls yet.</div>
+          <div className="text-center py-12 text-muted-foreground">{t("esgOs.noControls")}</div>
         )}
       </div>
     </div>

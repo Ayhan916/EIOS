@@ -9,6 +9,7 @@ import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUSES = ["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const;
 
@@ -27,6 +28,7 @@ function typeLabel(t: string) {
 
 function InitiativeCard({ init, orgId, kpis }: { init: DecarbonizationInitiative; orgId: string; kpis: ESGKPI[] }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [showKpiLink, setShowKpiLink] = useState(false);
   const [linkedKpiId, setLinkedKpiId] = useState("");
@@ -122,7 +124,7 @@ function InitiativeCard({ init, orgId, kpis }: { init: DecarbonizationInitiative
             >
               Link
             </Button>
-            <button onClick={() => setShowKpiLink(false)} className="text-xs text-muted-foreground hover:underline">Cancel</button>
+            <button onClick={() => setShowKpiLink(false)} className="text-xs text-muted-foreground hover:underline">{t("common.cancel")}</button>
           </div>
         </div>
       )}
@@ -144,7 +146,7 @@ function InitiativeCard({ init, orgId, kpis }: { init: DecarbonizationInitiative
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Status</label>
+              <label className="text-xs text-muted-foreground">{t("common.status")}</label>
               <select
                 value={newStatus}
                 onChange={(e) => setNewStatus(e.target.value)}
@@ -167,7 +169,7 @@ function InitiativeCard({ init, orgId, kpis }: { init: DecarbonizationInitiative
               Save Progress
             </Button>
             <button onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">
-              Cancel
+              {t("common.cancel")}
             </button>
             {mutation.isError && (
               <span className="text-xs text-red-600">
@@ -234,6 +236,7 @@ function GanttTimeline({ initiatives }: { initiatives: DecarbonizationInitiative
 
 export default function InitiativesPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
 
   const { data: initiatives, isLoading } = useQuery({
@@ -259,9 +262,9 @@ export default function InitiativesPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Decarbonization Initiatives</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sustain.initiativesTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Track renewable energy, logistics, supplier transition, and facility upgrade programs
+          {t("sustain.initiativesSubtitle")}
         </p>
       </div>
 
@@ -313,7 +316,7 @@ export default function InitiativesPage() {
         <CardContent>
           {isLoading && <Spinner />}
           {initiatives?.length === 0 && (
-            <p className="text-sm text-muted-foreground">No initiatives yet.</p>
+            <p className="text-sm text-muted-foreground">{t("sustain.noInitiatives")}</p>
           )}
           <div className="space-y-3">
             {initiatives?.map((init) => (

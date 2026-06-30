@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertCircle,
   AlertTriangle,
@@ -126,6 +127,7 @@ const SEVERITY_STYLES: Record<string, string> = {
 };
 
 function PriorityActionsPanel({ actions }: { actions: PriorityAction[] }) {
+  const { t } = useLanguage();
   if (!actions.length) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -146,7 +148,7 @@ function PriorityActionsPanel({ actions }: { actions: PriorityAction[] }) {
           >
             <Icon className="h-4 w-4 flex-shrink-0" />
             <span className="text-sm font-medium flex-1">{a.title}</span>
-            <span className="text-xs opacity-70">View →</span>
+            <span className="text-xs opacity-70">{t("common.view")} →</span>
           </Link>
         );
       })}
@@ -164,6 +166,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 function PendingDecisionsPanel({ decisions }: { decisions: PendingDecision[] }) {
+  const { t } = useLanguage();
   if (!decisions.length) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -182,7 +185,7 @@ function PendingDecisionsPanel({ decisions }: { decisions: PendingDecision[] }) 
           <div className="min-w-0">
             <p className="text-sm font-medium truncate">{d.title}</p>
             {d.due_date && (
-              <p className="text-xs text-muted-foreground">Due {d.due_date.slice(0, 10)}</p>
+              <p className="text-xs text-muted-foreground">{t("dashboard.due")} {d.due_date.slice(0, 10)}</p>
             )}
           </div>
           <span className={`ml-3 flex-shrink-0 text-xs font-semibold ${PRIORITY_COLORS[d.priority] ?? "text-slate-500"}`}>
@@ -335,6 +338,7 @@ function KpiCard({
 // ── Persona panels ────────────────────────────────────────────────────────────
 
 function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) {
+  const { t } = useLanguage();
   const ps = dashboard?.portfolio_summary;
   return (
     <div className="space-y-6">
@@ -378,7 +382,7 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
           accent={cc.ceo.overdue_actions > 0 ? "text-red-600" : ""}
         />
         <KpiCard
-          label="Critical Findings"
+          label={t("dashboard.criticalFindings")}
           value={cc.cco.open_critical_findings}
           icon={AlertTriangle}
           href="/findings?severity=Critical"
@@ -424,7 +428,7 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="h-4 w-4 text-amber-500" />
-              Pending Decisions
+              {t("exec.pendingDecisions")}
               {cc.pending_decisions_count > 0 && (
                 <span className="ml-auto rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
                   {cc.pending_decisions_count}
@@ -578,6 +582,7 @@ function CSOPanel({ cc }: { cc: CommandCenterData }) {
 }
 
 function CCOPanel({ cc }: { cc: CommandCenterData }) {
+  const { t } = useLanguage();
   const { soc2_readiness_pct, soc2_implemented, soc2_total, open_critical_findings } = cc.cco;
   const pct = soc2_readiness_pct ?? 0;
   const r = 42;
@@ -611,7 +616,7 @@ function CCOPanel({ cc }: { cc: CommandCenterData }) {
           </div>
         </Card>
         <KpiCard
-          label="Critical Findings Open"
+          label={t("dashboard.criticalFindings")}
           value={open_critical_findings}
           sub="require immediate action"
           icon={AlertTriangle}
@@ -861,6 +866,7 @@ function RiskRegisterPreview() {
 // ── Heatmap (shared) ──────────────────────────────────────────────────────────
 
 function HeatmapPreview() {
+  const { t } = useLanguage();
   const [view, setView] = useState<"country" | "sector" | "tier">("sector");
   const { data, isLoading } = useQuery({
     queryKey: ["executive-heatmap-preview", view],
@@ -870,7 +876,7 @@ function HeatmapPreview() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base">Risk Heatmap</CardTitle>
+        <CardTitle className="text-base">{t("dashboard.riskHeatmap")}</CardTitle>
         <div className="flex gap-1">
           {(["country", "sector", "tier"] as const).map((v) => (
             <button
@@ -925,6 +931,7 @@ function HeatmapPreview() {
 // ── Action + Governance (shared) ──────────────────────────────────────────────
 
 function ActionGovernanceSection() {
+  const { t } = useLanguage();
   const { data: ae } = useQuery({ queryKey: ["executive-action-effectiveness"], queryFn: () => getActionEffectiveness(30) });
   const { data: gov } = useQuery({ queryKey: ["executive-governance-metrics"], queryFn: () => getGovernanceMetrics(30) });
 
@@ -934,7 +941,7 @@ function ActionGovernanceSection() {
         <CardHeader className="pb-2"><CardTitle className="text-base">Action Effectiveness (30d)</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           <div className="flex justify-between"><span className="text-muted-foreground">Open actions</span><span className="font-medium">{ae?.total_open ?? "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Overdue</span><span className={`font-medium ${(ae?.total_overdue ?? 0) > 0 ? "text-red-600" : ""}`}>{ae?.total_overdue ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("dashboard.overdue")}</span><span className={`font-medium ${(ae?.total_overdue ?? 0) > 0 ? "text-red-600" : ""}`}>{ae?.total_overdue ?? "—"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Closed this period</span><span className="font-medium">{ae?.closed_this_period ?? "—"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Resolution rate</span><span className="font-medium">{ae?.resolution_rate != null ? `${(ae.resolution_rate * 100).toFixed(0)}%` : "—"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">Avg resolution</span><span className="font-medium">{ae?.avg_resolution_days != null ? `${ae.avg_resolution_days}d` : "—"}</span></div>
@@ -964,6 +971,7 @@ const PERSONAS: { id: Persona; label: string; icon: React.ElementType }[] = [
 ];
 
 export default function ExecutiveDashboardPage() {
+  const { t } = useLanguage();
   const [persona, setPersona] = useState<Persona>("CEO");
 
   const { data: cc, isLoading: ccLoading } = useQuery({
@@ -984,7 +992,7 @@ export default function ExecutiveDashboardPage() {
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">Executive Command Center</h1>
+          <h1 className="text-2xl font-semibold">{t("exec.commandCenter")}</h1>
           <p className="text-sm text-muted-foreground">
             Board-level ESG portfolio intelligence
           </p>
@@ -1026,7 +1034,7 @@ export default function ExecutiveDashboardPage() {
               {/* ESG Health Score */}
               <Card className="flex items-center justify-center p-6">
                 <div className="flex flex-col items-center gap-3 text-center">
-                  <p className="text-sm font-medium text-muted-foreground">ESG Health Score</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("exec.esgHealth")}</p>
                   <HealthScoreRing score={cc.esg_health_score} label={cc.health_label} />
                   {cc.yoy.avg_esg_delta != null && (
                     <p className={`text-xs font-medium ${cc.yoy.avg_esg_delta >= 0 ? "text-emerald-600" : "text-red-600"}`}>
@@ -1041,7 +1049,7 @@ export default function ExecutiveDashboardPage() {
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base flex items-center gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-500" />
-                    Priority Actions
+                    {t("exec.priorityActions")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -1069,10 +1077,10 @@ export default function ExecutiveDashboardPage() {
             ))}
             <div className="flex-1" />
             <span className="self-center text-xs text-muted-foreground">
-              {persona === "CEO" ? "Chief Executive Officer view"
-               : persona === "CFO" ? "Chief Financial Officer view"
-               : persona === "CSO" ? "Chief Sustainability Officer view"
-               : "Chief Compliance Officer view"}
+              {persona === "CEO" ? `${t("exec.ceo")} view`
+               : persona === "CFO" ? `${t("exec.cfo")} view`
+               : persona === "CSO" ? `${t("exec.cso")} view`
+               : `${t("exec.cco")} view`}
             </span>
           </div>
 

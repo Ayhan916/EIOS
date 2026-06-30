@@ -22,23 +22,26 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react";
+import type { TranslationKey } from "@/lib/i18n/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── #108 Onboarding checklist ─────────────────────────────────────────────────
 
 const SETUP_TASK_KEY = "eios_setup_tasks";
 
-const CHECKLIST_ITEMS = [
-  { key: "added_supplier",        label: "Add your first supplier",       href: "/suppliers" },
-  { key: "ran_assessment",        label: "Run an ESG assessment",          href: "/assessments/new" },
-  { key: "reviewed_finding",      label: "Review a finding",               href: "/findings" },
-  { key: "configured_integration",label: "Configure an integration",       href: "/settings/integrations" },
-  { key: "set_objective",         label: "Set a sustainability objective",  href: "/sustainability/objectives" },
-  { key: "uploaded_evidence",     label: "Upload evidence",                href: "/evidence" },
-  { key: "set_notifications",     label: "Configure notification rules",   href: "/settings/notifications" },
-  { key: "viewed_reports",        label: "Generate your first report",     href: "/reports" },
+const CHECKLIST_ITEMS: Array<{ key: string; labelKey: TranslationKey; href: string }> = [
+  { key: "added_supplier",         labelKey: "dashboard.addSupplier",          href: "/suppliers" },
+  { key: "ran_assessment",         labelKey: "dashboard.runAssessment",         href: "/assessments/new" },
+  { key: "reviewed_finding",       labelKey: "dashboard.reviewFinding",         href: "/findings" },
+  { key: "configured_integration", labelKey: "dashboard.configureIntegration",  href: "/settings/integrations" },
+  { key: "set_objective",          labelKey: "dashboard.setObjective",           href: "/sustainability/objectives" },
+  { key: "uploaded_evidence",      labelKey: "dashboard.uploadEvidence",         href: "/evidence" },
+  { key: "set_notifications",      labelKey: "dashboard.setNotifications",       href: "/settings/notifications" },
+  { key: "viewed_reports",         labelKey: "dashboard.viewReports",            href: "/reports" },
 ];
 
 function OnboardingChecklist() {
+  const { t } = useLanguage();
   const [done, setDone] = useState<Set<string>>(new Set());
   const [dismissed, setDismissed] = useState(false);
 
@@ -75,14 +78,14 @@ function OnboardingChecklist() {
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <ListChecks className="h-4 w-4 text-blue-600" />
-            Get started with EIOS
+            {t("dashboard.gettingStartedTitle")}
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {completedCount} of {CHECKLIST_ITEMS.length} tasks complete · {pct}%
+            {completedCount} {t("common.of")} {CHECKLIST_ITEMS.length} {t("dashboard.tasksComplete")} · {pct}%
           </p>
         </div>
         <button onClick={dismiss} className="text-xs text-muted-foreground hover:text-foreground">
-          Dismiss
+          {t("dashboard.dismiss")}
         </button>
       </CardHeader>
       <CardContent>
@@ -99,7 +102,7 @@ function OnboardingChecklist() {
                   className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border transition-colors ${
                     isChecked ? "border-blue-500 bg-blue-500" : "border-slate-300 bg-white"
                   }`}
-                  aria-label={isChecked ? "Done" : "Mark done"}
+                  aria-label={isChecked ? t("common.confirm") : t("common.confirm")}
                 >
                   {isChecked && <CheckCircle2 className="h-3 w-3 text-white" />}
                 </button>
@@ -108,7 +111,7 @@ function OnboardingChecklist() {
                   onClick={() => markDone(item.key)}
                   className={`text-sm hover:underline ${isChecked ? "text-muted-foreground line-through" : "text-foreground"}`}
                 >
-                  {item.label}
+                  {t(item.labelKey)}
                 </Link>
               </div>
             );
@@ -221,6 +224,7 @@ function HBar({
 
 function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const counts: Record<string, number> = { Critical: 0, High: 0, Medium: 0, Low: 0 };
   for (const r of risks) {
     if (r.risk_level in counts) counts[r.risk_level]++;
@@ -228,15 +232,12 @@ function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
 
   type Cell = { label: string; riskLevel: string; count: number; bg: string; text: string } | null;
   const grid: Cell[][] = [
-    // row=High Likelihood
-    [null, null, { label: "Critical", riskLevel: "Critical", count: counts.Critical, bg: "bg-red-500 hover:bg-red-600", text: "text-white" }],
-    // row=Medium Likelihood
-    [null, { label: "Medium", riskLevel: "Medium", count: counts.Medium, bg: "bg-amber-400 hover:bg-amber-500", text: "text-white" }, { label: "High", riskLevel: "High", count: counts.High, bg: "bg-orange-500 hover:bg-orange-600", text: "text-white" }],
-    // row=Low Likelihood
-    [{ label: "Low", riskLevel: "Low", count: counts.Low, bg: "bg-emerald-500 hover:bg-emerald-600", text: "text-white" }, null, null],
+    [null, null, { label: t("findings.critical"), riskLevel: "Critical", count: counts.Critical, bg: "bg-red-500 hover:bg-red-600", text: "text-white" }],
+    [null, { label: t("findings.medium"), riskLevel: "Medium", count: counts.Medium, bg: "bg-amber-400 hover:bg-amber-500", text: "text-white" }, { label: t("findings.high"), riskLevel: "High", count: counts.High, bg: "bg-orange-500 hover:bg-orange-600", text: "text-white" }],
+    [{ label: t("findings.low"), riskLevel: "Low", count: counts.Low, bg: "bg-emerald-500 hover:bg-emerald-600", text: "text-white" }, null, null],
   ];
-  const rowLabels = ["High", "Medium", "Low"];
-  const colLabels = ["Low Impact", "Medium Impact", "High Impact"];
+  const rowLabels = [t("findings.high"), t("findings.medium"), t("findings.low")];
+  const colLabels = [t("dashboard.lowImpact"), t("dashboard.mediumImpact"), t("dashboard.highImpact")];
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
   return (
@@ -245,21 +246,20 @@ function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-orange-500" />
-            Risk Heatmap
+            {t("dashboard.riskHeatmap")}
           </CardTitle>
-          <CardDescription>{total} risks · click cell to filter</CardDescription>
+          <CardDescription>{total} {t("dashboard.risksClickFilter")}</CardDescription>
         </div>
         <button
           onClick={() => router.push("/risks")}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          View all <ArrowRight className="h-3 w-3" />
+          {t("dashboard.viewAll")} <ArrowRight className="h-3 w-3" />
         </button>
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
           <div className="min-w-[320px]">
-            {/* Column headers */}
             <div className="flex mb-1 pl-16">
               {colLabels.map((c) => (
                 <div key={c} className="flex-1 text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">
@@ -267,7 +267,6 @@ function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
                 </div>
               ))}
             </div>
-            {/* Grid rows */}
             {grid.map((row, ri) => (
               <div key={ri} className="flex items-center mb-1">
                 <div className="w-16 text-[10px] font-semibold text-muted-foreground uppercase tracking-wide flex-shrink-0 text-right pr-2">
@@ -289,9 +288,8 @@ function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
                 )}
               </div>
             ))}
-            {/* X-axis label */}
             <div className="text-center text-[10px] text-muted-foreground mt-1 pl-16">
-              Impact →
+              {t("dashboard.impactAxis")}
             </div>
           </div>
         </div>
@@ -303,6 +301,7 @@ function RiskHeatmapCard({ risks }: { risks: Array<{ risk_level: string }> }) {
 // ── Compliance Gap Widget ─────────────────────────────────────────────────────
 
 function ComplianceGapCard({ readiness }: { readiness: Record<string, number> }) {
+  const { t } = useLanguage();
   const entries = Object.entries(readiness).sort((a, b) => a[1] - b[1]);
   if (entries.length === 0) return null;
 
@@ -312,12 +311,12 @@ function ComplianceGapCard({ readiness }: { readiness: Record<string, number> })
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-blue-500" />
-            Compliance Coverage
+            {t("dashboard.complianceCoverage")}
           </CardTitle>
-          <CardDescription>Framework coverage by control tests</CardDescription>
+          <CardDescription>{t("dashboard.frameworkCoverage")}</CardDescription>
         </div>
         <Link href="/operating-system/compliance-operations" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-          Details <ArrowRight className="h-3 w-3" />
+          {t("common.details")} <ArrowRight className="h-3 w-3" />
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -360,23 +359,24 @@ function FinancialEsgCard({
   greenRevenuePct: number | null;
   carbonCost: number | null;
 }) {
+  const { t } = useLanguage();
   const tiles: FinancialTile[] = [
     {
-      label: "Taxonomy Alignment",
+      label: t("dashboard.taxonomyAlignment"),
       value: taxonomyPct != null ? `${taxonomyPct.toFixed(1)}%` : "—",
       icon: Leaf,
       colorClass: taxonomyPct != null && taxonomyPct >= 30 ? "text-emerald-600" : "text-amber-600",
       href: "/financial-esg/taxonomy",
     },
     {
-      label: "Green Revenue",
+      label: t("dashboard.greenRevenue"),
       value: greenRevenuePct != null ? `${greenRevenuePct.toFixed(1)}%` : "—",
       icon: TrendingUp,
       colorClass: greenRevenuePct != null && greenRevenuePct >= 20 ? "text-emerald-600" : "text-slate-600",
       href: "/financial-esg",
     },
     {
-      label: "Carbon Cost Exposure",
+      label: t("dashboard.carbonCostExposure"),
       value: carbonCost != null ? `€${(carbonCost / 1000).toFixed(0)}k` : "—",
       icon: Zap,
       colorClass: carbonCost != null && carbonCost > 0 ? "text-orange-600" : "text-slate-600",
@@ -390,23 +390,23 @@ function FinancialEsgCard({
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-emerald-600" />
-            Financial ESG
+            {t("dashboard.financialEsgTitle")}
           </CardTitle>
-          <CardDescription>Taxonomy, green revenue & carbon exposure</CardDescription>
+          <CardDescription>{t("dashboard.taxonomyGreenCarbon")}</CardDescription>
         </div>
         <Button variant="ghost" size="sm" asChild>
           <Link href="/financial-esg" className="gap-1 text-xs">
-            Details <ArrowRight className="h-3 w-3" />
+            {t("common.details")} <ArrowRight className="h-3 w-3" />
           </Link>
         </Button>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-3 gap-4">
-          {tiles.map((t) => (
-            <Link key={t.label} href={t.href} className="group text-center rounded-lg border p-3 hover:bg-muted/50 transition-colors">
-              <t.icon className={`mx-auto mb-1.5 h-5 w-5 ${t.colorClass}`} />
-              <p className={`text-xl font-bold ${t.colorClass}`}>{t.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{t.label}</p>
+          {tiles.map((tile) => (
+            <Link key={tile.label} href={tile.href} className="group text-center rounded-lg border p-3 hover:bg-muted/50 transition-colors">
+              <tile.icon className={`mx-auto mb-1.5 h-5 w-5 ${tile.colorClass}`} />
+              <p className={`text-xl font-bold ${tile.colorClass}`}>{tile.value}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{tile.label}</p>
             </Link>
           ))}
         </div>
@@ -432,6 +432,7 @@ function PendingDecisionsCard({
   count: number;
 }) {
   const router = useRouter();
+  const { t } = useLanguage();
   const priorityBadge = (p: string) => {
     if (p === "Critical") return "bg-red-100 text-red-700";
     if (p === "High") return "bg-orange-100 text-orange-700";
@@ -445,23 +446,23 @@ function PendingDecisionsCard({
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <ListChecks className="h-4 w-4 text-blue-500" />
-            Pending Decisions
+            {t("dashboard.pendingDecisions")}
           </CardTitle>
           <CardDescription>
-            {count} open recommendation{count !== 1 ? "s" : ""} awaiting action
+            {count} {t("dashboard.recommendationsAwaitingAction")}
           </CardDescription>
         </div>
         <button
           onClick={() => router.push("/recommendations")}
           className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
-          View all <ArrowRight className="h-3 w-3" />
+          {t("dashboard.viewAll")} <ArrowRight className="h-3 w-3" />
         </button>
       </CardHeader>
       <CardContent>
         {decisions.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
-            No open decisions — all clear.
+            {t("dashboard.noOpenDecisions")}
           </div>
         ) : (
           <div className="space-y-2">
@@ -475,7 +476,7 @@ function PendingDecisionsCard({
                   {d.due_date && (
                     <p className="mt-0.5 text-xs text-muted-foreground flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      Due {formatDate(d.due_date)}
+                      {t("dashboard.due")} {formatDate(d.due_date)}
                     </p>
                   )}
                 </div>
@@ -507,6 +508,7 @@ interface RiskSignal {
 }
 
 function SignalFeedCard({ signals }: { signals: RiskSignal[] }) {
+  const { t } = useLanguage();
   const sevColor: Record<string, string> = {
     Critical: "bg-red-100 text-red-700",
     High: "bg-orange-100 text-orange-700",
@@ -520,12 +522,12 @@ function SignalFeedCard({ signals }: { signals: RiskSignal[] }) {
         <div>
           <CardTitle className="text-base flex items-center gap-2">
             <Radio className="h-4 w-4 text-blue-500 animate-pulse" />
-            External Risk Signals
+            {t("dashboard.externalRiskSignals")}
           </CardTitle>
-          <CardDescription>Latest {signals.length} active intelligence signals</CardDescription>
+          <CardDescription>{signals.length} {t("dashboard.activeSignals")}</CardDescription>
         </div>
         <Link href="/surveillance" className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-          View all <ArrowRight className="h-3 w-3" />
+          {t("dashboard.viewAll")} <ArrowRight className="h-3 w-3" />
         </Link>
       </CardHeader>
       <CardContent>
@@ -559,6 +561,7 @@ function SignalFeedCard({ signals }: { signals: RiskSignal[] }) {
 const DEMO_KEY = "eios_demo_seeded";
 
 function DemoDataButton() {
+  const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
 
@@ -591,7 +594,7 @@ function DemoDataButton() {
       ) : (
         <Zap className="h-3 w-3" />
       )}
-      {loading ? "Loading demo data…" : "Load demo data"}
+      {loading ? t("dashboard.loadingDemoData") : t("dashboard.loadDemoData")}
     </button>
   );
 }
@@ -600,6 +603,7 @@ function DemoDataButton() {
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
@@ -645,7 +649,7 @@ export default function DashboardPage() {
   if (error || !data) {
     return (
       <div className="py-24 text-center text-muted-foreground">
-        Failed to load dashboard.
+        {t("dashboard.failedToLoad")}
       </div>
     );
   }
@@ -657,7 +661,7 @@ export default function DashboardPage() {
   const maxSeverity = Math.max(...Object.values(data.findings_by_severity), 1);
   const maxCategory = Math.max(...Object.values(data.findings_by_category), 1);
   const maxMonthly = Math.max(
-    ...data.assessments_over_time.map((m) => m.count),
+    ...data.assessments_over_time.map((m: { count: number }) => m.count),
     1
   );
 
@@ -672,19 +676,18 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            Welcome back, {user?.display_name?.split(" ")[0]}
+            {t("dashboard.welcome")}, {user?.display_name?.split(" ")[0]}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Portfolio Dashboard · ESG Due Diligence & Risk Intelligence
+            {t("dashboard.portfolioSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {/* #110 Demo data mode */}
           <DemoDataButton />
           <Button asChild>
             <Link href="/assessments/new">
               <Plus className="h-4 w-4" />
-              New Assessment
+              {t("dashboard.newAssessment")}
             </Link>
           </Button>
         </div>
@@ -693,43 +696,43 @@ export default function DashboardPage() {
       {/* ── KPI strip ──────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         <KpiCard
-          label="Total Assessments"
+          label={t("dashboard.totalAssessments")}
           value={data.total_assessments}
           icon={FileText}
-          sub="in your organisation"
+          sub={t("dashboard.inYourOrganisation")}
         />
         <KpiCard
-          label="Avg Quality Score"
+          label={t("dashboard.avgQualityScore")}
           value={avgQualityPct}
           icon={TrendingUp}
           valueClass={qualityClass(data.avg_quality_score)}
-          sub="across all assessments"
+          sub={t("dashboard.acrossAllAssessments")}
         />
         <KpiCard
-          label="Open Actions"
+          label={t("dashboard.openActionsKpi")}
           value={data.open_actions}
           icon={Clock}
-          sub={`${data.closed_actions_pct}% closed`}
+          sub={`${data.closed_actions_pct}% ${t("findings.resolved").toLowerCase()}`}
         />
         <KpiCard
-          label="Overdue"
+          label={t("dashboard.overdue")}
           value={data.overdue_actions}
           icon={AlertTriangle}
           valueClass={data.overdue_actions > 0 ? "text-red-600" : "text-foreground"}
           accent={data.overdue_actions > 0 ? "bg-red-500" : undefined}
-          sub="past due date"
+          sub={t("dashboard.pastDueDate")}
         />
         <KpiCard
-          label="High-Risk Findings"
+          label={t("dashboard.highRiskFindings")}
           value={data.high_risk_finding_count + data.critical_finding_count}
           icon={ShieldAlert}
           valueClass={
             data.critical_finding_count > 0 ? "text-red-600" : "text-foreground"
           }
-          sub={`${data.critical_finding_count} critical`}
+          sub={`${data.critical_finding_count} ${t("findings.critical").toLowerCase()}`}
         />
         <KpiCard
-          label="ESG Health"
+          label={t("dashboard.esgHealth")}
           value={cc ? `${cc.esg_health_score}/100` : "—"}
           icon={Target}
           valueClass={
@@ -742,7 +745,7 @@ export default function DashboardPage() {
           sub={cc?.health_label ?? ""}
         />
         <KpiCard
-          label="Carbon Intensity"
+          label={t("dashboard.carbonIntensity")}
           value={
             cc?.cso?.latest_emissions_tco2e != null
               ? `${cc.cso.latest_emissions_tco2e.toLocaleString()} t`
@@ -750,14 +753,14 @@ export default function DashboardPage() {
           }
           icon={Flame}
           valueClass={cc?.cso?.latest_emissions_tco2e != null ? "text-orange-600" : "text-muted-foreground"}
-          sub="tCO₂e (latest year)"
+          sub={t("dashboard.tco2eLatestYear")}
         />
       </div>
 
       {/* #108 Onboarding checklist */}
       <OnboardingChecklist />
 
-      {/* ── Pending Decisions (Item 10) ────────────────────────────────────── */}
+      {/* ── Pending Decisions ──────────────────────────────────────────────── */}
       {cc && cc.pending_decisions_count > 0 && (
         <PendingDecisionsCard
           decisions={cc.pending_decisions}
@@ -765,7 +768,7 @@ export default function DashboardPage() {
         />
       )}
 
-      {/* ── Financial ESG summary (only when data available) ───────────────── */}
+      {/* ── Financial ESG summary ──────────────────────────────────────────── */}
       {cc?.cfo && (cc.cfo.taxonomy_alignment_pct != null || cc.cfo.green_revenue_pct != null) && (
         <FinancialEsgCard
           taxonomyPct={cc.cfo.taxonomy_alignment_pct}
@@ -789,16 +792,16 @@ export default function DashboardPage() {
         {/* Action status breakdown */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Action Status</CardTitle>
-            <CardDescription>Recommendation lifecycle across portfolio</CardDescription>
+            <CardTitle className="text-base">{t("dashboard.actionStatus")}</CardTitle>
+            <CardDescription>{t("dashboard.recommendationLifecycle")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-3">
               {[
-                { key: "open", label: "Open", cls: "bg-slate-100 text-slate-700" },
-                { key: "in_progress", label: "In Progress", cls: "bg-blue-100 text-blue-700" },
-                { key: "resolved", label: "Resolved", cls: "bg-amber-100 text-amber-700" },
-                { key: "verified", label: "Verified", cls: "bg-emerald-100 text-emerald-700" },
+                { key: "open",        label: t("findings.open"),       cls: "bg-slate-100 text-slate-700" },
+                { key: "in_progress", label: t("findings.inProgress"), cls: "bg-blue-100 text-blue-700" },
+                { key: "resolved",    label: t("findings.resolved"),   cls: "bg-amber-100 text-amber-700" },
+                { key: "verified",    label: t("findings.verified"),   cls: "bg-emerald-100 text-emerald-700" },
               ].map(({ key, label, cls }) => (
                 <div
                   key={key}
@@ -814,7 +817,7 @@ export default function DashboardPage() {
             {data.open_actions > 0 && (
               <div className="mt-4">
                 <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>Closure rate</span>
+                  <span>{t("dashboard.closureRate")}</span>
                   <span className="font-medium">{data.closed_actions_pct}%</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
@@ -831,35 +834,33 @@ export default function DashboardPage() {
         {/* Findings breakdown */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Findings Breakdown</CardTitle>
+            <CardTitle className="text-base">{t("dashboard.findingsBreakdown")}</CardTitle>
             <CardDescription>
-              {totalFindings} total findings across all assessments
+              {totalFindings} {t("dashboard.totalFindingsDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
-            {/* By severity */}
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                By Severity
+                {t("dashboard.bySeverity")}
               </p>
               <div className="space-y-2">
-                <HBar label="Critical" count={data.findings_by_severity["Critical"] ?? 0} max={maxSeverity} colorClass="bg-red-500" />
-                <HBar label="High" count={data.findings_by_severity["High"] ?? 0} max={maxSeverity} colorClass="bg-orange-400" />
-                <HBar label="Medium" count={data.findings_by_severity["Medium"] ?? 0} max={maxSeverity} colorClass="bg-amber-400" />
-                <HBar label="Low" count={data.findings_by_severity["Low"] ?? 0} max={maxSeverity} colorClass="bg-slate-300" />
+                <HBar label={t("findings.critical")} count={data.findings_by_severity["Critical"] ?? 0} max={maxSeverity} colorClass="bg-red-500" />
+                <HBar label={t("findings.high")}     count={data.findings_by_severity["High"] ?? 0}     max={maxSeverity} colorClass="bg-orange-400" />
+                <HBar label={t("findings.medium")}   count={data.findings_by_severity["Medium"] ?? 0}   max={maxSeverity} colorClass="bg-amber-400" />
+                <HBar label={t("findings.low")}      count={data.findings_by_severity["Low"] ?? 0}      max={maxSeverity} colorClass="bg-slate-300" />
               </div>
             </div>
-            {/* By ESG category */}
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-                By ESG Category
+                {t("dashboard.byEsgCategory")}
               </p>
               <div className="space-y-2">
-                <HBar label="Environmental" count={data.findings_by_category["E"] ?? 0} max={maxCategory} colorClass="bg-emerald-500" />
-                <HBar label="Social" count={data.findings_by_category["S"] ?? 0} max={maxCategory} colorClass="bg-blue-500" />
-                <HBar label="Governance" count={data.findings_by_category["G"] ?? 0} max={maxCategory} colorClass="bg-purple-500" />
+                <HBar label={t("dashboard.environmental")} count={data.findings_by_category["E"] ?? 0}     max={maxCategory} colorClass="bg-emerald-500" />
+                <HBar label={t("dashboard.social")}        count={data.findings_by_category["S"] ?? 0}     max={maxCategory} colorClass="bg-blue-500" />
+                <HBar label={t("dashboard.governance")}    count={data.findings_by_category["G"] ?? 0}     max={maxCategory} colorClass="bg-purple-500" />
                 {(data.findings_by_category["Other"] ?? 0) > 0 && (
-                  <HBar label="Other" count={data.findings_by_category["Other"]} max={maxCategory} colorClass="bg-slate-400" />
+                  <HBar label={t("materials.other")} count={data.findings_by_category["Other"]} max={maxCategory} colorClass="bg-slate-400" />
                 )}
               </div>
             </div>
@@ -867,34 +868,34 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* ── Review Queue (shown only when there are items pending) ─────────── */}
+      {/* ── Review Queue ───────────────────────────────────────────────────── */}
       {(data.awaiting_review > 0 || data.reviews_overdue > 0) && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <GitPullRequest className="h-4 w-4 text-blue-500" />
-                Review Queue
+                {t("dashboard.reviewQueue")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Assessments awaiting formal governance review
+                {t("dashboard.reviewQueueDesc")}
               </p>
             </div>
             <div className="flex items-center gap-3">
               {data.awaiting_review > 0 && (
                 <span className="rounded-full bg-blue-100 text-blue-700 px-3 py-0.5 text-xs font-semibold">
-                  {data.awaiting_review} awaiting
+                  {data.awaiting_review} {t("dashboard.awaitingReview")}
                 </span>
               )}
               {data.reviews_overdue > 0 && (
                 <span className="rounded-full bg-red-100 text-red-700 px-3 py-0.5 text-xs font-semibold">
-                  {data.reviews_overdue} overdue
+                  {data.reviews_overdue} {t("dashboard.overdueReview")}
                 </span>
               )}
             </div>
           </div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {data.review_queue.map((item) => (
+            {data.review_queue.map((item: { id: string; title: string; review_status: string; review_due_date: string | null; is_overdue: boolean }) => (
               <Link
                 key={item.id}
                 href={`/assessments/${item.id}`}
@@ -909,18 +910,18 @@ export default function DashboardPage() {
                       ? "bg-blue-100 text-blue-700"
                       : "bg-amber-100 text-amber-700"
                   }`}>
-                    {item.review_status === "InReview" ? "In Review" : "Changes Requested"}
+                    {item.review_status === "InReview" ? t("dashboard.inReview") : t("dashboard.changesRequested")}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3 flex-shrink-0" />
                   {item.review_due_date ? (
                     <span className={item.is_overdue ? "text-red-600 font-medium" : ""}>
-                      Due {formatDate(item.review_due_date)}
-                      {item.is_overdue && " · Overdue"}
+                      {t("dashboard.due")} {formatDate(item.review_due_date)}
+                      {item.is_overdue && ` · ${t("dashboard.overdueLabel")}`}
                     </span>
                   ) : (
-                    <span>No due date</span>
+                    <span>{t("dashboard.noDueDate")}</span>
                   )}
                 </div>
               </Link>
@@ -929,78 +930,78 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── Supplier KPIs (M27) ────────────────────────────────────────────── */}
+      {/* ── Supplier Portfolio ─────────────────────────────────────────────── */}
       {data.total_suppliers > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-blue-500" />
-                Supplier Portfolio
+                {t("dashboard.supplierPortfolio")}
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                ESG due diligence subjects under management
+                {t("dashboard.supplierPortfolioDesc")}
               </p>
             </div>
             <Link href="/suppliers">
               <Button variant="ghost" size="sm" className="gap-1 text-xs">
-                View all <ArrowRight className="h-3 w-3" />
+                {t("dashboard.viewAll")} <ArrowRight className="h-3 w-3" />
               </Button>
             </Link>
           </div>
 
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             <KpiCard
-              label="Total Suppliers"
+              label={t("suppliers.title")}
               value={data.total_suppliers}
               icon={Briefcase}
-              sub={`${data.active_suppliers} active`}
+              sub={`${data.active_suppliers} ${t("common.active").toLowerCase()}`}
             />
             <KpiCard
-              label="With Critical Risks"
+              label={t("dashboard.withCriticalRisks")}
               value={data.suppliers_with_critical_risks}
               icon={ShieldAlert}
               valueClass={data.suppliers_with_critical_risks > 0 ? "text-red-600" : "text-foreground"}
               accent={data.suppliers_with_critical_risks > 0 ? "bg-red-500" : undefined}
-              sub="have critical findings"
+              sub={t("dashboard.haveCriticalFindings")}
             />
             <KpiCard
-              label="No Assessments"
+              label={t("dashboard.suppliersNoAssessments")}
               value={data.suppliers_without_assessments}
               icon={AlertTriangle}
               valueClass={data.suppliers_without_assessments > 0 ? "text-amber-600" : "text-foreground"}
-              sub="need first assessment"
+              sub={t("dashboard.needFirstAssessment")}
             />
             <KpiCard
-              label="Active"
+              label={t("common.active")}
               value={data.active_suppliers}
               icon={CheckCircle2}
               valueClass="text-emerald-600"
-              sub="suppliers in scope"
+              sub={t("dashboard.suppliersInScope")}
             />
           </div>
 
           {data.supplier_watchlist.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base">Supplier Risk Watchlist</CardTitle>
-                <p className="text-xs text-muted-foreground">Ranked by critical findings</p>
+                <CardTitle className="text-base">{t("dashboard.supplierWatchlist")}</CardTitle>
+                <p className="text-xs text-muted-foreground">{t("dashboard.rankedByCritical")}</p>
               </CardHeader>
               <CardContent className="p-0">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/30">
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Supplier</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Country</th>
-                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">Tier</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Critical</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">High</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Open Actions</th>
-                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">Overdue</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">{t("assessments.supplier")}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">{t("common.country")}</th>
+                      <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground">{t("suppliers.tier")}</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">{t("findings.critical")}</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">{t("findings.high")}</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">{t("dashboard.colOpenActions")}</th>
+                      <th className="px-4 py-2.5 text-right text-xs font-medium text-muted-foreground">{t("dashboard.overdue")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {data.supplier_watchlist.map((s) => (
+                    {data.supplier_watchlist.map((s: { id: string; name: string; country: string; supplier_tier: string; critical_findings: number; high_findings: number; open_actions: number; overdue_actions: number }) => (
                       <tr key={s.id} className="hover:bg-muted/20 transition-colors">
                         <td className="px-4 py-2.5">
                           <Link
@@ -1042,7 +1043,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* ── External Risk Signals (Item 25) ────────────────────────────────── */}
+      {/* ── External Risk Signals ──────────────────────────────────────────── */}
       {riskSignals && riskSignals.length > 0 && (
         <SignalFeedCard signals={riskSignals} />
       )}
@@ -1053,21 +1054,21 @@ export default function DashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <div>
-              <CardTitle className="text-base">Recent Assessments</CardTitle>
-              <CardDescription>Latest ESG evaluations</CardDescription>
+              <CardTitle className="text-base">{t("dashboard.recentAssessments")}</CardTitle>
+              <CardDescription>{t("dashboard.latestEsgEvaluations")}</CardDescription>
             </div>
             <Button variant="ghost" size="sm" asChild>
               <Link href="/assessments" className="gap-1 text-xs">
-                View all <ArrowRight className="h-3 w-3" />
+                {t("dashboard.viewAll")} <ArrowRight className="h-3 w-3" />
               </Link>
             </Button>
           </CardHeader>
           <CardContent>
             {!data.recent_assessments.length ? (
               <div className="py-8 text-center text-sm text-muted-foreground">
-                No assessments yet.{" "}
+                {t("dashboard.noAssessmentsYet")}{" "}
                 <Link href="/assessments/new" className="text-primary underline">
-                  Run your first assessment
+                  {t("dashboard.runFirstAssessment")}
                 </Link>
               </div>
             ) : (
@@ -1093,7 +1094,7 @@ export default function DashboardPage() {
                         {a.finding_count > 0 && (
                           <>
                             <span>·</span>
-                            <span>{a.finding_count} findings</span>
+                            <span>{a.finding_count} {t("dashboard.findingsLabel")}</span>
                           </>
                         )}
                       </div>
@@ -1116,17 +1117,17 @@ export default function DashboardPage() {
         {/* Assessment timeline — 1/3 width */}
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Assessment Volume</CardTitle>
-            <CardDescription>Assessments per month</CardDescription>
+            <CardTitle className="text-base">{t("dashboard.assessmentVolume")}</CardTitle>
+            <CardDescription>{t("dashboard.assessmentsPerMonth")}</CardDescription>
           </CardHeader>
           <CardContent>
             {!data.assessments_over_time.length ? (
               <p className="py-8 text-center text-xs text-muted-foreground">
-                No timeline data yet.
+                {t("dashboard.noTimelineData")}
               </p>
             ) : (
               <div className="space-y-2">
-                {data.assessments_over_time.map((m) => (
+                {data.assessments_over_time.map((m: { month: string; count: number }) => (
                   <div key={m.month} className="flex items-center gap-3">
                     <span className="w-16 text-xs text-muted-foreground flex-shrink-0">
                       {m.month}

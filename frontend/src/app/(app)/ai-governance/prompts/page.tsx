@@ -7,10 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
 export default function PromptsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   const { data: prompts = [], isLoading } = useQuery({
@@ -29,16 +31,16 @@ export default function PromptsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Prompt Registry</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("aiGov.promptsTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Versioned and human-approved prompt templates
+          {t("aiGov.promptsSubtitle")}
         </p>
       </div>
 
       {prompts.length === 0 ? (
         <div className="py-16 text-center text-muted-foreground">
           <FileCode className="mx-auto mb-3 h-10 w-10 opacity-30" />
-          <p className="text-sm">No prompt templates registered.</p>
+          <p className="text-sm">{t("aiGov.noPromptsDesc")}</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -76,7 +78,7 @@ export default function PromptsPage() {
                       onClick={() => approve.mutate(p.id)}
                       disabled={approve.isPending}
                     >
-                      Approve
+                      {t("exec.approve")}
                     </Button>
                   )}
                 </div>

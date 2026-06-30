@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/context";
 
 const RESULT_COLORS: Record<string, string> = {
   PASS: "bg-green-100 text-green-800",
@@ -16,6 +17,7 @@ const RESULT_COLORS: Record<string, string> = {
 };
 
 export default function ControlTestsPage() {
+  const { t } = useLanguage();
   const { data: tests, isLoading, error } = useQuery({
     queryKey: ["control-tests"],
     queryFn: () => operatingSystemApi.listTests({ limit: 200 }).then((r) => r.data),
@@ -42,15 +44,15 @@ export default function ControlTestsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <ClipboardCheckIcon className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold">Control Tests</h1>
+          <h1 className="text-2xl font-semibold">{t("esgOs.testsTitle")}</h1>
         </div>
-        <span className="text-sm text-muted-foreground">{tests?.length ?? 0} tests</span>
+        <span className="text-sm text-muted-foreground">{tests?.length ?? 0} {t("nav.tests").toLowerCase()}</span>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("common.total")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{tests?.length ?? 0}</p>
@@ -58,7 +60,7 @@ export default function ControlTestsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Passed</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("esgOs.passed")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-green-600">{passed}</p>
@@ -66,7 +68,7 @@ export default function ControlTestsPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Failed</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("esgOs.failed")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-red-600">{failed}</p>
@@ -87,7 +89,7 @@ export default function ControlTestsPage() {
           <TestRow key={test.id} test={test} />
         ))}
         {tests?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">No control tests yet.</div>
+          <div className="text-center py-12 text-muted-foreground">{t("esgOs.noTests")}</div>
         )}
       </div>
     </div>
@@ -95,16 +97,17 @@ export default function ControlTestsPage() {
 }
 
 function TestRow({ test }: { test: ControlTest }) {
+  const { t } = useLanguage();
   return (
     <Card>
       <CardContent className="py-4 flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <p className="text-sm font-mono text-muted-foreground">Control: {test.control_id.slice(0, 8)}…</p>
+          <p className="text-sm font-mono text-muted-foreground">{t("esgOs.controlId")}: {test.control_id.slice(0, 8)}…</p>
           {test.findings && (
             <p className="text-sm">{test.findings}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            Tested {formatDateTime(test.tested_at)}
+            {t("esgOs.testDate")}: {formatDateTime(test.tested_at)}
           </p>
         </div>
         <Badge className={RESULT_COLORS[test.test_result] ?? "bg-gray-100 text-gray-800"}>

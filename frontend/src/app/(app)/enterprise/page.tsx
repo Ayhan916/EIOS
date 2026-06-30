@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertTriangle,
   BarChart3,
@@ -74,11 +75,12 @@ function KpiCard({
 }
 
 function HealthScoreCard({ data }: { data: EnterpriseDashboard }) {
+  const { t } = useLanguage();
   const { health_score: hs } = data;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Enterprise ESG Health Score</CardTitle>
+        <CardTitle className="text-base">{t("exec.esgHealth")}</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-6">
@@ -109,7 +111,7 @@ function HealthScoreCard({ data }: { data: EnterpriseDashboard }) {
         </div>
         {hs.drivers.length > 0 && (
           <div className="mt-4 rounded-lg bg-slate-50 p-3">
-            <p className="mb-1 text-xs font-semibold text-muted-foreground">Key Drivers</p>
+            <p className="mb-1 text-xs font-semibold text-muted-foreground">{t("exec.priorityActions")}</p>
             <ul className="space-y-1">
               {hs.drivers.map((d, i) => (
                 <li key={i} className="text-xs text-slate-600">• {d}</li>
@@ -123,23 +125,24 @@ function HealthScoreCard({ data }: { data: EnterpriseDashboard }) {
 }
 
 function BURollupsTable({ data }: { data: EnterpriseDashboard }) {
+  const { t } = useLanguage();
   if (!data.bu_rollups.length) return null;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Business Unit Breakdown</CardTitle>
+        <CardTitle className="text-base">{t("ent.businessUnitsTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
-              <th className="pb-2 text-left">Business Unit</th>
-              <th className="pb-2 text-right">Orgs</th>
-              <th className="pb-2 text-right">Suppliers</th>
-              <th className="pb-2 text-right">Risks</th>
-              <th className="pb-2 text-right">Critical</th>
-              <th className="pb-2 text-right">Open Findings</th>
-              <th className="pb-2 text-right">Compliance</th>
+              <th className="pb-2 text-left">{t("ent.unitName")}</th>
+              <th className="pb-2 text-right">{t("common.total")}</th>
+              <th className="pb-2 text-right">{t("nav.suppliers")}</th>
+              <th className="pb-2 text-right">{t("risks.title")}</th>
+              <th className="pb-2 text-right">{t("risks.critical")}</th>
+              <th className="pb-2 text-right">{t("findings.title")}</th>
+              <th className="pb-2 text-right">{t("nav.scCompliance")}</th>
             </tr>
           </thead>
           <tbody>
@@ -172,22 +175,23 @@ function BURollupsTable({ data }: { data: EnterpriseDashboard }) {
 }
 
 function RegionRollupsTable({ data }: { data: EnterpriseDashboard }) {
+  const { t } = useLanguage();
   if (!data.region_rollups.length) return null;
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Regional Breakdown</CardTitle>
+        <CardTitle className="text-base">{t("ent.regionsTitle")}</CardTitle>
       </CardHeader>
       <CardContent className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b text-xs text-muted-foreground">
-              <th className="pb-2 text-left">Region</th>
-              <th className="pb-2 text-right">Orgs</th>
-              <th className="pb-2 text-right">Suppliers</th>
-              <th className="pb-2 text-right">Risks</th>
-              <th className="pb-2 text-right">Open Findings</th>
-              <th className="pb-2 text-right">Compliance</th>
+              <th className="pb-2 text-left">{t("ent.regionsTitle")}</th>
+              <th className="pb-2 text-right">{t("common.total")}</th>
+              <th className="pb-2 text-right">{t("nav.suppliers")}</th>
+              <th className="pb-2 text-right">{t("risks.title")}</th>
+              <th className="pb-2 text-right">{t("findings.title")}</th>
+              <th className="pb-2 text-right">{t("nav.scCompliance")}</th>
             </tr>
           </thead>
           <tbody>
@@ -219,6 +223,7 @@ function RegionRollupsTable({ data }: { data: EnterpriseDashboard }) {
 }
 
 export default function EnterpriseDashboardPage() {
+  const { t } = useLanguage();
   const { data: enterprises, isLoading: loadingList } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -238,9 +243,9 @@ export default function EnterpriseDashboardPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Enterprise</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Global ESG oversight across all entities
+            {t("ent.subtitle")}
           </p>
         </div>
         {enterprises && enterprises.length > 1 && (
@@ -261,25 +266,25 @@ export default function EnterpriseDashboardPage() {
       ) : !dashboard ? (
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
-            No enterprise configured. Create an enterprise to get started.
+            {t("ent.noUnitsDesc")}
           </CardContent>
         </Card>
       ) : (
         <>
           {/* KPI strip */}
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <KpiCard label="Organizations" value={dashboard.rollup.organization_count} icon={Building2} />
-            <KpiCard label="Suppliers" value={dashboard.rollup.supplier_count} icon={Globe} />
-            <KpiCard label="Total Risks" value={dashboard.rollup.total_risks} icon={AlertTriangle} />
+            <KpiCard label={t("ent.businessUnitsTitle")} value={dashboard.rollup.organization_count} icon={Building2} />
+            <KpiCard label={t("nav.suppliers")} value={dashboard.rollup.supplier_count} icon={Globe} />
+            <KpiCard label={t("risks.title")} value={dashboard.rollup.total_risks} icon={AlertTriangle} />
             <KpiCard
-              label="Critical Risks"
+              label={t("risks.critical")}
               value={dashboard.rollup.critical_risks}
               icon={Shield}
               accent={(dashboard.rollup.critical_risks > 0) ? "text-red-600" : ""}
             />
-            <KpiCard label="Open Findings" value={dashboard.rollup.open_findings} icon={BarChart3} />
+            <KpiCard label={t("findings.title")} value={dashboard.rollup.open_findings} icon={BarChart3} />
             <KpiCard
-              label="Compliance"
+              label={t("nav.scCompliance")}
               value={`${(dashboard.rollup.compliance_readiness * 100).toFixed(0)}%`}
               icon={Users}
               accent={dashboard.rollup.compliance_readiness >= 0.8 ? "text-emerald-600" : "text-amber-600"}

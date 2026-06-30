@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { extractErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,16 +22,17 @@ import {
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
-const schema = z.object({
-  email: z.string().email("Enter a valid email"),
-  password: z.string().min(1, "Password is required"),
-});
-type FormData = z.infer<typeof schema>;
-
 export default function LoginPage() {
   const { login } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
   const [error, setError] = useState("");
+
+  const schema = z.object({
+    email: z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(1, t("auth.passwordRequired")),
+  });
+  type FormData = z.infer<typeof schema>;
 
   const {
     register,
@@ -51,8 +53,8 @@ export default function LoginPage() {
   return (
     <Card className="w-full max-w-sm shadow-lg">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-xl">Sign in</CardTitle>
-        <CardDescription>Enter your credentials to continue</CardDescription>
+        <CardTitle className="text-xl">{t("auth.signIn")}</CardTitle>
+        <CardDescription>{t("auth.subtitle")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
@@ -62,7 +64,7 @@ export default function LoginPage() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <Input
               id="email"
               type="email"
@@ -75,7 +77,7 @@ export default function LoginPage() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("auth.password")}</Label>
             <Input
               id="password"
               type="password"
@@ -94,16 +96,16 @@ export default function LoginPage() {
             {isSubmitting ? (
               <Spinner size="sm" className="text-white" />
             ) : (
-              "Sign in"
+              t("auth.signInButton")
             )}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            No account?{" "}
+            {t("auth.noAccount")}{" "}
             <Link
               href="/register"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Create one
+              {t("auth.signInLink")}
             </Link>
           </p>
         </CardFooter>

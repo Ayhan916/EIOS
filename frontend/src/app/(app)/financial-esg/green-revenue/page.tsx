@@ -14,6 +14,7 @@ import { listGreenRevenue, listGreenCapex, listGreenOpex } from "@/lib/api/finan
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ALIGN_COLORS: Record<string, string> = {
   ALIGNED: "bg-green-100 text-green-700",
@@ -23,6 +24,7 @@ const ALIGN_COLORS: Record<string, string> = {
 
 export default function GreenRevenuePage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
 
   const { data: revenues, isLoading: l1 } = useQuery({
@@ -68,16 +70,16 @@ export default function GreenRevenuePage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Green Revenue</h1>
+        <h1 className="text-2xl font-bold">{t("finEsg.greenRevenueTitle")}</h1>
         <p className="text-muted-foreground">
-          Green revenue, CapEx, and OpEx tracking
+          {t("finEsg.greenRevenueSubtitle")}
         </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         {[
           {
-            label: "Green Revenue",
+            label: t("finEsg.greenRevenueTitle"),
             value: `$${totalGreen.toLocaleString()}`,
             sub: avgGreenPct ? `${avgGreenPct.toFixed(1)}% avg` : undefined,
           },
@@ -137,7 +139,7 @@ export default function GreenRevenuePage() {
         </CardHeader>
         <CardContent>
           {(revenues ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No revenue records</p>
+            <p className="text-sm text-muted-foreground">{t("finEsg.noRevenue")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -147,7 +149,7 @@ export default function GreenRevenuePage() {
                     <th className="pb-2 pr-4">Period</th>
                     <th className="pb-2 pr-4">Amount</th>
                     <th className="pb-2 pr-4">Green %</th>
-                    <th className="pb-2">Status</th>
+                    <th className="pb-2">{t("common.status")}</th>
                   </tr>
                 </thead>
                 <tbody>

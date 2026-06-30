@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import { useLanguage } from "@/lib/i18n/context";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import {
   FlaskConical,
@@ -70,21 +71,22 @@ const SOURCING_RISK_COLORS: Record<string, string> = {
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
 function OverviewTab({ material }: { material: Material }) {
+  const { t } = useLanguage();
   const fields: [string, string | number | boolean | null][] = [
-    ["Type", material.material_type.replace(/_/g, " ")],
-    ["Status", material.material_status.replace(/_/g, " ")],
+    [t("common.type"), material.material_type.replace(/_/g, " ")],
+    [t("common.status"), material.material_status.replace(/_/g, " ")],
     ["Internal Code", material.internal_code],
-    ["CAS Number", material.cas_number],
+    [t("materials.casNumber"), material.cas_number],
     ["EC Number", material.ec_number],
     ["IUPAC Name", material.iupac_name],
     ["Molecular Formula", material.molecular_formula],
-    ["HS Code", material.hs_code],
+    [t("materials.hsCode"), material.hs_code],
     ["UN Number", material.un_number],
     ["GHS Hazard Class", material.ghs_hazard_class],
-    ["Unit of Measure", material.unit_of_measure],
+    [t("materials.unitOfMeasure"), material.unit_of_measure],
     ["Weight per Unit (kg)", material.weight_per_unit_kg],
-    ["Country of Origin", material.country_of_origin],
-    ["Critical Raw Material", material.is_critical_raw_material ? "Yes" : "No"],
+    [t("common.country"), material.country_of_origin],
+    [t("materials.isCrm"), material.is_critical_raw_material ? t("common.yes") : t("common.no")],
     ["Recycled Content %", material.recycled_content_pct != null ? `${material.recycled_content_pct}%` : null],
   ];
 
@@ -98,7 +100,7 @@ function OverviewTab({ material }: { material: Material }) {
         </Card>
       )}
       <Card>
-        <CardHeader><CardTitle className="text-base">Properties</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-base">{t("common.details")}</CardTitle></CardHeader>
         <CardContent>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
             {fields.map(([label, value]) => (
@@ -114,7 +116,7 @@ function OverviewTab({ material }: { material: Material }) {
       </Card>
       {material.notes && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("common.notes")}</CardTitle></CardHeader>
           <CardContent><p className="text-sm">{material.notes}</p></CardContent>
         </Card>
       )}
@@ -125,6 +127,7 @@ function OverviewTab({ material }: { material: Material }) {
 // ── Composition Tab ───────────────────────────────────────────────────────────
 
 function CompositionTab({ materialId }: { materialId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["material-composition", materialId],
@@ -142,10 +145,10 @@ function CompositionTab({ materialId }: { materialId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h3 className="font-semibold">Bill of Materials ({items.length})</h3>
+        <h3 className="font-semibold">{t("materials.composition")} ({items.length})</h3>
       </div>
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No composition entries yet.</p>
+        <p className="text-muted-foreground text-sm py-8 text-center">{t("common.noData")}</p>
       ) : (
         <div className="space-y-2">
           {items.map((c) => (
@@ -179,6 +182,7 @@ function CompositionTab({ materialId }: { materialId: string }) {
 // ── Sourcing Tab ──────────────────────────────────────────────────────────────
 
 function SourcingTab({ materialId }: { materialId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["material-sourcing", materialId],
@@ -195,9 +199,9 @@ function SourcingTab({ materialId }: { materialId: string }) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">Sourcing Records ({items.length})</h3>
+      <h3 className="font-semibold">{t("materials.sourcing")} ({items.length})</h3>
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No sourcing records yet.</p>
+        <p className="text-muted-foreground text-sm py-8 text-center">{t("common.noData")}</p>
       ) : (
         <div className="space-y-2">
           {items.map((s) => (
@@ -242,6 +246,7 @@ function SourcingTab({ materialId }: { materialId: string }) {
 // ── Compliance Tab ────────────────────────────────────────────────────────────
 
 function ComplianceTab({ materialId }: { materialId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["material-compliance", materialId],
@@ -265,11 +270,11 @@ function ComplianceTab({ materialId }: { materialId: string }) {
       <div className="flex gap-4">
         <div className="flex-1 rounded-lg border p-3 text-center">
           <div className="text-2xl font-bold text-green-600">{compliant}</div>
-          <div className="text-xs text-muted-foreground">Compliant</div>
+          <div className="text-xs text-muted-foreground">{t("scCompliance.compliant")}</div>
         </div>
         <div className="flex-1 rounded-lg border p-3 text-center">
           <div className="text-2xl font-bold text-red-600">{nonCompliant}</div>
-          <div className="text-xs text-muted-foreground">Non-Compliant</div>
+          <div className="text-xs text-muted-foreground">{t("scCompliance.nonCompliantStatus")}</div>
         </div>
         {expired > 0 && (
           <div className="flex-1 rounded-lg border p-3 text-center">
@@ -280,7 +285,7 @@ function ComplianceTab({ materialId }: { materialId: string }) {
       </div>
 
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No compliance flags yet.</p>
+        <p className="text-muted-foreground text-sm py-8 text-center">{t("common.noData")}</p>
       ) : (
         <div className="space-y-2">
           {items.map((c) => (
@@ -326,6 +331,7 @@ function ComplianceTab({ materialId }: { materialId: string }) {
 // ── Sustainability Tab ────────────────────────────────────────────────────────
 
 function SustainabilityTab({ materialId }: { materialId: string }) {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["material-sustainability", materialId],
     queryFn: () => listSustainability(materialId),
@@ -336,9 +342,9 @@ function SustainabilityTab({ materialId }: { materialId: string }) {
 
   return (
     <div className="space-y-4">
-      <h3 className="font-semibold">LCA / Sustainability Metrics ({items.length} year{items.length !== 1 ? "s" : ""})</h3>
+      <h3 className="font-semibold">{t("materials.tabSustainability")} ({items.length})</h3>
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm py-8 text-center">No sustainability metrics yet.</p>
+        <p className="text-muted-foreground text-sm py-8 text-center">{t("common.noData")}</p>
       ) : (
         <div className="space-y-4">
           {items.map((s) => (
@@ -361,7 +367,7 @@ function SustainabilityTab({ materialId }: { materialId: string }) {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                   {s.carbon_footprint_kg_co2e_per_kg != null && (
                     <div>
-                      <div className="text-xs text-muted-foreground">Carbon footprint</div>
+                      <div className="text-xs text-muted-foreground">{t("materials.carbonFootprint")}</div>
                       <div className="text-lg font-bold">{s.carbon_footprint_kg_co2e_per_kg}</div>
                       <div className="text-xs text-muted-foreground">kg CO₂e/kg</div>
                     </div>
@@ -382,7 +388,7 @@ function SustainabilityTab({ materialId }: { materialId: string }) {
                   )}
                   {s.recycled_content_pct != null && (
                     <div>
-                      <div className="text-xs text-muted-foreground">Recycled content</div>
+                      <div className="text-xs text-muted-foreground">{t("materials.recyclability")}</div>
                       <div className="text-lg font-bold">{s.recycled_content_pct}%</div>
                       {s.recyclability_pct != null && <div className="text-xs text-muted-foreground">{s.recyclability_pct}% recyclable</div>}
                     </div>
@@ -403,6 +409,7 @@ function SustainabilityTab({ materialId }: { materialId: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function MaterialDetailPage() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
 
@@ -425,7 +432,7 @@ export default function MaterialDetailPage() {
   if (!material) {
     return (
       <div className="p-6 text-center text-muted-foreground">
-        Material not found.
+        {t("error.notFound")}
       </div>
     );
   }
@@ -436,6 +443,14 @@ export default function MaterialDetailPage() {
     Sourcing: <FlaskConical className="h-4 w-4" />,
     Compliance: <ShieldCheck className="h-4 w-4" />,
     Sustainability: <Leaf className="h-4 w-4" />,
+  };
+
+  const TAB_LABELS: Record<Tab, string> = {
+    Overview: t("materials.tabOverview"),
+    Composition: t("materials.composition"),
+    Sourcing: t("materials.tabSourcing"),
+    Compliance: t("materials.tabCompliance"),
+    Sustainability: t("materials.tabSustainability"),
   };
 
   return (
@@ -451,7 +466,7 @@ export default function MaterialDetailPage() {
             {material.is_critical_raw_material && (
               <span className="flex items-center gap-1 text-xs font-medium bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
                 <AlertTriangle className="h-3 w-3" />
-                Critical Raw Material
+                {t("materials.isCrm")}
               </span>
             )}
             <span className={`text-xs font-medium px-2 py-1 rounded-full ${STATUS_COLORS[material.material_status] ?? "bg-gray-100"}`}>
@@ -481,7 +496,7 @@ export default function MaterialDetailPage() {
               }`}
             >
               {TAB_ICONS[tab]}
-              {tab}
+              {TAB_LABELS[tab]}
             </button>
           ))}
         </nav>

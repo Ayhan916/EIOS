@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { extractErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,21 +22,19 @@ import {
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
-const schema = z.object({
-  display_name: z.string().min(1, "Name is required").max(255),
-  organization_name: z.string().min(1, "Organisation name is required").max(255),
-  email: z.string().email("Enter a valid email"),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128),
-});
-type FormData = z.infer<typeof schema>;
-
 export default function RegisterPage() {
   const { register: authRegister } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
   const [error, setError] = useState("");
+
+  const schema = z.object({
+    display_name: z.string().min(1, t("auth.nameRequired")).max(255),
+    organization_name: z.string().min(1, t("auth.orgRequired")).max(255),
+    email: z.string().email(t("auth.invalidEmail")),
+    password: z.string().min(8, t("auth.passwordMinLength")).max(128),
+  });
+  type FormData = z.infer<typeof schema>;
 
   const {
     register,
@@ -56,10 +55,8 @@ export default function RegisterPage() {
   return (
     <Card className="w-full max-w-sm shadow-lg">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-xl">Create account</CardTitle>
-        <CardDescription>
-          Set up your organisation&apos;s EIOS workspace
-        </CardDescription>
+        <CardTitle className="text-xl">{t("auth.signUpButton")}</CardTitle>
+        <CardDescription>{t("auth.registerSubtitle")}</CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
@@ -69,10 +66,10 @@ export default function RegisterPage() {
             </div>
           )}
           <div className="space-y-2">
-            <Label htmlFor="display_name">Full name</Label>
+            <Label htmlFor="display_name">{t("auth.displayName")}</Label>
             <Input
               id="display_name"
-              placeholder="Jane Smith"
+              placeholder="Max Mustermann"
               autoComplete="name"
               {...register("display_name")}
             />
@@ -83,10 +80,10 @@ export default function RegisterPage() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="organization_name">Organisation</Label>
+            <Label htmlFor="organization_name">{t("auth.organizationName")}</Label>
             <Input
               id="organization_name"
-              placeholder="Acme Corp"
+              placeholder="Mustermann GmbH"
               {...register("organization_name")}
             />
             {errors.organization_name && (
@@ -96,11 +93,11 @@ export default function RegisterPage() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Work email</Label>
+            <Label htmlFor="email">{t("auth.email")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="you@company.com"
+              placeholder="max@mustermann.de"
               autoComplete="email"
               {...register("email")}
             />
@@ -109,12 +106,12 @@ export default function RegisterPage() {
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password">{t("auth.password")}</Label>
             <Input
               id="password"
               type="password"
               autoComplete="new-password"
-              placeholder="At least 8 characters"
+              placeholder={t("auth.passwordMinLength")}
               {...register("password")}
             />
             {errors.password && (
@@ -129,16 +126,16 @@ export default function RegisterPage() {
             {isSubmitting ? (
               <Spinner size="sm" className="text-white" />
             ) : (
-              "Create account"
+              t("auth.signUpButton")
             )}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            Already have an account?{" "}
+            {t("auth.hasAccount")}{" "}
             <Link
               href="/login"
               className="font-medium text-primary underline-offset-4 hover:underline"
             >
-              Sign in
+              {t("auth.signUpLink")}
             </Link>
           </p>
         </CardFooter>

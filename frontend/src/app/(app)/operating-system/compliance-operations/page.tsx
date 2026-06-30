@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -57,6 +58,7 @@ function AssignControlForm({
   gap: ComplianceGap;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(`Remediate gap: ${gap.description.slice(0, 60)}`);
   const [done, setDone] = useState(false);
@@ -104,7 +106,7 @@ function AssignControlForm({
           {mutation.isPending ? "Creating…" : "Create Action"}
         </Button>
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </div>
@@ -210,6 +212,7 @@ function ComplianceOpRow({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function ComplianceOperationsPage() {
+  const { t } = useLanguage();
   const { data: ops, isLoading, error } = useQuery({
     queryKey: ["compliance-operations"],
     queryFn: () => operatingSystemApi.listComplianceOperations({ limit: 100 }).then((r) => r.data),
@@ -245,7 +248,7 @@ export default function ComplianceOperationsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CheckSquareIcon className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold">Compliance Operations</h1>
+          <h1 className="text-2xl font-semibold">{t("esgOs.complianceOpsTitle")}</h1>
         </div>
         <span className="text-sm text-muted-foreground">{ops?.length ?? 0} frameworks</span>
       </div>
@@ -280,7 +283,7 @@ export default function ComplianceOperationsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <AlertTriangle className="h-3.5 w-3.5 text-red-500" /> Critical
+              <AlertTriangle className="h-3.5 w-3.5 text-red-500" /> {t("findings.critical")}
             </CardTitle>
           </CardHeader>
           <CardContent>

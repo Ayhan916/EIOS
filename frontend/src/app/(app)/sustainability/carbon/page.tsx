@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import { CheckCircle2, Loader2, Lock, Plus, RefreshCw } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import {
@@ -32,6 +33,7 @@ function scopeColor(scope: string) {
 }
 
 function InventoryCard({ inv }: { inv: CarbonInventory }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const recalc = useMutation({
     mutationFn: () => recalculateInventory(ORG_ID, inv.id),
@@ -63,7 +65,7 @@ function InventoryCard({ inv }: { inv: CarbonInventory }) {
           { label: "Scope 1", value: inv.scope1_emissions },
           { label: "Scope 2", value: inv.scope2_emissions },
           { label: "Scope 3", value: inv.scope3_emissions },
-          { label: "Total", value: inv.total_emissions },
+          { label: t("common.total"), value: inv.total_emissions },
         ].map(({ label, value }) => (
           <div key={label} className="rounded bg-muted p-2">
             <p className="text-[10px] text-muted-foreground">{label}</p>
@@ -94,6 +96,7 @@ function InventoryCard({ inv }: { inv: CarbonInventory }) {
 }
 
 function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [scope, setScope] = useState<"SCOPE1" | "SCOPE2" | "SCOPE3">("SCOPE1");
   const [activityData, setActivityData] = useState("");
@@ -154,7 +157,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
 
   return (
     <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-      <p className="text-xs font-medium">Add Emission Source</p>
+      <p className="text-xs font-medium">{t("sustain.addSource")}</p>
       <div className="grid grid-cols-2 gap-2 text-xs">
         <div className="col-span-2">
           <label className="block text-muted-foreground mb-1">Source Name</label>
@@ -166,7 +169,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-muted-foreground mb-1">Scope</label>
+          <label className="block text-muted-foreground mb-1">{t("sustain.scope")}</label>
           <select
             className="w-full rounded border px-2 py-1 text-sm bg-background"
             value={scope}
@@ -187,7 +190,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-muted-foreground mb-1">Activity Data</label>
+          <label className="block text-muted-foreground mb-1">{t("sustain.activityData")}</label>
           <input
             type="number" step="any" min="0"
             className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -209,7 +212,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
           </select>
         </div>
         <div>
-          <label className="block text-muted-foreground mb-1">Emission Factor (tCO₂e per unit)</label>
+          <label className="block text-muted-foreground mb-1">{t("sustain.emissionFactor")} (tCO₂e per unit)</label>
           <input
             type="number" step="any" min="0"
             className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -219,7 +222,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
           />
         </div>
         <div>
-          <label className="block text-muted-foreground mb-1">Reporting Year</label>
+          <label className="block text-muted-foreground mb-1">{t("scope3.reportingYear")}</label>
           <input
             type="number" min="2000" max="2100"
             className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -245,6 +248,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
 }
 
 export default function CarbonInventoryPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showAddSource, setShowAddSource] = useState(false);
 
@@ -280,9 +284,9 @@ export default function CarbonInventoryPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Carbon Inventory</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sustain.carbonTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          GHG emissions by scope — deterministic aggregation from emission sources
+          {t("sustain.carbonSubtitle")}
         </p>
       </div>
 
@@ -385,12 +389,12 @@ export default function CarbonInventoryPage() {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Inventories</CardTitle>
+            <CardTitle className="text-base">{t("scope3.inventories")}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading && <Spinner />}
             {inventories?.length === 0 && (
-              <p className="text-sm text-muted-foreground">No inventories yet.</p>
+              <p className="text-sm text-muted-foreground">{t("scope3.noInventories")}</p>
             )}
             <div className="space-y-3">
               {inventories?.map((inv) => (
@@ -413,7 +417,7 @@ export default function CarbonInventoryPage() {
                 onClick={() => setShowAddSource((v) => !v)}
               >
                 <Plus className="h-3.5 w-3.5" />
-                Add Source
+                {t("sustain.addSource")}
               </Button>
             </div>
           </CardHeader>
@@ -422,7 +426,7 @@ export default function CarbonInventoryPage() {
               <AddEmissionSourceForm onDone={() => { onSourceAdded(); setShowAddSource(false); }} />
             )}
             {sources?.length === 0 && !showAddSource && (
-              <p className="text-sm text-muted-foreground">No emission sources recorded.</p>
+              <p className="text-sm text-muted-foreground">{t("sustain.noCarbon")}</p>
             )}
             <div className="space-y-2">
               {sources?.slice(0, 20).map((src) => (

@@ -18,6 +18,7 @@ import type { ActionStatus } from "@/types/api";
 import apiClient from "@/lib/api/client";
 import { updateRecommendation } from "@/lib/api/recommendations";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -92,6 +93,7 @@ function StatusChanger({
   rec: OrgRecommendation;
   onDone: () => void;
 }) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState<string | null>(null);
 
   async function changeStatus(newStatus: ActionStatus) {
@@ -125,7 +127,7 @@ function StatusChanger({
           onClick={() => changeStatus("in_progress")}
         >
           {busy === "in_progress" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-          Start
+          {t("recommendations.startWork")}
         </Button>
       )}
       {(status === "open" || status === "in_progress") && (
@@ -137,7 +139,7 @@ function StatusChanger({
           onClick={() => changeStatus("resolved")}
         >
           {busy === "resolved" ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-          Resolve
+          {t("recommendations.markResolved")}
         </Button>
       )}
       {status === "resolved" && (
@@ -152,7 +154,7 @@ function StatusChanger({
           ) : (
             <CheckCircle2 className="h-3 w-3" />
           )}
-          Approve
+          {t("recommendations.approve")}
         </Button>
       )}
     </div>
@@ -163,6 +165,7 @@ function StatusChanger({
 
 function AssignToMeButton({ rec, onDone }: { rec: OrgRecommendation; onDone: () => void }) {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -193,7 +196,7 @@ function AssignToMeButton({ rec, onDone }: { rec: OrgRecommendation; onDone: () 
       title="Assign to me"
     >
       {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <UserCheck className="h-3 w-3" />}
-      Assign to me
+      {t("recommendations.assignToMe")}
     </button>
   );
 }
@@ -201,6 +204,7 @@ function AssignToMeButton({ rec, onDone }: { rec: OrgRecommendation; onDone: () 
 // ── Summary cards ─────────────────────────────────────────────────────────────
 
 function StatusSummary({ recs }: { recs: OrgRecommendation[] }) {
+  const { t } = useLanguage();
   const open = recs.filter((r) => r.action_status === "open").length;
   const inProgress = recs.filter((r) => r.action_status === "in_progress").length;
   const overdue = recs.filter((r) => r.is_overdue).length;
@@ -209,10 +213,10 @@ function StatusSummary({ recs }: { recs: OrgRecommendation[] }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {[
-        { label: "Open", value: open, cls: "bg-slate-50 border-slate-200" },
-        { label: "In Progress", value: inProgress, cls: "bg-blue-50 border-blue-200" },
-        { label: "Overdue", value: overdue, cls: overdue > 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200" },
-        { label: "Awaiting Approval", value: resolved, cls: resolved > 0 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200" },
+        { label: t("recommendations.open"), value: open, cls: "bg-slate-50 border-slate-200" },
+        { label: t("recommendations.inProgress"), value: inProgress, cls: "bg-blue-50 border-blue-200" },
+        { label: t("recommendations.overdue"), value: overdue, cls: overdue > 0 ? "bg-red-50 border-red-200" : "bg-slate-50 border-slate-200" },
+        { label: t("recommendations.awaitingApproval"), value: resolved, cls: resolved > 0 ? "bg-amber-50 border-amber-200" : "bg-slate-50 border-slate-200" },
       ].map(({ label, value, cls }) => (
         <Card key={label} className={`border ${cls}`}>
           <CardContent className="pt-4 pb-3 text-center">
@@ -229,6 +233,7 @@ function StatusSummary({ recs }: { recs: OrgRecommendation[] }) {
 
 export default function RecommendationsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -271,16 +276,16 @@ export default function RecommendationsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Recommendations</h1>
+          <h1 className="text-2xl font-bold">{t("recommendations.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All remediation recommendations across your supplier portfolio
+            {t("recommendations.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           {overdueCount > 0 && (
             <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
               <AlertTriangle className="h-3 w-3" />
-              {overdueCount} overdue
+              {overdueCount} {t("recommendations.overdue")}
             </span>
           )}
           <Filter className="h-4 w-4 text-muted-foreground" />
@@ -289,11 +294,11 @@ export default function RecommendationsPage() {
             value={statusFilter}
             onChange={(e) => { setStatusFilter(e.target.value); setSelected(new Set()); }}
           >
-            <option value="all">All Statuses</option>
-            <option value="open">Open</option>
-            <option value="in_progress">In Progress</option>
-            <option value="resolved">Awaiting Approval</option>
-            <option value="verified">Verified</option>
+            <option value="all">{t("assessments.allStatus")}</option>
+            <option value="open">{t("recommendations.open")}</option>
+            <option value="in_progress">{t("recommendations.inProgress")}</option>
+            <option value="resolved">{t("recommendations.awaitingApproval")}</option>
+            <option value="verified">{t("findings.verified")}</option>
           </select>
           {selected.size > 0 && (
             <Button
@@ -336,7 +341,7 @@ export default function RecommendationsPage() {
               <p className="text-sm text-muted-foreground">
                 {statusFilter !== "all"
                   ? `No recommendations with status "${statusFilter}".`
-                  : "No recommendations yet. Recommendations are generated from ESG assessments."}
+                  : t("recommendations.noRecommendationsYetDesc")}
               </p>
             </div>
           ) : (
@@ -348,12 +353,12 @@ export default function RecommendationsPage() {
                       <th className="px-4 py-3 text-left w-8">
                         <input type="checkbox" checked={allSelected} onChange={toggleAll} className="rounded" aria-label="Select all" />
                       </th>
-                      <th className="px-4 py-3 text-left">Recommendation</th>
-                      <th className="px-4 py-3 text-left hidden sm:table-cell">Priority</th>
-                      <th className="px-4 py-3 text-left">Supplier</th>
-                      <th className="px-4 py-3 text-left hidden md:table-cell">Due</th>
-                      <th className="px-4 py-3 text-left">Status</th>
-                      <th className="px-4 py-3 text-right">Actions</th>
+                      <th className="px-4 py-3 text-left">{t("nav.recommendations")}</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">{t("recommendations.priority")}</th>
+                      <th className="px-4 py-3 text-left">{t("assessments.supplier")}</th>
+                      <th className="px-4 py-3 text-left hidden md:table-cell">{t("findings.dueDate")}</th>
+                      <th className="px-4 py-3 text-left">{t("common.status")}</th>
+                      <th className="px-4 py-3 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -369,7 +374,7 @@ export default function RecommendationsPage() {
                           <p className="font-medium line-clamp-1 max-w-xs">{r.title}</p>
                           {r.is_overdue && (
                             <span className="inline-flex items-center gap-0.5 text-[10px] text-red-600 font-medium">
-                              <Clock className="h-3 w-3" /> Overdue
+                              <Clock className="h-3 w-3" /> {t("recommendations.overdue")}
                             </span>
                           )}
                         </td>

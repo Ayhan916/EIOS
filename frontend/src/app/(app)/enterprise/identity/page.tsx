@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import { KeyRound, Plus, ChevronDown, ChevronRight } from "lucide-react";
 import {
   listEnterprises,
@@ -24,6 +25,7 @@ function CreateIdPModal({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [providerType, setProviderType] = useState("oidc");
   const [issuer, setIssuer] = useState("");
@@ -50,11 +52,11 @@ function CreateIdPModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Add Identity Provider</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("ent.addIdp")}</h2>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-sm font-medium">Name *</label>
+              <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
               <input
                 className="w-full rounded-lg border px-3 py-2 text-sm"
                 value={name}
@@ -63,7 +65,7 @@ function CreateIdPModal({
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Type *</label>
+              <label className="mb-1 block text-sm font-medium">{t("common.type")} *</label>
               <select
                 className="w-full rounded-lg border px-3 py-2 text-sm"
                 value={providerType}
@@ -116,14 +118,14 @@ function CreateIdPModal({
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => mutate()}
             disabled={!name || isPending}
             className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Add Provider"}
+            {isPending ? t("common.loading") : t("ent.addIdp")}
           </button>
         </div>
       </div>
@@ -223,6 +225,7 @@ function GroupMappingsSection({
 }
 
 export default function IdentityPage() {
+  const { t } = useLanguage();
   const { data: enterprises } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -247,9 +250,9 @@ export default function IdentityPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Identity</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.identityTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            SSO providers (SAML 2.0 / OpenID Connect) and group mappings
+            {t("ent.identitySubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -270,7 +273,7 @@ export default function IdentityPage() {
             className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
-            Add Provider
+            {t("ent.addIdp")}
           </button>
         </div>
       </div>
@@ -280,7 +283,7 @@ export default function IdentityPage() {
       ) : !providers || providers.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
-            No identity providers configured.
+            {t("ent.noIdpDesc")}
           </CardContent>
         </Card>
       ) : (
@@ -301,7 +304,7 @@ export default function IdentityPage() {
                           variant="outline"
                           className={idp.is_active ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}
                         >
-                          {idp.is_active ? "Active" : "Inactive"}
+                          {idp.is_active ? t("common.active") : t("common.inactive")}
                         </Badge>
                       </div>
                       {idp.issuer && (

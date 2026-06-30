@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { ArrowRight, ArrowRightLeft, Plus, X, LineChart, Play } from "lucide-react";
 
 // ── #114 First-forecast wizard ────────────────────────────────────────────────
@@ -25,6 +26,7 @@ const WIZARD_STEPS = [
 ];
 
 function FirstForecastWizard({ onCreateModel }: { onCreateModel: () => void }) {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
 
@@ -67,7 +69,7 @@ function FirstForecastWizard({ onCreateModel }: { onCreateModel: () => void }) {
         <div className="flex gap-2">
           {step > 0 && (
             <button onClick={() => setStep((s) => s - 1)} className="rounded-lg border border-violet-300 px-3 py-1.5 text-xs text-violet-700 hover:bg-violet-100">
-              Back
+              {t("common.back")}
             </button>
           )}
           {isLast ? (
@@ -82,7 +84,7 @@ function FirstForecastWizard({ onCreateModel }: { onCreateModel: () => void }) {
               onClick={() => setStep((s) => s + 1)}
               className="flex items-center gap-1 rounded-lg bg-violet-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-violet-700"
             >
-              Next <ArrowRight className="h-3 w-3" />
+              {t("common.next")} <ArrowRight className="h-3 w-3" />
             </button>
           )}
         </div>
@@ -108,6 +110,7 @@ const FORECAST_TYPES = [
 ];
 
 function CreateModelModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [form, setForm] = useState({ model_name: "", methodology: "LINEAR_TREND", description: "", model_version: "1.0.0" });
   const [error, setError] = useState<string | null>(null);
@@ -143,27 +146,27 @@ function CreateModelModal({ orgId, onClose }: { orgId: string; onClose: () => vo
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.name")} <span className="text-red-500">*</span></label>
             <input value={form.model_name} onChange={(e) => setForm((f) => ({ ...f, model_name: e.target.value }))} placeholder="z. B. Emissions Linear 2030" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Methode</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("strategy.methodology")}</label>
             <select value={form.methodology} onChange={(e) => setForm((f) => ({ ...f, methodology: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500">
               {METHODOLOGIES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Beschreibung</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.description")}</label>
             <textarea value={form.description} onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))} rows={2} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Version</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.version")}</label>
             <input value={form.model_version} onChange={(e) => setForm((f) => ({ ...f, model_version: e.target.value }))} placeholder="1.0.0" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-violet-600 hover:bg-violet-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Modell erstellen"}
           </Button>
@@ -174,6 +177,7 @@ function CreateModelModal({ orgId, onClose }: { orgId: string; onClose: () => vo
 }
 
 function RunForecastModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data: models } = useQuery({ queryKey: ["strategy", "forecast-models", orgId], queryFn: () => listForecastModels(orgId) });
   const { data: scenarios } = useQuery({ queryKey: ["strategy", "scenarios", orgId], queryFn: () => listScenarios(orgId) });
@@ -226,13 +230,13 @@ function RunForecastModal({ orgId, onClose }: { orgId: string; onClose: () => vo
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Typ</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.type")}</label>
               <select value={form.forecast_type} onChange={(e) => setForm((f) => ({ ...f, forecast_type: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500">
                 {FORECAST_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Prognosejahr</label>
+              <label className="mb-1 block text-sm font-medium text-slate-700">{t("strategy.forecastYear")}</label>
               <input type="number" value={form.forecast_year} onChange={(e) => setForm((f) => ({ ...f, forecast_year: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
             </div>
           </div>
@@ -254,7 +258,7 @@ function RunForecastModal({ orgId, onClose }: { orgId: string; onClose: () => vo
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-violet-600 hover:bg-violet-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Forecast starten"}
           </Button>
@@ -380,6 +384,7 @@ function ForecastComparePanel({ results }: { results: ForecastResult[] }) {
 }
 
 export default function ForecastsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
   const [modal, setModal] = useState<"model" | "run" | null>(null);
@@ -400,8 +405,8 @@ export default function ForecastsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Forecasts</h1>
-          <p className="text-muted-foreground">Deterministische KPI- und Emissionsprognosen</p>
+          <h1 className="text-2xl font-bold">{t("strategy.forecastsTitle")}</h1>
+          <p className="text-muted-foreground">{t("strategy.forecastsSubtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setModal("model")} className="flex items-center gap-2">
@@ -438,7 +443,7 @@ export default function ForecastsPage() {
           {(models ?? []).length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-8 text-center">
               <LineChart className="h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-600">Noch kein Modell erstellt</p>
+              <p className="text-sm text-slate-600">{t("strategy.noForecasts")}</p>
               <Button onClick={() => setModal("model")} className="bg-violet-600 hover:bg-violet-700">
                 <Plus className="mr-2 h-4 w-4" />Erstes Modell erstellen
               </Button>

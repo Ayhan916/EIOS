@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Plus, X, Zap } from "lucide-react";
 import { StressTestBarChart } from "@/components/charts/stress-test-bar-chart";
 import type { StressTestDataPoint } from "@/components/charts/stress-test-bar-chart";
@@ -38,6 +39,7 @@ type TestTab = "climate" | "supplier" | "financial";
 
 function ClimateModal({ orgId, scenarios, onClose }: { orgId: string; scenarios: { id: string; name: string }[]; onClose: () => void }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ test_name: "", stress_type: "CARBON_PRICE", scenario_id: "", carbon_price_shock_pct: "", physical_risk_multiplier: "", transition_cost_pct: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -69,11 +71,11 @@ function ClimateModal({ orgId, scenarios, onClose }: { orgId: string; scenarios:
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.name")} <span className="text-red-500">*</span></label>
             <input value={form.test_name} onChange={(e) => setForm((f) => ({ ...f, test_name: e.target.value }))} placeholder="z. B. CO₂-Preis €150 Schock" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Typ</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">{t("common.type")}</label>
             <div className="grid grid-cols-2 gap-2">
               {CLIMATE_TYPES.map((t) => (
                 <button key={t.value} type="button" onClick={() => setForm((f) => ({ ...f, stress_type: t.value }))} className={`rounded-lg border-2 px-3 py-2 text-xs font-medium transition-colors ${form.stress_type === t.value ? "border-blue-400 bg-blue-100 text-blue-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
@@ -102,7 +104,7 @@ function ClimateModal({ orgId, scenarios, onClose }: { orgId: string; scenarios:
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-blue-600 hover:bg-blue-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Test erstellen"}
           </Button>
@@ -114,6 +116,7 @@ function ClimateModal({ orgId, scenarios, onClose }: { orgId: string; scenarios:
 
 function SupplierModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ scenario_name: "", shock_type: "SUPPLIER_FAILURE", shock_severity: "0.5", affected_region: "", recovery_timeline_months: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -147,7 +150,7 @@ function SupplierModal({ orgId, onClose }: { orgId: string; onClose: () => void 
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.name")} <span className="text-red-500">*</span></label>
             <input value={form.scenario_name} onChange={(e) => setForm((f) => ({ ...f, scenario_name: e.target.value }))} placeholder="z. B. APAC Lieferantenausfall" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-amber-500 focus:outline-none focus:ring-1 focus:ring-amber-500" />
           </div>
           <div>
@@ -180,7 +183,7 @@ function SupplierModal({ orgId, onClose }: { orgId: string; onClose: () => void 
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-amber-600 hover:bg-amber-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Schock erstellen"}
           </Button>
@@ -192,6 +195,7 @@ function SupplierModal({ orgId, onClose }: { orgId: string; onClose: () => void 
 
 function FinancialModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({ test_name: "", stress_type: "FINANCING_COST", financing_cost_increase_bps: "", green_revenue_decline_pct: "", carbon_tax_increase_pct: "", transition_delay_months: "" });
   const [error, setError] = useState<string | null>(null);
 
@@ -223,11 +227,11 @@ function FinancialModal({ orgId, onClose }: { orgId: string; onClose: () => void
         </div>
         <form onSubmit={submit} className="space-y-4 px-6 py-5">
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Name <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("common.name")} <span className="text-red-500">*</span></label>
             <input value={form.test_name} onChange={(e) => setForm((f) => ({ ...f, test_name: e.target.value }))} placeholder="z. B. Finanzierungskosten +200 bps" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500" />
           </div>
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Typ</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">{t("common.type")}</label>
             <div className="grid grid-cols-2 gap-2">
               {FINANCIAL_TYPES.map((t) => (
                 <button key={t.value} type="button" onClick={() => setForm((f) => ({ ...f, stress_type: t.value }))} className={`rounded-lg border-2 px-3 py-2 text-xs font-medium transition-colors ${form.stress_type === t.value ? "border-green-400 bg-green-100 text-green-700" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
@@ -257,7 +261,7 @@ function FinancialModal({ orgId, onClose }: { orgId: string; onClose: () => void
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-green-600 hover:bg-green-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Test erstellen"}
           </Button>
@@ -269,6 +273,7 @@ function FinancialModal({ orgId, onClose }: { orgId: string; onClose: () => void
 
 export default function StressTestsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
   const [tab, setTab] = useState<TestTab>("climate");
   const [modal, setModal] = useState<TestTab | null>(null);
@@ -320,7 +325,7 @@ export default function StressTestsPage() {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
-        <div><h1 className="text-2xl font-bold">Stress Tests</h1><p className="text-muted-foreground">Klima-, Lieferketten- und Finanz-Stresstests</p></div>
+        <div><h1 className="text-2xl font-bold">{t("strategy.stressTestsTitle")}</h1><p className="text-muted-foreground">{t("strategy.stressTestsSubtitle")}</p></div>
         <Button onClick={() => setModal(tab)} className={`flex items-center gap-2 ${btnColors[tab]}`}>
           <Plus className="h-4 w-4" />Neuer Test
         </Button>
@@ -374,7 +379,7 @@ export default function StressTestsPage() {
             (climate ?? []).length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <Zap className="h-10 w-10 text-slate-300" />
-                <p className="text-sm text-slate-600">Noch kein Klima-Stresstest</p>
+                <p className="text-sm text-slate-600">{t("strategy.noStressTests")}</p>
                 <Button onClick={() => setModal("climate")} className="mt-1 bg-blue-600 hover:bg-blue-700"><Plus className="mr-2 h-4 w-4" />Test erstellen</Button>
               </div>
             ) : (
@@ -398,7 +403,7 @@ export default function StressTestsPage() {
             (supplier ?? []).length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <Zap className="h-10 w-10 text-slate-300" />
-                <p className="text-sm text-slate-600">Noch kein Lieferketten-Schock</p>
+                <p className="text-sm text-slate-600">{t("strategy.noStressTests")}</p>
                 <Button onClick={() => setModal("supplier")} className="mt-1 bg-amber-600 hover:bg-amber-700"><Plus className="mr-2 h-4 w-4" />Schock erstellen</Button>
               </div>
             ) : (
@@ -425,7 +430,7 @@ export default function StressTestsPage() {
             (financial ?? []).length === 0 ? (
               <div className="flex flex-col items-center gap-2 py-8 text-center">
                 <Zap className="h-10 w-10 text-slate-300" />
-                <p className="text-sm text-slate-600">Noch kein Finanz-Stresstest</p>
+                <p className="text-sm text-slate-600">{t("strategy.noStressTests")}</p>
                 <Button onClick={() => setModal("financial")} className="mt-1 bg-green-600 hover:bg-green-700"><Plus className="mr-2 h-4 w-4" />Test erstellen</Button>
               </div>
             ) : (

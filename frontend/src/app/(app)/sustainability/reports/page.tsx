@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -25,6 +26,7 @@ function ragColor(s: string) {
 }
 
 function ReportCard({ report }: { report: SustainabilityReport }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const finalize = useMutation({
     mutationFn: () => finalizeReport(ORG_ID, report.id),
@@ -60,13 +62,13 @@ function ReportCard({ report }: { report: SustainabilityReport }) {
       <div className="grid grid-cols-3 gap-3 text-xs">
         {kpiSummary.total_active_kpis != null && (
           <div className="rounded bg-muted p-2">
-            <p className="text-muted-foreground">Active KPIs</p>
+            <p className="text-muted-foreground">{t("sustain.kpisTitle")}</p>
             <p className="font-bold">{String(kpiSummary.total_active_kpis)}</p>
           </div>
         )}
         {emissionsSummary.total_emissions != null && (
           <div className="rounded bg-muted p-2">
-            <p className="text-muted-foreground">Total Emissions</p>
+            <p className="text-muted-foreground">{t("scope3.totalEmissions")}</p>
             <p className="font-bold">{Number(emissionsSummary.total_emissions).toLocaleString()} tCO₂e</p>
           </div>
         )}
@@ -99,6 +101,7 @@ function ReportCard({ report }: { report: SustainabilityReport }) {
 }
 
 export default function ReportsPage() {
+  const { t } = useLanguage();
   const [sendingNow, setSendingNow] = useState(false);
   const [sentNow, setSentNow] = useState(false);
 
@@ -134,9 +137,9 @@ export default function ReportsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Sustainability Reports</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sustain.reportsTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Immutable performance snapshots once finalized. Supports CSRD, ISSB, and full ESG reporting.
+            {t("sustain.reportsSubtitle")}
           </p>
         </div>
         <Button
@@ -147,20 +150,20 @@ export default function ReportsPage() {
           disabled={sendingNow}
         >
           <Send className="h-3.5 w-3.5" />
-          {sentNow ? "Sent!" : sendingNow ? "Sending…" : "Send quarterly report now"}
+          {sentNow ? "Sent!" : sendingNow ? "Sending…" : t("reports.generate")}
         </Button>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total Reports</p>
+            <p className="text-sm text-muted-foreground">{t("reports.title")}</p>
             <p className="text-2xl font-bold">{reports?.length ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Draft</p>
+            <p className="text-sm text-muted-foreground">{t("dpp.draft")}</p>
             <p className="text-2xl font-bold text-amber-600">{draft}</p>
           </CardContent>
         </Card>
@@ -176,14 +179,14 @@ export default function ReportsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <FileText className="h-4 w-4" />
-            Reports{reports ? ` (${reports.length})` : ""}
+            {t("sustain.reportsTitle")}{reports ? ` (${reports.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && <Spinner />}
           {reports?.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              No reports yet. Generate a sustainability report via the API.
+              {t("sustain.noReportsDesc")}
             </p>
           )}
           <div className="space-y-3">

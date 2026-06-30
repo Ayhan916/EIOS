@@ -7,8 +7,10 @@ import { listEnterprises, listNotificationPolicies, type NotificationPolicy } fr
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 export default function EnterpriseNotificationsPage() {
+  const { t } = useLanguage();
   const { data: enterprises } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -27,9 +29,9 @@ export default function EnterpriseNotificationsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Notification Routing</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.notificationsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Escalation, regional, and executive notification policies
+            {t("ent.notificationsSubtitle")}
           </p>
         </div>
         {enterprises && enterprises.length > 1 && (
@@ -67,7 +69,7 @@ export default function EnterpriseNotificationsPage() {
                     variant="outline"
                     className={policy.is_active ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}
                   >
-                    {policy.is_active ? "Active" : "Inactive"}
+                    {policy.is_active ? t("common.active") : t("common.inactive")}
                   </Badge>
                 </div>
               </CardHeader>

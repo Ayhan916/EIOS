@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDateTime } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   SCHEDULED: "bg-blue-100 text-blue-800",
@@ -67,6 +68,7 @@ function CreateAssessmentForm({
   event: CalendarEvent;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [title, setTitle] = useState(`Assessment: ${event.title}`);
   const [description, setDescription] = useState(
@@ -118,7 +120,7 @@ function CreateAssessmentForm({
     <div className="mt-3 space-y-2 rounded-lg border border-blue-200 bg-blue-50/60 p-3">
       <p className="text-xs font-semibold text-blue-700">Create Assessment from Deadline</p>
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Title</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t("common.title")}</label>
         <input
           className="w-full rounded border border-input bg-background px-2 py-1 text-xs"
           value={title}
@@ -126,7 +128,7 @@ function CreateAssessmentForm({
         />
       </div>
       <div>
-        <label className="block text-xs text-muted-foreground mb-1">Description</label>
+        <label className="block text-xs text-muted-foreground mb-1">{t("common.description")}</label>
         <textarea
           className="w-full rounded border border-input bg-background px-2 py-1 text-xs resize-none"
           rows={2}
@@ -141,10 +143,10 @@ function CreateAssessmentForm({
           disabled={!title.trim() || !description.trim() || mutation.isPending}
           onClick={() => mutation.mutate()}
         >
-          {mutation.isPending ? "Creating…" : "Create Assessment"}
+          {mutation.isPending ? t("common.loading") : t("assessments.newAssessment")}
         </Button>
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onClose}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
       {mutation.isError && (
@@ -157,6 +159,7 @@ function CreateAssessmentForm({
 // ── Event Row ─────────────────────────────────────────────────────────────────
 
 function EventRow({ event }: { event: CalendarEvent }) {
+  const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
   const isDeadline = DEADLINE_TYPES.has(event.event_type);
   const typeColorClass = EVENT_TYPE_COLORS[event.event_type] ?? "bg-slate-100 text-slate-700 border-slate-200";
@@ -186,7 +189,7 @@ function EventRow({ event }: { event: CalendarEvent }) {
                 onClick={() => setShowForm(true)}
                 className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 transition-colors"
               >
-                <ClipboardList className="h-3 w-3" /> Create Assessment
+                <ClipboardList className="h-3 w-3" /> {t("assessments.newAssessment")}
               </button>
             )}
           </div>

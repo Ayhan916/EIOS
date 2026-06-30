@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   Building2,
   CheckCircle,
@@ -553,6 +554,7 @@ async function createEmissionInventory(orgId: string | null, em: EmissionFormDat
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
@@ -606,7 +608,7 @@ export default function OnboardingPage() {
         {/* Progress */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-foreground mb-6 text-center">
-            Willkommen bei EIOS
+            {t("onboard.title")}
           </h1>
           <nav aria-label="Onboarding steps">
             <ol className="flex items-center gap-0">
@@ -686,12 +688,12 @@ export default function OnboardingPage() {
             aria-label="Go to previous step"
           >
             <ChevronLeft className="h-4 w-4" aria-hidden="true" />
-            Zurück
+            {t("onboard.back")}
           </Button>
 
           {step < STEPS.length - 1 ? (
             <Button onClick={next} className="gap-1" aria-label="Go to next step">
-              Weiter
+              {t("onboard.next")}
               <ChevronRight className="h-4 w-4" aria-hidden="true" />
             </Button>
           ) : (
@@ -701,7 +703,7 @@ export default function OnboardingPage() {
               className="gap-1"
               aria-label="Complete onboarding"
             >
-              {mut.isPending ? "Speichern…" : "Abschließen"}
+              {mut.isPending ? t("settings.saving") : t("onboard.finish")}
               <CheckCircle className="h-4 w-4" aria-hidden="true" />
             </Button>
           )}
@@ -713,7 +715,7 @@ export default function OnboardingPage() {
             onClick={() => router.push("/dashboard")}
             className="underline hover:text-foreground"
           >
-            Überspringen — später einrichten
+            {t("onboard.skip")} — später einrichten
           </button>
         </p>
       </div>

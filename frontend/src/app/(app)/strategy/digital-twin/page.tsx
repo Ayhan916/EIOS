@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Plus, X, Cpu, Users, BarChart3, AlertTriangle, Zap } from "lucide-react";
 
 // ── Create Modal ──────────────────────────────────────────────────────────────
@@ -19,6 +20,7 @@ function CreateTwinModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { t } = useLanguage();
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -141,10 +143,10 @@ function CreateTwinModal({
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
                 Basisdaten
               </h3>
-              {field("Name", "name", { required: true, placeholder: "z. B. EIOS Enterprise Twin 2026" })}
+              {field(t("common.name"), "name", { required: true, placeholder: "z. B. EIOS Enterprise Twin 2026" })}
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
-                  Beschreibung
+                  {t("common.description")}
                 </label>
                 <textarea
                   value={form.description}
@@ -154,7 +156,7 @@ function CreateTwinModal({
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
                 />
               </div>
-              {field("Version", "twin_version", { placeholder: "1.0" })}
+              {field(t("common.version"), "twin_version", { placeholder: "1.0" })}
             </div>
 
             {/* Scale */}
@@ -163,9 +165,9 @@ function CreateTwinModal({
                 Unternehmensumfang
               </h3>
               <div className="grid grid-cols-3 gap-4">
-                {field("Lieferanten", "supplier_count", { type: "number", placeholder: "142" })}
+                {field(t("nav.suppliers"), "supplier_count", { type: "number", placeholder: "142" })}
                 {field("KPIs", "kpi_count", { type: "number", placeholder: "38" })}
-                {field("Risiken", "risk_count", { type: "number", placeholder: "21" })}
+                {field(t("nav.risks"), "risk_count", { type: "number", placeholder: "21" })}
               </div>
             </div>
 
@@ -221,7 +223,7 @@ function CreateTwinModal({
         {/* Footer */}
         <div className="flex justify-end gap-3 border-t px-6 py-4">
           <Button type="button" variant="outline" onClick={onClose}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
           <Button
             type="submit"
@@ -247,6 +249,7 @@ function CreateTwinModal({
 
 export default function DigitalTwinPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
   const [showCreate, setShowCreate] = useState(false);
 
@@ -268,9 +271,9 @@ export default function DigitalTwinPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Enterprise Digital Twin</h1>
+          <h1 className="text-2xl font-bold">{t("strategy.digitalTwinTitle")}</h1>
           <p className="text-muted-foreground">
-            Strukturierte Abbildung des Enterprise-Zustands für Szenarioplanung
+            {t("strategy.digitalTwinSubtitle")}
           </p>
         </div>
         <Button
@@ -302,31 +305,31 @@ export default function DigitalTwinPage() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {(twins ?? []).map((t) => (
-            <Card key={t.id} className="transition-shadow hover:shadow-md">
+          {(twins ?? []).map((twin) => (
+            <Card key={twin.id} className="transition-shadow hover:shadow-md">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-2">
-                  <CardTitle className="text-base leading-snug">{t.name}</CardTitle>
+                  <CardTitle className="text-base leading-snug">{twin.name}</CardTitle>
                   <div className="flex flex-shrink-0 gap-1">
                     <span
                       className={`rounded px-2 py-0.5 text-xs font-medium ${
-                        t.is_active
+                        twin.is_active
                           ? "bg-green-100 text-green-700"
                           : "bg-slate-100 text-slate-500"
                       }`}
                     >
-                      {t.is_active ? "AKTIV" : "INAKTIV"}
+                      {twin.is_active ? t("common.active").toUpperCase() : t("common.inactive").toUpperCase()}
                     </span>
-                    {t.is_final && (
+                    {twin.is_final && (
                       <span className="rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
                         FINAL
                       </span>
                     )}
                   </div>
                 </div>
-                {t.description && (
+                {twin.description && (
                   <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
-                    {t.description}
+                    {twin.description}
                   </p>
                 )}
               </CardHeader>
@@ -338,33 +341,33 @@ export default function DigitalTwinPage() {
                     <div className="flex items-center justify-center gap-1 text-slate-500">
                       <Users className="h-3 w-3" />
                     </div>
-                    <p className="text-lg font-bold">{t.supplier_count}</p>
-                    <p className="text-xs text-muted-foreground">Lieferanten</p>
+                    <p className="text-lg font-bold">{twin.supplier_count}</p>
+                    <p className="text-xs text-muted-foreground">{t("nav.suppliers")}</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-center gap-1 text-slate-500">
                       <BarChart3 className="h-3 w-3" />
                     </div>
-                    <p className="text-lg font-bold">{t.kpi_count}</p>
+                    <p className="text-lg font-bold">{twin.kpi_count}</p>
                     <p className="text-xs text-muted-foreground">KPIs</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-center gap-1 text-slate-500">
                       <AlertTriangle className="h-3 w-3" />
                     </div>
-                    <p className="text-lg font-bold">{t.risk_count}</p>
-                    <p className="text-xs text-muted-foreground">Risiken</p>
+                    <p className="text-lg font-bold">{twin.risk_count}</p>
+                    <p className="text-xs text-muted-foreground">{t("nav.risks")}</p>
                   </div>
                 </div>
 
                 {/* Emissions */}
-                {t.emissions_baseline_tco2e !== null && (
+                {twin.emissions_baseline_tco2e !== null && (
                   <div className="flex items-center gap-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
                     <Zap className="h-4 w-4 flex-shrink-0 text-emerald-600" />
                     <div>
                       <p className="text-xs text-emerald-700">Emissionen Baseline</p>
                       <p className="text-sm font-semibold text-emerald-900">
-                        {t.emissions_baseline_tco2e.toLocaleString("de-DE")} tCO₂e
+                        {twin.emissions_baseline_tco2e.toLocaleString("de-DE")} tCO₂e
                       </p>
                     </div>
                   </div>
@@ -372,9 +375,9 @@ export default function DigitalTwinPage() {
 
                 {/* Meta */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>v{t.twin_version}</span>
+                  <span>v{twin.twin_version}</span>
                   <span>
-                    Snapshot: {new Date(t.snapshot_date).toLocaleDateString("de-DE")}
+                    Snapshot: {new Date(twin.snapshot_date).toLocaleDateString("de-DE")}
                   </span>
                 </div>
               </CardContent>

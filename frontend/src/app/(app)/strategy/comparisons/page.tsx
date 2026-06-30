@@ -5,6 +5,7 @@ import { listComparisons } from "@/lib/api/strategy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 function DeltaValue({ value }: { value: number }) {
   const color =
@@ -19,6 +20,7 @@ function DeltaValue({ value }: { value: number }) {
 }
 
 export default function ScenarioComparisonsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -38,9 +40,9 @@ export default function ScenarioComparisonsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Scenario Comparison Engine</h1>
+        <h1 className="text-2xl font-bold">{t("strategy.comparisonsTitle")}</h1>
         <p className="text-muted-foreground">
-          Delta analysis across 2–10 scenarios — KPI, emissions, risk, and value
+          {t("strategy.comparisonsSubtitle")}
         </p>
       </div>
 
@@ -65,7 +67,7 @@ export default function ScenarioComparisonsPage() {
         <Card>
           <CardContent className="pt-6">
             <p className="text-sm text-muted-foreground">
-              No comparisons computed yet. Execute at least 2 scenarios and compare via the API.
+              {t("strategy.noBenchmarks")}
             </p>
           </CardContent>
         </Card>

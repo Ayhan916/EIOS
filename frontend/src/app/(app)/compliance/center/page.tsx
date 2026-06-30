@@ -17,6 +17,7 @@ import { operatingSystemApi, type ESGControl } from "@/lib/api/operating-system"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -74,10 +75,11 @@ const STATUS_TEXT: Record<string, string> = {
 };
 
 function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
+  const { t } = useLanguage();
   const types = Array.from(new Set(controls.map((c) => c.control_type))).sort();
 
   if (!types.length) {
-    return <p className="text-sm text-muted-foreground py-4 text-center">No control data available.</p>;
+    return <p className="text-sm text-muted-foreground py-4 text-center">{t("common.noData")}</p>;
   }
 
   const matrix: Record<string, Record<string, number>> = {};
@@ -100,7 +102,7 @@ function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
             {STATUSES.map((s) => (
               <th key={s} className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{s}</th>
             ))}
-            <th className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide">Total</th>
+            <th className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide">{t("common.total")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-border">
@@ -150,6 +152,7 @@ function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
 const ADMIN_ROLES = new Set(["admin", "enterprise_admin", "bu_admin"]);
 
 export default function ComplianceCenterPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
 
   const { data, isLoading } = useQuery<ComplianceCenterData>({
@@ -186,7 +189,7 @@ export default function ComplianceCenterPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Compliance Center</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("nav.complianceCenter")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">SOC 2 readiness, control status, and audit trail</p>
         </div>
         <div className="flex gap-2">
@@ -253,7 +256,7 @@ export default function ComplianceCenterPage() {
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Critical Findings</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("dashboard.criticalFindings")}</p>
                     <p className={`mt-1 text-3xl font-bold ${(data?.open_critical_findings ?? 0) > 0 ? "text-red-600" : "text-foreground"}`}>
                       {data?.open_critical_findings ?? "—"}
                     </p>

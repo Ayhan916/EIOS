@@ -5,6 +5,7 @@ import { Target } from "lucide-react";
 import { listAllTargets, type ESGTarget } from "@/lib/api/sustainability";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -15,6 +16,7 @@ function progressColor(pct: number) {
 }
 
 function TargetRow({ t }: { t: ESGTarget }) {
+  const { t: tr } = useLanguage();
   const pct = Math.min(100, Math.max(0, t.progress_percent));
   return (
     <div className="rounded-lg border p-4 space-y-2">
@@ -54,7 +56,7 @@ function TargetRow({ t }: { t: ESGTarget }) {
 
       {t.target_date && (
         <p className="text-xs text-muted-foreground">
-          Due {new Date(t.target_date).toLocaleDateString()}
+          {tr("dashboard.due")} {new Date(t.target_date).toLocaleDateString()}
         </p>
       )}
     </div>
@@ -62,6 +64,7 @@ function TargetRow({ t }: { t: ESGTarget }) {
 }
 
 export default function TargetsPage() {
+  const { t } = useLanguage();
   const { data: targets, isLoading } = useQuery({
     queryKey: ["all-targets", ORG_ID],
     queryFn: () => listAllTargets(ORG_ID),
@@ -73,7 +76,7 @@ export default function TargetsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Sustainability Targets</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sustain.targetsTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
           Quantitative ESG targets with baseline, current, and goal values.
         </p>
@@ -104,7 +107,7 @@ export default function TargetsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Target className="h-4 w-4" />
-            Targets{targets ? ` (${targets.length})` : ""}
+            {t("sustain.targetsTitle")}{targets ? ` (${targets.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>

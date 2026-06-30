@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import apiClient from "@/lib/api/client";
+import { useLanguage } from "@/lib/i18n/context";
 import { SupplierGraph } from "@/components/network/supplier-graph";
 import type { GraphSupplier, GraphRelationship } from "@/components/network/supplier-graph";
 
@@ -34,6 +35,7 @@ const TOUR_STEPS = [
 ];
 
 function NetworkTour() {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
   const [step, setStep] = useState(0);
 
@@ -77,7 +79,7 @@ function NetworkTour() {
           <div className="flex gap-2">
             {step > 0 && (
               <button onClick={() => setStep((s) => s - 1)} className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800">
-                Back
+                {t("common.back")}
               </button>
             )}
             {isLast ? (
@@ -86,7 +88,7 @@ function NetworkTour() {
               </button>
             ) : (
               <button onClick={() => setStep((s) => s + 1)} className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
-                Next <ArrowRight className="h-3 w-3" />
+                {t("common.next")} <ArrowRight className="h-3 w-3" />
               </button>
             )}
           </div>
@@ -156,6 +158,7 @@ async function getGraphData(): Promise<{
 }
 
 function NetworkGraphSection() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-graph"],
     queryFn: getGraphData,
@@ -200,7 +203,7 @@ function NetworkGraphSection() {
           onChange={(e) => setTierFilter(e.target.value)}
           className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200"
         >
-          <option value="">All Tiers</option>
+          <option value="">{t("network.allTiers")}</option>
           <option value="1">Tier 1</option>
           <option value="2">Tier 2</option>
           <option value="3">Tier 3</option>
@@ -210,10 +213,10 @@ function NetworkGraphSection() {
           onChange={(e) => setRiskFilter(e.target.value)}
           className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200"
         >
-          <option value="">All Risk Levels</option>
-          <option value="HIGH">High</option>
-          <option value="MEDIUM">Medium</option>
-          <option value="LOW">Low</option>
+          <option value="">{t("network.allRisks")}</option>
+          <option value="HIGH">{t("suppliers.high")}</option>
+          <option value="MEDIUM">{t("suppliers.medium")}</option>
+          <option value="LOW">{t("suppliers.low")}</option>
         </select>
         {countries.length > 0 && (
           <select
@@ -221,7 +224,7 @@ function NetworkGraphSection() {
             onChange={(e) => setCountryFilter(e.target.value)}
             className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200"
           >
-            <option value="">All Countries</option>
+            <option value="">{t("network.allCountries")}</option>
             {countries.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
@@ -488,6 +491,7 @@ function ClustersSection() {
 // ── Dashboard Overview ────────────────────────────────────────────────────────
 
 function DashboardOverview() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-dashboard"],
     queryFn: getNetworkDashboard,
@@ -509,7 +513,7 @@ function DashboardOverview() {
         title="Relationships"
         value={d.total_relationships ?? 0}
         icon={Share2}
-        sub="Active"
+        sub={t("common.active")}
       />
       <StatCard
         title="Pending Suggestions"

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import { CheckCircle2, Eye, EyeOff, FileText, FileUp, Link2, Loader2, Upload, X } from "lucide-react";
 import {
   createEvidence,
@@ -44,6 +45,7 @@ interface UploadState {
 }
 
 function LinkToControlPanel({ evidenceId, onClose }: { evidenceId: string; onClose: () => void }) {
+  const { t } = useLanguage();
   const [controlId, setControlId] = useState("");
   const [linked, setLinked] = useState(false);
 
@@ -63,7 +65,7 @@ function LinkToControlPanel({ evidenceId, onClose }: { evidenceId: string; onClo
   if (linked) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-emerald-600 font-medium">
-        <CheckCircle2 className="h-3 w-3" /> Linked to control
+        <CheckCircle2 className="h-3 w-3" /> {t("evidence.linkControl")}
       </div>
     );
   }
@@ -88,7 +90,7 @@ function LinkToControlPanel({ evidenceId, onClose }: { evidenceId: string; onClo
         {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
         Link
       </button>
-      <button onClick={onClose} className="text-[10px] text-muted-foreground hover:underline">Cancel</button>
+      <button onClick={onClose} className="text-[10px] text-muted-foreground hover:underline">{t("common.cancel")}</button>
     </div>
   );
 }
@@ -103,6 +105,7 @@ function isPdf(filename: string) {
 }
 
 function EvidencePreview({ ev }: { ev: any }) {
+  const { t } = useLanguage();
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -139,7 +142,7 @@ function EvidencePreview({ ev }: { ev: any }) {
     <div className="flex flex-col items-center gap-2 py-6 text-center">
       <FileText className="h-8 w-8 text-muted-foreground/40" />
       <p className="text-xs text-muted-foreground">No in-browser preview for this file type.</p>
-      <a href={objectUrl} download={ev.file_name} className="text-xs text-blue-600 hover:underline">Download instead</a>
+      <a href={objectUrl} download={ev.file_name} className="text-xs text-blue-600 hover:underline">{t("common.download")}</a>
     </div>
   );
 }
@@ -203,6 +206,7 @@ function EvidenceRow({
 }
 
 export default function EvidencePage() {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -316,9 +320,9 @@ export default function EvidencePage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Evidence Library</h1>
+        <h1 className="text-2xl font-bold">{t("evidence.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Upload and manage source documents for ESG analysis
+          {t("evidence.subtitle")}
         </p>
       </div>
 
@@ -326,7 +330,7 @@ export default function EvidencePage() {
         {/* Upload panel */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Upload Document</CardTitle>
+            <CardTitle className="text-base">{t("evidence.upload")}</CardTitle>
             <CardDescription>
               PDF, DOCX, or XLSX — up to 50 MB. Documents are parsed and
               embedded for semantic search.
@@ -350,7 +354,7 @@ export default function EvidencePage() {
                 </div>
               ) : (
                 <div>
-                  <p className="text-sm font-medium">Click to select file</p>
+                  <p className="text-sm font-medium">{t("evidence.chooseFile")}</p>
                   <p className="text-xs text-muted-foreground">
                     PDF, DOCX, XLSX
                   </p>
@@ -379,7 +383,7 @@ export default function EvidencePage() {
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="ev-title">Document title</Label>
+              <Label htmlFor="ev-title">{t("evidence.titleField")}</Label>
               <Input
                 id="ev-title"
                 placeholder="Annual Sustainability Report 2024"
@@ -389,7 +393,7 @@ export default function EvidencePage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ev-desc">Description (optional)</Label>
+              <Label htmlFor="ev-desc">{t("evidence.descriptionField")} ({t("common.optional")})</Label>
               <Textarea
                 id="ev-desc"
                 placeholder="Brief description of the document content…"
@@ -403,7 +407,7 @@ export default function EvidencePage() {
             {uploadState.stage === "uploading" && (
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs text-muted-foreground">
-                  <span>Uploading…</span>
+                  <span>{t("evidence.uploading")}</span>
                   <span>{uploadState.progress}%</span>
                 </div>
                 <Progress value={uploadState.progress} className="h-2" />
@@ -457,7 +461,7 @@ export default function EvidencePage() {
               uploadState.stage === "uploading" ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Processing…
+                  {t("common.loading")}
                 </>
               ) : (
                 <>
@@ -486,7 +490,7 @@ export default function EvidencePage() {
               </div>
             ) : !data?.items.length ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No documents uploaded yet.
+                {t("evidence.noEvidence")}
               </p>
             ) : (
               <div className="space-y-2">

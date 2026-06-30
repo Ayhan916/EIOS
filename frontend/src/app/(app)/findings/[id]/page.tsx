@@ -28,6 +28,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatDate } from "@/lib/utils";
 import { CopilotDrawer } from "@/components/copilot-drawer";
 import { AskKBButton } from "@/components/layout/knowledge-search";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── #145 Finding Audit: complete change history ───────────────────────────────
 
@@ -51,6 +52,7 @@ const ACTION_COLORS: Record<string, string> = {
 };
 
 function AuditTrailPanel({ entityId }: { entityId: string }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
 
   const { data: entries, isLoading } = useQuery({
@@ -100,7 +102,7 @@ function AuditTrailPanel({ entityId }: { entityId: string }) {
             <p className="text-xs text-muted-foreground">{entries?.length ?? 0} events</p>
             {entries && entries.length > 0 && (
               <button onClick={exportCsv} className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5">
-                <FileText className="h-3 w-3" /> Export CSV
+                <FileText className="h-3 w-3" /> {t("findings.exportCsv")}
               </button>
             )}
           </div>
@@ -157,6 +159,7 @@ function AuditTrailPanel({ entityId }: { entityId: string }) {
 // ── Evidence Drag-Drop ────────────────────────────────────────────────────────
 
 function EvidenceDropZone({ findingId }: { findingId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [isDragging, setIsDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -275,6 +278,7 @@ function RiskLevelBadge({ level }: { level: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FindingDetailPage() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
 
@@ -355,7 +359,7 @@ export default function FindingDetailPage() {
           href="/findings"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Findings
+          <ArrowLeft className="h-3.5 w-3.5" /> {t("common.back")} — {t("findings.title")}
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -369,7 +373,7 @@ export default function FindingDetailPage() {
                 </span>
               )}
               <span className="text-xs text-muted-foreground">
-                Confidence: <span className="font-medium">{finding.confidence}</span>
+                Confidence: <span className="font-medium capitalize">{finding.confidence}</span>
               </span>
             </div>
           </div>
@@ -387,12 +391,12 @@ export default function FindingDetailPage() {
               className="gap-1.5"
             >
               <Zap className="h-3.5 w-3.5" />
-              Create Remediation
+              {t("findings.createRecommendation")}
             </Button>
             {finding.assessment_id && (
               <Button size="sm" variant="ghost" asChild>
                 <Link href={`/assessments/${finding.assessment_id}`} className="gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Assessment
+                  <FileText className="h-3.5 w-3.5" /> {t("findings.assessment")}
                 </Link>
               </Button>
             )}
@@ -408,7 +412,7 @@ export default function FindingDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-blue-500" />
-                Description
+                {t("common.description")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -433,7 +437,7 @@ export default function FindingDetailPage() {
             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-orange-500" />
-                Linked Risks
+                {t("nav.risks")}
                 {linkedRisks && linkedRisks.length > 0 && (
                   <span className="rounded-full bg-orange-100 text-orange-700 px-2 py-0.5 text-xs font-semibold">
                     {linkedRisks.length}
@@ -445,7 +449,7 @@ export default function FindingDetailPage() {
               {!linkedRisks || linkedRisks.length === 0 ? (
                 <div className="py-6 text-center">
                   <ShieldAlert className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">No risks linked to this finding.</p>
+                  <p className="text-sm text-muted-foreground">{t("risks.noRisks")}</p>
                   {finding.assessment_id && (
                     <Link
                       href={`/assessments/${finding.assessment_id}?tab=risks`}
@@ -485,7 +489,7 @@ export default function FindingDetailPage() {
             <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-base flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                Remediation Actions
+                {t("findings.createRecommendation")}
               </CardTitle>
               <Button
                 size="sm"
@@ -494,19 +498,19 @@ export default function FindingDetailPage() {
                 disabled={createRecMutation.isPending}
                 className="gap-1.5 text-xs"
               >
-                <Zap className="h-3 w-3" /> New Action
+                <Zap className="h-3 w-3" /> {t("common.new")}
               </Button>
             </CardHeader>
             <CardContent>
               {!recommendations || recommendations.length === 0 ? (
                 <div className="py-6 text-center">
                   <CheckCircle2 className="mx-auto h-8 w-8 text-muted-foreground/30 mb-2" />
-                  <p className="text-sm text-muted-foreground">No remediation actions yet.</p>
+                  <p className="text-sm text-muted-foreground">{t("recommendations.noRecommendations")}</p>
                   <button
                     onClick={() => createRecMutation.mutate()}
                     className="mt-2 text-xs text-blue-600 hover:underline"
                   >
-                    Create the first action →
+                    {t("findings.createRecommendation")} →
                   </button>
                 </div>
               ) : (
@@ -533,7 +537,7 @@ export default function FindingDetailPage() {
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-medium truncate">{rec.title}</p>
                           {rec.due_date && (
-                            <p className="text-xs text-muted-foreground mt-0.5">Due {formatDate(rec.due_date)}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t("findings.dueDate")}: {formatDate(rec.due_date)}</p>
                           )}
                         </div>
                         <div className="flex flex-col items-end gap-1 flex-shrink-0">
@@ -560,7 +564,7 @@ export default function FindingDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Link2 className="h-4 w-4 text-violet-500" />
-                Evidence Sources
+                {t("evidence.title")}
                 {evidenceLinks && evidenceLinks.length > 0 && (
                   <span className="rounded-full bg-violet-100 text-violet-700 px-2 py-0.5 text-xs font-semibold">
                     {evidenceLinks.length}
@@ -584,7 +588,7 @@ export default function FindingDetailPage() {
               )}
               <EvidenceDropZone findingId={id} />
               {!evidenceLinks || evidenceLinks.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No evidence linked yet.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">{t("evidence.noEvidence")}</p>
               ) : (
                 <div className="space-y-2">
                   {evidenceLinks.map((link) => (
@@ -620,11 +624,11 @@ export default function FindingDetailPage() {
           {/* Metadata */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Details</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">{t("common.details")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Severity</span>
+                <span className="text-muted-foreground">{t("common.severity")}</span>
                 <SeverityBadge severity={finding.severity} />
               </div>
               <div className="flex justify-between">
@@ -633,12 +637,12 @@ export default function FindingDetailPage() {
               </div>
               {finding.category && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Category</span>
+                  <span className="text-muted-foreground">{t("common.category")}</span>
                   <span className="font-medium">{finding.category}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Evidence Sources</span>
+                <span className="text-muted-foreground">{t("evidence.title")}</span>
                 <span className="font-medium">{finding.evidence_source_count}</span>
               </div>
               {finding.assessment_id && (
@@ -648,7 +652,7 @@ export default function FindingDetailPage() {
                     className="flex items-center gap-1.5 text-xs text-blue-600 hover:underline"
                   >
                     <FileText className="h-3.5 w-3.5" />
-                    View parent assessment
+                    {t("common.view")} {t("findings.assessment")}
                   </Link>
                 </div>
               )}
@@ -661,7 +665,7 @@ export default function FindingDetailPage() {
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                  Remediation Plan
+                  {t("esgOs.remediationPlan")}
                   <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                     remediationPlan.status === "completed" ? "bg-emerald-100 text-emerald-700" :
                     remediationPlan.status === "in_progress" ? "bg-blue-100 text-blue-700" :
@@ -671,7 +675,7 @@ export default function FindingDetailPage() {
               </CardHeader>
               <CardContent className="space-y-2 pt-0">
                 {remediationPlan.actions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">No actions defined.</p>
+                  <p className="text-xs text-muted-foreground">{t("common.noData")}</p>
                 ) : (
                   <>
                     {/* #92 Progress tracker */}
@@ -712,7 +716,7 @@ export default function FindingDetailPage() {
           <div className="space-y-2">
             <Button variant="outline" size="sm" className="w-full gap-1.5" asChild>
               <Link href="/findings">
-                <AlertTriangle className="h-3.5 w-3.5" /> All Findings
+                <AlertTriangle className="h-3.5 w-3.5" /> {t("findings.title")}
               </Link>
             </Button>
           </div>

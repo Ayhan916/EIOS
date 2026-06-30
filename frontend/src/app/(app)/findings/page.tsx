@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Download, ExternalLink, Filter, GitBranch, Layers, Loader2, Plus, ShieldAlert, UserCheck, X } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import { EmptyState } from "@/components/ui/empty-state";
 import Link from "next/link";
 import apiClient from "@/lib/api/client";
@@ -655,6 +656,7 @@ function BulkEscalatePanel({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function FindingsPage() {
+  const { t } = useLanguage();
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkEscalate, setShowBulkEscalate] = useState(false);
@@ -698,9 +700,9 @@ export default function FindingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Findings</h1>
+          <h1 className="text-2xl font-bold">{t("findings.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All open ESG findings across your supplier portfolio
+            {t("findings.noFindingsDesc")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -710,10 +712,10 @@ export default function FindingsPage() {
             value={severityFilter}
             onChange={(e) => { setSeverityFilter(e.target.value); setSelected(new Set()); }}
           >
-            <option value="all">All Severities</option>
-            <option value="Critical">Critical</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
+            <option value="all">{t("findings.allSeverity")}</option>
+            <option value="Critical">{t("findings.critical")}</option>
+            <option value="High">{t("findings.high")}</option>
+            <option value="Medium">{t("findings.medium")}</option>
             <option value="Low">Low</option>
           </select>
 
@@ -811,13 +813,13 @@ export default function FindingsPage() {
             <div className="rounded-lg border border-dashed">
               <EmptyState
                 icon={AlertTriangle}
-                title={severityFilter !== "all" ? `No ${severityFilter} findings found` : "No findings yet"}
+                title={t("findings.noFindings")}
                 description={severityFilter !== "all"
-                  ? "Try clearing the severity filter to see all findings."
-                  : "Here's what you can do next: run an ESG assessment on a supplier to surface findings automatically."}
+                  ? t("findings.noFindingsDesc")
+                  : t("findings.noFindingsDesc")}
                 actions={severityFilter === "all" ? [
-                  { label: "Run Assessment", href: "/assessments/new", variant: "primary" },
-                  { label: "View Suppliers", href: "/suppliers", variant: "outline" },
+                  { label: t("assessments.newAssessment"), href: "/assessments/new", variant: "primary" },
+                  { label: t("suppliers.title"), href: "/suppliers", variant: "outline" },
                 ] : undefined}
               />
             </div>

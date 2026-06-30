@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import { Plus, Shield } from "lucide-react";
 import {
   listEnterprises,
@@ -36,6 +37,8 @@ function CreatePolicyModal({
   const [description, setDescription] = useState("");
   const [cascade, setCascade] = useState(true);
 
+  const { t } = useLanguage();
+
   const { mutate, isPending } = useMutation({
     mutationFn: () =>
       createPolicy(enterpriseId, {
@@ -53,10 +56,10 @@ function CreatePolicyModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Create Enterprise Policy</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("ent.addPolicy")}</h2>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">Name *</label>
+            <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={name}
@@ -64,7 +67,7 @@ function CreatePolicyModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Type *</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.policyType")} *</label>
             <select
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={policyType}
@@ -76,7 +79,7 @@ function CreatePolicyModal({
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Description</label>
+            <label className="mb-1 block text-sm font-medium">{t("common.description")}</label>
             <textarea
               className="w-full rounded-lg border px-3 py-2 text-sm"
               rows={2}
@@ -95,14 +98,14 @@ function CreatePolicyModal({
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => mutate()}
             disabled={!name || isPending}
             className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Create"}
+            {isPending ? t("common.loading") : t("common.create")}
           </button>
         </div>
       </div>
@@ -122,6 +125,7 @@ function typeBadge(t: string) {
 }
 
 export default function PoliciesPage() {
+  const { t } = useLanguage();
   const { data: enterprises } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -152,9 +156,9 @@ export default function PoliciesPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Policies</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.policiesTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Enterprise governance policies and retention rules
+            {t("ent.policiesSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -176,7 +180,7 @@ export default function PoliciesPage() {
               className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-40"
             >
               <Plus className="h-4 w-4" />
-              New Policy
+              {t("ent.addPolicy")}
             </button>
           )}
         </div>
@@ -184,17 +188,17 @@ export default function PoliciesPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b">
-        {(["policies", "retention"] as const).map((t) => (
+        {(["policies", "retention"] as const).map((tabKey) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabKey}
+            onClick={() => setTab(tabKey)}
             className={`px-4 py-2 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
-              tab === t
+              tab === tabKey
                 ? "border-slate-800 text-slate-800"
                 : "border-transparent text-muted-foreground hover:text-slate-700"
             }`}
           >
-            {t === "retention" ? "Retention Rules" : "Governance Policies"}
+            {tabKey === "retention" ? "Retention Rules" : t("ent.policiesTitle")}
           </button>
         ))}
       </div>
@@ -205,7 +209,7 @@ export default function PoliciesPage() {
         ) : !policies || policies.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center text-muted-foreground">
-              No policies created yet.
+              {t("ent.noPolicies")}
             </CardContent>
           </Card>
         ) : (
@@ -228,7 +232,7 @@ export default function PoliciesPage() {
                           <span className="text-xs text-muted-foreground">cascades to children</span>
                         )}
                         <span className="text-xs text-muted-foreground">
-                          scope: {p.scope}
+                          {p.scope}
                         </span>
                       </div>
                     </div>
@@ -237,7 +241,7 @@ export default function PoliciesPage() {
                     variant="outline"
                     className={p.is_active ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}
                   >
-                    {p.is_active ? "Active" : "Inactive"}
+                    {p.is_active ? t("common.active") : t("common.inactive")}
                   </Badge>
                 </CardContent>
               </Card>
@@ -252,7 +256,7 @@ export default function PoliciesPage() {
         ) : !retention || retention.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center text-muted-foreground">
-              No retention rules configured.
+              {t("ent.noPoliciesDesc")}
             </CardContent>
           </Card>
         ) : (
@@ -260,11 +264,11 @@ export default function PoliciesPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
-                  <th className="pb-2 text-left">Entity Type</th>
+                  <th className="pb-2 text-left">{t("common.type")}</th>
                   <th className="pb-2 text-right">Retention Days</th>
                   <th className="pb-2 text-center">Legal Hold</th>
                   <th className="pb-2 text-center">Cascades</th>
-                  <th className="pb-2 text-center">Status</th>
+                  <th className="pb-2 text-center">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -282,14 +286,14 @@ export default function PoliciesPage() {
                       ) : "—"}
                     </td>
                     <td className="py-3 text-center text-xs text-muted-foreground">
-                      {r.cascade_to_children ? "Yes" : "No"}
+                      {r.cascade_to_children ? t("common.yes") : t("common.no")}
                     </td>
                     <td className="py-3 text-center">
                       <Badge
                         variant="outline"
                         className={r.is_active ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}
                       >
-                        {r.is_active ? "Active" : "Inactive"}
+                        {r.is_active ? t("common.active") : t("common.inactive")}
                       </Badge>
                     </td>
                   </tr>

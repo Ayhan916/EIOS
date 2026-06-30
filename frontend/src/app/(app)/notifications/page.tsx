@@ -21,17 +21,18 @@ import {
   markAllNotificationsRead,
 } from "@/lib/api/notifications";
 import type { NotificationResponse } from "@/types/api";
+import { useLanguage } from "@/lib/i18n/context";
 
-const TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  workflow_completed:       { label: "Workflow",   color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  action_overdue:           { label: "Overdue",    color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  assessment_approved:      { label: "Approved",   color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  recommendation_assigned:  { label: "Assigned",   color: "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200" },
-  finding_escalated:        { label: "Escalation", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  risk_critical:            { label: "Risk",       color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+const TYPE_COLORS: Record<string, string> = {
+  workflow_completed:       "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200",
+  action_overdue:           "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  assessment_approved:      "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200",
+  recommendation_assigned:  "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
+  finding_escalated:        "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
+  risk_critical:            "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
 };
 
-type FilterType = "all" | "unread" | keyof typeof TYPE_LABELS;
+type FilterType = "all" | "unread" | keyof typeof TYPE_COLORS;
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -61,10 +62,20 @@ function entityUrl(type: string | null, id: string | null): string | null {
 }
 
 export default function NotificationsPage() {
+  const { t } = useLanguage();
   const [items, setItems] = useState<NotificationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterType>("all");
   const [page, setPage] = useState(0);
+
+  const TYPE_LABELS: Record<string, { label: string; color: string }> = {
+    workflow_completed:       { label: t("inbox.workflow"),   color: TYPE_COLORS.workflow_completed },
+    action_overdue:           { label: t("inbox.overdue"),    color: TYPE_COLORS.action_overdue },
+    assessment_approved:      { label: t("inbox.approved"),   color: TYPE_COLORS.assessment_approved },
+    recommendation_assigned:  { label: t("inbox.assigned"),   color: TYPE_COLORS.recommendation_assigned },
+    finding_escalated:        { label: t("inbox.escalation"), color: TYPE_COLORS.finding_escalated },
+    risk_critical:            { label: t("inbox.risk"),       color: TYPE_COLORS.risk_critical },
+  };
 
   async function load() {
     setLoading(true);
@@ -105,9 +116,9 @@ export default function NotificationsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Notifications</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("inbox.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+            {unreadCount > 0 ? `${unreadCount} ${t("inbox.unread")}` : t("inbox.allCaughtUp")}
           </p>
         </div>
         {unreadCount > 0 && (
@@ -119,7 +130,7 @@ export default function NotificationsPage() {
             aria-label="Mark all notifications as read"
           >
             <CheckCheck className="h-4 w-4" aria-hidden="true" />
-            Mark all read
+            {t("inbox.markAllRead")}
           </Button>
         )}
       </div>
@@ -138,7 +149,7 @@ export default function NotificationsPage() {
                 : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
             )}
           >
-            {f === "all" ? `All (${items.length})` : f === "unread" ? `Unread (${unreadCount})` : (TYPE_LABELS[f]?.label ?? f)}
+            {f === "all" ? `${t("common.all")} (${items.length})` : f === "unread" ? `${t("inbox.unread")} (${unreadCount})` : (TYPE_LABELS[f]?.label ?? f)}
           </button>
         ))}
       </div>
@@ -152,7 +163,7 @@ export default function NotificationsPage() {
           ) : pageItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-muted-foreground">
               <Inbox className="h-10 w-10 opacity-30" aria-hidden="true" />
-              <p className="text-sm">No notifications{filter !== "all" ? " for this filter" : ""}</p>
+              <p className="text-sm">{t("inbox.noNotifications")}</p>
             </div>
           ) : (
             <ul role="list" className="divide-y divide-border">
@@ -233,7 +244,7 @@ export default function NotificationsPage() {
       {totalPages > 1 && (
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            Page {page + 1} of {totalPages} · {filtered.length} notifications
+            {t("common.page")} {page + 1} {t("common.of")} {totalPages} · {filtered.length} {t("inbox.title")}
           </p>
           <div className="flex gap-2">
             <Button

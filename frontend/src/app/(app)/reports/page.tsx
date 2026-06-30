@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertCircle,
   ArrowRight,
@@ -627,6 +628,7 @@ function DirectReportCard({
 }: {
   report: (typeof DIRECT_REPORTS)[number];
 }) {
+  const { t } = useLanguage();
   const [year, setYear] = useState(new Date().getFullYear() - 1);
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -719,7 +721,7 @@ function DirectReportCard({
               ) : (
                 <Download className="h-3.5 w-3.5" />
               )}
-              {success ? "Downloaded" : "Export"}
+              {success ? "Downloaded" : t("common.export")}
             </Button>
           </div>
         </div>
@@ -810,6 +812,7 @@ function PackageExportButtons({ pkg }: { pkg: DisclosurePackage }) {
 }
 
 function GeneratePackageForm({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useLanguage();
   const [name, setName] = useState("CSRD Annual Report");
   const [frameworks, setFrameworks] = useState("CSRD,GRI");
   const [pubDate, setPubDate] = useState(() => {
@@ -873,7 +876,7 @@ function GeneratePackageForm({ onSuccess }: { onSuccess: () => void }) {
       )}
       <Button size="sm" disabled={isPending} onClick={() => mutate()} className="gap-1.5">
         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-        Generate Package
+        {t("reports.generate")}
       </Button>
     </div>
   );
@@ -893,6 +896,7 @@ function statusColor(status: string) {
 
 export default function ReportsCenterPage() {
   const qc = useQueryClient();
+  const { t } = useLanguage();
 
   const { data: packages, isLoading } = useQuery<DisclosurePackage[]>({
     queryKey: ["disclosure-packages"],
@@ -907,7 +911,7 @@ export default function ReportsCenterPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Reports Center</h1>
+          <h1 className="text-2xl font-bold">{t("reports.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Generate and download all regulatory and compliance reports
           </p>
@@ -969,8 +973,7 @@ export default function ReportsCenterPage() {
           <div className="rounded-lg border border-dashed p-8 text-center">
             <Calendar className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">
-              No disclosure packages yet. Generate one above to export iXBRL,
-              GRI, or CSRD reports.
+              {t("reports.noReports")}
             </p>
           </div>
         ) : (

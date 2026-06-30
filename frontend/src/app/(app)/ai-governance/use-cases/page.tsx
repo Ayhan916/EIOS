@@ -6,6 +6,7 @@ import { listModels, listUseCases } from "@/lib/api/ai-governance";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -28,6 +29,7 @@ function approvalColor(s: string) {
 }
 
 export default function AIUseCasesPage() {
+  const { t } = useLanguage();
   const { data: models = [], isLoading } = useQuery({
     queryKey: ["ai-models", ORG_ID],
     queryFn: () => listModels(ORG_ID),
@@ -48,9 +50,9 @@ export default function AIUseCasesPage() {
   return (
     <div className="space-y-8 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Use Cases</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("aiGov.useCasesTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Approved and pending AI use cases per model
+          {t("aiGov.useCasesSubtitle")}
         </p>
       </div>
       {models.map((model) => (
@@ -69,6 +71,7 @@ function ModelUseCases({
   modelName: string;
   orgId: string;
 }) {
+  const { t } = useLanguage();
   const { data: useCases = [] } = useQuery({
     queryKey: ["ai-use-cases", orgId, modelId],
     queryFn: () => listUseCases(orgId, modelId),
@@ -79,7 +82,7 @@ function ModelUseCases({
     <div className="space-y-3">
       <h2 className="text-base font-semibold text-foreground">{modelName}</h2>
       {useCases.length === 0 ? (
-        <p className="text-sm text-muted-foreground pl-1">No use cases registered.</p>
+        <p className="text-sm text-muted-foreground pl-1">{t("aiGov.noUseCases")}</p>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {useCases.map((uc) => (

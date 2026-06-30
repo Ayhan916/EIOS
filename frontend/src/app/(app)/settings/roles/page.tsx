@@ -7,6 +7,7 @@ import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 interface CustomRole {
   id: string;
@@ -106,6 +107,7 @@ function PermissionToggle({
 }
 
 export default function CustomRolesPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [roleName, setRoleName] = useState("");
@@ -182,20 +184,20 @@ export default function CustomRolesPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Shield className="h-6 w-6" />
-            Custom Roles
+            {t("sec.rolesTitle")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Define role templates with fine-grained resource permissions.
+            {t("sec.rolesSubtitle")}
           </p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <Plus className="h-4 w-4" /> Create Role
+          <Plus className="h-4 w-4" /> {t("sec.createRole")}
         </Button>
       </div>
 
       {/* Role Templates */}
       <div>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">Built-in Templates</h2>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">{t("settings.roles")}</h2>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {Object.entries(TEMPLATE_INFO).map(([key, info]) => (
             <div key={key} className="rounded-lg border p-4 space-y-1.5">
@@ -220,8 +222,8 @@ export default function CustomRolesPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0">
             <div>
-              <CardTitle className="text-base">Create Custom Role</CardTitle>
-              <CardDescription>Define name, description, and per-resource permissions.</CardDescription>
+              <CardTitle className="text-base">{t("sec.createRole")}</CardTitle>
+              <CardDescription>{t("sec.rolesSubtitle")}</CardDescription>
             </div>
             <button onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground">
               <X className="h-4 w-4" />
@@ -230,7 +232,7 @@ export default function CustomRolesPage() {
           <CardContent className="space-y-5">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium mb-1.5">Role Name</label>
+                <label className="block text-sm font-medium mb-1.5">{t("sec.rolesTitle")}</label>
                 <input
                   type="text"
                   value={roleName}
@@ -240,7 +242,7 @@ export default function CustomRolesPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1.5">Description</label>
+                <label className="block text-sm font-medium mb-1.5">{t("common.description")}</label>
                 <input
                   type="text"
                   value={roleDesc}
@@ -263,9 +265,9 @@ export default function CustomRolesPage() {
                 className="gap-2"
               >
                 {createMutation.isPending ? <Spinner size="sm" /> : <Plus className="h-4 w-4" />}
-                Create Role
+                {t("sec.createRole")}
               </Button>
-              <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
               {createMutation.isSuccess && (
                 <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
                   <CheckCircle2 className="h-4 w-4" /> Created
@@ -282,11 +284,11 @@ export default function CustomRolesPage() {
       {/* Existing roles */}
       <div>
         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-widest mb-3">
-          Custom Roles ({data?.items.length ?? 0})
+          {t("sec.rolesTitle")} ({data?.items.length ?? 0})
         </h2>
         {!data?.items.length ? (
           <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-            No custom roles yet. Use a template above or create from scratch.
+            {t("sec.noRoles")}
           </div>
         ) : (
           <div className="space-y-3">

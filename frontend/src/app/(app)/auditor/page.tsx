@@ -23,6 +23,7 @@ import {
 import apiClient from "@/lib/api/client";
 import { listAssessments } from "@/lib/api/assessments";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -128,6 +129,7 @@ function authenticatedDownload(url: string, filename: string) {
 // ── SOC2 Controls Tab ─────────────────────────────────────────────────────────
 
 function Soc2Tab() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [editing, setEditing] = useState<{ id: string; field: "status" | "notes"; value: string } | null>(null);
@@ -173,7 +175,7 @@ function Soc2Tab() {
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
         >
-          <option value="all">All Categories</option>
+          <option value="all">{t("auditor.category")} — {t("common.all")}</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -192,11 +194,11 @@ function Soc2Tab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-y bg-muted/20 text-xs text-muted-foreground">
-                  <th className="px-4 py-2 text-left w-20">Control</th>
-                  <th className="px-4 py-2 text-left">Description</th>
-                  <th className="px-4 py-2 text-left w-32">Status</th>
-                  <th className="px-4 py-2 text-left hidden lg:table-cell">Evidence</th>
-                  <th className="px-4 py-2 text-left w-24">Action</th>
+                  <th className="px-4 py-2 text-left w-20">{t("auditor.controlId")}</th>
+                  <th className="px-4 py-2 text-left">{t("common.description")}</th>
+                  <th className="px-4 py-2 text-left w-32">{t("common.status")}</th>
+                  <th className="px-4 py-2 text-left hidden lg:table-cell">{t("auditor.evidenceStatus")}</th>
+                  <th className="px-4 py-2 text-left w-24">{t("common.actions")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -246,7 +248,7 @@ function Soc2Tab() {
                       {ctrl.evidence_notes ? (
                         <p className="text-xs text-muted-foreground line-clamp-1 max-w-xs">{ctrl.evidence_notes}</p>
                       ) : (
-                        <span className="text-xs text-muted-foreground/40 italic">No evidence noted</span>
+                        <span className="text-xs text-muted-foreground/40 italic">{t("auditor.noControls")}</span>
                       )}
                     </td>
                     <td className="px-4 py-2.5">
@@ -254,7 +256,7 @@ function Soc2Tab() {
                         onClick={() => setEditing({ id: ctrl.control_id, field: "status", value: ctrl.status })}
                         className="text-xs text-blue-600 hover:underline"
                       >
-                        Edit
+                        {t("common.edit")}
                       </button>
                     </td>
                   </tr>
@@ -271,6 +273,7 @@ function Soc2Tab() {
 // ── Pentest Tab ───────────────────────────────────────────────────────────────
 
 function PentestTab() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery<{ items: PentestFinding[]; total: number; open: number }>({
     queryKey: ["pentest-findings"],
     queryFn: async () => {
@@ -300,7 +303,7 @@ function PentestTab() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <ShieldCheck className="h-5 w-5 text-blue-500" />
-              <p className="font-semibold">OWASP Top 10 Coverage</p>
+              <p className="font-semibold">{t("auditor.owasp")} Top 10 Coverage</p>
               <span className={`ml-auto font-bold tabular-nums ${pctColor((owasp as { overall_pct?: number }).overall_pct ?? 0)}`}>
                 {Math.round((owasp as { overall_pct?: number }).overall_pct ?? 0)}%
               </span>
@@ -313,7 +316,7 @@ function PentestTab() {
       {findings.length === 0 ? (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-emerald-400" />
-          <p className="text-sm text-muted-foreground">No pentest findings logged yet.</p>
+          <p className="text-sm text-muted-foreground">{t("auditor.finding")} — {t("common.noData")}</p>
         </div>
       ) : (
         <Card>
@@ -321,12 +324,12 @@ function PentestTab() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-muted/20 text-xs text-muted-foreground">
-                  <th className="px-4 py-2 text-left">Category</th>
-                  <th className="px-4 py-2 text-left">Title</th>
-                  <th className="px-4 py-2 text-left">Severity</th>
+                  <th className="px-4 py-2 text-left">{t("auditor.category")}</th>
+                  <th className="px-4 py-2 text-left">{t("common.title")}</th>
+                  <th className="px-4 py-2 text-left">{t("auditor.severity")}</th>
                   <th className="px-4 py-2 text-left">CVSS</th>
-                  <th className="px-4 py-2 text-left">Status</th>
-                  <th className="px-4 py-2 text-left hidden md:table-cell">Found</th>
+                  <th className="px-4 py-2 text-left">{t("common.status")}</th>
+                  <th className="px-4 py-2 text-left hidden md:table-cell">{t("common.date")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -368,6 +371,7 @@ function PentestTab() {
 // ── Production Checklist Tab ──────────────────────────────────────────────────
 
 function ChecklistTab() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery<{ items: ChecklistItem[]; summary: Record<string, unknown> }>({
@@ -440,7 +444,7 @@ function ChecklistTab() {
                             onClick={() => updateMutation.mutate({ id: item.id, status: "Complete" })}
                           >
                             {updateMutation.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-                            Complete
+                            {t("auditor.complete")}
                           </Button>
                           <Button
                             size="sm"
@@ -449,7 +453,7 @@ function ChecklistTab() {
                             disabled={updateMutation.isPending}
                             onClick={() => updateMutation.mutate({ id: item.id, status: "N/A" })}
                           >
-                            N/A
+                            {t("auditor.na")}
                           </Button>
                         </>
                       )}
@@ -465,7 +469,7 @@ function ChecklistTab() {
       {items.length === 0 && (
         <div className="rounded-lg border border-dashed p-10 text-center">
           <ClipboardList className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground mb-3">No checklist items yet.</p>
+          <p className="text-sm text-muted-foreground mb-3">{t("auditor.noControls")}</p>
           <Button
             size="sm"
             onClick={async () => {
@@ -474,7 +478,7 @@ function ChecklistTab() {
               qc.invalidateQueries({ queryKey: ["security-summary"] });
             }}
           >
-            Seed Production Checklist
+            {t("auditor.checklistTab")}
           </Button>
         </div>
       )}
@@ -485,6 +489,7 @@ function ChecklistTab() {
 // ── #142 Evidence Map ─────────────────────────────────────────────────────────
 
 function EvidenceMapTab() {
+  const { t } = useLanguage();
   const [category, setCategory] = useState("all");
 
   const { data, isLoading } = useQuery<{ items: Soc2Control[] }>({
@@ -513,7 +518,7 @@ function EvidenceMapTab() {
           value={category}
           onChange={(e) => setCategory(e.target.value)}
         >
-          <option value="all">All Categories</option>
+          <option value="all">{t("auditor.category")} — {t("common.all")}</option>
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <span className="text-xs text-muted-foreground">
@@ -529,12 +534,12 @@ function EvidenceMapTab() {
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b bg-muted/20 text-muted-foreground">
-                <th className="px-4 py-2.5 text-left font-semibold w-20">Control</th>
-                <th className="px-4 py-2.5 text-left font-semibold">Name</th>
-                <th className="px-4 py-2.5 text-left font-semibold w-24">Status</th>
-                <th className="px-4 py-2.5 text-left font-semibold">Evidence</th>
-                <th className="px-4 py-2.5 text-left font-semibold w-28 hidden lg:table-cell">Owner</th>
-                <th className="px-4 py-2.5 text-center font-semibold w-28">Package</th>
+                <th className="px-4 py-2.5 text-left font-semibold w-20">{t("auditor.controlId")}</th>
+                <th className="px-4 py-2.5 text-left font-semibold">{t("common.name")}</th>
+                <th className="px-4 py-2.5 text-left font-semibold w-24">{t("common.status")}</th>
+                <th className="px-4 py-2.5 text-left font-semibold">{t("auditor.evidenceStatus")}</th>
+                <th className="px-4 py-2.5 text-left font-semibold w-28 hidden lg:table-cell">{t("common.createdBy")}</th>
+                <th className="px-4 py-2.5 text-center font-semibold w-28">{t("auditor.signOff")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -560,7 +565,7 @@ function EvidenceMapTab() {
                       </div>
                     ) : (
                       <span className="flex items-center gap-1 text-amber-600">
-                        <AlertTriangle className="h-3 w-3" /> No evidence
+                        <AlertTriangle className="h-3 w-3" /> {t("auditor.evidenceStatus")}
                       </span>
                     )}
                   </td>
@@ -585,7 +590,7 @@ function EvidenceMapTab() {
             </tbody>
           </table>
           {filtered.length === 0 && (
-            <p className="py-10 text-center text-sm text-muted-foreground">No controls to display.</p>
+            <p className="py-10 text-center text-sm text-muted-foreground">{t("auditor.noControls")}</p>
           )}
         </CardContent>
       </Card>
@@ -613,6 +618,7 @@ const APPROVAL_STYLES: Record<string, { badge: string; label: string }> = {
 };
 
 function ApprovalsTab() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery<ApprovalRecord[]>({
     queryKey: ["auditor-approvals"],
     queryFn: async () => {
@@ -645,14 +651,14 @@ function ApprovalsTab() {
       <div className="flex items-center justify-between gap-4">
         <p className="text-sm text-muted-foreground">{records.length} decision{records.length !== 1 ? "s" : ""} on record</p>
         <Button variant="outline" size="sm" className="gap-2" onClick={exportCsv}>
-          <Download className="h-3.5 w-3.5" /> Export CSV
+          <Download className="h-3.5 w-3.5" /> {t("findings.exportCsv")}
         </Button>
       </div>
 
       {records.length === 0 ? (
         <div className="rounded-lg border border-dashed py-12 text-center">
           <UserCheck className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No decisions logged yet.</p>
+          <p className="text-sm text-muted-foreground">{t("common.noData")}</p>
         </div>
       ) : (
         <Card>
@@ -660,11 +666,11 @@ function ApprovalsTab() {
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b bg-muted/20 text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left font-semibold">Decision</th>
-                  <th className="px-4 py-2.5 text-left font-semibold">Item</th>
-                  <th className="px-4 py-2.5 text-left font-semibold hidden md:table-cell">Decided By</th>
-                  <th className="px-4 py-2.5 text-left font-semibold hidden lg:table-cell">Date</th>
-                  <th className="px-4 py-2.5 text-left font-semibold hidden lg:table-cell">Comment</th>
+                  <th className="px-4 py-2.5 text-left font-semibold">{t("exec.decisionsTitle")}</th>
+                  <th className="px-4 py-2.5 text-left font-semibold">{t("common.title")}</th>
+                  <th className="px-4 py-2.5 text-left font-semibold hidden md:table-cell">{t("common.createdBy")}</th>
+                  <th className="px-4 py-2.5 text-left font-semibold hidden lg:table-cell">{t("common.date")}</th>
+                  <th className="px-4 py-2.5 text-left font-semibold hidden lg:table-cell">{t("common.notes")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -701,6 +707,7 @@ function ApprovalsTab() {
 // ── #148 Audit Sampling ───────────────────────────────────────────────────────
 
 function SamplingTab() {
+  const { t } = useLanguage();
   const [n, setN] = useState(5);
   const [sample, setSample] = useState<AssessmentResponse[]>([]);
   const [sampledAt, setSampledAt] = useState<string | null>(null);
@@ -764,11 +771,11 @@ function SamplingTab() {
               />
             </div>
             <Button size="sm" onClick={drawSample} disabled={isLoading || total === 0} className="gap-2">
-              <Shuffle className="h-3.5 w-3.5" /> Draw Sample
+              <Shuffle className="h-3.5 w-3.5" /> {t("common.refresh")}
             </Button>
             {sample.length > 0 && (
               <Button size="sm" variant="outline" onClick={exportSample} className="gap-2">
-                <Download className="h-3.5 w-3.5" /> Export CSV
+                <Download className="h-3.5 w-3.5" /> {t("findings.exportCsv")}
               </Button>
             )}
           </div>
@@ -790,9 +797,9 @@ function SamplingTab() {
               <thead>
                 <tr className="border-b bg-muted/20 text-muted-foreground">
                   <th className="px-4 py-2.5 text-left w-8">#</th>
-                  <th className="px-4 py-2.5 text-left">Assessment</th>
-                  <th className="px-4 py-2.5 text-left">Type</th>
-                  <th className="px-4 py-2.5 text-left">Status</th>
+                  <th className="px-4 py-2.5 text-left">{t("assessments.title")}</th>
+                  <th className="px-4 py-2.5 text-left">{t("common.type")}</th>
+                  <th className="px-4 py-2.5 text-left">{t("common.status")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -832,6 +839,7 @@ interface SignoffRecord {
 }
 
 function SignoffTab() {
+  const { t } = useLanguage();
   const [records, setRecords] = useState<SignoffRecord[]>([]);
   const [reviewer, setReviewer] = useState("");
   const [noteFor, setNoteFor] = useState<Record<string, string>>({});
@@ -908,14 +916,14 @@ function SignoffTab() {
               {records.length > 0 && (
                 <>
                   <Button size="sm" variant="outline" onClick={exportSignoffs} className="gap-2">
-                    <Download className="h-3.5 w-3.5" /> Export
+                    <Download className="h-3.5 w-3.5" /> {t("common.export")}
                   </Button>
                   {/* #150 Audit report print */}
                   <Button size="sm" variant="outline" onClick={() => window.print()} className="gap-2 print:hidden">
-                    <Printer className="h-3.5 w-3.5" /> Print Report
+                    <Printer className="h-3.5 w-3.5" /> {t("auditor.downloadAudit")}
                   </Button>
                   <Button size="sm" variant="ghost" onClick={clearSignoffs} className="text-muted-foreground text-xs">
-                    Clear All
+                    {t("common.delete")}
                   </Button>
                 </>
               )}
@@ -962,7 +970,7 @@ function SignoffTab() {
                         className="h-7 text-xs flex-1"
                       />
                       <Button size="sm" onClick={() => signOff(ctrl)} className="h-7 px-3 text-xs gap-1.5 shrink-0">
-                        <PenLine className="h-3 w-3" /> Sign off
+                        <PenLine className="h-3 w-3" /> {t("auditor.signOff")}
                       </Button>
                     </div>
                   )}
@@ -998,6 +1006,7 @@ const TABS = ["SOC 2 Controls", "Evidence Map", "Pentest", "Checklist", "Approva
 type Tab = (typeof TABS)[number];
 
 export default function AuditorWorkspacePage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("SOC 2 Controls");
   const [csvFrom, setCsvFrom] = useState("");
@@ -1008,10 +1017,9 @@ export default function AuditorWorkspacePage() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
         <Lock className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm font-medium">Auditor access required</p>
+        <p className="text-sm font-medium">{t("auditor.title")}</p>
         <p className="text-xs text-muted-foreground max-w-xs">
-          This workspace is restricted to auditors and compliance officers.
-          Contact your administrator to request access.
+          {t("auditor.subtitle")}
         </p>
       </div>
     );
@@ -1032,7 +1040,7 @@ export default function AuditorWorkspacePage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Auditor Workspace</h1>
+            <h1 className="text-2xl font-bold">{t("auditor.title")}</h1>
             {user?.role && (
               <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-semibold text-violet-700 capitalize">
                 {user.role.replace(/_/g, " ")}
@@ -1040,7 +1048,7 @@ export default function AuditorWorkspacePage() {
             )}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            SOC 2 readiness, evidence map, audit trail, sign-off workflow
+            {t("auditor.subtitle")}
           </p>
         </div>
         {/* #143 Enhanced audit trail export with date range */}
@@ -1074,7 +1082,7 @@ export default function AuditorWorkspacePage() {
             }}
           >
             <Download className="h-4 w-4" />
-            Audit Trail CSV
+            {t("auditor.downloadAudit")}
           </Button>
           {/* #150 Audit report PDF */}
           <Button
@@ -1084,7 +1092,7 @@ export default function AuditorWorkspacePage() {
             onClick={() => window.print()}
           >
             <Printer className="h-4 w-4" />
-            Audit Report PDF
+            {t("common.download")}
           </Button>
           <Button
             size="sm"
@@ -1097,7 +1105,7 @@ export default function AuditorWorkspacePage() {
             }
           >
             <BookOpen className="h-4 w-4" />
-            Sign-off Package
+            {t("auditor.signOff")}
           </Button>
         </div>
       </div>
@@ -1115,8 +1123,8 @@ export default function AuditorWorkspacePage() {
               ) : (
                 <XCircle className="mx-auto mb-1 h-7 w-7 text-amber-500" />
               )}
-              <p className="text-sm font-bold">{summary.ga_ready ? "GA Ready" : "Not GA Ready"}</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">Production status</p>
+              <p className="text-sm font-bold">{summary.ga_ready ? t("esgOs.passed") : t("sec.checklistFailed")}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{t("auditor.checklistTab")}</p>
             </CardContent>
           </Card>
 
@@ -1184,7 +1192,7 @@ export default function AuditorWorkspacePage() {
                   {summary.pentest.high_open > 0 && (
                     <span className="ml-1 text-orange-600">{summary.pentest.high_open} High</span>
                   )}
-                  <span className="ml-2 text-muted-foreground text-xs">Review in Pentest tab</span>
+                  <span className="ml-2 text-muted-foreground text-xs">{t("auditor.pentestTab")}</span>
                 </p>
               </CardContent>
             </Card>

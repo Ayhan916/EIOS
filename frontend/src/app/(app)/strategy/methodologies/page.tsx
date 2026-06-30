@@ -5,6 +5,7 @@ import { listMethodologies } from "@/lib/api/strategy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-600",
@@ -13,6 +14,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function StrategyMethodologiesPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -44,7 +46,7 @@ export default function StrategyMethodologiesPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total</p>
+            <p className="text-sm text-muted-foreground">{t("common.total")}</p>
             <p className="mt-1 text-3xl font-bold">{(methodologies ?? []).length}</p>
           </CardContent>
         </Card>
@@ -69,7 +71,7 @@ export default function StrategyMethodologiesPage() {
         <CardContent>
           {(methodologies ?? []).length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No methodologies registered yet. Create methodologies via the API.
+              {t("strategy.noMethodologies")}
             </p>
           ) : (
             <div className="space-y-3">

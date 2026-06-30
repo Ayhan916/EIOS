@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLanguage } from "@/lib/i18n/context";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -1740,6 +1741,7 @@ type Tab = typeof TABS[number];
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SupplierDetailPage() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -1968,8 +1970,8 @@ export default function SupplierDetailPage() {
     return (
       <div className="flex flex-col items-center gap-4 py-20 text-center">
         <ShieldAlert className="h-12 w-12 text-muted-foreground/40" />
-        <p className="text-muted-foreground">Supplier not found.</p>
-        <Link href="/suppliers"><Button variant="outline">Back to Suppliers</Button></Link>
+        <p className="text-muted-foreground">{t("error.notFound")}</p>
+        <Link href="/suppliers"><Button variant="outline">{t("common.back")}</Button></Link>
       </div>
     );
   }
@@ -2052,7 +2054,7 @@ export default function SupplierDetailPage() {
           href="/suppliers"
           className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Suppliers
+          <ArrowLeft className="h-3.5 w-3.5" /> {t("suppliers.title")}
         </Link>
 
         <div className="flex items-start justify-between gap-4">
@@ -2071,10 +2073,10 @@ export default function SupplierDetailPage() {
             {tierBadge(supplier.supplier_tier)}
             {statusBadge(supplier.supplier_status)}
             <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 print:hidden">
-              <Printer className="h-3.5 w-3.5" /> Export PDF
+              <Printer className="h-3.5 w-3.5" /> {t("common.export")} PDF
             </Button>
             <Button variant="outline" size="sm" onClick={startEdit} className="gap-1.5">
-              <Edit2 className="h-3.5 w-3.5" /> Edit
+              <Edit2 className="h-3.5 w-3.5" /> {t("common.edit")}
             </Button>
             <Button
               variant="outline"
@@ -2082,7 +2084,7 @@ export default function SupplierDetailPage() {
               onClick={() => setConfirmArchive(true)}
               className="gap-1.5 text-red-600 hover:text-red-700"
             >
-              <Archive className="h-3.5 w-3.5" /> Archive
+              <Archive className="h-3.5 w-3.5" /> {t("common.delete")}
             </Button>
           </div>
         </div>
@@ -2110,7 +2112,7 @@ export default function SupplierDetailPage() {
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-blue-600 hover:underline"
           >
-            <ExternalLink className="h-3.5 w-3.5" /> Website
+            <ExternalLink className="h-3.5 w-3.5" /> {t("common.website")}
           </a>
         )}
       </div>
@@ -2138,15 +2140,15 @@ export default function SupplierDetailPage() {
       {tab === "Overview" && (
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
-            <CardHeader><CardTitle className="text-base">Details</CardTitle></CardHeader>
+            <CardHeader><CardTitle className="text-base">{t("common.details")}</CardTitle></CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-muted-foreground">Country</p>
+                  <p className="text-muted-foreground">{t("common.country")}</p>
                   <p className="font-medium">{supplier.country || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Industry</p>
+                  <p className="text-muted-foreground">{t("common.industry")}</p>
                   <p className="font-medium">{supplier.industry || "—"}</p>
                 </div>
                 <div>
@@ -2154,15 +2156,15 @@ export default function SupplierDetailPage() {
                   <p className="font-mono font-medium">{supplier.nace_code || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Tier</p>
+                  <p className="text-muted-foreground">{t("suppliers.tier")}</p>
                   <p className="font-medium">{supplier.supplier_tier}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Status</p>
+                  <p className="text-muted-foreground">{t("common.status")}</p>
                   <p className="font-medium">{supplier.supplier_status}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">Website</p>
+                  <p className="text-muted-foreground">{t("common.website")}</p>
                   {supplier.website ? (
                     <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                       {supplier.website}
@@ -2174,7 +2176,7 @@ export default function SupplierDetailPage() {
               </div>
               {supplier.notes && (
                 <div className="border-t border-border pt-4">
-                  <p className="mb-1 text-sm text-muted-foreground">Notes</p>
+                  <p className="mb-1 text-sm text-muted-foreground">{t("common.notes")}</p>
                   <p className="text-sm whitespace-pre-wrap">{supplier.notes}</p>
                 </div>
               )}
@@ -2380,7 +2382,7 @@ export default function SupplierDetailPage() {
       {tab === "Assessments" && (
         <div>
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-base font-semibold">Assessments ({assessments?.total ?? 0})</h2>
+            <h2 className="text-base font-semibold">{t("assessments.title")} ({assessments?.total ?? 0})</h2>
             <div className="flex gap-2">
               <Button
                 size="sm"
@@ -2389,14 +2391,14 @@ export default function SupplierDetailPage() {
                 onClick={() => { setShowSchedule((v) => !v); }}
               >
                 <Clock className="h-3.5 w-3.5" />
-                {existingSchedule ? "Edit Schedule" : "Schedule Reassessment"}
+                {existingSchedule ? t("common.edit") : "Schedule Reassessment"}
               </Button>
               <Button
                 size="sm"
                 className="gap-1.5"
                 onClick={() => { setStartAssessment((v) => !v); setAssessError(null); }}
               >
-                <FileText className="h-3.5 w-3.5" /> Start Assessment
+                <FileText className="h-3.5 w-3.5" /> {t("assessments.newAssessment")}
               </Button>
             </div>
           </div>
@@ -2449,9 +2451,9 @@ export default function SupplierDetailPage() {
                 )}
                 <div className="flex gap-2">
                   <Button size="sm" disabled={scheduleMutation.isPending} onClick={() => scheduleMutation.mutate()}>
-                    {scheduleMutation.isPending ? "Saving…" : "Save Schedule"}
+                    {scheduleMutation.isPending ? t("common.loading") : t("common.save")}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setShowSchedule(false)}>Cancel</Button>
+                  <Button size="sm" variant="outline" onClick={() => setShowSchedule(false)}>{t("common.cancel")}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -2487,9 +2489,9 @@ export default function SupplierDetailPage() {
                 {assessError && <p className="text-xs text-red-600">{assessError}</p>}
                 <div className="flex gap-2">
                   <Button size="sm" disabled={!assessTitle || assessBusy} onClick={handleStartAssessment}>
-                    {assessBusy ? "Creating…" : "Create & Open"}
+                    {assessBusy ? t("common.loading") : t("common.create")}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setStartAssessment(false)}>Cancel</Button>
+                  <Button size="sm" variant="outline" onClick={() => setStartAssessment(false)}>{t("common.cancel")}</Button>
                 </div>
               </CardContent>
             </Card>
@@ -2510,11 +2512,11 @@ export default function SupplierDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border bg-muted/30">
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Title</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Type</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Review Status</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Quality</th>
-                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">Created</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.title")}</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.type")}</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.status")}</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("assessments.quality")}</th>
+                      <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.createdAt")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -2559,7 +2561,7 @@ export default function SupplierDetailPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-semibold">
-              Findings ({supplierFindings?.length ?? 0})
+              {t("findings.title")} ({supplierFindings?.length ?? 0})
             </h2>
           </div>
           {findingsLoading ? (
@@ -2578,11 +2580,11 @@ export default function SupplierDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-muted/30 text-xs text-muted-foreground">
-                      <th className="px-4 py-3 text-left">Finding</th>
-                      <th className="px-4 py-3 text-left">Severity</th>
-                      <th className="px-4 py-3 text-left hidden sm:table-cell">Category</th>
-                      <th className="px-4 py-3 text-left hidden md:table-cell">Date</th>
-                      <th className="px-4 py-3 text-right">Assessment</th>
+                      <th className="px-4 py-3 text-left">{t("auditor.finding")}</th>
+                      <th className="px-4 py-3 text-left">{t("common.severity")}</th>
+                      <th className="px-4 py-3 text-left hidden sm:table-cell">{t("common.category")}</th>
+                      <th className="px-4 py-3 text-left hidden md:table-cell">{t("common.date")}</th>
+                      <th className="px-4 py-3 text-right">{t("findings.assessment")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
@@ -2697,22 +2699,22 @@ export default function SupplierDetailPage() {
               </div>
 
               <Card>
-                <CardHeader><CardTitle className="text-base">Action Tracking</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="text-base">{t("dashboard.actionStatus")}</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-6 text-center">
                     <div>
                       <p className="text-3xl font-bold text-foreground">{profile.open_recommendations}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Open Recommendations</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("recommendations.title")}</p>
                     </div>
                     <div>
                       <p className="text-3xl font-bold text-amber-600">{profile.open_actions}</p>
-                      <p className="text-xs text-muted-foreground mt-1">Open Actions</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("dashboard.openActionsKpi")}</p>
                     </div>
                     <div>
                       <p className={`text-3xl font-bold ${profile.overdue_actions > 0 ? "text-red-600" : "text-emerald-600"}`}>
                         {profile.overdue_actions}
                       </p>
-                      <p className="text-xs text-muted-foreground mt-1">Overdue Actions</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("dashboard.overdue")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -2862,7 +2864,7 @@ export default function SupplierDetailPage() {
                     {/* ESG scores */}
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-base">ESG Score</CardTitle>
+                        <CardTitle className="text-base">{t("suppliers.esgScore")}</CardTitle>
                         <p className="text-xs text-muted-foreground">
                           Calculated {new Date(intelligence.calculated_at).toLocaleString()} · v{intelligence.score_version}
                         </p>
@@ -2882,7 +2884,7 @@ export default function SupplierDetailPage() {
 
                     {/* Risk score */}
                     <Card>
-                      <CardHeader><CardTitle className="text-base">Risk Score</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="text-base">{t("suppliers.riskLevel")}</CardTitle></CardHeader>
                       <CardContent className="space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
@@ -2921,7 +2923,7 @@ export default function SupplierDetailPage() {
                   {/* Score drivers */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">Score Drivers</CardTitle>
+                      <CardTitle className="text-base">{t("suppliers.riskLevel")}</CardTitle>
                       <p className="text-xs text-muted-foreground">
                         Why this score was assigned — ordered by impact
                       </p>
@@ -2976,7 +2978,7 @@ export default function SupplierDetailPage() {
           {/* History sub-tab */}
           {intelligenceSubTab === "history" && (
             <Card>
-              <CardHeader><CardTitle className="text-base">Score History</CardTitle></CardHeader>
+              <CardHeader><CardTitle className="text-base">{t("common.overview")}</CardTitle></CardHeader>
               <CardContent>
                 {!history ? (
                   <div className="flex justify-center py-8"><Spinner size="lg" /></div>
@@ -3131,8 +3133,8 @@ export default function SupplierDetailPage() {
           {intelligenceSubTab === "heatmap" && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">ESG Risk Heatmap</CardTitle>
-                <p className="text-xs text-muted-foreground">Finding count by ESG pillar × severity</p>
+                <CardTitle className="text-base">{t("dashboard.riskHeatmap")}</CardTitle>
+                <p className="text-xs text-muted-foreground">{t("common.category")} × {t("common.severity")}</p>
               </CardHeader>
               <CardContent>
                 {!heatmap ? (
@@ -3195,7 +3197,7 @@ export default function SupplierDetailPage() {
           {/* Header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold">Supplier Digital Twin</h2>
+              <h2 className="text-base font-semibold">{t("strategy.digitalTwinTitle")}</h2>
               <p className="text-xs text-muted-foreground">
                 Continuously updated from external intelligence sources
               </p>
@@ -3305,7 +3307,7 @@ export default function SupplierDetailPage() {
               <div>
                 <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
                   <Clock className="h-4 w-4 text-blue-500" />
-                  Intelligence Timeline
+                  {t("aiGov.monitoringTitle")}
                   {timelineLoading && <Spinner size="sm" />}
                 </h3>
                 {!twinTimeline?.events.length ? (
@@ -3385,19 +3387,19 @@ export default function SupplierDetailPage() {
       {editing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-lg rounded-xl bg-background p-6 shadow-2xl">
-            <h2 className="mb-4 text-lg font-semibold">Edit Supplier</h2>
+            <h2 className="mb-4 text-lg font-semibold">{t("common.edit")} {t("nav.suppliers").slice(0, -1)}</h2>
             <div className="space-y-4">
               <div>
-                <label className="mb-1 block text-sm font-medium">Name *</label>
+                <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
                 <Input value={editForm.name ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Legal Name</label>
+                <label className="mb-1 block text-sm font-medium">{t("suppliers.legalName")}</label>
                 <Input value={editForm.legal_name ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, legal_name: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Country</label>
+                  <label className="mb-1 block text-sm font-medium">{t("common.country")}</label>
                   <Input value={editForm.country ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, country: e.target.value }))} />
                 </div>
                 <div>
@@ -3406,38 +3408,38 @@ export default function SupplierDetailPage() {
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Industry</label>
+                <label className="mb-1 block text-sm font-medium">{t("common.industry")}</label>
                 <Input value={editForm.industry ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, industry: e.target.value }))} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Tier</label>
+                  <label className="mb-1 block text-sm font-medium">{t("suppliers.tier")}</label>
                   <select
                     value={editForm.supplier_tier ?? "Tier 1"}
                     onChange={(e) => setEditForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    {["Tier 1", "Tier 2", "Tier 3", "Other"].map((t) => <option key={t} value={t}>{t}</option>)}
+                    {["Tier 1", "Tier 2", "Tier 3", "Other"].map((tier) => <option key={tier} value={tier}>{tier}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">Status</label>
+                  <label className="mb-1 block text-sm font-medium">{t("common.status")}</label>
                   <select
                     value={editForm.supplier_status ?? "Active"}
                     onChange={(e) => setEditForm((f) => ({ ...f, supplier_status: e.target.value as SupplierStatus }))}
                     className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                   >
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
+                    <option value="Active">{t("suppliers.active")}</option>
+                    <option value="Inactive">{t("suppliers.inactive")}</option>
                   </select>
                 </div>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Website</label>
+                <label className="mb-1 block text-sm font-medium">{t("common.website")}</label>
                 <Input value={editForm.website ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, website: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Notes</label>
+                <label className="mb-1 block text-sm font-medium">{t("common.notes")}</label>
                 <textarea
                   value={editForm.notes ?? ""}
                   onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
@@ -3448,10 +3450,10 @@ export default function SupplierDetailPage() {
             </div>
             {editError && <p className="mt-3 text-sm text-red-600">{editError}</p>}
             <div className="mt-5 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => { setEditing(false); setEditError(null); }}>Cancel</Button>
+              <Button variant="outline" onClick={() => { setEditing(false); setEditError(null); }}>{t("common.cancel")}</Button>
               <Button onClick={() => updateMutation.mutate(editForm)} disabled={updateMutation.isPending}>
                 {updateMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
-                Save Changes
+                {t("common.save")}
               </Button>
             </div>
           </div>
@@ -3468,10 +3470,10 @@ export default function SupplierDetailPage() {
               supplier to Inactive. Existing assessments are not affected.
             </p>
             <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setConfirmArchive(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => setConfirmArchive(false)}>{t("common.cancel")}</Button>
               <Button variant="destructive" onClick={() => archiveMutation.mutate()} disabled={archiveMutation.isPending}>
                 {archiveMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
-                Archive
+                {t("common.confirm")}
               </Button>
             </div>
           </div>

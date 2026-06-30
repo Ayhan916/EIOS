@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Plus, X, TrendingDown, Star } from "lucide-react";
 import { PathwayAreaChart } from "@/components/charts/pathway-area-chart";
 import type { PathwayDataPoint } from "@/components/charts/pathway-area-chart";
@@ -35,6 +36,7 @@ function CreatePathwayModal({
   orgId: string;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const currentYear = new Date().getFullYear();
   const [form, setForm] = useState({
@@ -103,7 +105,7 @@ function CreatePathwayModal({
           {/* Name */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Name <span className="text-red-500">*</span>
+              {t("common.name")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -116,7 +118,7 @@ function CreatePathwayModal({
 
           {/* Pathway-Typ */}
           <div>
-            <label className="mb-2 block text-sm font-medium text-slate-700">Typ</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">{t("common.type")}</label>
             <div className="grid grid-cols-2 gap-2">
               {PATHWAY_TYPES.map((t) => (
                 <button
@@ -138,7 +140,7 @@ function CreatePathwayModal({
           {/* Zieljahr */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Zieljahr <span className="text-red-500">*</span>
+              {t("sustain.targetYear")} <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
@@ -229,7 +231,7 @@ function CreatePathwayModal({
         {/* Footer */}
         <div className="flex justify-end gap-3 border-t px-6 py-4">
           <Button type="button" variant="outline" onClick={onClose}>
-            Abbrechen
+            {t("common.cancel")}
           </Button>
           <Button
             onClick={handleSubmit}
@@ -253,6 +255,7 @@ function CreatePathwayModal({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function PathwaysPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
   const [showCreate, setShowCreate] = useState(false);
@@ -280,9 +283,9 @@ export default function PathwaysPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Transition Pathways</h1>
+          <h1 className="text-2xl font-bold">{t("strategy.pathwaysTitle")}</h1>
           <p className="text-muted-foreground">
-            Dekarbonisierungspfade für konservative, erwartete und beschleunigte Szenarien
+            {t("strategy.pathwaysSubtitle")}
           </p>
         </div>
         <Button
@@ -290,7 +293,7 @@ export default function PathwaysPage() {
           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700"
         >
           <Plus className="h-4 w-4" />
-          Neuer Pathway
+          {t("strategy.addPathway")}
         </Button>
       </div>
 
@@ -341,11 +344,11 @@ export default function PathwaysPage() {
           <CardContent>
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-xs text-green-700">Zieljahr</p>
+                <p className="text-xs text-green-700">{t("sustain.targetYear")}</p>
                 <p className="text-2xl font-bold text-green-800">{primary.target_year}</p>
               </div>
               <div>
-                <p className="text-xs text-green-700">Reduktion</p>
+                <p className="text-xs text-green-700">{t("sustain.reductionPct")}</p>
                 <p className="text-2xl font-bold text-green-800">
                   {primary.reduction_pct !== null
                     ? `${primary.reduction_pct.toFixed(1)}%`
@@ -393,13 +396,13 @@ export default function PathwaysPage() {
           {(pathways ?? []).length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <TrendingDown className="h-10 w-10 text-slate-300" />
-              <p className="text-sm font-medium text-slate-600">Noch keine Pathways definiert</p>
+              <p className="text-sm font-medium text-slate-600">{t("strategy.noPathways")}</p>
               <Button
                 onClick={() => setShowCreate(true)}
                 className="mt-1 bg-violet-600 hover:bg-violet-700"
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Ersten Pathway erstellen
+                {t("strategy.addPathway")}
               </Button>
             </div>
           ) : (

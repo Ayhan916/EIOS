@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -552,6 +553,7 @@ type Tab = (typeof TABS)[number];
 
 export default function AutomationsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>("Rules");
   const [ruleStates, setRuleStates] = useState<Record<string, RuleState>>({});
   const [saving, setSaving] = useState(false);
@@ -611,7 +613,7 @@ export default function AutomationsPage() {
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
         <Lock className="h-10 w-10 text-muted-foreground/40" />
         <p className="text-sm font-medium">Admin access required</p>
-        <p className="text-xs text-muted-foreground">Automation configuration is restricted to organization administrators.</p>
+        <p className="text-xs text-muted-foreground">{t("settings.adminOnly")}</p>
       </div>
     );
   }
@@ -650,7 +652,7 @@ export default function AutomationsPage() {
             <RefreshCw className="h-3.5 w-3.5" /> Reset to defaults
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> Saving…</> : saved ? "✓ Saved" : <><Zap className="h-3.5 w-3.5" /> Save changes</>}
+            {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> {t("settings.saving")}</> : saved ? "✓ Saved" : <><Zap className="h-3.5 w-3.5" /> {t("settings.saveChanges")}</>}
           </Button>
         </div>
       </div>
@@ -733,7 +735,7 @@ export default function AutomationsPage() {
             <div className="flex items-center gap-3">
               {saved && <span className="text-xs text-emerald-600 font-medium">Changes saved</span>}
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-                {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> Saving…</> : <><Zap className="h-3.5 w-3.5" /> Save changes</>}
+                {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> {t("settings.saving")}</> : <><Zap className="h-3.5 w-3.5" /> {t("settings.saveChanges")}</>}
               </Button>
             </div>
           </div>

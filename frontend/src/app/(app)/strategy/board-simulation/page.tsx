@@ -7,9 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { Download, Loader2, Plus, X, Users } from "lucide-react";
 
 function CreateSimulationModal({ orgId, onClose }: { orgId: string; onClose: () => void }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { data: scenarios } = useQuery({ queryKey: ["strategy", "scenarios", orgId], queryFn: () => listScenarios(orgId) });
   const [form, setForm] = useState({ simulation_name: "", scenario_a_id: "", scenario_b_id: "", scenario_c_id: "", recommendation: "" });
@@ -75,7 +77,7 @@ function CreateSimulationModal({ orgId, onClose }: { orgId: string; onClose: () 
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
-          <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+          <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-violet-600 hover:bg-violet-700">
             {mut.isPending ? <Spinner className="h-4 w-4" /> : "Simulation erstellen"}
           </Button>
@@ -128,6 +130,7 @@ function PptxDownloadButton({ simId, simName }: { simId: string; simName: string
 }
 
 export default function BoardSimulationPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
   const [showCreate, setShowCreate] = useState(false);
@@ -143,8 +146,8 @@ export default function BoardSimulationPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Board Simulation</h1>
-          <p className="text-muted-foreground">Szenariovergleiche für Boardentscheidungen</p>
+          <h1 className="text-2xl font-bold">{t("strategy.boardSimTitle")}</h1>
+          <p className="text-muted-foreground">{t("strategy.boardSimSubtitle")}</p>
         </div>
         <Button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700">
           <Plus className="h-4 w-4" />Neue Simulation

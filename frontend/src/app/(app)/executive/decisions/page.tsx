@@ -8,6 +8,7 @@ import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDate } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── #139 Decision Log ─────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ const PRIORITY_COLORS: Record<string, string> = {
 };
 
 export default function DecisionLogPage() {
+  const { t } = useLanguage();
   const [filter, setFilter] = useState<"all" | "Approved" | "Rejected" | "ChangesRequested">("all");
 
   const { data, isLoading } = useQuery<DecisionRecord[]>({
@@ -59,9 +61,9 @@ export default function DecisionLogPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Decision Log</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("exec.decisionsTitle")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Complete history of approved and rejected recommendations
+            {t("exec.decisionsSubtitle")}
           </p>
         </div>
         <Link href="/recommendations" className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors">
@@ -81,7 +83,9 @@ export default function DecisionLogPage() {
             >
               <div className="flex items-center gap-2 mb-1">
                 <Icon className="h-4 w-4" />
-                <span className="text-sm font-medium">{label}</span>
+                <span className="text-sm font-medium">
+                  {k === "Approved" ? t("exec.approve") : k === "Rejected" ? t("exec.reject") : t("dashboard.changesRequested")}
+                </span>
               </div>
               <p className="text-3xl font-bold">{counts[k]}</p>
             </button>
@@ -100,7 +104,7 @@ export default function DecisionLogPage() {
               filter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
-            {f === "all" ? "All" : DECISION_STYLES[f]?.label ?? f}
+            {f === "all" ? t("common.all") : f === "Approved" ? t("exec.approve") : f === "Rejected" ? t("exec.reject") : t("dashboard.changesRequested")}
           </button>
         ))}
       </div>
@@ -110,14 +114,14 @@ export default function DecisionLogPage() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
             {decisions.length} decision{decisions.length !== 1 ? "s" : ""}
-            {filter !== "all" && ` · ${DECISION_STYLES[filter]?.label ?? filter}`}
+            {filter !== "all" && ` · ${filter === "Approved" ? t("exec.approve") : filter === "Rejected" ? t("exec.reject") : t("dashboard.changesRequested")}`}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : decisions.length === 0 ? (
-            <p className="py-12 text-center text-sm text-muted-foreground">No decisions recorded yet.</p>
+            <p className="py-12 text-center text-sm text-muted-foreground">{t("exec.noDecisions")}</p>
           ) : (
             <div className="divide-y divide-border">
               {decisions.map((d) => {
@@ -127,7 +131,7 @@ export default function DecisionLogPage() {
                   <div key={d.id} className="flex items-start gap-4 px-6 py-4">
                     <div className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold flex items-center gap-1 ${style.cls}`}>
                       <Icon className="h-3 w-3" />
-                      {style.label}
+                      {d.decision === "Approved" ? t("exec.approve") : d.decision === "Rejected" ? t("exec.reject") : d.decision === "ChangesRequested" ? t("dashboard.changesRequested") : style.label}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{d.title}</p>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   Activity,
   AlertTriangle,
@@ -97,6 +98,7 @@ function StatCard({
 }
 
 function SignalRow({ signal }: { signal: any }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [created, setCreated] = useState(false);
 
@@ -137,7 +139,7 @@ function SignalRow({ signal }: { signal: any }) {
             className="inline-flex items-center gap-1 rounded bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
           >
             {createRisk.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <ShieldAlert className="h-3 w-3" />}
-            Create Risk
+            {t("surveillance.createRisk")}
           </button>
         )}
       </div>
@@ -163,6 +165,7 @@ function EpisodeRow({ episode }: { episode: any }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SurveillancePage() {
+  const { t } = useLanguage();
   const { data: dashboard, isLoading: dashLoading } = useQuery({
     queryKey: ["surveillance-dashboard"],
     queryFn: getSurveillanceDashboard,
@@ -213,29 +216,29 @@ export default function SurveillancePage() {
       {/* Portfolio stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          label="Active Signals"
+          label={t("surveillance.activeSignals")}
           value={d.active_signals ?? 0}
           icon={Activity}
           colour={d.active_signals > 0 ? "text-orange-600" : undefined}
         />
         <StatCard
-          label="Critical Signals"
+          label={t("surveillance.criticalSignals")}
           value={d.critical_signals ?? 0}
           icon={AlertTriangle}
           colour={d.critical_signals > 0 ? "text-red-600" : undefined}
         />
         <StatCard
-          label="Suppliers At Risk"
+          label={t("surveillance.suppliersAtRisk")}
           value={d.suppliers_at_risk ?? 0}
           icon={Shield}
           colour={d.suppliers_at_risk > 0 ? "text-orange-600" : undefined}
         />
-        <StatCard label="Watchlist" value={d.watchlist_count ?? 0} icon={Eye} />
+        <StatCard label={t("surveillance.watchlist")} value={d.watchlist_count ?? 0} icon={Eye} />
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          label="Improving"
+          label={t("surveillance.improving")}
           value={d.suppliers_improving ?? 0}
           icon={TrendingUp}
           colour="text-green-600"
@@ -263,7 +266,7 @@ export default function SurveillancePage() {
         {/* Active Signals */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Active Signals</CardTitle>
+            <CardTitle className="text-base">{t("surveillance.activeSignals")}</CardTitle>
           </CardHeader>
           <CardContent>
             {signalsLoading ? (
@@ -301,7 +304,7 @@ export default function SurveillancePage() {
         {/* Watchlist */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Supplier Watchlist</CardTitle>
+            <CardTitle className="text-base">{t("surveillance.watchlist")}</CardTitle>
           </CardHeader>
           <CardContent>
             {(watchlist ?? []).length === 0 ? (

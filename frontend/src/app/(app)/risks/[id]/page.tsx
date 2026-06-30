@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import { useLanguage } from "@/lib/i18n/context";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -208,6 +209,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RiskDetailPage() {
+  const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const [ownerInput, setOwnerInput] = useState("");
@@ -309,7 +311,7 @@ export default function RiskDetailPage() {
           href="/risks"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-4"
         >
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to Risks
+          <ArrowLeft className="h-3.5 w-3.5" /> {t("common.back")}
         </Link>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0">
@@ -372,7 +374,7 @@ export default function RiskDetailPage() {
             {risk.assessment_id && (
               <Button size="sm" variant="ghost" asChild>
                 <Link href={`/assessments/${risk.assessment_id}`} className="gap-1.5">
-                  <FileText className="h-3.5 w-3.5" /> Assessment
+                  <FileText className="h-3.5 w-3.5" /> {t("risks.assessment")}
                 </Link>
               </Button>
             )}
@@ -388,7 +390,7 @@ export default function RiskDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-blue-500" />
-                Description
+                {t("common.description")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -454,7 +456,7 @@ export default function RiskDetailPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Upload className="h-4 w-4 text-blue-500" />
-                Evidence
+                {t("nav.evidence")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -547,7 +549,7 @@ export default function RiskDetailPage() {
             <CardContent className="space-y-3">
               {/* Status */}
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Status</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("common.status")}</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {(["Active", "Reviewed", "Verified", "Archived"] as const).map((s) => (
                     <button
@@ -568,7 +570,7 @@ export default function RiskDetailPage() {
 
               {/* Risk Level */}
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1.5">Risk Level</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1.5">{t("risks.riskLevel")}</p>
                 <div className="flex gap-1.5 flex-wrap">
                   {(["Critical", "High", "Medium", "Low"] as const).map((l) => (
                     <button
@@ -608,7 +610,7 @@ export default function RiskDetailPage() {
                       onClick={() => patchMutation.mutate({ owner: ownerInput })}
                       disabled={patchMutation.isPending}
                     >
-                      Save
+                      {t("common.save")}
                     </Button>
                   </div>
                 ) : (
@@ -666,15 +668,15 @@ export default function RiskDetailPage() {
           {/* Metadata */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm text-muted-foreground">Details</CardTitle>
+              <CardTitle className="text-sm text-muted-foreground">{t("common.details")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Risk Level</span>
+                <span className="text-muted-foreground">{t("risks.riskLevel")}</span>
                 <RiskLevelBadge level={risk.risk_level} />
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Status</span>
+                <span className="text-muted-foreground">{t("common.status")}</span>
                 <StatusBadge status={risk.status} />
               </div>
               <div className="flex justify-between">
@@ -683,7 +685,7 @@ export default function RiskDetailPage() {
               </div>
               {risk.category && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Category</span>
+                  <span className="text-muted-foreground">{t("common.category")}</span>
                   <span className="font-medium">{risk.category}</span>
                 </div>
               )}

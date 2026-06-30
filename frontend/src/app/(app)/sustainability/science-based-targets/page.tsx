@@ -8,6 +8,7 @@ import apiClient from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -30,6 +31,7 @@ interface ValidationResult {
 }
 
 function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
+  const { t } = useLanguage();
   const [showValidate, setShowValidate] = useState(false);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ValidationResult | null>(null);
@@ -85,18 +87,18 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
             onClick={() => { setShowValidate((v) => !v); setResult(null); setError(null); }}
           >
             <FlaskConical className="h-3.5 w-3.5 mr-1" />
-            Validate
+            {t("sustain.validateTarget")}
           </Button>
         </div>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <div className="rounded bg-muted p-2">
-          <p className="text-muted-foreground">Baseline Year</p>
+          <p className="text-muted-foreground">{t("sustain.baselineYear")}</p>
           <p className="font-bold">{sbt.baseline_year}</p>
         </div>
         <div className="rounded bg-muted p-2">
-          <p className="text-muted-foreground">Target Year</p>
+          <p className="text-muted-foreground">{t("sustain.targetYear")}</p>
           <p className="font-bold">{sbt.target_year}</p>
         </div>
         <div className="rounded bg-emerald-50 p-2">
@@ -202,7 +204,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               Run Validation
             </Button>
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowValidate(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
           </div>
 
@@ -237,6 +239,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
 }
 
 export default function ScienceBasedTargetsPage() {
+  const { t } = useLanguage();
   const { data: sbts, isLoading } = useQuery({
     queryKey: ["sbts", ORG_ID],
     queryFn: () => listScienceBasedTargets(ORG_ID),
@@ -248,9 +251,9 @@ export default function ScienceBasedTargetsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Science Based Targets</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sustain.sbtTitle")}</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Emission reduction targets aligned to climate science (SBTi, Paris Agreement, NET-ZERO).
+          {t("sustain.sbtSubtitle")}
         </p>
       </div>
 
@@ -279,14 +282,14 @@ export default function ScienceBasedTargetsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <FlaskConical className="h-4 w-4 text-emerald-600" />
-            Science Based Targets{sbts ? ` (${sbts.length})` : ""}
+            {t("sustain.sbtTitle")}{sbts ? ` (${sbts.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && <Spinner />}
           {sbts?.length === 0 && (
             <p className="text-sm text-muted-foreground">
-              No science-based targets yet. Create an SBT linked to a net-zero roadmap.
+              {t("sustain.noSbtDesc")}
             </p>
           )}
           <div className="space-y-4">

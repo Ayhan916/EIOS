@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, FileText, Plus, Search } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import { EmptyState } from "@/components/ui/empty-state";
 import { listAssessments } from "@/lib/api/assessments";
 import apiClient from "@/lib/api/client";
@@ -16,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 const STATUS_OPTIONS = ["", "pending", "reviewed", "active", "archived"];
 
 export default function AssessmentsPage() {
+  const { t } = useLanguage();
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -71,15 +73,15 @@ export default function AssessmentsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Assessments</h1>
+          <h1 className="text-2xl font-bold">{t("assessments.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All ESG due diligence evaluations
+            {t("dashboard.latestEsgEvaluations")}
           </p>
         </div>
         <Button asChild>
           <Link href="/assessments/new">
             <Plus className="h-4 w-4" />
-            New Assessment
+            {t("assessments.newAssessment")}
           </Link>
         </Button>
       </div>
@@ -92,7 +94,7 @@ export default function AssessmentsPage() {
               <div className="relative flex-1 max-w-sm">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search assessments…"
+                  placeholder={t("assessments.searchPlaceholder")}
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
@@ -100,7 +102,7 @@ export default function AssessmentsPage() {
                 />
               </div>
               <Button variant="outline" size="sm" onClick={applySearch}>
-                Search
+                {t("common.search")}
               </Button>
             </div>
             <select
@@ -111,7 +113,7 @@ export default function AssessmentsPage() {
               }}
               className="h-10 rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
-              <option value="">All statuses</option>
+              <option value="">{t("assessments.allStatus")}</option>
               {STATUS_OPTIONS.filter(Boolean).map((s) => (
                 <option key={s} value={s} className="capitalize">
                   {s}
@@ -126,10 +128,10 @@ export default function AssessmentsPage() {
       {data && data.total > 0 && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Pending", cls: "text-amber-600 bg-amber-50", status: "pending" },
-            { label: "Reviewed", cls: "text-blue-600 bg-blue-50", status: "reviewed" },
-            { label: "Active", cls: "text-emerald-600 bg-emerald-50", status: "active" },
-            { label: "Archived", cls: "text-slate-500 bg-slate-50", status: "archived" },
+            { label: t("assessments.pending"),  cls: "text-amber-600 bg-amber-50",  status: "pending" },
+            { label: t("assessments.reviewed"), cls: "text-blue-600 bg-blue-50",    status: "reviewed" },
+            { label: t("assessments.active"),   cls: "text-emerald-600 bg-emerald-50", status: "active" },
+            { label: t("assessments.archived"), cls: "text-slate-500 bg-slate-50",  status: "archived" },
           ].map(({ label, cls, status: s }) => {
             const count = data.items.filter((a) => a.status === s).length;
             const total_pct = data.total > 0 ? Math.round((count / data.total) * 100) : 0;
@@ -163,11 +165,11 @@ export default function AssessmentsPage() {
           ) : !data?.items.length ? (
             <EmptyState
               icon={FileText}
-              title="No assessments yet"
-              description="Here's what you can do next: select a supplier and run an ESG assessment to evaluate their environmental, social, and governance practices."
+              title={t("assessments.noAssessments")}
+              description={t("assessments.noAssessmentsDesc")}
               actions={[
-                { label: "Run First Assessment", href: "/assessments/new", variant: "primary" },
-                { label: "Add a Supplier First", href: "/suppliers", variant: "outline" },
+                { label: t("dashboard.runFirstAssessment"), href: "/assessments/new", variant: "primary" },
+                { label: t("suppliers.newSupplier"), href: "/suppliers", variant: "outline" },
               ]}
             />
           ) : (
@@ -177,22 +179,22 @@ export default function AssessmentsPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Title
+                        {t("common.title")}
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Type
+                        {t("assessments.type")}
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Status
+                        {t("common.status")}
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Schedule
+                        {t("nav.calendar")}
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Quality
+                        {t("assessments.quality")}
                       </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
-                        Created
+                        {t("common.createdAt")}
                       </th>
                     </tr>
                   </thead>
@@ -226,7 +228,7 @@ export default function AssessmentsPage() {
                         <td className="py-3 pr-4">
                           {a.supplier_id && scheduledSupplierIds?.has(a.supplier_id) ? (
                             <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                              <CalendarClock className="h-3 w-3" /> Scheduled
+                              <CalendarClock className="h-3 w-3" /> {t("assessments.scheduled")}
                             </span>
                           ) : (
                             <span className="text-xs text-muted-foreground">—</span>
@@ -248,7 +250,7 @@ export default function AssessmentsPage() {
               {data.total_pages > 1 && (
                 <div className="mt-4 flex items-center justify-between border-t border-border pt-4">
                   <p className="text-sm text-muted-foreground">
-                    Page {data.page} of {data.total_pages}
+                    {t("common.page")} {data.page} {t("common.of")} {data.total_pages}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -257,7 +259,7 @@ export default function AssessmentsPage() {
                       disabled={!data.has_prev}
                       onClick={() => setPage((p) => p - 1)}
                     >
-                      Previous
+                      {t("common.previous")}
                     </Button>
                     <Button
                       variant="outline"
@@ -265,7 +267,7 @@ export default function AssessmentsPage() {
                       disabled={!data.has_next}
                       onClick={() => setPage((p) => p + 1)}
                     >
-                      Next
+                      {t("common.next")}
                     </Button>
                   </div>
                 </div>

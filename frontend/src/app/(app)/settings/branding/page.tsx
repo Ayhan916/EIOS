@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, Image, Palette, Save } from "lucide-react";
 import apiClient from "@/lib/api/client";
+import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -29,6 +30,7 @@ const PRESET_COLORS = [
 ];
 
 export default function BrandingPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   const { data: settings, isLoading } = useQuery<OrgSettings>({
@@ -82,9 +84,9 @@ export default function BrandingPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">White-Labeling & Branding</h1>
+        <h1 className="text-2xl font-bold">{t("sec.brandingTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Customize the platform appearance for your organization.
+          {t("sec.brandingSubtitle")}
         </p>
       </div>
 
@@ -93,9 +95,9 @@ export default function BrandingPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Palette className="h-4 w-4" />
-            Live Preview
+            {t("sec.brandingTitle")}
           </CardTitle>
-          <CardDescription>How the sidebar header will look with your branding</CardDescription>
+          <CardDescription>{t("sec.brandingSubtitle")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="flex items-center gap-3 rounded-lg p-4 w-fit" style={{ backgroundColor: "#0f172a" }}>
@@ -122,11 +124,11 @@ export default function BrandingPage() {
       {/* Settings form */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Organization Identity</CardTitle>
+          <CardTitle className="text-base">{t("sec.orgTitle")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div>
-            <label className="block text-sm font-medium mb-1.5">Company Name Override</label>
+            <label className="block text-sm font-medium mb-1.5">{t("sec.companyName")}</label>
             <input
               type="text"
               value={companyName}
@@ -138,7 +140,7 @@ export default function BrandingPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Primary Color</label>
+            <label className="block text-sm font-medium mb-1.5">{t("sec.primaryColor")}</label>
             <div className="flex items-center gap-3">
               <input
                 type="color"
@@ -178,11 +180,11 @@ export default function BrandingPage() {
             <Image className="h-4 w-4" />
             Logo & Favicon
           </CardTitle>
-          <CardDescription>Enter public URLs for your brand assets</CardDescription>
+          <CardDescription>{t("sec.logoUrl")}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
           <div>
-            <label className="block text-sm font-medium mb-1.5">Logo URL</label>
+            <label className="block text-sm font-medium mb-1.5">{t("sec.logoUrl")}</label>
             <div className="flex items-center gap-3">
               <input
                 type="url"
@@ -204,7 +206,7 @@ export default function BrandingPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">Favicon URL</label>
+            <label className="block text-sm font-medium mb-1.5">{t("sec.logoUrl")} (Favicon)</label>
             <input
               type="url"
               value={faviconUrl}
@@ -224,15 +226,15 @@ export default function BrandingPage() {
           className="gap-2"
         >
           {saveMutation.isPending ? <Spinner size="sm" /> : <Save className="h-4 w-4" />}
-          Save Branding
+          {t("settings.saveChanges")}
         </Button>
         {saveMutation.isSuccess && (
           <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
-            <CheckCircle2 className="h-4 w-4" /> Saved
+            <CheckCircle2 className="h-4 w-4" /> {t("settings.orgSaved")}
           </span>
         )}
         {saveMutation.isError && (
-          <span className="text-sm text-red-600">Failed to save. Admin role required.</span>
+          <span className="text-sm text-red-600">{t("settings.adminOnly")}</span>
         )}
       </div>
     </div>

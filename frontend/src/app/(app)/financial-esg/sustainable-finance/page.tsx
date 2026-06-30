@@ -5,6 +5,7 @@ import { listFinanceInstruments } from "@/lib/api/financial-esg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const INSTRUMENT_LABELS: Record<string, string> = {
   GREEN_BOND: "Green Bond",
@@ -21,6 +22,7 @@ const COVENANT_COLORS: Record<string, string> = {
 };
 
 export default function SustainableFinancePage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -48,9 +50,9 @@ export default function SustainableFinancePage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Sustainable Finance</h1>
+        <h1 className="text-2xl font-bold">{t("finEsg.sustainFinanceTitle")}</h1>
         <p className="text-muted-foreground">
-          Green bonds, sustainability-linked loans, and transition finance instruments
+          {t("finEsg.sustainFinanceSubtitle")}
         </p>
       </div>
 
@@ -121,8 +123,8 @@ export default function SustainableFinancePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-2 pr-4">Name</th>
-                    <th className="pb-2 pr-4">Type</th>
+                    <th className="pb-2 pr-4">{t("common.name")}</th>
+                    <th className="pb-2 pr-4">{t("common.type")}</th>
                     <th className="pb-2 pr-4">Amount</th>
                     <th className="pb-2 pr-4">Maturity</th>
                     <th className="pb-2">Covenant</th>

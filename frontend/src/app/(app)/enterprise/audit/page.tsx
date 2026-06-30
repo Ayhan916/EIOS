@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 import { listEnterprises, getEnterpriseAudit, globalSearch } from "@/lib/api/enterprise";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 function fmt(ts: string) {
   return new Date(ts).toLocaleString();
@@ -21,6 +22,7 @@ function actionBadge(action: string) {
 }
 
 export default function EnterpriseAuditPage() {
+  const { t } = useLanguage();
   const { data: enterprises } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -49,9 +51,9 @@ export default function EnterpriseAuditPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Enterprise Audit</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.auditTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Cross-organizational audit trail and global search
+            {t("ent.auditSubtitle")}
           </p>
         </div>
         {enterprises && enterprises.length > 1 && (
@@ -70,7 +72,7 @@ export default function EnterpriseAuditPage() {
       {/* Search bar */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">Global Search</CardTitle>
+          <CardTitle className="text-base">{t("common.search")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
@@ -78,7 +80,7 @@ export default function EnterpriseAuditPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm"
-                placeholder="Search suppliers, risks, findings…"
+                placeholder={t("header.search")}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -87,14 +89,14 @@ export default function EnterpriseAuditPage() {
               onClick={() => setSearchActive(!!searchQuery)}
               className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white"
             >
-              Search
+              {t("common.search")}
             </button>
             {searchActive && (
               <button
                 onClick={() => { setSearchActive(false); setSearchQuery(""); }}
                 className="rounded-lg border px-4 py-2 text-sm"
               >
-                Clear
+                {t("common.close")}
               </button>
             )}
           </div>
@@ -104,7 +106,7 @@ export default function EnterpriseAuditPage() {
               {loadingSearch ? (
                 <div className="flex justify-center py-4"><Spinner /></div>
               ) : !searchResults || searchResults.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No results found.</p>
+                <p className="text-sm text-muted-foreground">{t("common.noData")}</p>
               ) : (
                 <div className="space-y-2">
                   {searchResults.map((r, i) => (
@@ -131,24 +133,24 @@ export default function EnterpriseAuditPage() {
       {!searchActive && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Audit Events</CardTitle>
+            <CardTitle className="text-base">{t("ent.auditTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             {isLoading ? (
               <div className="flex justify-center py-8"><Spinner /></div>
             ) : !events || events.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
-                No enterprise audit events yet.
+                {t("ent.noAuditEvents")}
               </p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-xs text-muted-foreground">
-                      <th className="pb-2 text-left">Action</th>
-                      <th className="pb-2 text-left">Entity</th>
-                      <th className="pb-2 text-left">Outcome</th>
-                      <th className="pb-2 text-left">When</th>
+                      <th className="pb-2 text-left">{t("ent.action")}</th>
+                      <th className="pb-2 text-left">{t("ent.resource")}</th>
+                      <th className="pb-2 text-left">{t("common.status")}</th>
+                      <th className="pb-2 text-left">{t("common.date")}</th>
                     </tr>
                   </thead>
                   <tbody>

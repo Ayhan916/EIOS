@@ -18,6 +18,7 @@ import { listTaxonomyAssessments } from "@/lib/api/financial-esg";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT: "bg-slate-100 text-slate-700",
@@ -26,6 +27,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function TaxonomyPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -225,10 +227,10 @@ export default function TaxonomyPage() {
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="pb-2 pr-4">Year</th>
-                    <th className="pb-2 pr-4">Framework</th>
+                    <th className="pb-2 pr-4">{t("esgOs.framework")}</th>
                     <th className="pb-2 pr-4">Aligned %</th>
                     <th className="pb-2 pr-4">Eligible %</th>
-                    <th className="pb-2">Status</th>
+                    <th className="pb-2">{t("common.status")}</th>
                   </tr>
                 </thead>
                 <tbody>

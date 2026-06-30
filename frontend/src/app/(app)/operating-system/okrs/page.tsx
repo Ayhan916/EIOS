@@ -6,6 +6,7 @@ import { listObjectives, listAllTargets, listKPIs, type ESGObjective, type ESGTa
 import { useAuth } from "@/lib/auth/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_STYLES: Record<string, string> = {
   ON_TRACK:    "bg-emerald-100 text-emerald-700",
@@ -32,6 +33,7 @@ function ObjectiveCard({
   targets: ESGTarget[];
   kpis: ESGKPI[];
 }) {
+  const { t } = useLanguage();
   const myTargets = targets.filter((t) => t.objective_id === obj.id);
   const avgProgress = myTargets.length > 0
     ? myTargets.reduce((s, t) => s + t.progress_percent, 0) / myTargets.length
@@ -65,7 +67,7 @@ function ObjectiveCard({
       {avgProgress != null ? (
         <div className="space-y-1">
           <div className="flex justify-between text-xs">
-            <span className="text-muted-foreground">Overall Progress</span>
+            <span className="text-muted-foreground">{t("esgOs.progress")}</span>
             <span className="font-semibold">{avgProgress.toFixed(0)}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -85,7 +87,7 @@ function ObjectiveCard({
       {/* Key Results (targets) */}
       {myTargets.length > 0 && (
         <div className="space-y-2 pt-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Key Results</p>
+          <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("esgOs.keyResult")}</p>
           {myTargets.map((t) => (
             <div key={t.id} className="space-y-0.5">
               <div className="flex justify-between text-xs">
@@ -126,6 +128,7 @@ function ObjectiveCard({
 }
 
 export default function OKRsPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -157,17 +160,15 @@ export default function OKRsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">ESG OKRs</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Objectives & Key Results — track ESG goals with measurable progress
-        </p>
+        <h1 className="text-2xl font-bold tracking-tight">{t("esgOs.okrsTitle")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("esgOs.okrsSubtitle")}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "On Track", value: onTrack, icon: CheckCircle2, color: "text-emerald-600" },
-          { label: "At Risk", value: atRisk, icon: AlertTriangle, color: "text-amber-600" },
-          { label: "Completed", value: completed, icon: Target, color: "text-blue-600" },
+          { label: t("common.active"), value: onTrack, icon: CheckCircle2, color: "text-emerald-600" },
+          { label: t("risks.high"), value: atRisk, icon: AlertTriangle, color: "text-amber-600" },
+          { label: t("assessments.reviewed"), value: completed, icon: Target, color: "text-blue-600" },
         ].map(({ label, value, icon: Icon, color }) => (
           <Card key={label}>
             <CardContent className="pt-4 pb-3 flex items-center gap-3">
@@ -183,15 +184,15 @@ export default function OKRsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Objectives</CardTitle>
+          <CardTitle className="text-base">{t("esgOs.objective")}</CardTitle>
         </CardHeader>
         <CardContent>
           {objLoading && <Spinner />}
           {!objLoading && objs.length === 0 && (
             <div className="flex flex-col items-center gap-2 py-10 text-center">
               <Target className="h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-600">No ESG objectives defined yet.</p>
-              <p className="text-xs text-muted-foreground">Create objectives via the Sustainability module.</p>
+              <p className="text-sm text-slate-600">{t("esgOs.noOkrs")}</p>
+              <p className="text-xs text-muted-foreground">{t("esgOs.noOkrsDesc")}</p>
             </div>
           )}
           <div className="space-y-4">

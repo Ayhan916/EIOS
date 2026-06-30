@@ -5,6 +5,7 @@ import { listValueInitiatives, listClimateFinance, listValuations } from "@/lib/
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: "text-blue-600",
@@ -15,6 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ValueCreationPage() {
+  const { t } = useLanguage();
   const { user } = useAuth();
   const orgId = user?.organization_id ?? "default";
 
@@ -51,9 +53,9 @@ export default function ValueCreationPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Value Creation</h1>
+        <h1 className="text-2xl font-bold">{t("finEsg.valueCreationTitle")}</h1>
         <p className="text-muted-foreground">
-          ESG value initiatives, climate finance analytics, and sustainability valuation
+          {t("finEsg.valueCreationSubtitle")}
         </p>
       </div>
 
@@ -75,11 +77,11 @@ export default function ValueCreationPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Value Creation Initiatives</CardTitle>
+          <CardTitle>{t("finEsg.valueCreationTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(initiatives ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No initiatives yet</p>
+            <p className="text-sm text-muted-foreground">{t("common.noData")}</p>
           ) : (
             <div className="space-y-3">
               {(initiatives ?? []).map((i) => {
@@ -145,7 +147,7 @@ export default function ValueCreationPage() {
           </CardHeader>
           <CardContent>
             {(climateItems ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No climate finance analyses</p>
+              <p className="text-sm text-muted-foreground">{t("common.noData")}</p>
             ) : (
               <div className="space-y-2">
                 {(climateItems ?? []).map((c) => (
@@ -180,7 +182,7 @@ export default function ValueCreationPage() {
           </CardHeader>
           <CardContent>
             {(valuations ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No valuations</p>
+              <p className="text-sm text-muted-foreground">{t("common.noData")}</p>
             ) : (
               <div className="space-y-2">
                 {(valuations ?? []).map((v) => (

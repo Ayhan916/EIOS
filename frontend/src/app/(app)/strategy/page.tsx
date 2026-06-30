@@ -5,20 +5,22 @@ import { getStrategyRollup } from "@/lib/api/strategy";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import Link from "next/link";
 
 const NAV = [
-  { href: "strategy/digital-twin", label: "Digital Twin", desc: "Enterprise state snapshots" },
-  { href: "strategy/scenarios", label: "Scenarios", desc: "Climate, regulatory, financial scenarios" },
-  { href: "strategy/stress-tests", label: "Stress Tests", desc: "Climate, supplier & financial shocks" },
-  { href: "strategy/pathways", label: "Pathways", desc: "Transition & net zero pathways" },
-  { href: "strategy/forecasts", label: "Forecasts", desc: "Deterministic KPI & emissions forecasts" },
-  { href: "strategy/board-simulation", label: "Board Simulation", desc: "Compare scenarios at board level" },
-  { href: "strategy/reports", label: "Reports", desc: "Immutable scenario reports" },
-];
+  { href: "strategy/digital-twin", labelKey: "nav.digitalTwin", desc: "Enterprise state snapshots" },
+  { href: "strategy/scenarios", labelKey: "nav.scenarios", desc: "Climate, regulatory, financial scenarios" },
+  { href: "strategy/stress-tests", labelKey: "nav.stressTests", desc: "Climate, supplier & financial shocks" },
+  { href: "strategy/pathways", labelKey: "nav.pathways", desc: "Transition & net zero pathways" },
+  { href: "strategy/forecasts", labelKey: "nav.forecasts", desc: "Deterministic KPI & emissions forecasts" },
+  { href: "strategy/board-simulation", labelKey: "nav.boardSimulation", desc: "Compare scenarios at board level" },
+  { href: "strategy/reports", labelKey: "nav.strategyReports", desc: "Immutable scenario reports" },
+] as const;
 
 export default function StrategyDashboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
 
   const { data: rollup, isLoading } = useQuery({
@@ -72,7 +74,7 @@ export default function StrategyDashboard() {
           <Link key={n.href} href={`/${n.href}`}>
             <Card className="cursor-pointer transition-shadow hover:shadow-md">
               <CardHeader>
-                <CardTitle className="text-base">{n.label}</CardTitle>
+                <CardTitle className="text-base">{t(n.labelKey)}</CardTitle>
               </CardHeader>
               <CardContent>
                 <p className="text-sm text-muted-foreground">{n.desc}</p>

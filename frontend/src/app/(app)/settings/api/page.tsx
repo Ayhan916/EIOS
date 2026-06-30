@@ -29,6 +29,7 @@ import {
   revokeApiKey,
 } from "@/lib/api/platform";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import type {
   ApiKeyCreate,
   ApiKeyCreatedResponse,
@@ -103,6 +104,7 @@ function CreateApiKeyModal({
   onClose: () => void;
   onCreate: (data: ApiKeyCreate) => void;
 }) {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [scopes, setScopes] = useState<string[]>([]);
   const toggleScope = (s: string) =>
@@ -112,14 +114,14 @@ function CreateApiKeyModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">Create API Key</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t("sec.createKey")}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
         </div>
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-700">Name</label>
+            <label className="mb-1 block text-xs font-medium text-slate-700">{t("common.name")}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -149,14 +151,14 @@ function CreateApiKeyModal({
             onClick={onClose}
             className="rounded px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => onCreate({ name, scopes })}
             disabled={!name || scopes.length === 0}
             className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            Create
+            {t("common.create")}
           </button>
         </div>
       </div>
@@ -173,6 +175,7 @@ function CreatedKeyBanner({
   result: ApiKeyCreatedResponse;
   onDismiss: () => void;
 }) {
+  const { t } = useLanguage();
   const [show, setShow] = useState(false);
   return (
     <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
@@ -207,6 +210,7 @@ function CreateWebhookModal({
   onClose: () => void;
   onCreate: (data: WebhookCreate) => void;
 }) {
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -225,7 +229,7 @@ function CreateWebhookModal({
         </div>
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-700">Name</label>
+            <label className="mb-1 block text-xs font-medium text-slate-700">{t("common.name")}</label>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -276,14 +280,14 @@ function CreateWebhookModal({
             onClick={onClose}
             className="rounded px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => onCreate({ name, target_url: url, events, secret })}
             disabled={!name || !url || !secret || secret.length < 16 || events.length === 0}
             className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            Create
+            {t("common.create")}
           </button>
         </div>
       </div>
@@ -295,6 +299,7 @@ function CreateWebhookModal({
 
 export default function ApiPlatformPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>("api-keys");
   const [showCreateKey, setShowCreateKey] = useState(false);
@@ -368,7 +373,7 @@ export default function ApiPlatformPage() {
   if (user?.role !== "admin") {
     return (
       <div className="p-8 text-center text-slate-500">
-        API &amp; Webhooks settings are only accessible to administrators.
+        {t("settings.adminOnly")}
       </div>
     );
   }
@@ -376,9 +381,9 @@ export default function ApiPlatformPage() {
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-900">API &amp; Webhooks</h1>
+        <h1 className="text-xl font-semibold text-slate-900">{t("sec.apiTitle")}</h1>
         <p className="mt-1 text-sm text-slate-500">
-          Manage API keys, service accounts, and webhook subscriptions for your organization.
+          {t("sec.apiSubtitle")}
         </p>
       </div>
 
@@ -414,18 +419,18 @@ export default function ApiPlatformPage() {
               className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
-              New API Key
+              {t("sec.createKey")}
             </button>
           </div>
           <div className="overflow-hidden rounded-lg border border-slate-200">
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs font-medium text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Prefix</th>
+                  <th className="px-4 py-3 text-left">{t("common.name")}</th>
+                  <th className="px-4 py-3 text-left">{t("sec.keyPrefix")}</th>
                   <th className="px-4 py-3 text-left">Scopes</th>
                   <th className="px-4 py-3 text-left">Requests</th>
-                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">{t("common.status")}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -433,7 +438,7 @@ export default function ApiPlatformPage() {
                 {apiKeys.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
-                      No API keys yet.
+                      {t("sec.noKeys")}
                     </td>
                   </tr>
                 )}
@@ -471,7 +476,7 @@ export default function ApiPlatformPage() {
                           className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
                         >
                           <RotateCcw className="h-3 w-3" />
-                          Revoke
+                          {t("sec.revokeKey")}
                         </button>
                       )}
                     </td>
@@ -502,9 +507,9 @@ export default function ApiPlatformPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs font-medium text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 text-left">Name</th>
-                  <th className="px-4 py-3 text-left">Description</th>
-                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">{t("common.name")}</th>
+                  <th className="px-4 py-3 text-left">{t("common.description")}</th>
+                  <th className="px-4 py-3 text-left">{t("common.status")}</th>
                   <th className="px-4 py-3" />
                 </tr>
               </thead>
@@ -521,7 +526,7 @@ export default function ApiPlatformPage() {
                     <td className="px-4 py-3 font-medium text-slate-800">{sa.name}</td>
                     <td className="px-4 py-3 text-slate-500">{sa.description || "—"}</td>
                     <td className="px-4 py-3">
-                      <StatusBadge active={sa.is_active} label={sa.is_active ? "Active" : "Inactive"} />
+                      <StatusBadge active={sa.is_active} label={sa.is_active ? t("common.active") : t("common.inactive")} />
                     </td>
                     <td className="px-4 py-3">
                       {sa.is_active && (
@@ -559,7 +564,7 @@ export default function ApiPlatformPage() {
           <div className="space-y-3">
             {webhooks.length === 0 && (
               <div className="rounded-lg border border-slate-200 px-4 py-8 text-center text-slate-400">
-                No webhooks yet.
+                {t("common.noData")}
               </div>
             )}
             {webhooks.map((wh) => (
@@ -617,19 +622,19 @@ export default function ApiPlatformPage() {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 text-xs font-medium text-slate-500">
                 <tr>
-                  <th className="px-4 py-3 text-left">Event</th>
-                  <th className="px-4 py-3 text-left">Status</th>
+                  <th className="px-4 py-3 text-left">{t("eventBus.eventType")}</th>
+                  <th className="px-4 py-3 text-left">{t("common.status")}</th>
                   <th className="px-4 py-3 text-left">HTTP</th>
                   <th className="px-4 py-3 text-left">Duration</th>
                   <th className="px-4 py-3 text-left">Retries</th>
-                  <th className="px-4 py-3 text-left">Time</th>
+                  <th className="px-4 py-3 text-left">{t("eventBus.timestamp")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {deliveries.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-6 text-center text-slate-400">
-                      No deliveries yet.
+                      {t("common.noData")}
                     </td>
                   </tr>
                 )}
@@ -687,14 +692,14 @@ export default function ApiPlatformPage() {
                 onClick={() => setShowCreateSA(false)}
                 className="rounded px-4 py-2 text-sm text-slate-600 hover:bg-slate-100"
               >
-                Cancel
+                {t("common.cancel")}
               </button>
               <button
                 onClick={() => createSAMut.mutate({ name: saName })}
                 disabled={!saName}
                 className="rounded bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
               >
-                Create
+                {t("common.create")}
               </button>
             </div>
           </div>

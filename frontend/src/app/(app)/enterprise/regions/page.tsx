@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const RESIDENCY_OPTIONS = ["EU", "UK", "US", "APAC"];
 
@@ -23,6 +24,7 @@ function CreateRegionModal({
   onClose: () => void;
 }) {
   const qc = useQueryClient();
+  const { t } = useLanguage();
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [residency, setResidency] = useState("EU");
@@ -39,10 +41,10 @@ function CreateRegionModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-lg font-semibold">Add Region</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("ent.addRegion")}</h2>
         <div className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">Name *</label>
+            <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={name}
@@ -51,7 +53,7 @@ function CreateRegionModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Code *</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.unitCode")} *</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={code}
@@ -74,14 +76,14 @@ function CreateRegionModal({
         </div>
         <div className="mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="rounded-lg border px-4 py-2 text-sm">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => mutate()}
             disabled={!name || !code || isPending}
             className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Create"}
+            {isPending ? "Saving…" : t("common.create")}
           </button>
         </div>
       </div>
@@ -100,6 +102,7 @@ function residencyBadge(r: string) {
 }
 
 export default function RegionsPage() {
+  const { t } = useLanguage();
   const { data: enterprises } = useQuery({
     queryKey: ["enterprises"],
     queryFn: listEnterprises,
@@ -123,9 +126,9 @@ export default function RegionsPage() {
 
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold">Regions</h1>
+          <h1 className="text-2xl font-semibold">{t("ent.regionsTitle")}</h1>
           <p className="text-sm text-muted-foreground">
-            Operational regions with data residency assignments
+            {t("ent.regionsSubtitle")}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -146,7 +149,7 @@ export default function RegionsPage() {
             className="flex items-center gap-2 rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-40"
           >
             <Plus className="h-4 w-4" />
-            Add Region
+            {t("ent.addRegion")}
           </button>
         </div>
       </div>
@@ -156,7 +159,7 @@ export default function RegionsPage() {
       ) : !regions || regions.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
-            No regions configured yet.
+            {t("ent.noRegions")}
           </CardContent>
         </Card>
       ) : (
@@ -184,7 +187,7 @@ export default function RegionsPage() {
                   variant="outline"
                   className={region.is_active ? "border-emerald-300 text-emerald-700" : "border-slate-300 text-slate-500"}
                 >
-                  {region.is_active ? "Active" : "Inactive"}
+                  {region.is_active ? t("common.active") : t("common.inactive")}
                 </Badge>
                 <p className="text-xs text-muted-foreground">
                   Created {new Date(region.created_at).toLocaleDateString()}

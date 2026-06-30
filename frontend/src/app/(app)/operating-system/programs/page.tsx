@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { formatDate } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: "bg-green-100 text-green-800",
@@ -17,6 +18,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ESGProgramsPage() {
+  const { t } = useLanguage();
   const { data: programs, isLoading, error } = useQuery({
     queryKey: ["esg-programs"],
     queryFn: () => operatingSystemApi.listPrograms({ limit: 100 }).then((r) => r.data),
@@ -44,7 +46,7 @@ export default function ESGProgramsPage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <LayersIcon className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold">ESG Programs</h1>
+          <h1 className="text-2xl font-semibold">{t("esgOs.programsTitle")}</h1>
         </div>
         <span className="text-sm text-muted-foreground">{programs?.length ?? 0} programs</span>
       </div>
@@ -63,7 +65,7 @@ export default function ESGProgramsPage() {
         {Object.keys(byStatus).length === 0 && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-xs font-medium text-muted-foreground">Total</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">{t("common.total")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold">0</p>
@@ -77,7 +79,7 @@ export default function ESGProgramsPage() {
           <ProgramRow key={prog.id} program={prog} />
         ))}
         {programs?.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">No programs yet.</div>
+          <div className="text-center py-12 text-muted-foreground">{t("esgOs.noPrograms")}</div>
         )}
       </div>
     </div>

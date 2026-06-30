@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { listUsers, updateUser, inviteUser } from "@/lib/api/users";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import type { UserResponse, UserInviteRequest } from "@/types/api";
 
 const ROLES = ["viewer", "analyst", "reviewer", "admin"] as const;
@@ -47,6 +48,7 @@ function InviteModal({
   loading: boolean;
   result: { temp_password: string } | null;
 }) {
+  const { t } = useLanguage();
   const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [role, setRole] = useState<Role>("analyst");
@@ -57,7 +59,7 @@ function InviteModal({
         <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
           <div className="mb-4 flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-green-600" />
-            <h2 className="text-base font-semibold">User Invited</h2>
+            <h2 className="text-base font-semibold">{t("sec.inviteUser")}</h2>
           </div>
           <p className="mb-2 text-sm text-slate-600">
             Share this temporary password with the new user. It will{" "}
@@ -70,7 +72,7 @@ function InviteModal({
             onClick={onClose}
             className="w-full rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
           >
-            Done
+            {t("common.close")}
           </button>
         </div>
       </div>
@@ -80,11 +82,11 @@ function InviteModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-        <h2 className="mb-4 text-base font-semibold">Invite User</h2>
+        <h2 className="mb-4 text-base font-semibold">{t("sec.inviteUser")}</h2>
         <div className="space-y-3">
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">
-              Email
+              {t("common.email")}
             </label>
             <input
               type="email"
@@ -96,7 +98,7 @@ function InviteModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">
-              Display Name
+              {t("auth.displayName")}
             </label>
             <input
               type="text"
@@ -108,7 +110,7 @@ function InviteModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-600">
-              Role
+              {t("sec.role")}
             </label>
             <select
               value={role}
@@ -128,7 +130,7 @@ function InviteModal({
             onClick={onClose}
             className="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() =>
@@ -146,6 +148,7 @@ function InviteModal({
 }
 
 export default function UsersSettingsPage() {
+  const { t } = useLanguage();
   const { user: me } = useAuth();
   const qc = useQueryClient();
   const [showInvite, setShowInvite] = useState(false);
@@ -182,7 +185,7 @@ export default function UsersSettingsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <ShieldOff className="mb-4 h-10 w-10 text-slate-300" />
-        <p className="text-sm text-slate-500">Admin access required.</p>
+        <p className="text-sm text-slate-500">{t("settings.adminOnly")}</p>
       </div>
     );
   }
@@ -192,10 +195,10 @@ export default function UsersSettingsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-slate-900">
-            User Management
+            {t("sec.usersTitle")}
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Manage team members and their roles.
+            {t("sec.usersSubtitle")}
           </p>
         </div>
         <button
@@ -206,25 +209,25 @@ export default function UsersSettingsPage() {
           className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
         >
           <UserPlus className="h-4 w-4" />
-          Invite User
+          {t("sec.inviteUser")}
         </button>
       </div>
 
       {isLoading ? (
         <div className="py-12 text-center text-sm text-slate-400">
-          Loading…
+          {t("common.loading")}
         </div>
       ) : (
         <div className="rounded-xl border border-slate-200 bg-white">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 text-left text-xs font-medium uppercase tracking-wide text-slate-400">
-                <th className="px-4 py-3">User</th>
-                <th className="px-4 py-3">Role</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">{t("sec.usersTitle")}</th>
+                <th className="px-4 py-3">{t("sec.role")}</th>
+                <th className="px-4 py-3">{t("common.status")}</th>
                 <th className="px-4 py-3">MFA</th>
-                <th className="px-4 py-3">Last Login</th>
-                <th className="px-4 py-3 text-right">Actions</th>
+                <th className="px-4 py-3">{t("sec.lastLogin")}</th>
+                <th className="px-4 py-3 text-right">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -274,12 +277,12 @@ export default function UsersSettingsPage() {
                     {u.is_active ? (
                       <span className="inline-flex items-center gap-1 text-xs text-green-600">
                         <UserCheck className="h-3.5 w-3.5" />
-                        Active
+                        {t("common.active")}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 text-xs text-red-500">
                         <UserX className="h-3.5 w-3.5" />
-                        Inactive
+                        {t("common.inactive")}
                       </span>
                     )}
                   </td>
@@ -324,7 +327,7 @@ export default function UsersSettingsPage() {
           </table>
           {users.length === 0 && (
             <div className="py-10 text-center text-sm text-slate-400">
-              No users found.
+              {t("sec.noUsers")}
             </div>
           )}
         </div>

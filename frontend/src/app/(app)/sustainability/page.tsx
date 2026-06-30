@@ -14,6 +14,7 @@ import {
 import { getDashboard, listScorecards, type SustainabilityScorecard } from "@/lib/api/sustainability";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -119,6 +120,7 @@ function downloadScorecardPDF(scorecards: SustainabilityScorecard[]) {
 }
 
 export default function SustainabilityDashboardPage() {
+  const { t } = useLanguage();
   const { data, isLoading, error } = useQuery({
     queryKey: ["sustainability-dashboard", ORG_ID],
     queryFn: () => getDashboard(ORG_ID),
@@ -135,7 +137,7 @@ export default function SustainabilityDashboardPage() {
   if (error || !data)
     return (
       <div className="p-6 text-sm text-muted-foreground">
-        No sustainability data yet. Create objectives and KPIs to get started.
+        {t("common.noData")}
       </div>
     );
 
@@ -143,9 +145,9 @@ export default function SustainabilityDashboardPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Sustainability Dashboard</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sustain.title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            ESG performance, carbon accounting, and decarbonization progress
+            {t("sustain.subtitle")}
           </p>
         </div>
         {scorecards && scorecards.length > 0 && (
@@ -154,28 +156,28 @@ export default function SustainabilityDashboardPage() {
             className="flex items-center gap-2 rounded-lg border px-4 py-2 text-sm hover:bg-muted/50 transition-colors flex-shrink-0"
           >
             <Download className="h-4 w-4" />
-            Download Scorecard PDF
+            {t("common.download")}
           </button>
         )}
       </div>
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-        <KpiCard label="Total Objectives" value={data.total_objectives} icon={Target} />
+        <KpiCard label={t("sustain.objectivesTitle")} value={data.total_objectives} icon={Target} />
         <KpiCard
-          label="Active Objectives"
+          label={t("sustain.activeObjectives")}
           value={data.active_objectives}
           icon={CheckCircle}
           accent="text-blue-600"
         />
-        <KpiCard label="Total KPIs" value={data.total_kpis} icon={BarChart3} />
+        <KpiCard label={t("sustain.totalKpis")} value={data.total_kpis} icon={BarChart3} />
         <KpiCard
-          label="Open Alerts"
+          label={t("surveillance.activeSignals")}
           value={data.open_alerts}
           icon={AlertTriangle}
           accent={data.open_alerts > 0 ? "text-amber-500" : "text-emerald-600"}
         />
         <KpiCard
-          label="Total Emissions"
+          label={t("scope3.totalEmissions")}
           value={
             data.total_emissions_tco2e != null
               ? `${data.total_emissions_tco2e.toLocaleString()} tCO₂e`
@@ -186,18 +188,18 @@ export default function SustainabilityDashboardPage() {
           sub={data.latest_inventory_year ? `${data.latest_inventory_year} (finalized)` : undefined}
         />
         <KpiCard
-          label="Active Initiatives"
+          label={t("sustain.initiativesTitle")}
           value={data.active_initiatives}
           icon={TrendingDown}
           accent="text-emerald-600"
         />
         <KpiCard
-          label="Active SBTs"
+          label={t("sustain.sbtiTargets")}
           value={data.active_sbts}
           icon={Leaf}
         />
         <KpiCard
-          label="ESG Score"
+          label={t("dashboard.esgHealth")}
           value={
             data.latest_overall_score != null
               ? `${data.latest_overall_score.toFixed(1)}`
@@ -205,27 +207,27 @@ export default function SustainabilityDashboardPage() {
           }
           icon={BarChart3}
           accent="text-purple-600"
-          sub="Latest scorecard"
+          sub={t("sustain.targetsTitle")}
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Objective Progress</CardTitle>
+            <CardTitle className="text-base">{t("sustain.objectivesTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total</span>
+                <span className="text-muted-foreground">{t("common.total")}</span>
                 <span className="font-medium">{data.total_objectives}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Active</span>
+                <span className="text-muted-foreground">{t("common.active")}</span>
                 <span className="font-medium text-blue-600">{data.active_objectives}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Completed</span>
+                <span className="text-muted-foreground">{t("auditor.complete")}</span>
                 <span className="font-medium text-emerald-600">{data.completed_objectives}</span>
               </div>
             </div>
@@ -234,16 +236,16 @@ export default function SustainabilityDashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Carbon Summary</CardTitle>
+            <CardTitle className="text-base">{t("sustain.carbonTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Latest Inventory Year</span>
+                <span className="text-muted-foreground">{t("scope3.reportingYear")}</span>
                 <span className="font-medium">{data.latest_inventory_year ?? "—"}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Emissions</span>
+                <span className="text-muted-foreground">{t("scope3.totalEmissions")}</span>
                 <span className="font-medium">
                   {data.total_emissions_tco2e != null
                     ? `${data.total_emissions_tco2e.toLocaleString()} tCO₂e`
@@ -251,7 +253,7 @@ export default function SustainabilityDashboardPage() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Active Initiatives</span>
+                <span className="text-muted-foreground">{t("sustain.initiativesTitle")}</span>
                 <span className="font-medium text-emerald-600">{data.active_initiatives}</span>
               </div>
             </div>

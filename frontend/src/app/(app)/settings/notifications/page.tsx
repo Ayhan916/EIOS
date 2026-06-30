@@ -8,6 +8,7 @@ import {
   updateNotificationPreferences,
 } from "@/lib/api/notifications";
 import type { NotificationPreferences } from "@/types/api";
+import { useLanguage } from "@/lib/i18n/context";
 
 const PREFS: { key: keyof NotificationPreferences; label: string; description: string }[] = [
   {
@@ -33,6 +34,7 @@ const PREFS: { key: keyof NotificationPreferences; label: string; description: s
 ];
 
 export default function NotificationSettingsPage() {
+  const { t } = useLanguage();
   const [prefs, setPrefs] = useState<NotificationPreferences | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -79,9 +81,9 @@ export default function NotificationSettingsPage() {
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Notification Preferences</h1>
+        <h1 className="text-2xl font-bold tracking-tight">{t("sec.notifSettingsTitle")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Choose which events send you an email notification.
+          {t("sec.notifSettingsSubtitle")}
         </p>
       </div>
 
@@ -162,7 +164,7 @@ export default function NotificationSettingsPage() {
       <div className="flex items-center gap-3">
         <Button onClick={handleSave} disabled={saving}>
           {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Save preferences
+          {saving ? t("settings.saving") : t("settings.saveChanges")}
         </Button>
         {saved && (
           <span className="text-sm text-green-600 dark:text-green-400">Saved!</span>

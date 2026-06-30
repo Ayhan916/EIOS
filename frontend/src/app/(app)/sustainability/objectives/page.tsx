@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 const ORG_ID = "default";
 
@@ -38,6 +39,7 @@ function categoryColor(c: string) {
 }
 
 function ObjectiveRow({ obj }: { obj: ESGObjective }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const advance = useMutation({
     mutationFn: (status: string) => updateObjectiveStatus(ORG_ID, obj.id, status),
@@ -78,11 +80,13 @@ function ObjectiveRow({ obj }: { obj: ESGObjective }) {
           Complete
         </Button>
       )}
+
     </div>
   );
 }
 
 export default function ObjectivesPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string>("ENVIRONMENTAL");
@@ -108,24 +112,24 @@ export default function ObjectivesPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">ESG Objectives</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sustain.objectivesTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Define and track Environmental, Social, and Governance objectives
+            {t("sustain.objectivesSubtitle")}
           </p>
         </div>
         <Button onClick={() => setCreating(true)} size="sm">
-          <Plus className="mr-2 h-4 w-4" /> New Objective
+          <Plus className="mr-2 h-4 w-4" /> {t("sustain.addObjective")}
         </Button>
       </div>
 
       {creating && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">New Objective</CardTitle>
+            <CardTitle className="text-base">{t("sustain.addObjective")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="block text-xs font-medium mb-1">Title</label>
+              <label className="block text-xs font-medium mb-1">{t("common.title")}</label>
               <input
                 className="w-full rounded border px-3 py-1.5 text-sm"
                 value={title}
@@ -134,7 +138,7 @@ export default function ObjectivesPage() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Category</label>
+              <label className="block text-xs font-medium mb-1">{t("common.category")}</label>
               <select
                 className="w-full rounded border px-3 py-1.5 text-sm"
                 value={category}
@@ -146,7 +150,7 @@ export default function ObjectivesPage() {
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium mb-1">Description</label>
+              <label className="block text-xs font-medium mb-1">{t("common.description")}</label>
               <textarea
                 className="w-full rounded border px-3 py-1.5 text-sm"
                 value={description}
@@ -160,10 +164,10 @@ export default function ObjectivesPage() {
                 onClick={() => create.mutate()}
                 disabled={!title || create.isPending}
               >
-                {create.isPending ? "Creating…" : "Create"}
+                {create.isPending ? t("common.loading") : t("common.create")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setCreating(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </CardContent>
@@ -173,13 +177,13 @@ export default function ObjectivesPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            All Objectives{objectives ? ` (${objectives.length})` : ""}
+            {t("sustain.objectivesTitle")}{objectives ? ` (${objectives.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading && <Spinner />}
           {objectives?.length === 0 && (
-            <p className="text-sm text-muted-foreground">No objectives yet.</p>
+            <p className="text-sm text-muted-foreground">{t("sustain.noObjectives")}</p>
           )}
           <div className="space-y-2">
             {objectives?.map((obj) => <ObjectiveRow key={obj.id} obj={obj} />)}

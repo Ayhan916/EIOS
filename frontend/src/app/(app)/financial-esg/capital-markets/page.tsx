@@ -8,6 +8,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const READINESS_STYLE: Record<string, { bar: string; label: string }> = {
   READY: { bar: "bg-green-500", label: "text-green-700 bg-green-100" },
@@ -33,6 +34,7 @@ function ReadinessRow({ label, value }: { label: string; value: string }) {
 
 export default function CapitalMarketsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
 
   const { data: assessments, isLoading: l1 } = useQuery({
@@ -86,7 +88,7 @@ export default function CapitalMarketsPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total Assessments</p>
+            <p className="text-sm text-muted-foreground">{t("dashboard.totalAssessments")}</p>
             <p className="mt-1 text-3xl font-bold">{(assessments ?? []).length}</p>
           </CardContent>
         </Card>
@@ -95,7 +97,7 @@ export default function CapitalMarketsPage() {
             <p className="text-sm text-muted-foreground">Finalized Disclosures</p>
             <p className="mt-1 text-3xl font-bold">{finalizedPkgs}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              of {(packages ?? []).length} total
+              {t("common.of")} {(packages ?? []).length} {t("common.total")}
             </p>
           </CardContent>
         </Card>

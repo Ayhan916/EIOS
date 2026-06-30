@@ -12,6 +12,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
+import { useLanguage } from "@/lib/i18n/context";
 import { getCommandCenter } from "@/lib/api/executive";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -77,6 +78,7 @@ function MetricPillar({
 }
 
 export default function BoardSummaryPage() {
+  const { t } = useLanguage();
   const { data: cc, isLoading } = useQuery({
     queryKey: ["executive-command-center"],
     queryFn: getCommandCenter,
@@ -88,7 +90,7 @@ export default function BoardSummaryPage() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">Board Summary</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400">{t("exec.boardSummaryTitle")}</p>
           <h1 className="mt-1 text-3xl font-bold text-slate-900">ESG Portfolio Overview</h1>
           <p className="mt-1 text-sm text-slate-500">Condensed board-level view · {new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" })}</p>
         </div>

@@ -17,18 +17,19 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { listMaterials, MATERIAL_TYPES, type Material, type MaterialType, type MaterialStatus } from "@/lib/api/material";
+import { useLanguage } from "@/lib/i18n/context";
 
-const TYPE_LABELS: Record<string, string> = {
-  RAW_MATERIAL: "Raw Material",
-  CHEMICAL: "Chemical",
-  METAL: "Metal",
-  PLASTIC: "Plastic",
-  TEXTILE: "Textile",
-  ELECTRONIC_COMPONENT: "Electronic Component",
-  PACKAGING: "Packaging",
-  INTERMEDIATE: "Intermediate",
-  COMPOSITE: "Composite",
-  OTHER: "Other",
+const TYPE_LABELS_KEYS: Record<string, string> = {
+  RAW_MATERIAL: "materials.rawMaterialLabel",
+  CHEMICAL: "materials.chemicalLabel",
+  METAL: "materials.metalLabel",
+  PLASTIC: "materials.plasticLabel",
+  TEXTILE: "materials.textileLabel",
+  ELECTRONIC_COMPONENT: "materials.electronicLabel",
+  PACKAGING: "materials.packaging",
+  INTERMEDIATE: "materials.intermediateLabel",
+  COMPOSITE: "materials.composite",
+  OTHER: "materials.other",
 };
 
 const STATUS_COLORS: Record<string, string> = {
@@ -42,6 +43,7 @@ const STATUS_COLORS: Record<string, string> = {
 const PAGE_SIZE = 50;
 
 export default function MaterialsPage() {
+  const { t } = useLanguage();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<MaterialType | "">("");
   const [crmOnly, setCrmOnly] = useState(false);
@@ -69,15 +71,15 @@ export default function MaterialsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Material Twin</h1>
+          <h1 className="text-2xl font-bold">{t("materials.title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {total} material{total !== 1 ? "s" : ""} — BOM, sourcing, compliance &amp; LCA
+            {t("materials.subtitle")}
           </p>
         </div>
         <Button asChild>
           <Link href="/materials/new">
             <Plus className="h-4 w-4 mr-2" />
-            New Material
+            {t("materials.newMaterial")}
           </Link>
         </Button>
       </div>
@@ -87,7 +89,7 @@ export default function MaterialsPage() {
         <div className="relative flex-1 min-w-56">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search name, CAS, HS code…"
+            placeholder={t("materials.searchName")}
             className="pl-9"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setOffset(0); }}
@@ -98,9 +100,9 @@ export default function MaterialsPage() {
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value as MaterialType | ""); setOffset(0); }}
         >
-          <option value="">All Types</option>
-          {MATERIAL_TYPES.map((t) => (
-            <option key={t} value={t}>{TYPE_LABELS[t] ?? t}</option>
+          <option value="">{t("materials.allTypes")}</option>
+          {MATERIAL_TYPES.map((mt) => (
+            <option key={mt} value={mt}>{TYPE_LABELS_KEYS[mt] ? t(TYPE_LABELS_KEYS[mt] as Parameters<typeof t>[0]) : mt}</option>
           ))}
         </select>
         <label className="flex items-center gap-2 text-sm border rounded-md px-3 py-2 cursor-pointer">
@@ -110,7 +112,7 @@ export default function MaterialsPage() {
             onChange={(e) => { setCrmOnly(e.target.checked); setOffset(0); }}
             className="rounded"
           />
-          Critical Raw Materials only
+          {t("materials.isCrm")}
         </label>
       </div>
 
@@ -122,8 +124,8 @@ export default function MaterialsPage() {
       ) : items.length === 0 ? (
         <EmptyState
           icon={FlaskConical}
-          title="No materials found"
-          description="Add your first material to start tracking BOM, sourcing and compliance."
+          title={t("materials.noMaterialsFound")}
+          description={t("materials.noMaterialsDesc")}
         />
       ) : (
         <>
@@ -149,7 +151,7 @@ export default function MaterialsPage() {
                         </span>
                       </div>
                       <div className="flex gap-4 mt-1 text-xs text-muted-foreground flex-wrap">
-                        <span>{TYPE_LABELS[m.material_type] ?? m.material_type}</span>
+                        <span>{TYPE_LABELS_KEYS[m.material_type] ? t(TYPE_LABELS_KEYS[m.material_type] as Parameters<typeof t>[0]) : m.material_type}</span>
                         {m.cas_number && <span>CAS {m.cas_number}</span>}
                         {m.hs_code && <span>HS {m.hs_code}</span>}
                         {m.country_of_origin && <span>{m.country_of_origin}</span>}
@@ -169,7 +171,7 @@ export default function MaterialsPage() {
           {totalPages > 1 && (
             <div className="flex items-center justify-between pt-2">
               <span className="text-sm text-muted-foreground">
-                Page {currentPage} of {totalPages} ({total} total)
+                {t("common.page")} {currentPage} {t("common.of")} {totalPages} ({total} {t("common.total")})
               </span>
               <div className="flex gap-2">
                 <Button
@@ -179,7 +181,7 @@ export default function MaterialsPage() {
                   onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Previous
+                  {t("common.previous")}
                 </Button>
                 <Button
                   variant="outline"
@@ -187,7 +189,7 @@ export default function MaterialsPage() {
                   disabled={offset + PAGE_SIZE >= total}
                   onClick={() => setOffset(offset + PAGE_SIZE)}
                 >
-                  Next
+                  {t("common.next")}
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>

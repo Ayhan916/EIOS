@@ -5,10 +5,12 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Building2, CheckCircle, ShieldOff } from "lucide-react";
 import { getMyOrganization, updateMyOrganization } from "@/lib/api/organizations";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import type { OrganizationUpdate } from "@/types/api";
 
 export default function OrganizationSettingsPage() {
   const { user: me } = useAuth();
+  const { t } = useLanguage();
 
   const { data: org, isLoading } = useQuery({
     queryKey: ["my-organization"],
@@ -41,14 +43,14 @@ export default function OrganizationSettingsPage() {
     return (
       <div className="flex flex-col items-center justify-center py-24 text-center">
         <ShieldOff className="mb-4 h-10 w-10 text-slate-300" />
-        <p className="text-sm text-slate-500">Admin access required.</p>
+        <p className="text-sm text-slate-500">{t("settings.adminOnly")}</p>
       </div>
     );
   }
 
   if (isLoading || !org) {
     return (
-      <div className="py-12 text-center text-sm text-slate-400">Loading…</div>
+      <div className="py-12 text-center text-sm text-slate-400">{t("common.loading")}</div>
     );
   }
 
@@ -87,7 +89,7 @@ export default function OrganizationSettingsPage() {
         </div>
         <div>
           <h1 className="text-xl font-semibold text-slate-900">
-            Organization Settings
+            {t("sec.orgTitle")}
           </h1>
           <p className="text-sm text-slate-500">{org.organization_type}</p>
         </div>
@@ -95,17 +97,17 @@ export default function OrganizationSettingsPage() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-6">
         <div className="space-y-4">
-          {field("Organization Name", "name")}
-          {field("Description", "description", "textarea")}
-          {field("Country", "country")}
-          {field("Industry", "industry")}
+          {field(t("settings.orgName"), "name")}
+          {field(t("settings.orgDescription"), "description", "textarea")}
+          {field(t("settings.orgCountry"), "country")}
+          {field(t("settings.orgIndustry"), "industry")}
         </div>
 
         <div className="mt-6 flex items-center justify-between">
           {saved ? (
             <span className="flex items-center gap-1.5 text-sm text-green-600">
               <CheckCircle className="h-4 w-4" />
-              Saved
+              {t("settings.orgSaved")}
             </span>
           ) : (
             <span />
@@ -115,14 +117,14 @@ export default function OrganizationSettingsPage() {
             disabled={update.isPending}
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {update.isPending ? "Saving…" : "Save Changes"}
+            {update.isPending ? t("settings.saving") : t("settings.saveChanges")}
           </button>
         </div>
       </div>
 
       <div className="mt-4 rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 text-xs text-slate-400">
-        <span className="font-medium">Organization ID:</span> {org.id}
-        <span className="ml-4 font-medium">Status:</span>{" "}
+        <span className="font-medium">{t("common.id")}:</span> {org.id}
+        <span className="ml-4 font-medium">{t("common.status")}:</span>{" "}
         <span className="capitalize">{org.status}</span>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   Package,
   AlertTriangle,
@@ -49,19 +50,20 @@ const COMPLIANCE_STATUS_COLORS: Record<string, string> = {
 // ── Overview Tab ──────────────────────────────────────────────────────────────
 
 function OverviewTab({ product }: { product: Product }) {
+  const { t } = useLanguage();
   const fields: [string, string | number | boolean | null][] = [
-    ["Type", product.product_type.replace(/_/g, " ")],
-    ["Status", product.product_status],
-    ["SKU", product.sku],
+    [t("common.type"), product.product_type.replace(/_/g, " ")],
+    [t("common.status"), product.product_status],
+    [t("products.sku"), product.sku],
     ["GTIN / Barcode", product.gtin],
     ["Internal Code", product.internal_code],
-    ["Category", product.category],
+    [t("common.category"), product.category],
     ["Brand", product.brand],
     ["Unit of Measure", product.unit_of_measure],
-    ["Weight (kg)", product.weight_kg],
-    ["Country of Manufacture", product.country_of_manufacture],
-    ["Target Market", product.target_market],
-    ["Regulated Product", product.is_regulated_product ? "Yes (DPP scope)" : "No"],
+    [t("products.weight"), product.weight_kg],
+    [t("products.manufacturer"), product.country_of_manufacture],
+    [t("products.targetMarket"), product.target_market],
+    ["Regulated Product", product.is_regulated_product ? `${t("common.yes")} (DPP scope)` : t("common.no")],
   ];
 
   return (
@@ -90,7 +92,7 @@ function OverviewTab({ product }: { product: Product }) {
       </Card>
       {product.notes && (
         <Card>
-          <CardHeader><CardTitle className="text-base">Notes</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("common.notes")}</CardTitle></CardHeader>
           <CardContent><p className="text-sm">{product.notes}</p></CardContent>
         </Card>
       )}
@@ -175,6 +177,7 @@ function BOMTab({ productId }: { productId: string }) {
 // ── Compliance Tab ────────────────────────────────────────────────────────────
 
 function ComplianceTab({ productId }: { productId: string }) {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["product-compliance", productId],
     queryFn: () => getProductCompliance(productId),
@@ -195,11 +198,11 @@ function ComplianceTab({ productId }: { productId: string }) {
         <div className="flex gap-4">
           <div className="flex-1 rounded-lg border p-3 text-center">
             <div className="text-2xl font-bold text-green-600">{compliant}</div>
-            <div className="text-xs text-muted-foreground">Compliant</div>
+            <div className="text-xs text-muted-foreground">{t("scCompliance.compliant")}</div>
           </div>
           <div className="flex-1 rounded-lg border p-3 text-center">
             <div className="text-2xl font-bold text-red-600">{nonCompliant}</div>
-            <div className="text-xs text-muted-foreground">Non-Compliant</div>
+            <div className="text-xs text-muted-foreground">{t("scCompliance.nonCompliantStatus")}</div>
           </div>
           <div className="flex-1 rounded-lg border p-3 text-center">
             <div className="text-2xl font-bold">{items.length}</div>
@@ -329,6 +332,7 @@ function SustainabilityTab({ productId }: { productId: string }) {
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<Tab>("Overview");
 
   const { data, isLoading } = useQuery({
@@ -343,8 +347,15 @@ export default function ProductDetailPage() {
     return <div className="flex justify-center items-center min-h-96"><Spinner /></div>;
   }
   if (!product) {
-    return <div className="p-6 text-center text-muted-foreground">Product not found.</div>;
+    return <div className="p-6 text-center text-muted-foreground">{t("products.noProductsFound")}</div>;
   }
+
+  const TAB_LABELS: Record<Tab, string> = {
+    Overview: t("products.tabOverview"),
+    BOM: t("products.tabBom"),
+    Compliance: t("products.tabCompliance"),
+    Sustainability: t("materials.tabSustainability"),
+  };
 
   const TAB_ICONS: Record<Tab, React.ReactNode> = {
     Overview: <Info className="h-4 w-4" />,
@@ -375,8 +386,8 @@ export default function ProductDetailPage() {
           </div>
           <div className="flex gap-4 mt-1 text-sm text-muted-foreground flex-wrap">
             <span>{product.product_type.replace(/_/g, " ")}</span>
-            {product.sku && <span>SKU: {product.sku}</span>}
-            {product.gtin && <span>GTIN: {product.gtin}</span>}
+            {product.sku && <span>{t("products.sku")}: {product.sku}</span>}
+            {product.gtin && <span>{t("products.gtin")}: {product.gtin}</span>}
             {product.brand && <span>{product.brand}</span>}
             {product.target_market && <span>{product.target_market}</span>}
           </div>
@@ -397,7 +408,7 @@ export default function ProductDetailPage() {
               }`}
             >
               {TAB_ICONS[tab]}
-              {tab}
+              {TAB_LABELS[tab]}
             </button>
           ))}
         </nav>

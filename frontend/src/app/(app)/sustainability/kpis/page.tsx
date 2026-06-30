@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import { AlertTriangle, BarChart3, CheckCircle2, Loader2, Plus, TrendingUp } from "lucide-react";
 import {
   listKPIs,
@@ -78,6 +79,7 @@ function Sparkline({ data, target }: { data: KPIMeasurement[]; target: number | 
 // ── KPI Card ──────────────────────────────────────────────────────────────────
 
 function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
+  const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
 
   const { data: measurements } = useQuery({
@@ -143,7 +145,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
           <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
             kpi.is_active ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"
           }`}>
-            {kpi.is_active ? "Active" : "Inactive"}
+            {kpi.is_active ? t("common.active") : t("common.inactive")}
           </span>
           {kpi.is_active && (
             <Button
@@ -153,7 +155,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
               onClick={() => { setShowForm((v) => !v); setSuccess(false); setErr(null); }}
             >
               <TrendingUp className="h-3.5 w-3.5 mr-1" />
-              Add Measurement
+              {t("sustain.addMeasurement")}
             </Button>
           )}
         </div>
@@ -187,10 +189,10 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
 
       {showForm && (
         <div className="rounded-lg border bg-muted/30 p-3 space-y-2 mt-2">
-          <p className="text-xs font-medium">Log Measurement{kpi.unit ? ` (${kpi.unit})` : ""}</p>
+          <p className="text-xs font-medium">{t("sustain.addMeasurement")}{kpi.unit ? ` (${kpi.unit})` : ""}</p>
           <div className="grid grid-cols-3 gap-2">
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Value</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t("sustain.value")}</label>
               <input
                 type="number" step="any"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -200,7 +202,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Period Start</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t("sustain.periodStart")}</label>
               <input
                 type="date"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -209,7 +211,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
               />
             </div>
             <div>
-              <label className="block text-xs text-muted-foreground mb-1">Period End</label>
+              <label className="block text-xs text-muted-foreground mb-1">{t("sustain.periodEnd")}</label>
               <input
                 type="date"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -219,7 +221,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
             </div>
           </div>
           <div>
-            <label className="block text-xs text-muted-foreground mb-1">Notes (optional)</label>
+            <label className="block text-xs text-muted-foreground mb-1">{t("common.notes")} ({t("common.optional")})</label>
             <input
               className="w-full rounded border px-2 py-1 text-sm bg-background"
               placeholder="Source, methodology…"
@@ -230,14 +232,14 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
           <div className="flex items-center gap-2">
             <Button size="sm" className="h-7 text-xs" disabled={!value || busy} onClick={submit}>
               {busy ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Save
+              {t("common.save")}
             </Button>
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowForm(false)}>
-              Cancel
+              {t("common.cancel")}
             </Button>
             {success && (
               <span className="flex items-center gap-1 text-xs text-emerald-600">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Saved
+                <CheckCircle2 className="h-3.5 w-3.5" /> {t("common.save")}
               </span>
             )}
             {err && <span className="text-xs text-red-600">{err}</span>}
@@ -249,6 +251,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
 }
 
 export default function KPIsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
@@ -302,13 +305,13 @@ export default function KPIsPage() {
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">KPI Management</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sustain.kpisTitle")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Track ESG performance indicators with thresholds and alerts
+            {t("sustain.kpisSubtitle")}
           </p>
         </div>
         <Button onClick={() => setCreating(true)} size="sm">
-          <Plus className="mr-2 h-4 w-4" /> New KPI
+          <Plus className="mr-2 h-4 w-4" /> {t("sustain.addKpi")}
         </Button>
       </div>
 
@@ -341,11 +344,11 @@ export default function KPIsPage() {
       {creating && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">New KPI</CardTitle>
+            <CardTitle className="text-base">{t("sustain.addKpi")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <label className="block text-xs font-medium mb-1">Name</label>
+              <label className="block text-xs font-medium mb-1">{t("common.name")}</label>
               <input
                 className="w-full rounded border px-3 py-1.5 text-sm"
                 value={name}
@@ -355,7 +358,7 @@ export default function KPIsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium mb-1">Category</label>
+                <label className="block text-xs font-medium mb-1">{t("sustain.kpiCategory")}</label>
                 <select
                   className="w-full rounded border px-3 py-1.5 text-sm"
                   value={category}
@@ -365,7 +368,7 @@ export default function KPIsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">Unit</label>
+                <label className="block text-xs font-medium mb-1">{t("sustain.kpiUnit")}</label>
                 <input
                   className="w-full rounded border px-3 py-1.5 text-sm"
                   value={unit}
@@ -374,7 +377,7 @@ export default function KPIsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">Target Value</label>
+                <label className="block text-xs font-medium mb-1">{t("sustain.kpiTarget")}</label>
                 <input
                   type="number"
                   className="w-full rounded border px-3 py-1.5 text-sm"
@@ -394,10 +397,10 @@ export default function KPIsPage() {
             </div>
             <div className="flex gap-2">
               <Button size="sm" onClick={() => create.mutate()} disabled={!name || create.isPending}>
-                {create.isPending ? "Creating…" : "Create"}
+                {create.isPending ? t("common.loading") : t("common.create")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setCreating(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
             </div>
           </CardContent>
@@ -430,7 +433,7 @@ export default function KPIsPage() {
         <CardContent>
           {kpisLoading && <Spinner />}
           {kpis?.length === 0 && (
-            <p className="text-sm text-muted-foreground">No KPIs yet.</p>
+            <p className="text-sm text-muted-foreground">{t("sustain.noKpis")}</p>
           )}
           <div className="space-y-2">
             {kpis?.map((k) => <KPICard key={k.id} kpi={k} onMeasured={invalidateKpis} />)}

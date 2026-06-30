@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useLanguage } from "@/lib/i18n/context";
 
 type EntityType = "enterprise" | "business-unit";
 
@@ -21,6 +22,7 @@ function MetricTile({ label, value }: { label: string; value: string | number | 
 }
 
 function RollupDetail({ data }: { data: RollupSummary }) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -47,27 +49,27 @@ function RollupDetail({ data }: { data: RollupSummary }) {
       <div>
         <p className="text-sm font-medium mb-2">Objectives</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <MetricTile label="Total" value={data.objectives.total} />
-          <MetricTile label="Active" value={data.objectives.active} />
+          <MetricTile label={t("common.total")} value={data.objectives.total} />
+          <MetricTile label={t("common.active")} value={data.objectives.active} />
           <MetricTile label="Completed" value={data.objectives.completed} />
           <MetricTile label="Completion %" value={`${data.objectives.completion_percent}%`} />
         </div>
       </div>
 
       <div>
-        <p className="text-sm font-medium mb-2">Targets</p>
+        <p className="text-sm font-medium mb-2">{t("sustain.targetsTitle")}</p>
         <div className="grid grid-cols-3 gap-2">
-          <MetricTile label="Total" value={data.targets.total} />
+          <MetricTile label={t("common.total")} value={data.targets.total} />
           <MetricTile label="With Measurements" value={data.targets.with_measurements} />
           <MetricTile label="Attainment %" value={`${data.targets.attainment_percent}%`} />
         </div>
       </div>
 
       <div>
-        <p className="text-sm font-medium mb-2">KPIs</p>
+        <p className="text-sm font-medium mb-2">{t("sustain.kpisTitle")}</p>
         <div className="grid grid-cols-2 gap-2">
-          <MetricTile label="Total" value={data.kpis.total} />
-          <MetricTile label="Active" value={data.kpis.active} />
+          <MetricTile label={t("common.total")} value={data.kpis.total} />
+          <MetricTile label={t("common.active")} value={data.kpis.active} />
         </div>
       </div>
 
@@ -75,9 +77,9 @@ function RollupDetail({ data }: { data: RollupSummary }) {
         <p className="text-sm font-medium mb-2">Sustainability Scores</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <MetricTile label="Overall" value={data.scores.avg_overall_score} />
-          <MetricTile label="Environmental" value={data.scores.avg_environmental_score} />
-          <MetricTile label="Social" value={data.scores.avg_social_score} />
-          <MetricTile label="Governance" value={data.scores.avg_governance_score} />
+          <MetricTile label={t("dashboard.environmental")} value={data.scores.avg_environmental_score} />
+          <MetricTile label={t("dashboard.social")} value={data.scores.avg_social_score} />
+          <MetricTile label={t("dashboard.governance")} value={data.scores.avg_governance_score} />
         </div>
       </div>
 
@@ -95,6 +97,7 @@ function RollupDetail({ data }: { data: RollupSummary }) {
 }
 
 export default function RollupsPage() {
+  const { t } = useLanguage();
   const [entityType, setEntityType] = useState<EntityType>("enterprise");
   const [entityId, setEntityId] = useState("");
   const [queryId, setQueryId] = useState("");
@@ -157,7 +160,7 @@ export default function RollupsPage() {
             />
             <Button onClick={handleSearch} disabled={!entityId.trim() || isLoading}>
               <Search className="mr-1 h-4 w-4" />
-              {isLoading ? "Loading…" : "Load Rollup"}
+              {isLoading ? t("common.loading") : "Load Rollup"}
             </Button>
           </div>
 

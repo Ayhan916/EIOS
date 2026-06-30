@@ -15,6 +15,7 @@ import {
   UserCheck,
   X,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   ScatterChart,
   Scatter,
@@ -486,6 +487,7 @@ function BulkRiskStatusPanel({ ids, onDone, onCancel }: { ids: string[]; onDone:
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function RisksPage() {
+  const { t } = useLanguage();
   const [levelFilter, setLevelFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkOwner, setShowBulkOwner] = useState(false);
@@ -531,10 +533,10 @@ export default function RisksPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <ShieldAlert className="h-6 w-6 text-orange-500" />
-            Risks
+            {t("risks.title")}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            All ESG risks across your supplier portfolio — update status or escalate inline
+            {t("risks.noRisksDesc")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -547,11 +549,11 @@ export default function RisksPage() {
               setSelected(new Set());
             }}
           >
-            <option value="all">All Levels</option>
-            <option value="Critical">Critical</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
+            <option value="all">{t("risks.allLevels")}</option>
+            <option value="Critical">{t("risks.critical")}</option>
+            <option value="High">{t("risks.high")}</option>
+            <option value="Medium">{t("risks.medium")}</option>
+            <option value="Low">{t("risks.low")}</option>
           </select>
 
           {selected.size > 0 && (
@@ -636,13 +638,11 @@ export default function RisksPage() {
             <div className="rounded-lg border border-dashed">
               <EmptyState
                 icon={ShieldAlert}
-                title={levelFilter !== "all" ? `No ${levelFilter} risks found` : "No risks yet"}
-                description={levelFilter !== "all"
-                  ? "Try clearing the risk level filter to see all risks."
-                  : "Here's what you can do next: run an ESG assessment to surface risks, or add risks manually to build your register."}
+                title={t("risks.noRisks")}
+                description={t("risks.noRisksDesc")}
                 actions={levelFilter === "all" ? [
-                  { label: "Run Assessment", href: "/assessments/new", variant: "primary" },
-                  { label: "Add Risk Manually", href: "/risks/new", variant: "outline" },
+                  { label: t("assessments.newAssessment"), href: "/assessments/new", variant: "primary" },
+                  { label: t("risks.newRisk"), href: "/risks/new", variant: "outline" },
                 ] : undefined}
               />
             </div>

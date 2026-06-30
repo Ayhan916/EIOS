@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 import { CommandPalette } from "@/components/layout/command-palette";
 import { FeatureSpotlight } from "@/components/layout/feature-spotlight";
 import { HelpButton } from "@/components/layout/help-sidebar";
@@ -16,6 +17,7 @@ import { Spinner } from "@/components/ui/spinner";
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const { t } = useLanguage();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -55,8 +57,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
               </svg>
-              <span>Search...</span>
-              <kbd className="ml-2 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px]">⌘K</kbd>
+              <span>{t("header.search")}</span>
+              <kbd className="ml-2 rounded border border-border bg-background px-1.5 py-0.5 font-mono text-[10px]">{t("header.searchShortcut")}</kbd>
             </button>
             {/* #83 Knowledge base search */}
             <KnowledgeSearchDrawer />

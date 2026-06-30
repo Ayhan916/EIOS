@@ -22,10 +22,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── Generate form ─────────────────────────────────────────────────────────────
 
 function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useLanguage();
   const [title, setTitle] = useState("Board Report");
   const [periodStart, setPeriodStart] = useState(() => {
     const d = new Date();
@@ -81,12 +83,12 @@ function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Generate New Board Report</CardTitle>
+        <CardTitle className="text-base">{t("reports.newReport")}</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <Label htmlFor="title">Report Title</Label>
+            <Label htmlFor="title">{t("common.title")}</Label>
             <Input
               id="title"
               value={title}
@@ -175,11 +177,11 @@ function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
           <Button type="submit" disabled={isPending} className="w-full">
             {isPending ? (
               <span className="flex items-center gap-2">
-                <Spinner className="h-4 w-4" /> Generating…
+                <Spinner className="h-4 w-4" /> {t("common.loading")}
               </span>
             ) : (
               <span className="flex items-center gap-2">
-                <Plus className="h-4 w-4" /> Generate Report
+                <Plus className="h-4 w-4" /> {t("reports.generate")}
               </span>
             )}
           </Button>
@@ -192,6 +194,7 @@ function GenerateForm({ onSuccess }: { onSuccess: () => void }) {
 // ── Share link button ─────────────────────────────────────────────────────────
 
 function ShareLinkButton({ reportId }: { reportId: string }) {
+  const { t } = useLanguage();
   const [sharing, setSharing] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -224,7 +227,7 @@ function ShareLinkButton({ reportId }: { reportId: string }) {
       ) : (
         <Share2 className="h-3.5 w-3.5" />
       )}
-      {copied ? "Copied!" : "Share"}
+      {copied ? t("common.confirm") : t("exec.shareLink")}
     </button>
   );
 }
@@ -272,6 +275,7 @@ function PptxButton({ reportId, title }: { reportId: string; title: string }) {
 // ── Report list ───────────────────────────────────────────────────────────────
 
 function ReportList() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const { user } = useAuth();
   const isAdmin = user?.role === "admin";
@@ -298,7 +302,7 @@ function ReportList() {
     return (
       <Card>
         <CardContent className="py-10 text-center text-sm text-muted-foreground">
-          No board reports generated yet.
+          {t("reports.noReports")}
         </CardContent>
       </Card>
     );
@@ -358,15 +362,15 @@ function ReportList() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BoardReportsPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-semibold">Board Reports</h1>
+        <h1 className="text-2xl font-semibold">{t("exec.reportsTitle")}</h1>
         <p className="text-sm text-muted-foreground">
-          Generate immutable, auditable board-level ESG reports. Each report
-          captures a full portfolio snapshot at generation time.
+          {t("exec.reportsSubtitle")}
         </p>
       </div>
 

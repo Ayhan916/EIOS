@@ -5,9 +5,11 @@ import { listReports, listScenarios, listCorrelations } from "@/lib/api/financia
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 export default function FinancialReportsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
 
   const { data: reports, isLoading: l1 } = useQuery({
@@ -34,7 +36,7 @@ export default function FinancialReportsPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Financial ESG Reports</h1>
+        <h1 className="text-2xl font-bold">{t("finEsg.reportsTitle")}</h1>
         <p className="text-muted-foreground">
           Reports, scenario analyses, and ESG–financial correlations
         </p>
@@ -42,11 +44,11 @@ export default function FinancialReportsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Reports</CardTitle>
+          <CardTitle>{t("reports.title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(reports ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No reports yet</p>
+            <p className="text-sm text-muted-foreground">{t("finEsg.noReports")}</p>
           ) : (
             <div className="space-y-2">
               {(reports ?? []).map((r) => (
@@ -89,7 +91,7 @@ export default function FinancialReportsPage() {
           </CardHeader>
           <CardContent>
             {(scenarios ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No scenarios</p>
+              <p className="text-sm text-muted-foreground">{t("strategy.noScenarios")}</p>
             ) : (
               <div className="space-y-2">
                 {(scenarios ?? []).map((s) => (

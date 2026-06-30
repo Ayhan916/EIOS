@@ -38,6 +38,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { useLanguage } from "@/lib/i18n/context";
 
 const DONUT_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
 
@@ -72,6 +73,7 @@ function KpiCard({
 
 export default function FinancialESGDashboard() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const orgId = user?.organization_id ?? "default";
 
   const { data: carbonModels, isLoading: l1 } = useQuery({
@@ -179,7 +181,7 @@ export default function FinancialESGDashboard() {
           sub={`of $${(totalInvestment / 1_000_000).toFixed(1)}M invested`}
         />
         <KpiCard
-          label="Taxonomy Alignment"
+          label={t("dashboard.taxonomyAlignment")}
           value={
             latestTaxonomy
               ? `${latestTaxonomy.aligned_percent.toFixed(1)}%`
@@ -194,7 +196,7 @@ export default function FinancialESGDashboard() {
           }
         />
         <KpiCard
-          label="Sustainable Finance"
+          label={t("finEsg.sustainFinanceTitle")}
           value={`$${(totalFinanceExposure / 1_000_000).toFixed(1)}M`}
           icon={DollarSign}
           accent="text-blue-600"
@@ -204,14 +206,14 @@ export default function FinancialESGDashboard() {
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard
-          label="Green Revenue"
+          label={t("finEsg.greenRevenueTitle")}
           value={`$${(totalGreenRevenue / 1_000_000).toFixed(1)}M`}
           icon={BarChart3}
           accent="text-teal-600"
           sub={`${(greenRevRecords ?? []).length} records`}
         />
         <KpiCard
-          label="Capital Markets"
+          label={t("finEsg.capitalMarketsTitle")}
           value={latestReadiness?.overall_readiness ?? "—"}
           icon={Building2}
           accent={readinessBadge}
@@ -225,7 +227,7 @@ export default function FinancialESGDashboard() {
           sub={`${(initiatives ?? []).filter((i) => i.initiative_status === "ACTIVE").length} active`}
         />
         <KpiCard
-          label="Reports"
+          label={t("finEsg.reportsTitle")}
           value={(reports ?? []).length}
           icon={FileText}
           accent="text-slate-600"
