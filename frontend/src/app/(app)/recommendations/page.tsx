@@ -111,7 +111,7 @@ function StatusChanger({
   if (status === "verified") {
     return (
       <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Verified
+        <CheckCircle2 className="h-3.5 w-3.5" /> {t("recommendations.verified")}
       </span>
     );
   }
@@ -172,7 +172,7 @@ function AssignToMeButton({ rec, onDone }: { rec: OrgRecommendation; onDone: () 
   if (!user || rec.assigned_to_id === user.id || done) {
     return done ? (
       <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
-        <UserCheck className="h-3 w-3" /> Assigned
+        <UserCheck className="h-3 w-3" /> {t("recommendations.assigned")}
       </span>
     ) : null;
   }
@@ -308,7 +308,7 @@ export default function RecommendationsPage() {
               onClick={() => exportToCsv(selectedRecs, `recommendations-selected-${new Date().toISOString().split("T")[0]}.csv`)}
             >
               <Layers className="h-3.5 w-3.5" />
-              Export {selected.size} selected
+              {t("recommendations.exportSelected").replace("{n}", String(selected.size))}
             </Button>
           )}
           <Button
@@ -340,7 +340,7 @@ export default function RecommendationsPage() {
               <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">
                 {statusFilter !== "all"
-                  ? `No recommendations with status "${statusFilter}".`
+                  ? `${t("recommendations.noRecsWithStatus")} "${statusFilter}".`
                   : t("recommendations.noRecommendationsYetDesc")}
               </p>
             </div>

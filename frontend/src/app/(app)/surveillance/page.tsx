@@ -154,7 +154,7 @@ function SignalRow({ signal }: { signal: any }) {
         <SeverityBadge severity={signal.severity} />
         {created ? (
           <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
-            <CheckCircle2 className="h-3 w-3" /> Risk created
+            <CheckCircle2 className="h-3 w-3" /> {t("surveillance.riskCreated")}
           </span>
         ) : (
           <button
@@ -177,8 +177,7 @@ function EpisodeRow({ episode }: { episode: any }) {
       <div className="flex-1 min-w-0 mr-4">
         <p className="text-sm font-medium truncate">{episode.title}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {episode.signal_count} signals · started{" "}
-          {formatDateTime(episode.started_at)}
+          {episode.signal_count} {episode.signal_count === 1 ? "Signal" : "Signals"} · {formatDateTime(episode.started_at)}
         </p>
       </div>
       <SeverityBadge severity={episode.severity} />
@@ -205,6 +204,7 @@ const SEV_COLOUR: Record<string, string> = {
 };
 
 function ConnectorCard({ connector }: { connector: { source_name: string; label: string; total: number; signals: any[] } }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? connector.signals : connector.signals.slice(0, 3);
   const icon = CONNECTOR_ICONS[connector.source_name] ?? "📡";
@@ -221,11 +221,11 @@ function ConnectorCard({ connector }: { connector: { source_name: string; label:
           <div className="flex items-center gap-2">
             {hasSignals ? (
               <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
-                {connector.total} Signal{connector.total !== 1 ? "e" : ""}
+                {connector.total} {t("surveillance.signalCount")}
               </span>
             ) : (
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
-                Klar
+                {t("surveillance.clear")}
               </span>
             )}
           </div>
@@ -233,7 +233,7 @@ function ConnectorCard({ connector }: { connector: { source_name: string; label:
       </CardHeader>
       <CardContent>
         {!hasSignals ? (
-          <p className="text-xs text-muted-foreground py-1">Keine aktiven Signale für deine Lieferanten.</p>
+          <p className="text-xs text-muted-foreground py-1">{t("surveillance.noSignalsForSuppliers")}</p>
         ) : (
           <div className="space-y-1.5">
             {shown.map((s: any) => (
@@ -252,8 +252,8 @@ function ConnectorCard({ connector }: { connector: { source_name: string; label:
                 className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground mt-1"
               >
                 {expanded
-                  ? <><ChevronUp className="h-3 w-3" /> Weniger anzeigen</>
-                  : <><ChevronDown className="h-3 w-3" /> {connector.signals.length - 3} weitere anzeigen</>
+                  ? <><ChevronUp className="h-3 w-3" /> {t("surveillance.showLess")}</>
+                  : <><ChevronDown className="h-3 w-3" /> {t("surveillance.showMore").replace("{n}", String(connector.signals.length - 3))}</>
                 }
               </button>
             )}
@@ -315,11 +315,9 @@ export default function SurveillancePage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Radio className="h-6 w-6 text-primary" />
-          Continuous Surveillance
+          {t("surveillance.pageTitle")}
         </h1>
-        <p className="text-muted-foreground mt-1">
-          Real-time ESG risk surveillance across your supplier portfolio.
-        </p>
+        <p className="text-muted-foreground mt-1">{t("surveillance.pageSubtitle")}</p>
       </div>
 
       {/* Portfolio stats */}
@@ -353,19 +351,19 @@ export default function SurveillancePage() {
           colour="text-green-600"
         />
         <StatCard
-          label="Deteriorating"
+          label={t("surveillance.deteriorating")}
           value={d.suppliers_deteriorating ?? 0}
           icon={TrendingDown}
           colour={d.suppliers_deteriorating > 0 ? "text-red-600" : undefined}
         />
         <StatCard
-          label="Open Episodes"
+          label={t("surveillance.openEpisodes")}
           value={d.open_episodes ?? 0}
           icon={Zap}
           colour={d.open_episodes > 0 ? "text-yellow-600" : undefined}
         />
         <StatCard
-          label="Total Suppliers"
+          label={t("surveillance.totalSuppliers")}
           value={d.total_suppliers ?? 0}
           icon={Shield}
         />
@@ -375,12 +373,12 @@ export default function SurveillancePage() {
       <div>
         <div className="flex items-center gap-2 mb-3">
           <Building2 className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-semibold text-base">Externe Risikosignale nach Quelle</h2>
-          <span className="text-xs text-muted-foreground">— Top 10 je Connector, bezogen auf deine Lieferanten</span>
+          <h2 className="font-semibold text-base">{t("surveillance.externalSignalsBySource")}</h2>
+          <span className="text-xs text-muted-foreground">— {t("surveillance.topNHint")}</span>
         </div>
         {connectorLoading ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
-            <Loader2 className="h-4 w-4 animate-spin" /> Signale werden geladen…
+            <Loader2 className="h-4 w-4 animate-spin" /> {t("surveillance.loadingSignals")}
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -401,7 +399,7 @@ export default function SurveillancePage() {
             {signalsLoading ? (
               <Spinner />
             ) : (signals ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No active signals.</p>
+              <p className="text-sm text-muted-foreground">{t("surveillance.noActiveSignals")}</p>
             ) : (
               <div>
                 {(signals ?? []).map((s: any) => (
@@ -415,11 +413,11 @@ export default function SurveillancePage() {
         {/* Open Risk Episodes */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Open Risk Episodes</CardTitle>
+            <CardTitle className="text-base">{t("surveillance.openRiskEpisodes")}</CardTitle>
           </CardHeader>
           <CardContent>
             {(episodes ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No open episodes.</p>
+              <p className="text-sm text-muted-foreground">{t("surveillance.noOpenEpisodes")}</p>
             ) : (
               <div>
                 {(episodes ?? []).map((e: any) => (
@@ -437,9 +435,7 @@ export default function SurveillancePage() {
           </CardHeader>
           <CardContent>
             {(watchlist ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No suppliers on watchlist.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("surveillance.noWatchlistSuppliers")}</p>
             ) : (
               <div>
                 {(watchlist ?? []).map((w: any) => (
@@ -466,34 +462,18 @@ export default function SurveillancePage() {
         {/* Signal type breakdown */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Portfolio Health</CardTitle>
+            <CardTitle className="text-base">{t("surveillance.portfolioHealth")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {[
-              {
-                label: "Improving suppliers",
-                value: d.suppliers_improving ?? 0,
-                colour: "bg-green-500",
-              },
-              {
-                label: "Stable suppliers",
-                value: d.suppliers_stable ?? 0,
-                colour: "bg-blue-400",
-              },
-              {
-                label: "Deteriorating suppliers",
-                value: d.suppliers_deteriorating ?? 0,
-                colour: "bg-red-500",
-              },
-              {
-                label: "Needing review",
-                value: d.suppliers_needing_review ?? 0,
-                colour: "bg-yellow-500",
-              },
+              { labelKey: "surveillance.improvingSuppliers" as const,    value: d.suppliers_improving ?? 0,    colour: "bg-green-500" },
+              { labelKey: "surveillance.stableSuppliers" as const,       value: d.suppliers_stable ?? 0,       colour: "bg-blue-400" },
+              { labelKey: "surveillance.deterioratingSuppliers" as const, value: d.suppliers_deteriorating ?? 0, colour: "bg-red-500" },
+              { labelKey: "surveillance.needingReview" as const,         value: d.suppliers_needing_review ?? 0, colour: "bg-yellow-500" },
             ].map((row) => (
-              <div key={row.label} className="space-y-1">
+              <div key={row.labelKey} className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span>{row.label}</span>
+                  <span>{t(row.labelKey)}</span>
                   <span className="font-medium">{row.value}</span>
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
