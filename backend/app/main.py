@@ -89,6 +89,8 @@ from interfaces.api.routers import (
     erp_router,
     supply_chain_compliance_router,
     scope3_router,
+    sector_risk_register_router,
+    news_router,
 )
 from shared.config import settings
 
@@ -464,3 +466,5 @@ app.include_router(supply_chain_events_router, prefix=API_V1)
 app.include_router(erp_router, prefix=API_V1)
 app.include_router(supply_chain_compliance_router, prefix=API_V1)
 app.include_router(scope3_router, prefix=API_V1)
+app.include_router(sector_risk_register_router, prefix=API_V1)
+app.include_router(news_router, prefix=API_V1)
