@@ -206,7 +206,12 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
                 </thead>
                 <tbody>
                   {displayRights.map((r) => (
-                    <RightRow key={r.right_id} right={r} showScenario={!!scenario && !!simulation} />
+                    <RightRow
+                      key={r.right_id}
+                      right={r}
+                      showScenario={!!scenario && !!simulation}
+                      colSpan={scenario && simulation ? 6 : 3}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -228,37 +233,59 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
   );
 }
 
-function RightRow({ right, showScenario }: { right: RightScore; showScenario: boolean }) {
+function RightRow({ right, showScenario, colSpan }: { right: RightScore; showScenario: boolean; colSpan: number }) {
+  const [open, setOpen] = useState(false);
   const scenarioScore = right.scenario?.adjusted_probability;
   const delta = right.scenario?.delta ?? 0;
   const factor = right.scenario?.factor ?? 1.0;
+  const explanation = right.scenario?.explanation;
   const displayScore = showScenario && scenarioScore !== undefined ? scenarioScore : right.probability;
+  const hasExplanation = showScenario && delta > 0 && !!explanation;
 
   return (
-    <tr className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-      <td className="px-4 py-2.5">
-        <span className="text-foreground">{right.right_name}</span>
-        {!right.is_calibrated && (
-          <span className="ml-2 text-xs text-muted-foreground">(Fallback)</span>
+    <>
+      <tr
+        className={`border-b border-border last:border-0 transition-colors ${hasExplanation ? "cursor-pointer hover:bg-amber-50/40" : "hover:bg-muted/20"}`}
+        onClick={() => hasExplanation && setOpen((v) => !v)}
+      >
+        <td className="px-4 py-2.5">
+          <div className="flex items-center gap-1.5">
+            {hasExplanation && (
+              <span className={`text-xs text-amber-500 transition-transform ${open ? "rotate-90" : ""}`}>▶</span>
+            )}
+            <span className="text-foreground">{right.right_name}</span>
+            {!right.is_calibrated && (
+              <span className="ml-1 text-xs text-muted-foreground">(Fallback)</span>
+            )}
+          </div>
+        </td>
+        <td className="px-4 py-2.5 text-center">
+          {scorePill(right.probability)}
+        </td>
+        {showScenario && (
+          <>
+            <td className="px-4 py-2.5 text-center">
+              {scenarioScore !== undefined ? scorePill(scenarioScore) : "—"}
+            </td>
+            <td className="px-4 py-2.5 text-center">
+              {deltaChip(delta)}
+            </td>
+            <td className="px-4 py-2.5 text-center text-xs text-muted-foreground">
+              {factor !== 1.0 ? `×${factor.toFixed(1)}` : "—"}
+            </td>
+          </>
         )}
-      </td>
-      <td className="px-4 py-2.5 text-center">
-        {scorePill(right.probability)}
-      </td>
-      {showScenario && (
-        <>
-          <td className="px-4 py-2.5 text-center">
-            {scenarioScore !== undefined ? scorePill(scenarioScore) : "—"}
+        <td className="px-4 py-2.5">{scoreBar(displayScore)}</td>
+      </tr>
+      {hasExplanation && open && (
+        <tr className="bg-amber-50/60 border-b border-amber-100">
+          <td colSpan={colSpan} className="px-6 py-2.5">
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <span className="font-semibold">Begründung:</span> {explanation}
+            </p>
           </td>
-          <td className="px-4 py-2.5 text-center">
-            {deltaChip(delta)}
-          </td>
-          <td className="px-4 py-2.5 text-center text-xs text-muted-foreground">
-            {factor !== 1.0 ? `×${factor.toFixed(1)}` : "—"}
-          </td>
-        </>
+        </tr>
       )}
-      <td className="px-4 py-2.5">{scoreBar(displayScore)}</td>
-    </tr>
+    </>
   );
 }
