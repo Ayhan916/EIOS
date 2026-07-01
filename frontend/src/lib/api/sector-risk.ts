@@ -90,7 +90,7 @@ export interface ScenarioSuggestion {
   expires_at: string | null;
 }
 
-const BASE = "/api/v1/sector-risk-register";
+const BASE = "/sector-risk-register";
 
 export const sectorRiskApi = {
   listSectors: (calibratedOnly = false): Promise<SectorListItem[]> =>
