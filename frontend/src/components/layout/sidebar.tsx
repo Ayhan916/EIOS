@@ -100,6 +100,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.assessments", href: "/assessments", icon: FileText },
       { labelKey: "nav.findings", href: "/findings", icon: AlertTriangle },
       { labelKey: "nav.risks", href: "/risks", icon: ShieldAlert },
+      { labelKey: "nav.sectorRisk", href: "/sector-risk", icon: Layers },
       { labelKey: "nav.recommendations", href: "/recommendations", icon: CheckSquare },
       { labelKey: "nav.evidence", href: "/evidence", icon: Upload },
       { labelKey: "nav.surveillance", href: "/surveillance", icon: Radio },

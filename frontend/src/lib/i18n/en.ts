@@ -1221,6 +1221,22 @@ const en = {
   "news.empty": "No news available yet.",
   "news.emptyHint": "Click Refresh to load the first news articles.",
   "news.loadError": "Could not load news.",
+
+  // ── Sector Risk Register ─────────────────────────────────────────────────────
+  "nav.sectorRisk": "Sector Risk Register",
+  "sectorRisk.title": "CSDDD Sector Risk Register",
+  "sectorRisk.subtitle": "Sector-specific risk assessment (NACE × CSDDD Annex I)",
+  "sectorRisk.calibrated": "Calibrated",
+  "sectorRisk.fallback": "Fallback",
+  "sectorRisk.scenario": "Scenario",
+  "sectorRisk.baseline": "Baseline",
+  "sectorRisk.simulate": "Simulate scenario",
+  "sectorRisk.calibrate": "RAG Calibration",
+  "sectorRisk.scenarios": "Scenario Suggestions",
+  "sectorRisk.approve": "Approve",
+  "sectorRisk.reject": "Reject",
+  "sectorRisk.activate": "Activate",
+  "sectorRisk.dismiss": "Dismiss",
 } as const;
 
 export default en;
