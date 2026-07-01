@@ -271,6 +271,25 @@ def _classify_gdelt_article(title: str, url: str) -> tuple[str, str] | None:
     return None
 
 
+def _supplier_name_in_title(supplier_name: str, title: str) -> bool:
+    """Verify that the supplier name (or a meaningful token) appears in the title.
+
+    Strips common legal suffixes before checking so "BMW AG" matches "BMW".
+    At least one token of 4+ characters must appear in the title.
+    """
+    import re
+    _LEGAL_SUFFIXES = re.compile(
+        r"\b(ag|gmbh|inc|llc|ltd|corp|s\.a\.|se|oy|ab|nv|bv|co\.|co)\b",
+        re.IGNORECASE,
+    )
+    clean = _LEGAL_SUFFIXES.sub("", supplier_name)
+    tokens = [t for t in re.split(r"\s+", clean.strip()) if len(t) >= 4]
+    if not tokens:
+        tokens = [supplier_name.split()[0]] if supplier_name else []
+    title_lower = title.lower()
+    return any(tok.lower() in title_lower for tok in tokens)
+
+
 async def _query_gdelt_for_supplier(
     supplier_name: str,
     client: httpx.AsyncClient,
@@ -311,6 +330,10 @@ async def _query_gdelt_for_supplier(
     for art in data.get("articles") or []:
         title = art.get("title") or ""
         url = art.get("url") or ""
+        # Discard articles where the supplier name doesn't appear in the title — avoids false positives
+        if not _supplier_name_in_title(supplier_name, title):
+            logger.debug("gdelt_false_positive_skipped", supplier=supplier_name, title=title[:80])
+            continue
         classification = _classify_gdelt_article(title, url)
         if classification:
             signal_type, severity = classification

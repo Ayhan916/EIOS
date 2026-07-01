@@ -1208,6 +1208,19 @@ const de = {
   "onboard.back": "Zurück",
   "onboard.finish": "Abschließen",
   "onboard.skip": "Überspringen",
+
+  "news.title": "Live News",
+  "news.description": "Weltweite Nachrichten zu Lieferanten und Ländern",
+  "news.lastUpdate": "Aktualisiert",
+  "news.refresh": "Aktualisieren",
+  "news.refreshing": "Wird geladen…",
+  "news.all": "Alle",
+  "news.supplier": "Lieferanten",
+  "news.country": "Länder",
+  "news.partner": "Partner",
+  "news.empty": "Noch keine Nachrichten verfügbar.",
+  "news.emptyHint": "Klicke auf Aktualisieren, um die ersten News zu laden.",
+  "news.loadError": "Nachrichten konnten nicht geladen werden.",
 } as const;
 
 export default de;

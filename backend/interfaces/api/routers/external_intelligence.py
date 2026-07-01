@@ -195,6 +195,77 @@ async def list_org_signals(
 
 
 @router.get(
+    "/signals/by-connector",
+    response_model=dict,
+    dependencies=[_READ],
+)
+async def signals_by_connector(
+    top_n: int = 10,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return top N active signals per connector/source for the organisation.
+
+    Response shape:
+    {
+      "connectors": [
+        { "source_name": "world_bank", "label": "World Bank", "signals": [...], "total": N },
+        ...
+      ]
+    }
+    """
+    from sqlalchemy import select
+    from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+
+    _SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+    _CONNECTOR_LABELS = {
+        "world_bank":                  "World Bank",
+        "transparency_international":  "Transparency International",
+        "ilo":                         "ILO",
+        "unicef":                      "UNICEF",
+        "un_sanctions":                "UN Sanctions",
+        "eu_sanctions":                "EU Sanctions",
+    }
+
+    # Pull all active signals for this org (max 1000)
+    stmt = (
+        select(ExternalRiskSignalModel)
+        .where(
+            ExternalRiskSignalModel.organization_id == current_user.organization_id,
+            ExternalRiskSignalModel.is_active.is_(True),
+        )
+        .order_by(ExternalRiskSignalModel.observed_at.desc())
+        .limit(1000)
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+
+    # Group by source_name
+    grouped: dict[str, list] = {k: [] for k in _CONNECTOR_LABELS}
+    for r in rows:
+        src = r.source_name if isinstance(r.source_name, str) else r.source_name.value
+        if src in grouped:
+            grouped[src].append(r)
+
+    connectors = []
+    for src, label in _CONNECTOR_LABELS.items():
+        bucket = grouped[src]
+        # Sort by severity then observed_at desc
+        bucket.sort(key=lambda r: (
+            _SEV_ORDER.get((r.severity if isinstance(r.severity, str) else r.severity.value).lower(), 9),
+            -(r.observed_at.timestamp() if r.observed_at else 0),
+        ))
+        top = bucket[:top_n]
+        connectors.append({
+            "source_name": src,
+            "label": label,
+            "total": len(bucket),
+            "signals": [_signal_to_response(r) for r in top],
+        })
+
+    return {"connectors": connectors}
+
+
+@router.get(
     "/signals/supplier/{supplier_id}",
     response_model=SignalListResponse,
     dependencies=[_READ],

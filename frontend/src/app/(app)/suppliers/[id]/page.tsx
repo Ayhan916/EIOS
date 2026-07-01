@@ -85,6 +85,12 @@ import type { SupplierTier, SupplierStatus, SupplierUpdate } from "@/types/api";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
+function toAbsoluteUrl(url: string): string {
+  if (!url) return url;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `https://${url}`;
+}
+
 function tierBadge(tier: string) {
   const colors: Record<string, string> = {
     "Tier 1": "bg-blue-100 text-blue-800",
@@ -225,7 +231,7 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
             <div className="mt-1">
               {event.source_url ? (
                 <a
-                  href={event.source_url}
+                  href={toAbsoluteUrl(event.source_url)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline"
@@ -1716,7 +1722,7 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
                         </p>
                       )}
                       {r.report_url && (
-                        <a href={r.report_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-blue-600 hover:underline">
+                        <a href={toAbsoluteUrl(r.report_url)} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-[10px] text-blue-600 hover:underline">
                           <ExternalLink className="h-3 w-3" /> Report
                         </a>
                       )}
@@ -1777,6 +1783,7 @@ export default function SupplierDetailPage() {
   // Due diligence
   const [ddBusy, setDdBusy] = useState(false);
   const [ddError, setDdError] = useState<string | null>(null);
+  const [ddSuccess, setDdSuccess] = useState(false);
 
   const { data: supplier, isLoading } = useQuery({
     queryKey: ["supplier", id],
@@ -1848,10 +1855,14 @@ export default function SupplierDetailPage() {
   const [processResult, setProcessResult] = useState<string | null>(null);
 
   const { data: dueDiligence, refetch: refetchDD } = useQuery<{
-    supplier_id: string; overall_risk: string; csddd_score: number;
-    human_rights_score: number; environmental_score: number;
-    active_findings: number; critical_findings: number;
-    open_recommendations: number; last_updated: string | null;
+    supplier_id: string; risk_band: string; esg_score: number;
+    environmental_score: number; social_score: number; governance_score: number;
+    risk_score: number; trend: string;
+    critical_findings: number; high_findings: number;
+    open_actions: number; overdue_actions: number;
+    hr_findings: number; env_findings: number;
+    unresolved_gaps: number; lksgg_coverage: string; csddd_coverage: string;
+    explainability: { factor: string; value: string | number; detail: string }[];
   } | null>({
     queryKey: ["supplier-due-diligence", id],
     queryFn: async () => {
@@ -2107,7 +2118,7 @@ export default function SupplierDetailPage() {
         )}
         {supplier.website && (
           <a
-            href={supplier.website}
+            href={toAbsoluteUrl(supplier.website)}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-blue-600 hover:underline"
@@ -2166,7 +2177,7 @@ export default function SupplierDetailPage() {
                 <div>
                   <p className="text-muted-foreground">{t("common.website")}</p>
                   {supplier.website ? (
-                    <a href={supplier.website} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                    <a href={toAbsoluteUrl(supplier.website)} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                       {supplier.website}
                     </a>
                   ) : (
@@ -2263,14 +2274,18 @@ export default function SupplierDetailPage() {
                   </span>
                   <button
                     onClick={async () => {
-                      setDdBusy(true); setDdError(null);
+                      setDdBusy(true); setDdError(null); setDdSuccess(false);
                       try {
                         for (const report_type of ["csddd", "human_rights", "environmental"]) {
                           await apiClient.post("/due-diligence/reports/generate", { report_type });
                         }
-                        refetchDD();
-                      } catch { setDdError("Failed to run"); }
-                      finally { setDdBusy(false); }
+                        await refetchDD();
+                        setDdSuccess(true);
+                        setTimeout(() => setDdSuccess(false), 4000);
+                      } catch (e: unknown) {
+                        const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? "Failed to run";
+                        setDdError(msg);
+                      } finally { setDdBusy(false); }
                     }}
                     disabled={ddBusy}
                     className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
@@ -2281,36 +2296,46 @@ export default function SupplierDetailPage() {
               </CardHeader>
               <CardContent className="pt-0">
                 {ddError && <p className="text-xs text-red-500 mb-2">{ddError}</p>}
+                {ddSuccess && <p className="text-xs text-emerald-600 mb-2">3 reports generated successfully.</p>}
                 {dueDiligence ? (
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Overall Risk</span>
-                      <span className={`font-semibold ${dueDiligence.overall_risk === "Critical" || dueDiligence.overall_risk === "High" ? "text-red-600" : dueDiligence.overall_risk === "Medium" ? "text-amber-600" : "text-emerald-600"}`}>
-                        {dueDiligence.overall_risk}
+                      <span className="text-muted-foreground">Risk Band</span>
+                      <span className={`font-semibold ${dueDiligence.risk_band === "Critical" || dueDiligence.risk_band === "High" ? "text-red-600" : dueDiligence.risk_band === "Moderate" ? "text-amber-600" : "text-emerald-600"}`}>
+                        {dueDiligence.risk_band}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">CSDDD Score</span>
-                      <span className="font-medium">{dueDiligence.csddd_score?.toFixed(0) ?? "—"}</span>
+                      <span className="text-muted-foreground">ESG Score</span>
+                      <span className="font-medium">{dueDiligence.esg_score?.toFixed(0) ?? "—"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Human Rights</span>
-                      <span className="font-medium">{dueDiligence.human_rights_score?.toFixed(0) ?? "—"}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Active Findings</span>
-                      <span className={`font-semibold ${dueDiligence.active_findings > 0 ? "text-red-600" : "text-emerald-600"}`}>
-                        {dueDiligence.active_findings}
+                      <span className="text-muted-foreground">CSDDD Coverage</span>
+                      <span className={`font-medium ${dueDiligence.csddd_coverage === "Compliant" ? "text-emerald-600" : dueDiligence.csddd_coverage === "Partially Compliant" ? "text-amber-600" : "text-red-600"}`}>
+                        {dueDiligence.csddd_coverage}
                       </span>
                     </div>
-                    {dueDiligence.last_updated && (
-                      <p className="text-muted-foreground">
-                        Updated {new Date(dueDiligence.last_updated).toLocaleDateString()}
-                      </p>
-                    )}
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Critical Findings</span>
+                      <span className={`font-semibold ${dueDiligence.critical_findings > 0 ? "text-red-600" : "text-emerald-600"}`}>
+                        {dueDiligence.critical_findings}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Open Actions</span>
+                      <span className={`font-semibold ${dueDiligence.open_actions > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                        {dueDiligence.open_actions}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">LkSG Coverage</span>
+                      <span className={`font-medium ${dueDiligence.lksgg_coverage === "High" ? "text-emerald-600" : dueDiligence.lksgg_coverage === "Partial" ? "text-amber-600" : "text-red-600"}`}>
+                        {dueDiligence.lksgg_coverage}
+                      </span>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No due diligence report yet. Click Run to generate.</p>
+                  <p className="text-xs text-muted-foreground">No due diligence data yet. Click Run to generate.</p>
                 )}
               </CardContent>
             </Card>

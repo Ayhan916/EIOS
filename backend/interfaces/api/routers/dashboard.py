@@ -252,10 +252,12 @@ async def get_dashboard(
     # ── 9. Supplier KPIs (M27) ─────────────────────────────────────────────────
     from infrastructure.persistence.models.risk import RiskModel  # noqa: PLC0415
 
+    _excluded = ("Deleted", "Archived")
+
     total_suppliers_row = await session.execute(
         select(func.count(SupplierModel.id)).where(
             SupplierModel.organization_id == org_id,
-            SupplierModel.status != "Deleted",
+            SupplierModel.status.notin_(_excluded),
         )
     )
     total_suppliers = total_suppliers_row.scalar() or 0
@@ -264,7 +266,7 @@ async def get_dashboard(
         select(func.count(SupplierModel.id)).where(
             SupplierModel.organization_id == org_id,
             SupplierModel.supplier_status == "Active",
-            SupplierModel.status != "Deleted",
+            SupplierModel.status.notin_(_excluded),
         )
     )
     active_suppliers = active_suppliers_row.scalar() or 0
@@ -297,7 +299,7 @@ async def get_dashboard(
     total_supplier_ids_row = await session.execute(
         select(SupplierModel.id).where(
             SupplierModel.organization_id == org_id,
-            SupplierModel.status != "Deleted",
+            SupplierModel.status.notin_(_excluded),
         )
     )
     all_supplier_ids = set(total_supplier_ids_row.scalars().all())
@@ -325,7 +327,7 @@ async def get_dashboard(
         .outerjoin(FindingModel, FindingModel.assessment_id == AssessmentModel.id)
         .where(
             SupplierModel.organization_id == org_id,
-            SupplierModel.status != "Deleted",
+            SupplierModel.status.notin_(_excluded),
         )
         .group_by(SupplierModel.id, SupplierModel.name, SupplierModel.country, SupplierModel.supplier_tier)
         .order_by(critical_expr.desc())

@@ -63,7 +63,21 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
             .where(
                 SupplierModel.organization_id == organization_id,
                 SupplierModel.name == name,
-                SupplierModel.status != "Deleted",
+                SupplierModel.status.notin_(["Deleted", "Archived"]),
+            )
+            .limit(1)
+        )
+        result = await self._session.execute(stmt)
+        row = result.scalar_one_or_none()
+        return self._to_domain(row) if row else None
+
+    async def get_archived_by_name_and_org(self, name: str, organization_id: str) -> Supplier | None:
+        stmt = (
+            select(SupplierModel)
+            .where(
+                SupplierModel.organization_id == organization_id,
+                SupplierModel.name == name,
+                SupplierModel.status == "Archived",
             )
             .limit(1)
         )

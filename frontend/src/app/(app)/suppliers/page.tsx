@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,14 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Trash2,
+  AlertTriangle,
+  Building2,
+  CheckCircle2,
+  SlidersHorizontal,
+  ArrowLeft,
+  MapPin,
+  ExternalLink,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
@@ -25,7 +33,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
-import { listSuppliers, createSupplier } from "@/lib/api/suppliers";
+import { listSuppliers, createSupplier, archiveSupplier } from "@/lib/api/suppliers";
 import apiClient from "@/lib/api/client";
 import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
@@ -33,6 +41,93 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import type { SupplierCreate, SupplierTier } from "@/types/api";
+
+interface GleifCompany {
+  lei: string;
+  name: string;
+  country: string;
+  city: string;
+  jurisdiction: string;
+}
+
+interface CompanyDetail {
+  company: {
+    lei: string; name: string; country: string; city: string;
+    postal_code: string; address_lines: string[];
+    hq_city: string; hq_country: string;
+    status: string; category: string; jurisdiction: string;
+    legal_form: string; registration_date: string;
+  };
+  children: { lei: string; name: string; country: string; city: string; status: string; category: string }[];
+  total_children: number;
+}
+
+const LEGAL_FORMS = [
+  { value: "", label: "Alle Rechtsformen" },
+  { value: "GmbH", label: "GmbH" },
+  { value: "AG", label: "AG" },
+  { value: "SE", label: "SE" },
+  { value: "KGaA", label: "KGaA" },
+  { value: "GmbH & Co. KG", label: "GmbH & Co. KG" },
+  { value: "Limited", label: "Limited (Ltd.)" },
+  { value: "LLC", label: "LLC" },
+  { value: "Inc", label: "Inc." },
+  { value: "S.A.", label: "S.A." },
+  { value: "B.V.", label: "B.V." },
+  { value: "NV", label: "N.V." },
+  { value: "SAS", label: "SAS" },
+  { value: "SRL", label: "SRL / S.r.l." },
+];
+
+const GLEIF_CATEGORIES = [
+  { value: "", label: "Alle Kategorien" },
+  { value: "GENERAL", label: "Unternehmen (GENERAL)" },
+  { value: "BRANCH", label: "Niederlassung (BRANCH)" },
+  { value: "FUND", label: "Fonds (FUND)" },
+];
+
+function toTitleCase(s: string): string {
+  return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function getToken() {
+  return typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
+}
+
+async function searchGleif(query: string, options?: { country?: string; legalForm?: string; category?: string }): Promise<GleifCompany[]> {
+  const token = getToken();
+  const params = new URLSearchParams({ q: query });
+  if (options?.country) params.set("country", options.country);
+  if (options?.legalForm) params.set("legal_form", options.legalForm);
+  if (options?.category) params.set("category", options.category);
+  const res = await fetch(
+    `http://localhost:8000/api/v1/suppliers/company-search?${params}`,
+    { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+  );
+  if (!res.ok) return [];
+  return res.json();
+}
+
+async function fetchCompanyDetail(lei: string): Promise<CompanyDetail | null> {
+  const token = getToken();
+  const res = await fetch(
+    `http://localhost:8000/api/v1/suppliers/company-detail?lei=${encodeURIComponent(lei)}`,
+    { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
+
+async function enrichCompany(lei: string, name: string) {
+  const token = getToken();
+  const params = new URLSearchParams({ lei, name });
+  const res = await fetch(
+    `http://localhost:8000/api/v1/suppliers/company-enrich?${params}`,
+    { headers: { Authorization: token ? `Bearer ${token}` : "" } }
+  );
+  if (!res.ok) return null;
+  return res.json();
+}
 
 interface SupplierScore {
   id: string;
@@ -195,7 +290,42 @@ export default function SuppliersPage() {
   const [statusFilter, setStatusFilter] = useState("");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [showCreate, setShowCreate] = useState(false);
+  const [createTab, setCreateTab] = useState<"search" | "manual">("search");
   const [createError, setCreateError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  // ── Company search state (Tab 1) ──────────────────────────
+  const [quickQuery, setQuickQuery] = useState("");
+  const [quickResults, setQuickResults] = useState<GleifCompany[]>([]);
+  const [quickSearching, setQuickSearching] = useState(false);
+  const [quickDropdownOpen, setQuickDropdownOpen] = useState(false);
+
+  // Advanced filter panel
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [advQ, setAdvQ] = useState("");
+  const [advCountry, setAdvCountry] = useState("");
+  const [advLegalForm, setAdvLegalForm] = useState("");
+  const [advCategory, setAdvCategory] = useState("");
+  const [advResults, setAdvResults] = useState<GleifCompany[]>([]);
+  const [advSearching, setAdvSearching] = useState(false);
+  const [advSearched, setAdvSearched] = useState(false);
+
+  // Detail modal (after clicking any result)
+  const [detailTarget, setDetailTarget] = useState<GleifCompany | null>(null);
+  const [detailData, setDetailData] = useState<CompanyDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailEnriched, setDetailEnriched] = useState<{ website: string; industry: string; nace_code: string; nace_label?: string; notes: string; supplier_tier?: string } | null>(null);
+  const [detailEnrichLoading, setDetailEnrichLoading] = useState(false);
+  const [detailEntityFilter, setDetailEntityFilter] = useState("");
+
+  // Final selected company
+  const [companySelected, setCompanySelected] = useState<GleifCompany | null>(null);
+  const [enrichedData, setEnrichedData] = useState<{ website: string; industry: string; nace_code: string; nace_label?: string; notes: string } | null>(null);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const country = searchParams.get("country");
@@ -236,7 +366,9 @@ export default function SuppliersPage() {
       queryClient.invalidateQueries({ queryKey: ["supplier-scores-overview"] });
       setShowCreate(false);
       setCreateError(null);
+      setCreateTab("search");
       setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" });
+      resetCompanySearch();
       // #159 Auto-trigger OFAC scan if rule is enabled in automation settings
       try {
         const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
@@ -254,9 +386,176 @@ export default function SuppliersPage() {
     e.preventDefault();
     setPage(1);
     setSearch(searchInput);
+    setSelectedIds(new Set());
+  }
+
+  // Quick search debounce (≥3 chars)
+  useEffect(() => {
+    if (!showCreate || quickQuery.trim().length < 3) {
+      setQuickResults([]);
+      setQuickDropdownOpen(false);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setQuickSearching(true);
+      try {
+        const results = await searchGleif(quickQuery.trim());
+        setQuickResults(results);
+        setQuickDropdownOpen(results.length > 0);
+      } catch {
+        setQuickResults([]);
+      } finally {
+        setQuickSearching(false);
+      }
+    }, 280);
+    return () => clearTimeout(timer);
+  }, [quickQuery, showCreate]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setQuickDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Open the detail modal for any clicked company
+  async function openDetail(c: GleifCompany) {
+    setDetailTarget(c);
+    setDetailData(null);
+    setDetailEnriched(null);
+    setDetailEntityFilter("");
+    setQuickDropdownOpen(false);
+    setDetailLoading(true);
+    setDetailEnrichLoading(true);
+    try {
+      const [detail, enriched] = await Promise.all([
+        fetchCompanyDetail(c.lei),
+        enrichCompany(c.lei, toTitleCase(c.name)),
+      ]);
+      setDetailData(detail);
+      setDetailEnriched(enriched);
+    } catch { /* silent */ }
+    finally {
+      setDetailLoading(false);
+      setDetailEnrichLoading(false);
+    }
+  }
+
+  // Confirm selection of a specific entity from the detail modal
+  function confirmEntity(entity: { lei: string; name: string; country: string; city: string; category?: string }) {
+    const displayName = toTitleCase(entity.name);
+    const selected: GleifCompany = { lei: entity.lei, name: entity.name, country: entity.country, city: entity.city, jurisdiction: "" };
+    setCompanySelected(selected);
+    setEnrichedData(detailEnriched);
+
+    // Tier: use enriched tier for main company; derive from GLEIF category for subsidiaries
+    let autoTier: string = detailEnriched?.supplier_tier || "Tier 1";
+    if (entity.category !== undefined) {
+      // User selected a subsidiary from the children list — derive tier from its category
+      if (entity.category === "BRANCH") autoTier = "Tier 3";
+      else autoTier = "Tier 2"; // GENERAL child = direct subsidiary
+    }
+
+    setForm((f) => ({
+      ...f,
+      name: displayName,
+      legal_name: displayName,
+      country: entity.country,
+      website: detailEnriched?.website || f.website,
+      industry: detailEnriched?.industry || f.industry,
+      nace_code: detailEnriched?.nace_code || f.nace_code,
+      notes: detailEnriched?.notes || f.notes,
+      supplier_tier: autoTier as import("@/types/api").SupplierTier,
+    }));
+    setDetailTarget(null);
+    setDetailData(null);
+    setQuickQuery("");
+    setQuickResults([]);
+    setAdvResults([]);
+    setAdvSearched(false);
+  }
+
+  async function runAdvancedSearch() {
+    if (!advQ.trim() && !advCountry && !advLegalForm && !advCategory) return;
+    setAdvSearching(true);
+    setAdvSearched(false);
+    try {
+      const results = await searchGleif(advQ.trim() || "a", {
+        country: advCountry || undefined,
+        legalForm: advLegalForm || undefined,
+        category: advCategory || undefined,
+      });
+      setAdvResults(results);
+    } catch {
+      setAdvResults([]);
+    } finally {
+      setAdvSearching(false);
+      setAdvSearched(true);
+    }
+  }
+
+  function resetCompanySearch() {
+    setQuickQuery("");
+    setQuickResults([]);
+    setQuickDropdownOpen(false);
+    setAdvQ(""); setAdvCountry(""); setAdvLegalForm(""); setAdvCategory("");
+    setAdvResults([]); setAdvSearched(false);
+    setShowAdvanced(false);
+    setDetailTarget(null); setDetailData(null); setDetailEnriched(null);
+    setCompanySelected(null);
+    setEnrichedData(null);
   }
 
   const suppliers = data?.items ?? [];
+
+  const isAllSelected = suppliers.length > 0 && suppliers.every((s) => selectedIds.has(s.id));
+  const isPartialSelected = suppliers.some((s) => selectedIds.has(s.id)) && !isAllSelected;
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    if (isAllSelected) {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        suppliers.forEach((s) => next.delete(s.id));
+        return next;
+      });
+    } else {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        suppliers.forEach((s) => next.add(s.id));
+        return next;
+      });
+    }
+  }
+
+  async function handleDeleteSelected() {
+    setDeleteBusy(true);
+    setDeleteError(null);
+    try {
+      for (const id of selectedIds) {
+        await archiveSupplier(id);
+      }
+      setSelectedIds(new Set());
+      setShowDeleteConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-scores-overview"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch {
+      setDeleteError("Einige Lieferanten konnten nicht gelöscht werden.");
+    } finally {
+      setDeleteBusy(false);
+    }
+  }
   const total = data?.total ?? 0;
   const totalPages = data ? Math.ceil(total / PAGE_SIZE) : 1;
 
@@ -328,6 +627,27 @@ export default function SuppliersPage() {
         </div>
       </div>
 
+      {/* Selection action bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
+          <span className="text-sm font-medium text-red-800">
+            {selectedIds.size} Lieferant{selectedIds.size !== 1 ? "en" : ""} ausgewählt
+          </span>
+          <button
+            onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
+            className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Löschen
+          </button>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="text-xs text-red-700 hover:text-red-900 underline"
+          >
+            Abwählen
+          </button>
+        </div>
+      )}
+
       {/* ESG Score Distribution */}
       {scoreData && scoreData.length > 0 && <EsgScoreDistribution scores={scoreData} />}
 
@@ -356,9 +676,17 @@ export default function SuppliersPage() {
             {suppliers.map((s) => {
               const sc = scoreMap.get(s.id);
               return (
-                <Link key={s.id} href={`/suppliers/${s.id}`} className="block">
-                  <Card className="h-full transition-shadow hover:shadow-md hover:border-blue-300">
-                    <CardContent className="p-4">
+                <div key={s.id} className="relative">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(s.id)}
+                    onChange={() => toggleSelect(s.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute top-3 left-3 z-10 h-4 w-4 rounded border-gray-300 cursor-pointer"
+                  />
+                  <Link href={`/suppliers/${s.id}`} className="block">
+                  <Card className={`h-full transition-shadow hover:shadow-md hover:border-blue-300 ${selectedIds.has(s.id) ? "border-blue-400 bg-blue-50" : ""}`}>
+                    <CardContent className="p-4 pl-8">
                       <div className="flex items-start justify-between gap-2 mb-2">
                         <p className="font-semibold text-sm leading-tight line-clamp-2">{s.name}</p>
                         {tierBadge(s.supplier_tier)}
@@ -375,7 +703,8 @@ export default function SuppliersPage() {
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
+                  </Link>
+                </div>
               );
             })}
           </div>
@@ -396,6 +725,15 @@ export default function SuppliersPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
+                    <th className="w-10 px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={isAllSelected}
+                        ref={(el) => { if (el) el.indeterminate = isPartialSelected; }}
+                        onChange={toggleSelectAll}
+                        className="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                      />
+                    </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("common.name")}</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">{t("common.country")}</th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">{t("common.industry")}</th>
@@ -412,7 +750,15 @@ export default function SuppliersPage() {
                   {suppliers.map((s) => {
                     const sc = scoreMap.get(s.id);
                     return (
-                      <tr key={s.id} className="hover:bg-muted/20 transition-colors">
+                      <tr key={s.id} className={`hover:bg-muted/20 transition-colors ${selectedIds.has(s.id) ? "bg-blue-50" : ""}`}>
+                        <td className="w-10 px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(s.id)}
+                            onChange={() => toggleSelect(s.id)}
+                            className="h-4 w-4 rounded border-gray-300 cursor-pointer"
+                          />
+                        </td>
                         <td className="px-4 py-3">
                           <Link href={`/suppliers/${s.id}`} className="font-medium text-foreground hover:text-blue-600 hover:underline">
                             {s.name}
@@ -471,72 +817,494 @@ export default function SuppliersPage() {
         </Card>
       )}
 
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-background p-6 shadow-2xl">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+              <div>
+                <h2 className="text-base font-semibold">Lieferanten löschen</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Möchten Sie <strong>{selectedIds.size} Lieferant{selectedIds.size !== 1 ? "en" : ""}</strong> wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+                </p>
+              </div>
+            </div>
+            {deleteError && <p className="mb-3 text-sm text-red-600">{deleteError}</p>}
+            <div className="flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setShowDeleteConfirm(false)} disabled={deleteBusy}>
+                Abbrechen
+              </Button>
+              <Button
+                onClick={handleDeleteSelected}
+                disabled={deleteBusy}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleteBusy ? <Spinner size="sm" className="mr-2" /> : <Trash2 className="h-4 w-4 mr-1.5" />}
+                {deleteBusy ? "Wird gelöscht…" : `${selectedIds.size} löschen`}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Create Modal */}
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-background p-6 shadow-2xl">
-            <div className="mb-4 flex items-center justify-between">
+          <div className="w-full max-w-lg rounded-xl bg-background shadow-2xl flex flex-col max-h-[92vh]">
+
+            {/* Modal header */}
+            <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
               <h2 className="text-lg font-semibold">{t("suppliers.createTitle")}</h2>
-              <button onClick={() => { setShowCreate(false); setCreateError(null); }} className="text-muted-foreground hover:text-foreground">
+              <button
+                onClick={() => { setShowCreate(false); setCreateError(null); resetCompanySearch(); setCreateTab("search"); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" }); }}
+                className="text-muted-foreground hover:text-foreground"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
-                <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("suppliers.namePlaceholder")} />
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">{t("suppliers.legalName")}</label>
-                <Input value={form.legal_name ?? ""} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} placeholder="Full legal name (if different)" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">{t("common.country")}</label>
-                  <Input value={form.country ?? ""} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE, US, FR…" />
+
+            {/* Tab bar */}
+            <div className="flex border-b border-border shrink-0">
+              <button
+                onClick={() => setCreateTab("search")}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  createTab === "search"
+                    ? "border-b-2 border-blue-600 text-blue-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Search className="h-3.5 w-3.5" />
+                Unternehmenssuche
+              </button>
+              <button
+                onClick={() => setCreateTab("manual")}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  createTab === "manual"
+                    ? "border-b-2 border-blue-600 text-blue-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Building2 className="h-3.5 w-3.5" />
+                Manuelle Eingabe
+              </button>
+            </div>
+
+            {/* Tab content — scrollable */}
+            <div className="overflow-y-auto flex-1 px-6 py-5">
+
+              {/* ── TAB 1: Unternehmenssuche ── */}
+              {createTab === "search" && (
+                <div className="space-y-4">
+
+                  {/* Selected company preview */}
+                  {companySelected && (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <span className="text-sm font-semibold text-emerald-800 truncate">{toTitleCase(companySelected.name)}</span>
+                          <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-mono text-emerald-700">{companySelected.country}</span>
+                          {companySelected.city && <span className="text-[11px] text-emerald-700 truncate hidden sm:block">{companySelected.city}</span>}
+                        </div>
+                        <button type="button" onClick={() => { setCompanySelected(null); setEnrichedData(null); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" }); }} className="text-emerald-400 hover:text-emerald-700 shrink-0 ml-2">
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+                        {enrichedData?.website && (
+                          <div><p className="text-muted-foreground font-medium">Webseite</p><p className="text-blue-600 truncate">{enrichedData.website.replace(/^https?:\/\//,"")}</p></div>
+                        )}
+                        {enrichedData?.nace_code && (
+                          <div><p className="text-muted-foreground font-medium">NACE</p><p className="font-mono text-[11px]">{enrichedData.nace_code}{enrichedData.nace_label ? ` – ${enrichedData.nace_label}` : ""}</p></div>
+                        )}
+                        {enrichedData?.industry && (
+                          <div className="col-span-2"><p className="text-muted-foreground font-medium">Branche</p><p>{enrichedData.industry}</p></div>
+                        )}
+                        {enrichedData?.notes && (
+                          <div className="col-span-2"><p className="text-muted-foreground font-medium">Zusammenfassung</p><p className="line-clamp-2">{enrichedData.notes}</p></div>
+                        )}
+                      </div>
+                      <div className="pt-1 border-t border-emerald-200 flex items-center gap-3">
+                        <div className="flex-1">
+                          <label className="mb-1 block text-xs font-medium text-emerald-800">Lieferanten-Tier</label>
+                          <select value={form.supplier_tier} onChange={(e) => setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))} className="w-full rounded border border-emerald-300 bg-white px-2 py-1.5 text-sm">
+                            <option>Tier 1</option><option>Tier 2</option><option>Tier 3</option><option>Other</option>
+                          </select>
+                        </div>
+                        <button type="button" onClick={() => setCreateTab("manual")} className="text-xs text-emerald-700 hover:underline mt-4">Felder bearbeiten →</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Quick search */}
+                  {!companySelected && (
+                    <>
+                      <div className="relative" ref={dropdownRef}>
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={quickQuery}
+                          onChange={(e) => { setQuickQuery(e.target.value); }}
+                          placeholder="Unternehmen suchen… (ab 3 Zeichen)"
+                          className="w-full rounded-md border border-input bg-background py-2 pl-10 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          autoFocus
+                        />
+                        {quickSearching && <Spinner size="sm" className="absolute right-2.5 top-2.5" />}
+                        {quickQuery && !quickSearching && (
+                          <button onClick={() => { setQuickQuery(""); setQuickResults([]); setQuickDropdownOpen(false); }} className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground">
+                            <X className="h-4 w-4" />
+                          </button>
+                        )}
+
+                        {/* Quick results dropdown */}
+                        {quickDropdownOpen && quickResults.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-64 overflow-y-auto rounded-md border border-border bg-background shadow-xl">
+                            {quickResults.map((c) => (
+                              <button
+                                key={c.lei}
+                                type="button"
+                                onMouseDown={(e) => { e.preventDefault(); openDetail(c); }}
+                                className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-muted transition-colors border-b border-border/40 last:border-0"
+                              >
+                                <div className="min-w-0">
+                                  <p className="text-sm font-medium truncate">{toTitleCase(c.name)}</p>
+                                  {c.city && <p className="text-[11px] text-muted-foreground">{c.city}</p>}
+                                </div>
+                                <span className="ml-3 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600">{c.country}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {quickDropdownOpen && quickResults.length === 0 && !quickSearching && (
+                          <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border border-border bg-background shadow-xl px-3 py-3 text-xs text-muted-foreground">
+                            Kein Ergebnis — nutzen Sie die <button type="button" className="text-blue-600 hover:underline" onClick={() => { setQuickDropdownOpen(false); setShowAdvanced(true); }}>erweiterte Suche</button>.
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Advanced filter toggle */}
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvanced((v) => !v)}
+                        className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                        {showAdvanced ? "Erweiterte Suche ausblenden" : "Erweiterte Suche / Filter"}
+                      </button>
+
+                      {/* Advanced filter panel */}
+                      {showAdvanced && (
+                        <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4 space-y-3">
+                          <p className="text-xs font-semibold text-blue-800 flex items-center gap-1.5"><SlidersHorizontal className="h-3.5 w-3.5" /> Erweiterte Suche</p>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="col-span-2">
+                              <label className="mb-1 block text-xs font-medium text-slate-600">Unternehmensname</label>
+                              <input type="text" value={advQ} onChange={(e) => setAdvQ(e.target.value)} placeholder="z.B. Siemens, BASF…" className="w-full rounded border border-input bg-white px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" onKeyDown={(e) => { if (e.key === "Enter") runAdvancedSearch(); }} />
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-600">Land (ISO)</label>
+                              <div className="relative">
+                                <Globe className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                                <input type="text" value={advCountry} onChange={(e) => setAdvCountry(e.target.value.toUpperCase().slice(0,2))} placeholder="DE, US…" maxLength={2} className="w-full rounded border border-input bg-white py-1.5 pl-7 pr-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                              </div>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-600">Rechtsform</label>
+                              <select value={advLegalForm} onChange={(e) => setAdvLegalForm(e.target.value)} className="w-full rounded border border-input bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                {LEGAL_FORMS.map((lf) => <option key={lf.value} value={lf.value}>{lf.label}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <label className="mb-1 block text-xs font-medium text-slate-600">Kategorie</label>
+                              <select value={advCategory} onChange={(e) => setAdvCategory(e.target.value)} className="w-full rounded border border-input bg-white px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                {GLEIF_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                              </select>
+                            </div>
+                            <div className="flex items-end">
+                              <Button onClick={runAdvancedSearch} disabled={advSearching} size="sm" className="w-full">
+                                {advSearching ? <Spinner size="sm" className="mr-1.5" /> : <Search className="h-3.5 w-3.5 mr-1.5" />}
+                                Suchen
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Advanced results list */}
+                          {advSearched && (
+                            <div className="mt-2 space-y-1 max-h-56 overflow-y-auto">
+                              {advResults.length === 0 && (
+                                <p className="text-xs text-muted-foreground py-2 text-center">Keine Ergebnisse gefunden.</p>
+                              )}
+                              {advResults.map((c) => (
+                                <button
+                                  key={c.lei}
+                                  type="button"
+                                  onClick={() => openDetail(c)}
+                                  className="flex w-full items-center justify-between rounded-md border border-border bg-white px-3 py-2 text-left hover:bg-muted/60 transition-colors"
+                                >
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium truncate">{toTitleCase(c.name)}</p>
+                                    {c.city && <p className="text-[11px] text-muted-foreground">{c.city}</p>}
+                                  </div>
+                                  <span className="ml-3 shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600">{c.country}</span>
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Empty state */}
+                      {!quickQuery && !showAdvanced && (
+                        <div className="rounded-lg border border-dashed border-border p-6 text-center">
+                          <Building2 className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
+                          <p className="text-sm text-muted-foreground font-medium">Weltweite Unternehmenssuche</p>
+                          <p className="mt-1 text-xs text-muted-foreground">Tippen Sie einen Firmennamen — ab 3 Zeichen erscheinen sofort Vorschläge aus dem globalen GLEIF LEI-Register.</p>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">NACE Code</label>
-                  <Input value={form.nace_code ?? ""} onChange={(e) => setForm((f) => ({ ...f, nace_code: e.target.value }))} placeholder="C24.10" />
+              )}
+
+              {/* ── TAB 2: Manuelle Eingabe ── */}
+              {createTab === "manual" && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
+                    <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("suppliers.namePlaceholder")} />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">{t("suppliers.legalName")}</label>
+                    <Input value={form.legal_name ?? ""} onChange={(e) => setForm((f) => ({ ...f, legal_name: e.target.value }))} placeholder="Vollständiger Firmenname (falls abweichend)" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">{t("common.country")}</label>
+                      <Input value={form.country ?? ""} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE, US, FR…" />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">NACE Code</label>
+                      <Input value={form.nace_code ?? ""} onChange={(e) => setForm((f) => ({ ...f, nace_code: e.target.value }))} placeholder="C27, C29.32…" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">{t("common.industry")}</label>
+                    <Input value={form.industry ?? ""} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} placeholder="Maschinenbau, Chemie…" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">{t("suppliers.supplierTier")}</label>
+                      <select value={form.supplier_tier} onChange={(e) => setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
+                        <option value="Tier 1">Tier 1</option>
+                        <option value="Tier 2">Tier 2</option>
+                        <option value="Tier 3">Tier 3</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">{t("suppliers.website")}</label>
+                      <Input value={form.website ?? ""} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://…" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">{t("common.notes")}</label>
+                    <textarea
+                      value={form.notes ?? ""}
+                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                      rows={3}
+                      placeholder="Interne Notizen…"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
                 </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">{t("common.industry")}</label>
-                <Input value={form.industry ?? ""} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} placeholder="Steel Manufacturing, Agriculture…" />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">{t("suppliers.supplierTier")}</label>
-                  <select value={form.supplier_tier} onChange={(e) => setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">
-                    <option value="Tier 1">Tier 1</option>
-                    <option value="Tier 2">Tier 2</option>
-                    <option value="Tier 3">Tier 3</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium">{t("suppliers.website")}</label>
-                  <Input value={form.website ?? ""} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://…" />
-                </div>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium">{t("common.notes")}</label>
-                <textarea value={form.notes ?? ""} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={3} placeholder="Internal notes…" className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              )}
+            </div>
+
+            {/* Modal footer — always visible */}
+            <div className="border-t border-border px-6 py-4 shrink-0">
+              {createError && <p className="mb-3 text-sm text-red-600">{createError}</p>}
+              <div className="flex justify-end gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => { setShowCreate(false); setCreateError(null); resetCompanySearch(); setCreateTab("search"); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" }); }}
+                >
+                  {t("common.cancel")}
+                </Button>
+                <Button
+                  onClick={() => {
+                    const name = form.name.trim();
+                    if (!name) { setCreateError("Name ist erforderlich."); return; }
+                    createMutation.mutate({
+                      ...form,
+                      legal_name: form.legal_name || undefined,
+                      nace_code: form.nace_code || undefined,
+                      website: form.website || undefined,
+                      notes: form.notes || undefined,
+                    });
+                  }}
+                  disabled={createMutation.isPending || (createTab === "search" && !companySelected)}
+                >
+                  {createMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
+                  {createMutation.isPending ? t("suppliers.creating") : t("suppliers.createTitle")}
+                </Button>
               </div>
             </div>
-            {createError && <p className="mt-3 text-sm text-red-600">{createError}</p>}
-            <div className="mt-5 flex justify-end gap-3">
-              <Button variant="outline" onClick={() => { setShowCreate(false); setCreateError(null); }}>{t("common.cancel")}</Button>
-              <Button
-                onClick={() => {
-                  if (!form.name.trim()) { setCreateError(t("common.required")); return; }
-                  createMutation.mutate({ ...form, legal_name: form.legal_name || undefined, nace_code: form.nace_code || undefined, website: form.website || undefined, notes: form.notes || undefined });
-                }}
-                disabled={createMutation.isPending}
-              >
-                {createMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
-                {createMutation.isPending ? t("suppliers.creating") : t("suppliers.createTitle")}
-              </Button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Company Detail Modal ───────────────────────────────── */}
+      {detailTarget && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-background shadow-2xl flex flex-col max-h-[90vh]">
+
+            {/* Header */}
+            <div className="flex items-center gap-3 px-6 pt-5 pb-4 border-b border-border shrink-0">
+              <button type="button" onClick={() => { setDetailTarget(null); setDetailData(null); }} className="text-muted-foreground hover:text-foreground shrink-0">
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-semibold truncate">{toTitleCase(detailTarget.name)}</h3>
+                <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
+                  <MapPin className="h-3 w-3" />
+                  {[detailTarget.city, detailTarget.country].filter(Boolean).join(", ")}
+                  <span className="mx-1.5 text-border">·</span>
+                  <span className="font-mono text-[10px]">LEI: {detailTarget.lei}</span>
+                </p>
+              </div>
+              <button type="button" onClick={() => { setDetailTarget(null); setDetailData(null); }} className="text-muted-foreground hover:text-foreground shrink-0">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+
+              {/* Loading */}
+              {(detailLoading || detailEnrichLoading) && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground py-4 justify-center">
+                  <Spinner size="sm" /> Daten werden geladen…
+                </div>
+              )}
+
+              {/* Enriched info */}
+              {!detailEnrichLoading && detailEnriched && (
+                <div className="grid grid-cols-2 gap-4 rounded-lg border border-border p-4">
+                  {detailEnriched.supplier_tier && (
+                    <div>
+                      <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Auto-Tier</p>
+                      <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        detailEnriched.supplier_tier === "Tier 1" ? "bg-emerald-100 text-emerald-700" :
+                        detailEnriched.supplier_tier === "Tier 2" ? "bg-blue-100 text-blue-700" :
+                        "bg-purple-100 text-purple-700"
+                      }`}>
+                        {detailEnriched.supplier_tier}
+                      </span>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {detailEnriched.supplier_tier === "Tier 1" ? "Muttergesellschaft" :
+                         detailEnriched.supplier_tier === "Tier 2" ? "Tochtergesellschaft" : "Niederlassung"}
+                      </p>
+                    </div>
+                  )}
+                  {detailEnriched.website && (
+                    <div>
+                      <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Webseite</p>
+                      <a href={detailEnriched.website} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1 truncate">
+                        {detailEnriched.website.replace(/^https?:\/\//, "")} <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    </div>
+                  )}
+                  {detailEnriched.nace_code && (
+                    <div>
+                      <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">NACE Code</p>
+                      <p className="text-sm font-mono">{detailEnriched.nace_code}{detailEnriched.nace_label ? <span className="font-sans text-muted-foreground"> – {detailEnriched.nace_label}</span> : ""}</p>
+                    </div>
+                  )}
+                  {detailEnriched.industry && (
+                    <div className="col-span-2">
+                      <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Branche</p>
+                      <p className="text-sm">{detailEnriched.industry}</p>
+                    </div>
+                  )}
+                  {detailEnriched.notes && (
+                    <div className="col-span-2">
+                      <p className="text-[11px] text-muted-foreground font-medium uppercase tracking-wide">Unternehmensbeschreibung</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">{detailEnriched.notes}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Select THIS company */}
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Diesen Eintrag auswählen</p>
+                <button
+                  type="button"
+                  onClick={() => confirmEntity({ lei: detailTarget.lei, name: detailTarget.name, country: detailTarget.country, city: detailTarget.city })}
+                  className="flex w-full items-center justify-between rounded-lg border-2 border-blue-400 bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors"
+                >
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-blue-900">{toTitleCase(detailTarget.name)}</p>
+                    <p className="text-xs text-blue-700">{[detailTarget.city, detailTarget.country].filter(Boolean).join(", ")} · Hauptgesellschaft</p>
+                  </div>
+                  <CheckCircle2 className="h-5 w-5 text-blue-500 shrink-0" />
+                </button>
+              </div>
+
+              {/* Children / related entities */}
+              {!detailLoading && detailData && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      Tochtergesellschaften & Standorte
+                      {detailData.total_children > 0 && <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[10px] normal-case">{detailData.total_children} gesamt</span>}
+                    </p>
+                    {detailData.children.length > 8 && (
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1.5 h-3.5 w-3.5 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={detailEntityFilter}
+                          onChange={(e) => setDetailEntityFilter(e.target.value)}
+                          placeholder="Filtern…"
+                          className="rounded border border-input bg-background py-1 pl-7 pr-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-400 w-36"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  {detailData.children.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-3 rounded border border-dashed border-border">
+                      Keine verknüpften Tochtergesellschaften in GLEIF gefunden.
+                    </p>
+                  )}
+
+                  <div className="space-y-1.5 max-h-64 overflow-y-auto pr-0.5">
+                    {detailData.children
+                      .filter((ch) => !detailEntityFilter || ch.name.toLowerCase().includes(detailEntityFilter.toLowerCase()) || ch.country.toLowerCase().includes(detailEntityFilter.toLowerCase()) || ch.city.toLowerCase().includes(detailEntityFilter.toLowerCase()))
+                      .map((ch) => (
+                        <button
+                          key={ch.lei}
+                          type="button"
+                          onClick={() => confirmEntity(ch)}
+                          className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-2.5 text-left hover:bg-muted/70 hover:border-blue-300 transition-colors group"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate group-hover:text-blue-700">{toTitleCase(ch.name)}</p>
+                            <p className="text-[11px] text-muted-foreground">{[ch.city, ch.country].filter(Boolean).join(", ")}</p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-3 shrink-0">
+                            {ch.category === "BRANCH"
+                              ? <span className="rounded bg-purple-100 px-1.5 py-0.5 text-[9px] font-medium text-purple-700">Tier 3 · Niederlassung</span>
+                              : <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-medium text-blue-700">Tier 2</span>
+                            }
+                            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-mono text-slate-600">{ch.country}</span>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

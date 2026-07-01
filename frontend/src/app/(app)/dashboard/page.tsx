@@ -136,6 +136,7 @@ import {
 } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/lib/auth/context";
+import { NewsFeedWidget } from "@/components/news/NewsFeedWidget";
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -608,7 +609,7 @@ export default function DashboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
-    staleTime: 30_000,
+    staleTime: 0,
   });
 
   const { data: cc } = useQuery({
@@ -1150,6 +1151,9 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Live News Feed ─────────────────────────────────────────────────── */}
+      <NewsFeedWidget />
     </div>
   );
 }

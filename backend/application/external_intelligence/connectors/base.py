@@ -146,7 +146,7 @@ class BaseLiveConnector(ABC):
         _client = client
         _own_client = False
         if _client is None:
-            _client = httpx.AsyncClient(timeout=30.0)
+            _client = httpx.AsyncClient(timeout=30.0, follow_redirects=True)
             _own_client = True
 
         try:

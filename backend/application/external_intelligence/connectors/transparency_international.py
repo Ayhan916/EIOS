@@ -18,7 +18,7 @@ from .base import BaseLiveConnector
 
 logger = structlog.get_logger(__name__)
 
-_TI_URL = "https://www.transparency.org/api/latest/country-scores"
+_TI_URL = "https://www.transparency.org/en/api/latest/country-scores"
 
 
 class TransparencyInternationalConnector(BaseLiveConnector):

@@ -1208,6 +1208,19 @@ const en = {
   "onboard.back": "Back",
   "onboard.finish": "Finish",
   "onboard.skip": "Skip",
+
+  "news.title": "Live News",
+  "news.description": "Worldwide news about suppliers and countries",
+  "news.lastUpdate": "Updated",
+  "news.refresh": "Refresh",
+  "news.refreshing": "Loading…",
+  "news.all": "All",
+  "news.supplier": "Suppliers",
+  "news.country": "Countries",
+  "news.partner": "Partners",
+  "news.empty": "No news available yet.",
+  "news.emptyHint": "Click Refresh to load the first news articles.",
+  "news.loadError": "Could not load news.",
 } as const;
 
 export default en;

@@ -82,6 +82,7 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     openai_api_key: str = ""
     groq_api_key: str = ""
+    gnews_api_key: str = ""
 
     # Webhook secret encryption key (Fernet, base64url-encoded 32-byte key)
     # Generate with: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"

@@ -6,7 +6,10 @@ import { useLanguage } from "@/lib/i18n/context";
 import {
   Activity,
   AlertTriangle,
+  Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Eye,
   Loader2,
   Radio,
@@ -48,6 +51,27 @@ async function getOpenEpisodes() {
     "/surveillance/episodes?episode_status=OPEN&limit=10"
   );
   return res.data;
+}
+
+async function getSignalsByConnector() {
+  const res = await apiClient.get("/external-intelligence/signals/by-connector?top_n=10");
+  return res.data as {
+    connectors: Array<{
+      source_name: string;
+      label: string;
+      total: number;
+      signals: Array<{
+        id: string;
+        signal_type: string;
+        severity: string;
+        description: string;
+        source_name: string;
+        observed_at: string;
+        supplier_id: string;
+        country_code: string;
+      }>;
+    }>;
+  };
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -162,6 +186,84 @@ function EpisodeRow({ episode }: { episode: any }) {
   );
 }
 
+// ── Connector signal panel ────────────────────────────────────────────────────
+
+const CONNECTOR_ICONS: Record<string, string> = {
+  world_bank:                 "🌍",
+  transparency_international: "🔍",
+  ilo:                        "⚙️",
+  unicef:                     "🧒",
+  un_sanctions:               "🚫",
+  eu_sanctions:               "🇪🇺",
+};
+
+const SEV_COLOUR: Record<string, string> = {
+  critical: "bg-red-100 text-red-700 border-red-200",
+  high:     "bg-orange-100 text-orange-700 border-orange-200",
+  medium:   "bg-amber-100 text-amber-700 border-amber-200",
+  low:      "bg-slate-100 text-slate-600 border-slate-200",
+};
+
+function ConnectorCard({ connector }: { connector: { source_name: string; label: string; total: number; signals: any[] } }) {
+  const [expanded, setExpanded] = useState(false);
+  const shown = expanded ? connector.signals : connector.signals.slice(0, 3);
+  const icon = CONNECTOR_ICONS[connector.source_name] ?? "📡";
+  const hasSignals = connector.total > 0;
+
+  return (
+    <Card className={hasSignals ? "border-orange-200" : ""}>
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <span className="text-base">{icon}</span>
+            {connector.label}
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {hasSignals ? (
+              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700">
+                {connector.total} Signal{connector.total !== 1 ? "e" : ""}
+              </span>
+            ) : (
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                Klar
+              </span>
+            )}
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {!hasSignals ? (
+          <p className="text-xs text-muted-foreground py-1">Keine aktiven Signale für deine Lieferanten.</p>
+        ) : (
+          <div className="space-y-1.5">
+            {shown.map((s: any) => (
+              <div key={s.id} className={`rounded border px-2.5 py-2 ${SEV_COLOUR[(s.severity ?? "").toLowerCase()] ?? "bg-slate-50 border-slate-200"}`}>
+                <p className="text-xs font-medium leading-snug line-clamp-2">{s.description}</p>
+                <p className="text-[10px] opacity-70 mt-0.5">
+                  {s.signal_type?.replace(/_/g, " ")}
+                  {s.country_code ? ` · ${s.country_code}` : ""}
+                  {s.supplier_id ? " · Lieferant" : ""}
+                </p>
+              </div>
+            ))}
+            {connector.signals.length > 3 && (
+              <button
+                onClick={() => setExpanded(e => !e)}
+                className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground mt-1"
+              >
+                {expanded
+                  ? <><ChevronUp className="h-3 w-3" /> Weniger anzeigen</>
+                  : <><ChevronDown className="h-3 w-3" /> {connector.signals.length - 3} weitere anzeigen</>
+                }
+              </button>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function SurveillancePage() {
@@ -188,6 +290,13 @@ export default function SurveillancePage() {
     queryKey: ["surveillance-episodes-open"],
     queryFn: getOpenEpisodes,
     refetchInterval: 60_000,
+  });
+
+  const { data: byConnector, isLoading: connectorLoading } = useQuery({
+    queryKey: ["signals-by-connector"],
+    queryFn: getSignalsByConnector,
+    staleTime: 0,
+    refetchInterval: 120_000,
   });
 
   if (dashLoading) {
@@ -260,6 +369,26 @@ export default function SurveillancePage() {
           value={d.total_suppliers ?? 0}
           icon={Shield}
         />
+      </div>
+
+      {/* Externe Risikosignale nach Connector */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <Building2 className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-base">Externe Risikosignale nach Quelle</h2>
+          <span className="text-xs text-muted-foreground">— Top 10 je Connector, bezogen auf deine Lieferanten</span>
+        </div>
+        {connectorLoading ? (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+            <Loader2 className="h-4 w-4 animate-spin" /> Signale werden geladen…
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {(byConnector?.connectors ?? []).map((c) => (
+              <ConnectorCard key={c.source_name} connector={c} />
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">

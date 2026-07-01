@@ -17,11 +17,11 @@ from .base import BaseLiveConnector
 
 logger = structlog.get_logger(__name__)
 
-_UNICEF_BASE = "https://data.unicef.org/wp-json/unicef/v1/indicator"
+_UNICEF_BASE = "https://sdmx.data.unicef.org/ws/public/sdmxapi/rest/data"
 
 _UNICEF_INDICATORS = {
-    "PT_CHLD_5-17_LBR_ECON": "child_labour_pct",
-    "EDU_SE_AGP_CPRA_L2": "out_of_school_pct",
+    "UNICEF,PT_CHLD_5-17_LBR_ECON,1.0": "child_labour_pct",
+    "UNICEF,EDU_SE_AGP_CPRA_L2,1.0": "out_of_school_pct",
 }
 
 
@@ -33,32 +33,47 @@ class UNICEFConnector(BaseLiveConnector):
     refresh_cadence_hours = 24 * 30
 
     async def fetch(self, client: Any) -> list[dict[str, Any]]:
-        """Fetch UNICEF child welfare indicators."""
+        """Fetch UNICEF child welfare indicators via SDMX API."""
         aggregated: dict[str, dict[str, Any]] = {}
 
-        for indicator, metric_key in _UNICEF_INDICATORS.items():
-            url = f"{_UNICEF_BASE}/{indicator}?format=json"
+        for dataflow, metric_key in _UNICEF_INDICATORS.items():
+            url = f"{_UNICEF_BASE}/{dataflow}/all?format=jsondata&lastNObservations=1"
             try:
-                resp = await client.get(url)
-                resp.raise_for_status()
-                items = resp.json().get("data", resp.json())
-                if isinstance(items, list):
-                    for item in items:
-                        iso3 = item.get("iso3") or item.get("country_iso_code", "")
-                        val = item.get("value") or item.get("obs_value")
-                        if not iso3 or val is None:
-                            continue
-                        if iso3 not in aggregated:
-                            aggregated[iso3] = {
-                                "country_code": iso3,
-                                "country_name": item.get("country_name", ""),
-                            }
-                        try:
-                            aggregated[iso3][metric_key] = float(val)
-                        except (ValueError, TypeError):
-                            pass
+                resp = await client.get(url, follow_redirects=True)
+                if resp.status_code not in (200, 206):
+                    logger.warning("unicef_indicator_fetch_failed", indicator=dataflow, status=resp.status_code)
+                    continue
+                data = resp.json()
+                series = data.get("dataSets", [{}])[0].get("series", {})
+                dims = data.get("structure", {}).get("dimensions", {}).get("series", [])
+                # find country dimension index
+                country_dim_idx = next(
+                    (i for i, d in enumerate(dims) if d.get("id") in ("REF_AREA", "COUNTRY")), 0
+                )
+                country_values = dims[country_dim_idx].get("values", []) if dims else []
+                for series_key, series_data in series.items():
+                    parts = series_key.split(":")
+                    if len(parts) <= country_dim_idx:
+                        continue
+                    country_idx = int(parts[country_dim_idx])
+                    if country_idx >= len(country_values):
+                        continue
+                    iso3 = country_values[country_idx].get("id", "")
+                    country_name = country_values[country_idx].get("name", "")
+                    obs = series_data.get("observations", {})
+                    if not obs:
+                        continue
+                    val = list(obs.values())[0][0] if obs else None
+                    if val is None or not iso3:
+                        continue
+                    if iso3 not in aggregated:
+                        aggregated[iso3] = {"country_code": iso3, "country_name": country_name}
+                    try:
+                        aggregated[iso3][metric_key] = float(val)
+                    except (ValueError, TypeError):
+                        pass
             except Exception as exc:
-                logger.warning("unicef_indicator_fetch_failed", indicator=indicator, error=str(exc))
+                logger.warning("unicef_indicator_fetch_failed", indicator=dataflow, error=str(exc))
 
         return list(aggregated.values())
 
