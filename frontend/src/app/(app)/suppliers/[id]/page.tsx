@@ -29,6 +29,7 @@ import {
   Share2,
   Target,
   Users,
+  Shield,
 } from "lucide-react";
 import {
   getSupplier,
@@ -77,6 +78,7 @@ import {
   type ExternalESGRating,
 } from "@/lib/api/supplier-extensions";
 import apiClient from "@/lib/api/client";
+import { sectorRiskApi, type SectorBaseline, type SimulationResult as SectorSimResult } from "@/lib/api/sector-risk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1741,7 +1743,7 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics", "ESG Ratings"] as const;
+const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Sector Risk", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics", "ESG Ratings"] as const;
 type Tab = typeof TABS[number];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -1834,6 +1836,21 @@ export default function SupplierDetailPage() {
     enabled: !!supplier?.nace_code && tab === "Intelligence" && intelligenceSubTab === "benchmark",
     staleTime: 600_000,
     retry: false,
+  });
+
+  // ── Sector Risk queries ────────────────────────────────────────────────────
+  const [sectorScenario, setSectorScenario] = useState<string>("");
+  const { data: sectorBaseline } = useQuery({
+    queryKey: ["sector-baseline-supplier", supplier?.nace_code],
+    queryFn: () => sectorRiskApi.getSector(supplier!.nace_code!),
+    enabled: !!supplier?.nace_code && tab === "Sector Risk",
+    staleTime: 300_000,
+  });
+  const { data: sectorSimulation, isLoading: sectorSimLoading } = useQuery({
+    queryKey: ["sector-simulate-supplier", supplier?.nace_code, sectorScenario],
+    queryFn: () => sectorRiskApi.simulate(supplier!.nace_code!, sectorScenario),
+    enabled: !!supplier?.nace_code && tab === "Sector Risk" && !!sectorScenario,
+    staleTime: 300_000,
   });
 
   // ── Digital Twin queries ───────────────────────────────────────────────────
@@ -2745,6 +2762,159 @@ export default function SupplierDetailPage() {
                 </CardContent>
               </Card>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Sector Risk Tab ───────────────────────────────────────────────── */}
+      {tab === "Sector Risk" && (
+        <div className="space-y-5">
+          {!supplier?.nace_code ? (
+            <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-2">
+              <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
+              <p className="font-medium">Kein NACE-Code hinterlegt</p>
+              <p className="text-sm text-muted-foreground">
+                Bitte den NACE-2-digit-Code im Lieferantenprofil (Übersicht → Bearbeiten) eintragen,
+                damit das sektorspezifische Risikoregister angezeigt werden kann.
+              </p>
+              <button onClick={() => setTab("Overview")} className="text-sm text-blue-600 hover:underline">
+                Zum Profil →
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Header */}
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono font-bold text-lg">{supplier.nace_code}</span>
+                    {sectorBaseline && (
+                      <>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="font-medium">{sectorBaseline.sector_name}</span>
+                        {sectorBaseline.is_fully_calibrated ? (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Kalibriert</span>
+                        ) : (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">Fallback-Scores</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    CSDDD Sector Risk Register · 21 Schutzrechte (Annex I) · deterministisch
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="relative">
+                    <select
+                      value={sectorScenario}
+                      onChange={(e) => setSectorScenario(e.target.value)}
+                      className="appearance-none pl-3 pr-8 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                    >
+                      <option value="">Kein Szenario (Baseline)</option>
+                      <option value="geopolitical_conflict">Geopolitischer Konflikt</option>
+                      <option value="sanctions_escalation">Sanktionsverschärfung</option>
+                      <option value="natural_disaster">Naturkatastrophe</option>
+                      <option value="regulatory_change">Regulierungsänderung (CSDDD)</option>
+                      <option value="labour_unrest">Arbeitskampf / Streik</option>
+                      <option value="supply_shortage">Versorgungsengpass</option>
+                    </select>
+                    <ChevronRight className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground rotate-90" />
+                  </div>
+                  {sectorSimLoading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
+                  <Link href={`/sector-risk/${supplier.nace_code}`} className="text-xs text-blue-600 hover:underline whitespace-nowrap">
+                    Vollansicht →
+                  </Link>
+                </div>
+              </div>
+
+              {/* Simulation summary bar */}
+              {sectorScenario && sectorSimulation && (
+                <div className="flex gap-3 flex-wrap">
+                  <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-amber-50 border border-amber-200 text-amber-800">
+                    <GitBranch className="h-4 w-4" />
+                    <span className="font-medium">{sectorSimulation.scenario_name}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-orange-50 border border-orange-200 text-orange-800">
+                    <TrendingUp className="h-4 w-4" />
+                    <span>{sectorSimulation.summary.rights_increased} Rechte erhöht</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-800">
+                    <AlertTriangle className="h-4 w-4" />
+                    <span>{sectorSimulation.summary.rights_above_7_scenario} Rechte ≥ 7</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Rights table */}
+              {sectorBaseline && (
+                <Card>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border text-left bg-muted/30">
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">CSDDD-Schutzrecht</th>
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-20">Baseline</th>
+                          {sectorScenario && sectorSimulation && (
+                            <>
+                              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-24">Szenario</th>
+                              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">Delta</th>
+                            </>
+                          )}
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground w-36">Wahrscheinlichkeit</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(sectorScenario && sectorSimulation ? sectorSimulation.rights : sectorBaseline.rights).map((r) => {
+                          const delta = r.scenario?.delta ?? 0;
+                          const scenarioScore = r.scenario?.adjusted_probability;
+                          const displayScore = sectorScenario && scenarioScore !== undefined ? scenarioScore : r.probability;
+                          const pct = (displayScore / 10) * 100;
+                          const barColor = displayScore >= 8 ? "bg-red-500" : displayScore >= 6 ? "bg-orange-400" : displayScore >= 4 ? "bg-amber-400" : "bg-green-500";
+                          const pillColor = displayScore >= 8 ? "bg-red-100 text-red-800 border-red-200" : displayScore >= 6 ? "bg-orange-100 text-orange-800 border-orange-200" : displayScore >= 4 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-800 border-green-200";
+                          return (
+                            <tr key={r.right_id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
+                              <td className="px-4 py-2">{r.right_name}</td>
+                              <td className="px-4 py-2 text-center">
+                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${displayScore >= 8 ? "bg-red-100 text-red-800 border-red-200" : displayScore >= 6 ? "bg-orange-100 text-orange-800 border-orange-200" : displayScore >= 4 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-800 border-green-200"} ${sectorScenario ? "opacity-60" : ""}`}>
+                                  {r.probability}
+                                </span>
+                              </td>
+                              {sectorScenario && sectorSimulation && (
+                                <>
+                                  <td className="px-4 py-2 text-center">
+                                    {scenarioScore !== undefined ? (
+                                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${pillColor}`}>
+                                        {scenarioScore}
+                                      </span>
+                                    ) : "—"}
+                                  </td>
+                                  <td className="px-4 py-2 text-center text-xs font-semibold">
+                                    {delta > 0 ? <span className="text-red-600">+{delta}</span> : delta < 0 ? <span className="text-green-600">{delta}</span> : <span className="text-muted-foreground">—</span>}
+                                  </td>
+                                </>
+                              )}
+                              <td className="px-4 py-2">
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="text-xs font-medium w-4 text-right">{displayScore}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
+              )}
+
+              {!sectorBaseline && (
+                <div className="flex justify-center py-8"><RefreshCw className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+              )}
+            </>
           )}
         </div>
       )}
