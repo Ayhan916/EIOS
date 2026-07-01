@@ -472,7 +472,7 @@ export default function AssessmentDetailPage({
   const { data: qTemplates } = useQuery({
     queryKey: ["questionnaire-templates"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/supplier-portal/internal/questionnaires/templates");
+      const res = await apiClient.get("/supplier-portal/internal/questionnaires/templates");
       return res.data as Array<{ id: string; template_name: string; version: string }>;
     },
     staleTime: 300_000,
@@ -482,7 +482,7 @@ export default function AssessmentDetailPage({
     queryKey: ["questionnaire-assignments", assessment?.supplier_id],
     queryFn: async () => {
       const res = await apiClient.get(
-        `/api/v1/supplier-portal/internal/questionnaires/assignments?supplier_id=${assessment!.supplier_id}`
+        `/supplier-portal/internal/questionnaires/assignments?supplier_id=${assessment!.supplier_id}`
       );
       return res.data as Array<{
         id: string; questionnaire_status: string; due_date: string | null; score: number | null; template_id: string; completion_pct: number | null;
@@ -494,7 +494,7 @@ export default function AssessmentDetailPage({
 
   const sendQMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post("/api/v1/supplier-portal/internal/questionnaires/assign", {
+      await apiClient.post("/supplier-portal/internal/questionnaires/assign", {
         template_id: qTemplateId,
         supplier_id: assessment!.supplier_id,
         due_date: qDueDate || null,
@@ -556,7 +556,7 @@ export default function AssessmentDetailPage({
         try {
           const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
           if (stored?.esg_score_update?.enabled !== false && assessment?.supplier_id) {
-            await apiClient.post(`/api/v1/automations/trigger`, {
+            await apiClient.post(`/automations/trigger`, {
               rule_id: "esg_score_update",
               entity_type: "assessment",
               entity_id: id,

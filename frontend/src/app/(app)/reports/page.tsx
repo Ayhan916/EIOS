@@ -120,7 +120,7 @@ function CompleteDisclosureWizard({
     queryKey: ["disclosure-requirements", framework.framework_id],
     queryFn: async () => {
       const r = await apiClient.get(
-        `/api/v1/reporting/frameworks/${framework.framework_id}/requirements`,
+        `/reporting/frameworks/${framework.framework_id}/requirements`,
       );
       return r.data ?? [];
     },
@@ -141,7 +141,7 @@ function CompleteDisclosureWizard({
   async function handleBegin(req: DisclosureRequirement) {
     setBusy(req.id);
     try {
-      await apiClient.post("/api/v1/reporting/responses", {
+      await apiClient.post("/reporting/responses", {
         requirement_id: req.id,
       });
       qc.invalidateQueries({ queryKey: ["disclosure-requirements", framework.framework_id] });
@@ -155,11 +155,11 @@ function CompleteDisclosureWizard({
     setBusy(req.id + "-submit");
     try {
       const listR = await apiClient.get(
-        `/api/v1/reporting/responses?requirement_id=${req.id}&limit=1`,
+        `/reporting/responses?requirement_id=${req.id}&limit=1`,
       );
       const respId = listR.data?.[0]?.id;
       if (respId) {
-        await apiClient.post(`/api/v1/reporting/responses/${respId}/submit`, {});
+        await apiClient.post(`/reporting/responses/${respId}/submit`, {});
         qc.invalidateQueries({ queryKey: ["disclosure-requirements", framework.framework_id] });
         qc.invalidateQueries({ queryKey: ["disclosure-dashboard"] });
         if (step < incomplete.length - 1) setStep((s) => s + 1);
@@ -341,7 +341,7 @@ function DisclosureGapAnalysis() {
   const { data: dashboard, isLoading } = useQuery<DisclosureDashboardResponse>({
     queryKey: ["disclosure-dashboard"],
     queryFn: async () => {
-      const r = await apiClient.get("/api/v1/reporting/dashboard");
+      const r = await apiClient.get("/reporting/dashboard");
       return r.data;
     },
     staleTime: 60_000,
@@ -514,7 +514,7 @@ const DIRECT_REPORTS = [
     iconColor: "text-teal-600",
     action: async (year: number) => {
       await authenticatedDownload(
-        `/api/v1/executive/tcfd?reporting_year=${year}`,
+        `/executive/tcfd?reporting_year=${year}`,
         `tcfd_report_${year}.json`,
       );
     },
@@ -531,7 +531,7 @@ const DIRECT_REPORTS = [
       const start = `${year}-01-01`;
       const end = `${year}-12-31`;
       await authenticatedDownload(
-        `/api/v1/financial-esg/sfdr/pai?reference_period_start=${start}&reference_period_end=${end}`,
+        `/financial-esg/sfdr/pai?reference_period_start=${start}&reference_period_end=${end}`,
         `sfdr_pai_${year}.json`,
       );
     },
@@ -545,7 +545,7 @@ const DIRECT_REPORTS = [
     iconColor: "text-slate-600",
     action: async (_year: number) => {
       await authenticatedDownload(
-        `/api/v1/audit/events/export?format=csv`,
+        `/audit/events/export?format=csv`,
         `audit_trail.csv`,
       );
     },
@@ -559,7 +559,7 @@ function CDPModuleCard() {
     queryKey: ["org-settings-cdp"],
     queryFn: async () => {
       try {
-        const r = await apiClient.get("/api/v1/commercial/organizations/me/settings");
+        const r = await apiClient.get("/commercial/organizations/me/settings");
         return r.data;
       } catch { return null; }
     },
@@ -656,7 +656,7 @@ function DirectReportCard({
     if (previewOpen) { setPreviewOpen(false); return; }
     setPreviewLoading(true);
     try {
-      const r = await apiClient.get(`/api/v1/executive/tcfd?reporting_year=${year}`);
+      const r = await apiClient.get(`/executive/tcfd?reporting_year=${year}`);
       setPreviewData(r.data);
       setPreviewOpen(true);
     } catch { setError("Preview unavailable"); }
@@ -762,7 +762,7 @@ function PackageExportButtons({ pkg }: { pkg: DisclosurePackage }) {
       const ext = format === "xbrl" ? "html" : format;
       const name = `${pkg.package_name.replace(/\s+/g, "_").toLowerCase()}_${format}.${ext}`;
       await authenticatedDownload(
-        `/api/v1/disclosure/packages/${pkg.id}/export?format=${format}`,
+        `/disclosure/packages/${pkg.id}/export?format=${format}`,
         name,
       );
     } catch (e: unknown) {
@@ -823,7 +823,7 @@ function GeneratePackageForm({ onSuccess }: { onSuccess: () => void }) {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/api/v1/disclosure/packages/generate", {
+      const res = await apiClient.post("/disclosure/packages/generate", {
         package_name: name,
         framework_codes: frameworks.split(",").map((f) => f.trim()),
         publication_date: pubDate,
@@ -901,7 +901,7 @@ export default function ReportsCenterPage() {
   const { data: packages, isLoading } = useQuery<DisclosurePackage[]>({
     queryKey: ["disclosure-packages"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/disclosure/packages?limit=50");
+      const res = await apiClient.get("/disclosure/packages?limit=50");
       return res.data;
     },
   });

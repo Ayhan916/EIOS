@@ -486,7 +486,7 @@ function ActivityTab() {
     queryKey: ["automation-activity"],
     queryFn: async () => {
       try {
-        const res = await apiClient.get("/api/v1/automations/activity?limit=100");
+        const res = await apiClient.get("/automations/activity?limit=100");
         return res.data?.items ?? res.data ?? [];
       } catch { return []; }
     },
@@ -581,7 +581,7 @@ export default function AutomationsPage() {
     queryKey: ["org-settings-automations"],
     queryFn: async () => {
       try {
-        const res = await apiClient.get("/api/v1/commercial/organizations/me/settings");
+        const res = await apiClient.get("/commercial/organizations/me/settings");
         return res.data;
       } catch { return { integrations_configured: [] }; }
     },
@@ -599,7 +599,7 @@ export default function AutomationsPage() {
     setSaved(false);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(ruleStates));
     try {
-      await apiClient.post("/api/v1/automations/rules/batch", { rules: ruleStates });
+      await apiClient.post("/automations/rules/batch", { rules: ruleStates });
     } catch { /* graceful — stored locally regardless */ }
     setSaving(false);
     setSaved(true);

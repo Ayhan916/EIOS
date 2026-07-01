@@ -158,7 +158,7 @@ export default function ComplianceCenterPage() {
   const { data, isLoading } = useQuery<ComplianceCenterData>({
     queryKey: ["compliance-center"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/executive/command-center");
+      const res = await apiClient.get("/executive/command-center");
       return res.data?.cco ?? {};
     },
     staleTime: 300_000,

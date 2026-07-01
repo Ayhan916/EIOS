@@ -25,27 +25,27 @@ import { formatDateTime } from "@/lib/utils";
 // ── API ───────────────────────────────────────────────────────────────────────
 
 async function getSurveillanceDashboard() {
-  const res = await apiClient.get("/api/v1/surveillance/dashboard");
+  const res = await apiClient.get("/surveillance/dashboard");
   return res.data;
 }
 
 async function getActiveSignals() {
   const res = await apiClient.get(
-    "/api/v1/surveillance/signals?signal_status=ACTIVE&limit=20"
+    "/surveillance/signals?signal_status=ACTIVE&limit=20"
   );
   return res.data;
 }
 
 async function getWatchlist() {
   const res = await apiClient.get(
-    "/api/v1/surveillance/watchlists?active_only=true&limit=20"
+    "/surveillance/watchlists?active_only=true&limit=20"
   );
   return res.data;
 }
 
 async function getOpenEpisodes() {
   const res = await apiClient.get(
-    "/api/v1/surveillance/episodes?episode_status=OPEN&limit=10"
+    "/surveillance/episodes?episode_status=OPEN&limit=10"
   );
   return res.data;
 }
@@ -104,7 +104,7 @@ function SignalRow({ signal }: { signal: any }) {
 
   const createRisk = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/api/v1/risks/", {
+      const res = await apiClient.post("/risks/", {
         title: `[Signal] ${signal.title}`,
         risk_level: signal.severity === "HIGH" || signal.severity === "CRITICAL" ? signal.severity.charAt(0) + signal.severity.slice(1).toLowerCase() : "Medium",
         status: "Draft",

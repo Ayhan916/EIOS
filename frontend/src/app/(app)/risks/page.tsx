@@ -141,7 +141,7 @@ function RiskRow({
 
   const patchMutation = useMutation({
     mutationFn: async (patch: { status?: string; risk_level?: string; owner?: string }) => {
-      const res = await apiClient.patch(`/api/v1/risks/${risk.id}`, patch);
+      const res = await apiClient.patch(`/risks/${risk.id}`, patch);
       return res.data;
     },
     onSuccess: () => {
@@ -400,7 +400,7 @@ function BulkOwnerPanel({ ids, onDone, onCancel }: { ids: string[]; onDone: () =
 
   async function apply() {
     setBusy(true);
-    await Promise.all(ids.map((id) => apiClient.patch(`/api/v1/risks/${id}`, { owner })));
+    await Promise.all(ids.map((id) => apiClient.patch(`/risks/${id}`, { owner })));
     qc.invalidateQueries({ queryKey: ["org-risks"] });
     setDone(true);
     setBusy(false);
@@ -444,7 +444,7 @@ function BulkRiskStatusPanel({ ids, onDone, onCancel }: { ids: string[]; onDone:
 
   async function apply() {
     setBusy(true);
-    await Promise.all(ids.map((id) => apiClient.patch(`/api/v1/risks/${id}`, { status })));
+    await Promise.all(ids.map((id) => apiClient.patch(`/risks/${id}`, { status })));
     qc.invalidateQueries({ queryKey: ["org-risks"] });
     setDone(true);
     setBusy(false);
@@ -498,7 +498,7 @@ export default function RisksPage() {
     queryKey: ["org-risks", levelFilter],
     queryFn: async () => {
       const params = levelFilter !== "all" ? `?risk_level=${levelFilter}` : "";
-      const res = await apiClient.get(`/api/v1/executive/risks${params}`);
+      const res = await apiClient.get(`/executive/risks${params}`);
       return res.data;
     },
     staleTime: 30_000,

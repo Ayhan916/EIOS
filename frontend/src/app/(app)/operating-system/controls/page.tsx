@@ -115,7 +115,7 @@ function ControlLinkedCounts({ controlId }: { controlId: string }) {
     queryKey: ["control-findings", controlId],
     queryFn: async () => {
       try {
-        const res = await apiClient.get(`/api/v1/controls/${controlId}/findings`);
+        const res = await apiClient.get(`/controls/${controlId}/findings`);
         return res.data as any[];
       } catch {
         return [] as any[];

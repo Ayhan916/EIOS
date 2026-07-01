@@ -117,7 +117,7 @@ export default function ReportsPage() {
     setSendingNow(true);
     try {
       const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
-      await apiClient.post("/api/v1/automations/trigger", {
+      await apiClient.post("/automations/trigger", {
         rule_id: "quarterly_sustainability",
         entity_type: "org",
         entity_id: ORG_ID,

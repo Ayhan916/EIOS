@@ -65,7 +65,7 @@ function AssignControlForm({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post("/api/v1/recommendations/", {
+      await apiClient.post("/recommendations/", {
         title,
         description: gap.description,
         priority: gap.severity === "Critical" ? "Critical" : gap.severity === "High" ? "High" : "Medium",
@@ -221,7 +221,7 @@ export default function ComplianceOperationsPage() {
   const { data: allGaps } = useQuery({
     queryKey: ["org-compliance-gaps"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/reporting/gaps?limit=200");
+      const res = await apiClient.get("/reporting/gaps?limit=200");
       return res.data as ComplianceGap[];
     },
     staleTime: 120_000,

@@ -47,7 +47,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
     setError(null);
     setResult(null);
     try {
-      const r = await apiClient.post("/api/v1/integrations/sbti/validate", {
+      const r = await apiClient.post("/integrations/sbti/validate", {
         target_id: sbt.id,
         base_year: sbt.baseline_year,
         target_year: sbt.target_year,

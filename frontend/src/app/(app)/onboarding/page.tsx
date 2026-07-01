@@ -522,7 +522,7 @@ const STEPS = ["Organisation", "Lieferanten", "Framework", "Erster KPI", "Emissi
 async function createFirstKpi(orgId: string | null, kpi: KpiFormData) {
   if (!kpi.name.trim()) return;
   try {
-    await apiClient.post(`/api/v1/sustainability/${orgId ?? "default"}/kpis`, {
+    await apiClient.post(`/sustainability/${orgId ?? "default"}/kpis`, {
       name: kpi.name.trim(),
       unit: kpi.unit.trim() || "—",
       target_value: parseFloat(kpi.target_value) || undefined,
@@ -538,7 +538,7 @@ async function createEmissionInventory(orgId: string | null, em: EmissionFormDat
   const yr = parseInt(em.year) || new Date().getFullYear();
   if (!em.scope1 && !em.scope2 && !em.scope3) return;
   try {
-    await apiClient.post(`/api/v1/sustainability/${orgId ?? "default"}/inventory`, {
+    await apiClient.post(`/sustainability/${orgId ?? "default"}/inventory`, {
       reporting_year: yr,
       period_start: `${yr}-01-01T00:00:00Z`,
       period_end: `${yr}-12-31T23:59:59Z`,

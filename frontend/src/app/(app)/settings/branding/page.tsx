@@ -36,7 +36,7 @@ export default function BrandingPage() {
   const { data: settings, isLoading } = useQuery<OrgSettings>({
     queryKey: ["org-settings"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/commercial/organizations/me/settings");
+      const res = await apiClient.get("/commercial/organizations/me/settings");
       return res.data;
     },
   });
@@ -66,7 +66,7 @@ export default function BrandingPage() {
       else body.favicon_url = null;
       const colorVal = /^#[0-9A-Fa-f]{6}$/.test(primaryColor) ? primaryColor : null;
       if (colorVal) body.primary_color = colorVal;
-      await apiClient.put("/api/v1/commercial/organizations/me/settings", body);
+      await apiClient.put("/commercial/organizations/me/settings", body);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["org-settings"] }),
   });

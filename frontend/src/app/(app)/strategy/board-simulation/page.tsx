@@ -96,7 +96,7 @@ function PptxDownloadButton({ simId, simName }: { simId: string; simName: string
     setError(null);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
-      const res = await fetch(`/api/v1/commercial/strategy/board-simulations/${simId}/export?format=pptx`, {
+      const res = await fetch(`/commercial/strategy/board-simulations/${simId}/export?format=pptx`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error(`Export unavailable (${res.status})`);

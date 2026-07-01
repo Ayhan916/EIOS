@@ -242,7 +242,7 @@ export default function RecommendationsPage() {
     queryKey: ["org-recommendations", statusFilter],
     queryFn: async () => {
       const params = statusFilter !== "all" ? `?action_status=${statusFilter}` : "";
-      const res = await apiClient.get(`/api/v1/executive/recommendations${params}`);
+      const res = await apiClient.get(`/executive/recommendations${params}`);
       return res.data;
     },
     staleTime: 20_000,
@@ -318,7 +318,7 @@ export default function RecommendationsPage() {
             onClick={() => {
               const params = statusFilter !== "all" ? `?action_status=${statusFilter}` : "";
               authenticatedDownload(
-                `/api/v1/executive/recommendations/export${params}`,
+                `/executive/recommendations/export${params}`,
                 `recommendations-${new Date().toISOString().split("T")[0]}.csv`
               );
             }}

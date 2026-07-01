@@ -138,7 +138,7 @@ function Soc2Tab() {
     queryKey: ["soc2-controls", categoryFilter],
     queryFn: async () => {
       const params = categoryFilter !== "all" ? `?category=${encodeURIComponent(categoryFilter)}` : "";
-      const res = await apiClient.get(`/api/v1/security/soc2/controls${params}`);
+      const res = await apiClient.get(`/security/soc2/controls${params}`);
       return res.data;
     },
     staleTime: 30_000,
@@ -146,7 +146,7 @@ function Soc2Tab() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ controlId, payload }: { controlId: string; payload: Record<string, string> }) => {
-      await apiClient.put(`/api/v1/security/soc2/controls/${controlId}`, payload);
+      await apiClient.put(`/security/soc2/controls/${controlId}`, payload);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["soc2-controls"] });
@@ -277,7 +277,7 @@ function PentestTab() {
   const { data, isLoading } = useQuery<{ items: PentestFinding[]; total: number; open: number }>({
     queryKey: ["pentest-findings"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/security/pentest/findings");
+      const res = await apiClient.get("/security/pentest/findings");
       return res.data;
     },
     staleTime: 30_000,
@@ -286,7 +286,7 @@ function PentestTab() {
   const { data: owasp, isLoading: owaspLoading } = useQuery<Record<string, unknown>>({
     queryKey: ["owasp-assessment"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/security/pentest/owasp");
+      const res = await apiClient.get("/security/pentest/owasp");
       return res.data;
     },
     staleTime: 60_000,
@@ -377,7 +377,7 @@ function ChecklistTab() {
   const { data, isLoading } = useQuery<{ items: ChecklistItem[]; summary: Record<string, unknown> }>({
     queryKey: ["production-checklist"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/security/production-checklist");
+      const res = await apiClient.get("/security/production-checklist");
       return res.data;
     },
     staleTime: 20_000,
@@ -385,7 +385,7 @@ function ChecklistTab() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      await apiClient.put(`/api/v1/security/production-checklist/${id}`, { status });
+      await apiClient.put(`/security/production-checklist/${id}`, { status });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["production-checklist"] });
@@ -473,7 +473,7 @@ function ChecklistTab() {
           <Button
             size="sm"
             onClick={async () => {
-              await apiClient.post("/api/v1/security/production-checklist/seed");
+              await apiClient.post("/security/production-checklist/seed");
               qc.invalidateQueries({ queryKey: ["production-checklist"] });
               qc.invalidateQueries({ queryKey: ["security-summary"] });
             }}
@@ -495,7 +495,7 @@ function EvidenceMapTab() {
   const { data, isLoading } = useQuery<{ items: Soc2Control[] }>({
     queryKey: ["soc2-controls-evidence-map"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/security/soc2/controls?limit=500");
+      const res = await apiClient.get("/security/soc2/controls?limit=500");
       return res.data;
     },
     staleTime: 60_000,
@@ -576,7 +576,7 @@ function EvidenceMapTab() {
                     {/* #147 Per-control evidence package download */}
                     <button
                       onClick={() => authenticatedDownload(
-                        `/api/v1/security/soc2/controls/${ctrl.control_id}/evidence-package`,
+                        `/security/soc2/controls/${ctrl.control_id}/evidence-package`,
                         `evidence-${ctrl.control_id}.zip`
                       )}
                       title="Download evidence package"
@@ -622,7 +622,7 @@ function ApprovalsTab() {
   const { data, isLoading } = useQuery<ApprovalRecord[]>({
     queryKey: ["auditor-approvals"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/recommendations/decisions?limit=200");
+      const res = await apiClient.get("/recommendations/decisions?limit=200");
       return res.data?.items ?? res.data ?? [];
     },
     staleTime: 60_000,
@@ -854,7 +854,7 @@ function SignoffTab() {
   const { data, isLoading } = useQuery<{ items: Soc2Control[] }>({
     queryKey: ["soc2-controls-signoff"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/security/soc2/controls?limit=200");
+      const res = await apiClient.get("/security/soc2/controls?limit=200");
       return res.data;
     },
     staleTime: 120_000,
@@ -1028,7 +1028,7 @@ export default function AuditorWorkspacePage() {
   const { data: summary, isLoading: summaryLoading } = useQuery<SecuritySummary>({
     queryKey: ["security-summary"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/security/audit-summary");
+      const res = await apiClient.get("/security/audit-summary");
       return res.data;
     },
     staleTime: 60_000,
@@ -1076,7 +1076,7 @@ export default function AuditorWorkspacePage() {
               if (csvFrom) params.set("from", csvFrom);
               if (csvTo) params.set("to", csvTo);
               authenticatedDownload(
-                `/api/v1/audit/events/export?${params}`,
+                `/audit/events/export?${params}`,
                 `audit-trail-${new Date().toISOString().split("T")[0]}.csv`
               );
             }}
@@ -1099,7 +1099,7 @@ export default function AuditorWorkspacePage() {
             className="gap-2 bg-slate-700 hover:bg-slate-800 text-white"
             onClick={() =>
               authenticatedDownload(
-                "/api/v1/security/auditor/sign-off",
+                "/security/auditor/sign-off",
                 `eios-sign-off-${new Date().toISOString().split("T")[0]}.json`
               )
             }

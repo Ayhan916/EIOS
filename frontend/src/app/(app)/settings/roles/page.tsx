@@ -118,14 +118,14 @@ export default function CustomRolesPage() {
   const { data, isLoading } = useQuery<RolesResponse>({
     queryKey: ["custom-roles"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/commercial/roles/custom");
+      const res = await apiClient.get("/commercial/roles/custom");
       return res.data;
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post("/api/v1/commercial/roles/custom", {
+      await apiClient.post("/commercial/roles/custom", {
         role_name: roleName.trim(),
         description: roleDesc.trim(),
         permissions,
@@ -144,7 +144,7 @@ export default function CustomRolesPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      await apiClient.delete(`/api/v1/commercial/roles/custom/${id}`);
+      await apiClient.delete(`/commercial/roles/custom/${id}`);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["custom-roles"] }),
   });

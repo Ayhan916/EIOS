@@ -241,7 +241,7 @@ function PptxButton({ reportId, title }: { reportId: string; title: string }) {
     setBusy(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
-      const res = await fetch(`/api/v1/commercial/executive/reports/${reportId}/pptx`, {
+      const res = await fetch(`/commercial/executive/reports/${reportId}/pptx`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       if (!res.ok) throw new Error("Download failed");

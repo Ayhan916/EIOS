@@ -220,7 +220,7 @@ export default function SuppliersPage() {
 
   const { data: scoreData } = useQuery<SupplierScore[]>({
     queryKey: ["supplier-scores-overview"],
-    queryFn: async () => { const r = await apiClient.get("/api/v1/executive/suppliers"); return r.data; },
+    queryFn: async () => { const r = await apiClient.get("/executive/suppliers"); return r.data; },
     staleTime: 60_000,
   });
 
@@ -241,7 +241,7 @@ export default function SuppliersPage() {
       try {
         const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
         if (stored?.supplier_ofac_scan?.enabled !== false && newSupplier?.id) {
-          await apiClient.post(`/api/v1/integrations/sanctions/ofac/scan/supplier/${newSupplier.id}`);
+          await apiClient.post(`/integrations/sanctions/ofac/scan/supplier/${newSupplier.id}`);
         }
       } catch { /* silent — OFAC scan failure should not block supplier creation */ }
     },

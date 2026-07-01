@@ -123,7 +123,7 @@ function CreateRecommendationInline({
 
   const createMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/api/v1/recommendations/", {
+      const res = await apiClient.post("/recommendations/", {
         title,
         description: description || `Remediate finding: ${finding.title}`,
         priority,
@@ -212,7 +212,7 @@ function LinkToRiskInline({
   const { data: risks } = useQuery({
     queryKey: ["org-risks-for-link"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/executive/risks?limit=100");
+      const res = await apiClient.get("/executive/risks?limit=100");
       return res.data as Array<{ id: string; title: string; risk_level: string }>;
     },
     staleTime: 60_000,
@@ -220,7 +220,7 @@ function LinkToRiskInline({
 
   const linkMutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post(`/api/v1/findings/${findingId}/risks/${selectedRiskId}`);
+      await apiClient.post(`/findings/${findingId}/risks/${selectedRiskId}`);
     },
     onSuccess: () => {
       setDone(true);
@@ -385,7 +385,7 @@ function BulkStatusPanel({
 
   async function apply() {
     setBusy(true);
-    await Promise.all(ids.map((id) => apiClient.patch(`/api/v1/findings/${id}`, { status })));
+    await Promise.all(ids.map((id) => apiClient.patch(`/findings/${id}`, { status })));
     qc.invalidateQueries({ queryKey: ["org-findings"] });
 
     try {
@@ -394,7 +394,7 @@ function BulkStatusPanel({
 
       // #152 Critical finding → trigger risk creation
       if (criticalIds.length > 0 && stored?.critical_finding_risk?.enabled !== false) {
-        await apiClient.post("/api/v1/automations/trigger", {
+        await apiClient.post("/automations/trigger", {
           rule_id: "critical_finding_risk",
           entity_type: "finding",
           payload: { finding_ids: criticalIds },
@@ -408,7 +408,7 @@ function BulkStatusPanel({
         const minIdx = sevOrder.indexOf(minSev);
         const jiraIds = findings.filter((f) => ids.includes(f.id) && sevOrder.indexOf(f.severity) <= minIdx).map((f) => f.id);
         if (jiraIds.length > 0) {
-          await apiClient.post("/api/v1/automations/trigger", {
+          await apiClient.post("/automations/trigger", {
             rule_id: "finding_jira_ticket",
             entity_type: "finding",
             payload: {
@@ -422,7 +422,7 @@ function BulkStatusPanel({
 
       // #164 Remediation assignment when finding resolved/verified
       if ((status === "Resolved" || status === "Verified") && stored?.finding_remediation?.enabled !== false) {
-        await apiClient.post("/api/v1/automations/trigger", {
+        await apiClient.post("/automations/trigger", {
           rule_id: "finding_remediation",
           entity_type: "finding",
           payload: {
@@ -492,7 +492,7 @@ function BulkLinkToRiskPanel({
   const { data: risks } = useQuery({
     queryKey: ["org-risks-for-bulk-link"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/executive/risks?limit=100");
+      const res = await apiClient.get("/executive/risks?limit=100");
       return res.data as Array<{ id: string; title: string; risk_level: string }>;
     },
     staleTime: 60_000,
@@ -502,7 +502,7 @@ function BulkLinkToRiskPanel({
     if (!riskId) return;
     setBusy(true);
     await Promise.all(findings.map((f) =>
-      apiClient.post(`/api/v1/findings/${f.id}/link-risk`, { risk_id: riskId })
+      apiClient.post(`/findings/${f.id}/link-risk`, { risk_id: riskId })
         .catch(() => {})
     ));
     qc.invalidateQueries({ queryKey: ["org-findings"] });
@@ -577,7 +577,7 @@ function BulkEscalatePanel({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      await apiClient.post("/api/v1/recommendations/", {
+      await apiClient.post("/recommendations/", {
         title,
         description,
         priority,
@@ -667,7 +667,7 @@ export default function FindingsPage() {
     queryKey: ["org-findings", severityFilter],
     queryFn: async () => {
       const params = severityFilter !== "all" ? `?severity=${severityFilter}` : "";
-      const res = await apiClient.get(`/api/v1/executive/findings${params}`);
+      const res = await apiClient.get(`/executive/findings${params}`);
       return res.data;
     },
     staleTime: 30_000,
@@ -767,7 +767,7 @@ export default function FindingsPage() {
             onClick={() => {
               const params = severityFilter !== "all" ? `?severity=${severityFilter}` : "";
               authenticatedDownload(
-                `/api/v1/executive/findings/export${params}`,
+                `/executive/findings/export${params}`,
                 `findings-${new Date().toISOString().split("T")[0]}.csv`
               );
             }}

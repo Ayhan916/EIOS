@@ -137,7 +137,7 @@ function AddEmissionSourceForm({ onDone }: { onDone: () => void }) {
           const scopeConfig = stored?.ghg_carbon_link?.config?.scope_mapping ?? "all";
           if (scopeConfig === "all" || scopeConfig === scope) {
             await import("@/lib/api/client").then(({ default: api }) =>
-              api.post(`/api/v1/automations/trigger`, {
+              api.post(`/automations/trigger`, {
                 rule_id: "ghg_carbon_link",
                 entity_type: "emission_source",
                 entity_id: src.id,

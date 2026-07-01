@@ -118,7 +118,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
           const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
           if (stored?.kpi_alert?.enabled !== false) {
             await import("@/lib/api/client").then(({ default: api }) =>
-              api.post(`/api/v1/sustainability/${ORG_ID}/kpis/${kpi.id}/alert`, {
+              api.post(`/sustainability/${ORG_ID}/kpis/${kpi.id}/alert`, {
                 measured_value: numVal,
                 threshold: kpi.alert_threshold,
                 trigger: "below_threshold",

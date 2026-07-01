@@ -572,7 +572,7 @@ function DemoDataButton() {
   async function seed() {
     setLoading(true);
     try {
-      await apiClient.post("/api/v1/demo/seed");
+      await apiClient.post("/demo/seed");
       localStorage.setItem(DEMO_KEY, "1");
       setDone(true);
       window.location.reload();
@@ -614,7 +614,7 @@ export default function DashboardPage() {
   const { data: cc } = useQuery({
     queryKey: ["command-center-dashboard"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/executive/command-center");
+      const res = await apiClient.get("/executive/command-center");
       return res.data;
     },
     staleTime: 300_000,
@@ -623,7 +623,7 @@ export default function DashboardPage() {
   const { data: orgRisks } = useQuery({
     queryKey: ["org-risks-heatmap"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/executive/risks?limit=500");
+      const res = await apiClient.get("/executive/risks?limit=500");
       return res.data as Array<{ risk_level: string }>;
     },
     staleTime: 120_000,
@@ -632,7 +632,7 @@ export default function DashboardPage() {
   const { data: riskSignals } = useQuery({
     queryKey: ["dashboard-risk-signals"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/external-intelligence/signals?limit=7");
+      const res = await apiClient.get("/external-intelligence/signals?limit=7");
       return (res.data as { signals: RiskSignal[]; total: number }).signals;
     },
     staleTime: 120_000,

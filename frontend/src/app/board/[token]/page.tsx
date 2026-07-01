@@ -116,7 +116,7 @@ function ExpiryBadge({ expiresAt, token }: { expiresAt: string; token: string })
   async function handleExtend() {
     setExtending(true);
     try {
-      await fetch(`/api/v1/executive/board-portal/${token}/extend`, { method: "POST" });
+      await fetch(`/executive/board-portal/${token}/extend`, { method: "POST" });
       setExtended(true);
     } catch { /* silent */ }
     finally { setExtending(false); }

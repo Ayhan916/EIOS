@@ -58,7 +58,7 @@ function AuditTrailPanel({ entityId }: { entityId: string }) {
   const { data: entries, isLoading } = useQuery({
     queryKey: ["audit-trail", "finding", entityId],
     queryFn: async () => {
-      const r = await apiClient.get(`/api/v1/findings/${entityId}/activity`);
+      const r = await apiClient.get(`/findings/${entityId}/activity`);
       return r.data as ActivityEntry[];
     },
     enabled: open,
@@ -173,7 +173,7 @@ function EvidenceDropZone({ findingId }: { findingId: string }) {
     form.append("file", file);
     form.append("finding_id", findingId);
     try {
-      await apiClient.post("/api/v1/evidence/upload", form, {
+      await apiClient.post("/evidence/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setUploadedName(file.name);
@@ -321,7 +321,7 @@ export default function FindingDetailPage() {
     queryKey: ["remediation-plan", finding?.assessment_id],
     queryFn: async () => {
       try {
-        const r = await apiClient.get(`/api/v1/assessments/${finding!.assessment_id}/remediation`);
+        const r = await apiClient.get(`/assessments/${finding!.assessment_id}/remediation`);
         return r.data;
       } catch { return null; }
     },

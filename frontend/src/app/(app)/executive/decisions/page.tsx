@@ -43,7 +43,7 @@ export default function DecisionLogPage() {
   const { data, isLoading } = useQuery<DecisionRecord[]>({
     queryKey: ["decision-log"],
     queryFn: async () => {
-      const r = await apiClient.get("/api/v1/recommendations/decisions?limit=100");
+      const r = await apiClient.get("/recommendations/decisions?limit=100");
       return r.data?.items ?? r.data ?? [];
     },
     staleTime: 60_000,

@@ -239,7 +239,7 @@ export default function ComplianceGapsPage() {
         return daysUntil > 0 && daysUntil < daysThreshold;
       });
       if (urgentOps.length === 0) return;
-      apiClient.post("/api/v1/automations/trigger", {
+      apiClient.post("/automations/trigger", {
         rule_id: "reg_gap_finding",
         entity_type: "compliance_operation",
         payload: { urgent_frameworks: urgentOps.map((o) => o.framework_name), severity, days_threshold: daysThreshold },

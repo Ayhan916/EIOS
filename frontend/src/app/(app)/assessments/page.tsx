@@ -38,7 +38,7 @@ export default function AssessmentsPage() {
     queryKey: ["assessment-schedules-supplier-ids"],
     queryFn: async () => {
       try {
-        const r = await apiClient.get("/api/v1/assessments/schedules?active_only=true&limit=200");
+        const r = await apiClient.get("/assessments/schedules?active_only=true&limit=200");
         const ids = new Set<string>((r.data ?? []).map((s: { supplier_id: string }) => s.supplier_id).filter(Boolean));
         return ids;
       } catch { return new Set(); }

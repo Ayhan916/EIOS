@@ -19,7 +19,7 @@ function IncidentCreateButtons({ inc }: { inc: AIIncident }) {
 
   const createFinding = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/api/v1/findings/", {
+      const res = await apiClient.post("/findings/", {
         title: `[AI Incident] ${inc.incident_type.replace(/_/g, " ")}`,
         severity: inc.severity,
         status: "Open",
@@ -31,7 +31,7 @@ function IncidentCreateButtons({ inc }: { inc: AIIncident }) {
 
   const createRisk = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/api/v1/risks/", {
+      const res = await apiClient.post("/risks/", {
         title: `[AI Incident] ${inc.incident_type.replace(/_/g, " ")}`,
         risk_level: inc.severity.charAt(0) + inc.severity.slice(1).toLowerCase(),
         status: "Draft",

@@ -101,32 +101,32 @@ function NetworkTour() {
 // ── API ───────────────────────────────────────────────────────────────────────
 
 async function getNetworkDashboard() {
-  const res = await apiClient.get("/api/v1/network/dashboard");
+  const res = await apiClient.get("/network/dashboard");
   return res.data;
 }
 
 async function getRelationships() {
-  const res = await apiClient.get("/api/v1/network/relationships?limit=20");
+  const res = await apiClient.get("/network/relationships?limit=20");
   return res.data;
 }
 
 async function getPendingSuggestions() {
   const res = await apiClient.get(
-    "/api/v1/network/suggested-relationships?suggestion_status=PENDING&limit=20"
+    "/network/suggested-relationships?suggestion_status=PENDING&limit=20"
   );
   return res.data;
 }
 
 async function getExposureSignals() {
   const res = await apiClient.get(
-    "/api/v1/network/exposure-signals?exposure_status=ACTIVE&limit=10"
+    "/network/exposure-signals?exposure_status=ACTIVE&limit=10"
   );
   return res.data;
 }
 
 async function getClusters() {
   const res = await apiClient.get(
-    "/api/v1/network/clusters?cluster_status=ACTIVE&limit=10"
+    "/network/clusters?cluster_status=ACTIVE&limit=10"
   );
   return res.data;
 }
@@ -136,8 +136,8 @@ async function getGraphData(): Promise<{
   relationships: GraphRelationship[];
 }> {
   const [suppRes, relRes] = await Promise.all([
-    apiClient.get("/api/v1/suppliers?limit=200"),
-    apiClient.get("/api/v1/network/relationships?limit=500"),
+    apiClient.get("/suppliers?limit=200"),
+    apiClient.get("/network/relationships?limit=500"),
   ]);
   const tierNum: Record<string, number> = { "Tier 1": 1, "Tier 2": 2, "Tier 3": 3 };
   const suppliers: GraphSupplier[] = (suppRes.data.items ?? suppRes.data ?? []).map((s: any) => ({

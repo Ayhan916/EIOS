@@ -207,7 +207,7 @@ function UpcomingDeadlinesPanel() {
     queryKey: ["upcoming-deadlines"],
     queryFn: async () => {
       const res = await apiClient.get(
-        "/api/v1/operating-system/calendar-events?event_status=SCHEDULED&limit=5"
+        "/operating-system/calendar-events?event_status=SCHEDULED&limit=5"
       );
       return res.data as { id: string; title: string; event_type: string; scheduled_at: string }[];
     },
@@ -519,7 +519,7 @@ function CSOPanel({ cc }: { cc: CommandCenterData }) {
 
   const { data: sustDash } = useQuery({
     queryKey: ["sustainability-dashboard-cso"],
-    queryFn: async () => { const r = await apiClient.get("/api/v1/sustainability/dashboard/default"); return r.data; },
+    queryFn: async () => { const r = await apiClient.get("/sustainability/dashboard/default"); return r.data; },
     staleTime: 300_000,
   });
 
@@ -769,7 +769,7 @@ function EmissionsTrendChart() {
   const { data, isLoading } = useQuery({
     queryKey: ["executive-emissions-trend"],
     queryFn: async () => {
-      const r = await apiClient.get("/api/v1/sustainability/carbon-inventory/default?limit=12");
+      const r = await apiClient.get("/sustainability/carbon-inventory/default?limit=12");
       return r.data;
     },
     staleTime: 300_000,

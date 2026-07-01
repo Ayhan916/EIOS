@@ -117,7 +117,7 @@ function InitiativeCard({ init, orgId, kpis }: { init: DecarbonizationInitiative
               className="h-8 text-xs bg-violet-600 hover:bg-violet-700"
               disabled={!linkedKpiId}
               onClick={async () => {
-                await apiClient.patch(`/api/v1/sustainability/${orgId}/initiatives/${init.id}`, { linked_kpi_id: linkedKpiId });
+                await apiClient.patch(`/sustainability/${orgId}/initiatives/${init.id}`, { linked_kpi_id: linkedKpiId });
                 qc.invalidateQueries({ queryKey: ["initiatives", orgId] });
                 setShowKpiLink(false);
               }}

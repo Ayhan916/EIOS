@@ -79,7 +79,7 @@ function CreateAssessmentForm({
 
   const mutation = useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post("/api/v1/assessments/", {
+      const res = await apiClient.post("/assessments/", {
         title,
         description,
         assessment_type: event.event_type,

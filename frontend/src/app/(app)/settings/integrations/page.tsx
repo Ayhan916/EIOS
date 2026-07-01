@@ -76,7 +76,7 @@ export default function IntegrationSettingsPage() {
   const { data: settings, isLoading } = useQuery<OrgSettings>({
     queryKey: ["org-settings"],
     queryFn: async () => {
-      const res = await apiClient.get("/api/v1/commercial/organizations/me/settings");
+      const res = await apiClient.get("/commercial/organizations/me/settings");
       return res.data;
     },
   });
@@ -93,7 +93,7 @@ export default function IntegrationSettingsPage() {
       for (const [k, v] of Object.entries(values)) {
         body[k] = v.trim() || null;
       }
-      await apiClient.put("/api/v1/commercial/organizations/me/settings", body);
+      await apiClient.put("/commercial/organizations/me/settings", body);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["org-settings"] }),
   });

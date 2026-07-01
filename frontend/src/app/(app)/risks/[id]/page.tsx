@@ -49,7 +49,7 @@ function AuditTrailPanel({ entityId }: { entityId: string }) {
   const { data: entries, isLoading } = useQuery({
     queryKey: ["audit-trail", "risk", entityId],
     queryFn: async () => {
-      const r = await apiClient.get(`/api/v1/risks/${entityId}/activity`);
+      const r = await apiClient.get(`/risks/${entityId}/activity`);
       return r.data as ActivityEntry[];
     },
     enabled: open,
@@ -111,7 +111,7 @@ function EvidenceDropZone({ riskId }: { riskId: string }) {
     form.append("file", file);
     form.append("risk_id", riskId);
     try {
-      await apiClient.post("/api/v1/evidence/upload", form, {
+      await apiClient.post("/evidence/upload", form, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setUploadedName(file.name);
@@ -251,7 +251,7 @@ export default function RiskDetailPage() {
         try {
           const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
           if (stored?.risk_status_notify?.enabled !== false) {
-            await apiClient.post(`/api/v1/automations/trigger`, {
+            await apiClient.post(`/automations/trigger`, {
               rule_id: "risk_status_notify",
               entity_type: "risk",
               entity_id: id,
@@ -265,7 +265,7 @@ export default function RiskDetailPage() {
         try {
           const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
           if (stored?.critical_risk_teams?.enabled !== false) {
-            await apiClient.post(`/api/v1/automations/trigger`, {
+            await apiClient.post(`/automations/trigger`, {
               rule_id: "critical_risk_teams",
               entity_type: "risk",
               entity_id: id,

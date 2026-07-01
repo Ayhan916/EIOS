@@ -302,7 +302,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
     queryKey: ["supplier-network-rels", supplierId],
     queryFn: async () => {
       const res = await apiClient.get(
-        `/api/v1/network/relationships?supplier_id=${supplierId}&limit=50`
+        `/network/relationships?supplier_id=${supplierId}&limit=50`
       );
       return res.data;
     },
@@ -313,7 +313,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
     queryKey: ["supplier-network-exposures", supplierId],
     queryFn: async () => {
       const res = await apiClient.get(
-        `/api/v1/network/exposure-signals?impacted_supplier_id=${supplierId}&exposure_status=ACTIVE&limit=10`
+        `/network/exposure-signals?impacted_supplier_id=${supplierId}&exposure_status=ACTIVE&limit=10`
       );
       return res.data;
     },
@@ -324,7 +324,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
     queryKey: ["supplier-criticality", supplierId],
     queryFn: async () => {
       try {
-        const res = await apiClient.get(`/api/v1/network/criticality/${supplierId}`);
+        const res = await apiClient.get(`/network/criticality/${supplierId}`);
         return res.data;
       } catch {
         return null;
@@ -479,7 +479,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
     queryKey: ["portal-conversations", supplierId],
     queryFn: async () => {
       try {
-        const r = await apiClient.get(`/api/v1/supplier-portal/internal/conversations?supplier_id=${supplierId}`);
+        const r = await apiClient.get(`/supplier-portal/internal/conversations?supplier_id=${supplierId}`);
         return r.data ?? [];
       } catch { return []; }
     },
@@ -494,7 +494,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
     queryKey: ["portal-messages", activeConvId],
     queryFn: async () => {
       try {
-        const r = await apiClient.get(`/api/v1/supplier-portal/internal/conversations/${activeConvId}/messages`);
+        const r = await apiClient.get(`/supplier-portal/internal/conversations/${activeConvId}/messages`);
         return r.data ?? [];
       } catch { return []; }
     },
@@ -507,17 +507,17 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
     setSending(true); setSendError(null);
     try {
       if (!activeConvId) {
-        const r = await apiClient.post("/api/v1/supplier-portal/internal/conversations", {
+        const r = await apiClient.post("/supplier-portal/internal/conversations", {
           supplier_id: supplierId, subject: `Message to ${supplierName}`,
         });
         const convId = r.data.id;
-        await apiClient.post("/api/v1/supplier-portal/internal/messages", {
+        await apiClient.post("/supplier-portal/internal/messages", {
           conversation_id: convId, content: newMessage,
         });
         qc.invalidateQueries({ queryKey: ["portal-conversations", supplierId] });
         setActiveConvId(convId);
       } else {
-        await apiClient.post("/api/v1/supplier-portal/internal/messages", {
+        await apiClient.post("/supplier-portal/internal/messages", {
           conversation_id: activeConvId, content: newMessage,
         });
         qc.invalidateQueries({ queryKey: ["portal-messages", activeConvId] });
@@ -1856,7 +1856,7 @@ export default function SupplierDetailPage() {
     queryKey: ["supplier-due-diligence", id],
     queryFn: async () => {
       try {
-        const r = await apiClient.get(`/api/v1/due-diligence/suppliers/${id}`);
+        const r = await apiClient.get(`/due-diligence/suppliers/${id}`);
         return r.data;
       } catch { return null; }
     },
@@ -1871,7 +1871,7 @@ export default function SupplierDetailPage() {
     queryKey: ["supplier-certificates", id],
     queryFn: async () => {
       try {
-        const r = await apiClient.get(`/api/v1/suppliers/${id}/certificates`);
+        const r = await apiClient.get(`/suppliers/${id}/certificates`);
         return r.data;
       } catch { return []; }
     },
@@ -1886,7 +1886,7 @@ export default function SupplierDetailPage() {
     queryKey: ["supplier-questionnaire-pct", id],
     queryFn: async () => {
       try {
-        const r = await apiClient.get(`/api/v1/executive/suppliers?limit=500`);
+        const r = await apiClient.get(`/executive/suppliers?limit=500`);
         const row = (r.data?.items ?? r.data ?? []).find((s: { id: string }) => s.id === id);
         return row ? { supplier_id: id, questionnaire_pct: row.questionnaire_pct ?? 0 } : null;
       } catch { return null; }
@@ -1902,7 +1902,7 @@ export default function SupplierDetailPage() {
   }[]>({
     queryKey: ["supplier-findings", id],
     queryFn: async () => {
-      const r = await apiClient.get(`/api/v1/executive/findings?supplier_id=${id}&limit=200`);
+      const r = await apiClient.get(`/executive/findings?supplier_id=${id}&limit=200`);
       return r.data;
     },
     enabled: !!id && tab === "Findings",
@@ -1941,7 +1941,7 @@ export default function SupplierDetailPage() {
   const { data: existingSchedule } = useQuery<{ id: string; frequency_days: number; next_due_at: string; is_active: boolean } | null>({
     queryKey: ["supplier-schedule", id],
     queryFn: async () => {
-      const r = await apiClient.get(`/api/v1/assessments/schedules?supplier_id=${id}&active_only=false`);
+      const r = await apiClient.get(`/assessments/schedules?supplier_id=${id}&active_only=false`);
       return r.data?.[0] ?? null;
     },
     enabled: !!id && tab === "Assessments",
@@ -1954,7 +1954,7 @@ export default function SupplierDetailPage() {
         frequency_days: scheduleFrequency,
       };
       if (scheduleNextDue) body.next_due_at = new Date(scheduleNextDue).toISOString();
-      const r = await apiClient.post("/api/v1/assessments/schedules", body);
+      const r = await apiClient.post("/assessments/schedules", body);
       return r.data;
     },
     onSuccess: () => {
@@ -1995,7 +1995,7 @@ export default function SupplierDetailPage() {
     setAssessBusy(true);
     setAssessError(null);
     try {
-      const r = await apiClient.post("/api/v1/assessments/", {
+      const r = await apiClient.post("/assessments/", {
         title: assessTitle,
         description: `Assessment for ${supplier!.name}`,
         assessment_type: assessType,
@@ -2019,14 +2019,14 @@ export default function SupplierDetailPage() {
     setOfacError(null);
     setOfacResult(null);
     try {
-      const r = await apiClient.post(`/api/v1/integrations/sanctions/ofac/scan/supplier/${id}`);
+      const r = await apiClient.post(`/integrations/sanctions/ofac/scan/supplier/${id}`);
       setOfacResult(r.data);
       // #151 Auto-create finding when OFAC matches found
       if (r.data?.matches_found > 0) {
         try {
           const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
           if (stored?.ofac_match_finding?.enabled !== false) {
-            await apiClient.post("/api/v1/automations/trigger", {
+            await apiClient.post("/automations/trigger", {
               rule_id: "ofac_match_finding",
               entity_type: "supplier",
               entity_id: id,
@@ -2265,9 +2265,9 @@ export default function SupplierDetailPage() {
                     onClick={async () => {
                       setDdBusy(true); setDdError(null);
                       try {
-                        await apiClient.post("/api/v1/due-diligence/reports/generate", {
-                          supplier_id: id, report_types: ["CSDDD", "HUMAN_RIGHTS", "ENVIRONMENTAL"],
-                        });
+                        for (const report_type of ["csddd", "human_rights", "environmental"]) {
+                          await apiClient.post("/due-diligence/reports/generate", { report_type });
+                        }
                         refetchDD();
                       } catch { setDdError("Failed to run"); }
                       finally { setDdBusy(false); }

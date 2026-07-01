@@ -113,7 +113,7 @@ function EvidencePreview({ ev }: { ev: any }) {
   // Fetch the document with auth and create a blob URL
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
-    fetch(`/api/v1/evidences/${ev.id}/download`, {
+    fetch(`/evidences/${ev.id}/download`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => {
