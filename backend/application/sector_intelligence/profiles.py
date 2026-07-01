@@ -355,15 +355,21 @@ _FALLBACK = _BY_SECTION["*"]
 
 
 def get_profile(nace_code: str) -> SectorESGProfile:
-    """
-    Return the ESG profile for the given NACE code.
+    """Return the ESG profile for the given NACE code.
 
-    Matches on the section letter (first character of the code).
+    Accepts both section letters ("C", "H") and 2-digit numeric codes ("29", "49").
     Falls back to the generic profile when the section is not covered.
     """
     if not nace_code:
         return _FALLBACK
-    section = nace_code[0].upper()
+    cleaned = nace_code.strip()
+    # Numeric 2-digit code → resolve to section letter via taxonomy
+    if cleaned[:1].isdigit():
+        from application.sector_intelligence.nace_taxonomy import get_section
+        result = get_section(cleaned)
+        section = result[0] if result else cleaned[:1].upper()
+    else:
+        section = cleaned[0].upper()
     return _BY_SECTION.get(section, _FALLBACK)
 
 

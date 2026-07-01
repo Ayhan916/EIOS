@@ -180,8 +180,37 @@ TODO
 
 ---
 
+## TASK-0015 ← NÄCHSTE PRIORITÄT
+
+CSDDD Sector Risk Register (RAG + Szenario-Simulation)
+
+Status: APPROVED — bereit zur Implementierung
+
+Genehmigt: 2026-07-01
+
+Detail: tasks/CLAUDE_TASK_003_CSDDD_SECTOR_RISK_REGISTER.md
+
+Phasen:
+- Phase 1: Domain Foundation (2 Tage)
+- Phase 2: Statische Basis-Matrix 20 Sektoren × 21 CSDDD-Rechte (3 Tage)
+- Phase 3: RAG Kalibrierungspipeline via Groq (3 Tage)
+- Phase 4: News → Szenario-Trigger (2 Tage)
+- Phase 5: Simulation Engine deterministisch (2 Tage)
+- Phase 6: API + Catena-X Output (2 Tage)
+- Phase 7: Tests (2 Tage)
+
+---
+
 # Rule
 
 Only one ACTIVE implementation task shall exist at a time.
 
 A task must be completed before the next implementation task begins unless the Founder explicitly decides otherwise.
+
+---
+
+# Wie Claude dieses File nutzt
+
+Zu Beginn jeder Session: IMPLEMENTATION_QUEUE.md lesen → aktive Task-Datei öffnen → Status-Checkboxen prüfen → dort weitermachen wo aufgehört wurde.
+
+Nach jeder abgeschlossenen Phase: Checkbox in CLAUDE_TASK_003... auf [x] setzen + Protokoll-Zeile ergänzen.

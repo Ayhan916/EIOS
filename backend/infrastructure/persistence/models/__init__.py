@@ -201,6 +201,12 @@ from .product import (
 from .dpp import DigitalProductPassportModel
 from .supply_chain_event import EventOutboxModel, EventLogModel
 from .erp import ERPConnectorModel, ERPSyncJobModel, ERPFieldMappingModel
+from .news_feed import NewsArticleModel, NewsSupplierAssignmentModel
+from .sector_risk_register import (
+    CalibrationSuggestionModel,
+    ScenarioSuggestionModel,
+    SectorRightScoreModel,
+)
 from .sustainability import (
     SustainabilityObjectiveModel,
     ESGTargetModel,
@@ -403,4 +409,9 @@ __all__ = [
     "recommendation_risk",
     "risk_finding",
     "standard_requirement",
+    "NewsArticleModel",
+    "NewsSupplierAssignmentModel",
+    "SectorRightScoreModel",
+    "CalibrationSuggestionModel",
+    "ScenarioSuggestionModel",
 ]

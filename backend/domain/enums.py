@@ -507,3 +507,54 @@ class SupplierActivityEventType(str, Enum):
     INVITATION_ACCEPTED = "invitation_accepted"
     PASSWORD_RESET = "password_reset"
     PROFILE_UPDATE = "profile_update"
+
+
+# ── CSDDD Sector Risk Register (TASK-003) ─────────────────────────────────────
+
+class CSDDDRight(str, Enum):
+    """21 protected rights from CSDDD Annex I and referenced ILO/UN conventions."""
+    CHILD_LABOUR = "child_labour"                          # ILO C138, C182
+    FORCED_LABOUR = "forced_labour"                        # ILO C029, C105
+    FREEDOM_OF_ASSOCIATION = "freedom_of_association"      # ILO C087
+    COLLECTIVE_BARGAINING = "collective_bargaining"        # ILO C098
+    DISCRIMINATION = "discrimination"                      # ILO C100, C111
+    MINIMUM_WAGE = "minimum_wage"                          # ILO C131
+    WORKING_HOURS = "working_hours"                        # ILO C001
+    OCCUPATIONAL_SAFETY = "occupational_safety"            # ILO C155, C187
+    LAND_RIGHTS = "land_rights"                            # UNDRIP, VGGT
+    WATER_RIGHTS = "water_rights"                          # UN Resolution A/RES/64/292
+    ENVIRONMENTAL_DESTRUCTION = "environmental_destruction"
+    HARMFUL_CHEMICALS = "harmful_chemicals"                # Stockholm, Rotterdam Conventions
+    BIODIVERSITY = "biodiversity"                          # CBD
+    MERCURY = "mercury"                                    # Minamata Convention
+    HAZARDOUS_WASTE = "hazardous_waste"                    # Basel Convention
+    PRIVACY = "privacy"                                    # ICCPR Art. 17
+    FREEDOM_OF_EXPRESSION = "freedom_of_expression"        # ICCPR Art. 19
+    HUMAN_DIGNITY = "human_dignity"                        # UDHR Art. 1
+    MODERN_SLAVERY = "modern_slavery"                      # Palermo Protocol
+    MIGRANT_WORKER_RIGHTS = "migrant_worker_rights"        # ICRMW
+    COMMUNITY_RIGHTS = "community_rights"                  # ILO C169, UNDRIP
+
+
+class ScenarioType(str, Enum):
+    """Predefined scenario types for deterministic sector risk simulation."""
+    GEOPOLITICAL_CONFLICT = "geopolitical_conflict"
+    SANCTIONS_ESCALATION = "sanctions_escalation"
+    NATURAL_DISASTER = "natural_disaster"
+    REGULATORY_CHANGE = "regulatory_change"
+    LABOUR_UNREST = "labour_unrest"
+    SUPPLY_SHORTAGE = "supply_shortage"
+
+
+class CalibrationStatus(str, Enum):
+    """Lifecycle of a RAG-generated score suggestion awaiting human review."""
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class ScenarioSuggestionStatus(str, Enum):
+    """Lifecycle of a news-triggered scenario suggestion."""
+    PENDING = "pending"
+    ACTIVE = "active"
+    DISMISSED = "dismissed"
