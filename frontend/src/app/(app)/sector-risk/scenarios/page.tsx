@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, Newspaper, Radio, X, Zap } from "lucide-react";
 import { sectorRiskApi, type ScenarioSuggestion } from "@/lib/api/sector-risk";
+import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -41,6 +42,7 @@ const STATUS_STYLES: Record<string, string> = {
 
 export default function ScenarioSuggestionsPage() {
   const { user } = useAuth();
+  const { t } = useLanguage();
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const qc = useQueryClient();
 
@@ -76,12 +78,9 @@ export default function ScenarioSuggestionsPage() {
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Radio className="h-5 w-5 text-orange-500" />
-            Szenario-Vorschläge
+            {t("sectorRisk.suggestionsTitle")}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            News-basierte Szenario-Erkennung. Schwellenwert: 5 Artikel in 7 Tagen → Vorschlag.
-            Aktivierung erfordert Founder-Genehmigung — niemals automatisch.
-          </p>
+          <p className="text-sm text-muted-foreground mt-1">{t("sectorRisk.suggestionsSubtitle")}</p>
         </div>
         <Button
           onClick={() => detectMutation.mutate()}
@@ -91,7 +90,7 @@ export default function ScenarioSuggestionsPage() {
           {detectMutation.isPending ? (
             <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Scannt News…</>
           ) : (
-            <><Newspaper className="h-4 w-4 mr-1.5" />News scannen</>
+            <><Newspaper className="h-4 w-4 mr-1.5" />{t("sectorRisk.scanNews")}</>
           )}
         </Button>
       </div>
@@ -116,7 +115,7 @@ export default function ScenarioSuggestionsPage() {
               onClick={() => setStatusFilter(s)}
               className="text-xs"
             >
-              {s === "pending" ? "Ausstehend" : s === "active" ? "Aktiv" : "Verworfen"}
+              {s === "pending" ? t("sectorRisk.pending") : s === "active" ? t("sectorRisk.active") : t("sectorRisk.dismissed")}
             </Button>
           ))}
         </div>
@@ -130,7 +129,7 @@ export default function ScenarioSuggestionsPage() {
           title="Keine Vorschläge"
           description={
             statusFilter === "pending"
-              ? "Keine ausstehenden Szenario-Vorschläge. News scannen, um neue zu erkennen."
+              ? t("sectorRisk.noSuggestions")
               : `Keine ${statusFilter === "active" ? "aktiven" : "verworfenen"} Vorschläge.`
           }
         />
@@ -162,6 +161,7 @@ function ScenarioCard({
   onDismiss: () => void;
   actionPending: boolean;
 }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const label = SCENARIO_LABELS[suggestion.scenario_type] ?? suggestion.scenario_type;
   const icon = SCENARIO_ICONS[suggestion.scenario_type] ?? "⚠️";
@@ -175,7 +175,7 @@ function ScenarioCard({
               <span className="text-xl">{icon}</span>
               <span className="font-semibold text-foreground">{label}</span>
               <span className={`text-xs px-2 py-0.5 rounded-full border ${STATUS_STYLES[suggestion.status] ?? ""}`}>
-                {suggestion.status === "pending" ? "Ausstehend" : suggestion.status === "active" ? "Aktiv" : "Verworfen"}
+                {suggestion.status === "pending" ? t("sectorRisk.pending") : suggestion.status === "active" ? t("sectorRisk.active") : t("sectorRisk.dismissed")}
               </span>
             </div>
 
@@ -185,7 +185,7 @@ function ScenarioCard({
               </span>
               {suggestion.affected_nace_codes.length > 0 && (
                 <span>
-                  Betroffene Sektoren:{" "}
+                  {t("sectorRisk.affectedSectors")}{" "}
                   {suggestion.affected_nace_codes.map((c) => (
                     <Link key={c} href={`/sector-risk/${c}`} className="font-mono text-blue-600 hover:underline mr-1">{c}</Link>
                   ))}
@@ -233,11 +233,11 @@ function ScenarioCard({
             <div className="flex gap-2 shrink-0">
               <Button size="sm" onClick={onActivate} disabled={actionPending}>
                 <Zap className="h-4 w-4 mr-1.5" />
-                Aktivieren
+                {t("sectorRisk.activate")}
               </Button>
               <Button size="sm" variant="outline" onClick={onDismiss} disabled={actionPending}>
                 <X className="h-4 w-4 mr-1.5" />
-                Verwerfen
+                {t("sectorRisk.dismiss")}
               </Button>
             </div>
           )}

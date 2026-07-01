@@ -14,6 +14,7 @@ import {
   Zap,
 } from "lucide-react";
 import { sectorRiskApi, type RightScore, type SimulationResult } from "@/lib/api/sector-risk";
+import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -75,6 +76,7 @@ function deltaChip(delta: number) {
 
 export default function SectorDetailPage({ params }: { params: Promise<{ nace: string }> }) {
   const { nace } = use(params);
+  const { t } = useLanguage();
   const [scenario, setScenario] = useState<string>("");
 
   const { data: baseline, isLoading: baseLoading } = useQuery({
@@ -95,7 +97,7 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
       {/* Back */}
       <Link href="/sector-risk" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" />
-        Alle Sektoren
+        {t("sectorRisk.allSectors")}
       </Link>
 
       {baseLoading && (
@@ -106,7 +108,7 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
 
       {!baseLoading && !baseline && (
         <div className="text-center py-16 text-muted-foreground">
-          Sektor &quot;{nace}&quot; nicht gefunden.
+          {t("sectorRisk.notFound")}
         </div>
       )}
 
@@ -119,13 +121,13 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
                 <span className="font-mono text-lg font-bold text-foreground">{baseline.nace_code}</span>
                 <span className="text-sm text-muted-foreground">{baseline.nace_section}</span>
                 {baseline.is_fully_calibrated ? (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Kalibriert v{baseline.calibration_version}</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">{t("sectorRisk.calibrated")} v{baseline.calibration_version}</span>
                 ) : (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">Fallback-Scores</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">{t("sectorRisk.fallback")}</span>
                 )}
               </div>
               <h1 className="text-2xl font-bold text-foreground mt-1">{baseline.sector_name}</h1>
-              <p className="text-xs text-muted-foreground mt-0.5">Kalibrierungsdatum: {baseline.calibration_date}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("sectorRisk.calibrationDate")} {baseline.calibration_date}</p>
             </div>
 
             {/* Scenario selector */}
@@ -137,7 +139,7 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
                   onChange={(e) => setScenario(e.target.value)}
                   className="appearance-none pl-3 pr-8 py-2 text-sm rounded-md border border-border bg-background focus:outline-none focus:ring-2 focus:ring-ring cursor-pointer"
                 >
-                  <option value="">Kein Szenario (Baseline)</option>
+                  <option value="">{t("sectorRisk.noScenario")}</option>
                   {SCENARIO_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
@@ -159,20 +161,20 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
               </Card>
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <p className="text-xs text-muted-foreground">Rechte erhöht</p>
+                  <p className="text-xs text-muted-foreground">{t("sectorRisk.rightsIncreased")}</p>
                   <p className="text-2xl font-bold text-orange-600">{simulation.summary.rights_increased}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <p className="text-xs text-muted-foreground">Rechte ≥ 7 (Szenario)</p>
+                  <p className="text-xs text-muted-foreground">{t("sectorRisk.rightsAbove7")}</p>
                   <p className="text-2xl font-bold text-red-600">{simulation.summary.rights_above_7_scenario}</p>
-                  <p className="text-xs text-muted-foreground">Baseline: {simulation.summary.rights_above_7_baseline}</p>
+                  <p className="text-xs text-muted-foreground">{t("sectorRisk.baselineLabel")} {simulation.summary.rights_above_7_baseline}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-4 pb-4">
-                  <p className="text-xs text-muted-foreground">Höchstes Risiko</p>
+                  <p className="text-xs text-muted-foreground">{t("sectorRisk.highestRisk")}</p>
                   <p className="text-2xl font-bold text-red-600">{simulation.summary.highest_risk_score}</p>
                   <p className="text-xs text-muted-foreground truncate">{simulation.summary.highest_risk_right?.replace(/_/g, " ")}</p>
                 </CardContent>
@@ -185,23 +187,23 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
             <div className="px-4 py-3 border-b border-border flex items-center gap-2">
               <Shield className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium text-sm">
-                21 CSDDD-Schutzrechte — {scenario && simulation ? `Szenario: ${simulation.scenario_name}` : "Baseline"}
+                {t("sectorRisk.rightsTable")} — {scenario && simulation ? `${t("sectorRisk.scenarioLabel")} ${simulation.scenario_name}` : t("sectorRisk.baseline")}
               </span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left">
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground">Recht (CSDDD Annex I)</th>
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-20">Baseline</th>
+                    <th className="px-4 py-2.5 font-medium text-muted-foreground">{t("sectorRisk.right")}</th>
+                    <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-20">{t("sectorRisk.baseline")}</th>
                     {scenario && simulation && (
                       <>
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-24">Szenario</th>
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">Delta</th>
-                        <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">Faktor</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-24">{t("sectorRisk.scenario")}</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">{t("sectorRisk.delta")}</th>
+                        <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">{t("sectorRisk.factor")}</th>
                       </>
                     )}
-                    <th className="px-4 py-2.5 font-medium text-muted-foreground w-40">Wahrscheinlichkeit</th>
+                    <th className="px-4 py-2.5 font-medium text-muted-foreground w-40">{t("sectorRisk.probability")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -223,7 +225,7 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
             <Link href="/sector-risk/calibration">
               <Button variant="outline" size="sm">
                 <Zap className="h-4 w-4 mr-1.5" />
-                RAG Kalibrierung für diesen Sektor starten
+                {t("sectorRisk.startCalibration")}
               </Button>
             </Link>
           </div>
@@ -234,6 +236,7 @@ export default function SectorDetailPage({ params }: { params: Promise<{ nace: s
 }
 
 function RightRow({ right, showScenario, colSpan }: { right: RightScore; showScenario: boolean; colSpan: number }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const scenarioScore = right.scenario?.adjusted_probability;
   const delta = right.scenario?.delta ?? 0;
@@ -281,7 +284,7 @@ function RightRow({ right, showScenario, colSpan }: { right: RightScore; showSce
         <tr className="bg-amber-50/60 border-b border-amber-100">
           <td colSpan={colSpan} className="px-6 py-2.5">
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Begründung:</span> {explanation}
+              <span className="font-semibold">{t("sectorRisk.explanation")}:</span> {explanation}
             </p>
           </td>
         </tr>

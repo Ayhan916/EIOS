@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, CheckCircle2, FlaskConical, Loader2, X, AlertTriangle, ChevronDown } from "lucide-react";
 import { sectorRiskApi, type CalibrationSuggestion } from "@/lib/api/sector-risk";
+import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -56,7 +57,7 @@ export default function CalibrationPage() {
   const [statusFilter, setStatusFilter] = useState<string>("pending");
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
-
+  const { t } = useLanguage();
   const qc = useQueryClient();
 
   const { data: suggestions, isLoading } = useQuery({
@@ -94,11 +95,9 @@ export default function CalibrationPage() {
       <div>
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <FlaskConical className="h-5 w-5 text-blue-500" />
-          RAG Kalibrierung
+          {t("sectorRisk.ragTitle")}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Groq LLM + pgvector generiert Wahrscheinlichkeitsvorschläge aus ILO/OECD-Dokumenten. Jeder Vorschlag erfordert Founder-Genehmigung (M43).
-        </p>
+        <p className="text-sm text-muted-foreground mt-1">{t("sectorRisk.ragSubtitle")}</p>
       </div>
 
       {/* Start calibration form */}
@@ -107,7 +106,7 @@ export default function CalibrationPage() {
           <p className="text-sm font-semibold">Neuen Kalibrierungsvorschlag erstellen</p>
           <div className="flex gap-3 flex-wrap items-end">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">NACE-Code</label>
+              <label className="text-xs text-muted-foreground">{t("sectorRisk.naceCode")}</label>
               <input
                 type="text"
                 value={naceCode}
@@ -117,7 +116,7 @@ export default function CalibrationPage() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">CSDDD-Recht</label>
+              <label className="text-xs text-muted-foreground">{t("sectorRisk.selectRight")}</label>
               <div className="relative">
                 <select
                   value={right}
@@ -150,7 +149,7 @@ export default function CalibrationPage() {
           )}
           {calibrateMutation.isError && (
             <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md px-3 py-2">
-              Fehler beim Starten der Kalibrierung. Bitte NACE-Code prüfen.
+              {t("sectorRisk.calibrationError")}
             </div>
           )}
         </CardContent>
@@ -169,7 +168,7 @@ export default function CalibrationPage() {
                 onClick={() => setStatusFilter(s)}
                 className="text-xs capitalize"
               >
-                {s === "pending" ? "Ausstehend" : s === "approved" ? "Genehmigt" : "Abgelehnt"}
+                {s === "pending" ? t("sectorRisk.pending") : s === "approved" ? t("sectorRisk.approve") : t("sectorRisk.reject")}
               </Button>
             ))}
           </div>
@@ -206,7 +205,7 @@ export default function CalibrationPage() {
               <textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Begründung für die Ablehnung (min. 5 Zeichen)…"
+                placeholder={t("sectorRisk.rejectReason")}
                 rows={3}
                 className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none"
               />
@@ -240,6 +239,7 @@ function CalibrationCard({
   onReject: () => void;
   approvePending: boolean;
 }) {
+  const { t } = useLanguage();
   return (
     <Card>
       <CardContent className="pt-4 pb-4">
@@ -255,7 +255,7 @@ function CalibrationCard({
             </div>
             <div className="flex items-center gap-3 text-sm">
               <span>
-                Wahrscheinlichkeit:{" "}
+                {t("sectorRisk.probabilityLabel")}{" "}
                 <span className="font-bold text-foreground">{suggestion.suggested_probability}/10</span>
               </span>
               <span>
@@ -275,11 +275,11 @@ function CalibrationCard({
             <div className="flex gap-2 shrink-0">
               <Button size="sm" onClick={onApprove} disabled={approvePending}>
                 <CheckCircle2 className="h-4 w-4 mr-1.5" />
-                Genehmigen
+                {t("sectorRisk.approve")}
               </Button>
               <Button size="sm" variant="outline" onClick={onReject}>
                 <X className="h-4 w-4 mr-1.5" />
-                Ablehnen
+                {t("sectorRisk.reject")}
               </Button>
             </div>
           )}

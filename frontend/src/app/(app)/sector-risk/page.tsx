@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { AlertTriangle, BarChart3, ChevronRight, FlaskConical, Shield, SlidersHorizontal } from "lucide-react";
 import { sectorRiskApi, type SectorListItem } from "@/lib/api/sector-risk";
+import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -34,6 +35,7 @@ function rightLabel(rightId: string | null): string {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function SectorRiskPage() {
+  const { t } = useLanguage();
   const [calibratedOnly, setCalibratedOnly] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -55,23 +57,21 @@ export default function SectorRiskPage() {
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
             <Shield className="h-6 w-6 text-amber-500" />
-            CSDDD Sector Risk Register
+            {t("sectorRisk.title")}
           </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Sektorspezifisches Risikoregister auf Basis von NACE-2-Codes und 21 CSDDD-Schutzrechten (Annex I). Deterministisch, auditierbar, M43-konform.
-          </p>
+          <p className="text-muted-foreground text-sm mt-1">{t("sectorRisk.subtitle")}</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <Link href="/sector-risk/calibration">
             <Button variant="outline" size="sm">
               <FlaskConical className="h-4 w-4 mr-1.5" />
-              RAG Kalibrierung
+              {t("sectorRisk.calibrate")}
             </Button>
           </Link>
           <Link href="/sector-risk/scenarios">
             <Button variant="outline" size="sm">
               <AlertTriangle className="h-4 w-4 mr-1.5" />
-              Szenario-Vorschläge
+              {t("sectorRisk.scenarios")}
             </Button>
           </Link>
         </div>
@@ -82,25 +82,25 @@ export default function SectorRiskPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-4 pb-4">
-              <p className="text-xs text-muted-foreground">Sektoren gesamt</p>
+              <p className="text-xs text-muted-foreground">{t("sectorRisk.totalSectors")}</p>
               <p className="text-2xl font-bold">{data.length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
-              <p className="text-xs text-muted-foreground">Kalibriert</p>
+              <p className="text-xs text-muted-foreground">{t("sectorRisk.calibratedSectors")}</p>
               <p className="text-2xl font-bold text-blue-600">{data.filter((s) => s.is_calibrated).length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
-              <p className="text-xs text-muted-foreground">Hohes Risiko ≥ 7</p>
+              <p className="text-xs text-muted-foreground">{t("sectorRisk.highRiskRights")}</p>
               <p className="text-2xl font-bold text-red-600">{data.filter((s) => s.highest_probability >= 7).length}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4 pb-4">
-              <p className="text-xs text-muted-foreground">Ø Wahrscheinlichkeit</p>
+              <p className="text-xs text-muted-foreground">{t("sectorRisk.highestScore")}</p>
               <p className="text-2xl font-bold">
                 {data.length ? (data.reduce((a, s) => a + s.average_probability, 0) / data.length).toFixed(1) : "—"}
               </p>
@@ -114,7 +114,7 @@ export default function SectorRiskPage() {
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <input
             type="text"
-            placeholder="NACE-Code oder Sektorname…"
+            placeholder={t("sectorRisk.searchPlaceholder")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -126,7 +126,7 @@ export default function SectorRiskPage() {
           onClick={() => setCalibratedOnly((v) => !v)}
         >
           <SlidersHorizontal className="h-4 w-4 mr-1.5" />
-          Nur kalibrierte Sektoren
+          {t("sectorRisk.onlyCalibratedFilter")}
         </Button>
       </div>
 
@@ -140,7 +140,7 @@ export default function SectorRiskPage() {
         <EmptyState icon={AlertTriangle} title="Fehler beim Laden" description="Sector Risk Register konnte nicht geladen werden." />
       )}
       {!isLoading && !error && sectors.length === 0 && (
-        <EmptyState icon={BarChart3} title="Keine Sektoren gefunden" description="Passen Sie den Filter an." />
+        <EmptyState icon={BarChart3} title={t("sectorRisk.noSectorsFound")} description={t("sectorRisk.adjustFilter")} />
       )}
       {!isLoading && sectors.length > 0 && (
         <Card>
@@ -171,6 +171,7 @@ export default function SectorRiskPage() {
 }
 
 function SectorRow({ sector }: { sector: SectorListItem }) {
+  const { t } = useLanguage();
   return (
     <tr className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
       <td className="px-4 py-3">
@@ -202,11 +203,11 @@ function SectorRow({ sector }: { sector: SectorListItem }) {
       <td className="px-4 py-3">
         {sector.is_calibrated ? (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
-            Kalibriert
+            {t("sectorRisk.calibrated")}
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">
-            Fallback
+            {t("sectorRisk.fallback")}
           </span>
         )}
       </td>
