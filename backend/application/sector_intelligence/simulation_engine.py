@@ -42,6 +42,86 @@ from domain.sector_risk_register import ScenarioTemplate, SimulationResult
 
 _R = CSDDDRight
 
+# ---------------------------------------------------------------------------
+# Human-readable explanations per scenario × right (German, business language)
+# Only defined for rights with factor > 1.0
+# ---------------------------------------------------------------------------
+
+_EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
+
+    ScenarioType.GEOPOLITICAL_CONFLICT: {
+        _R.FORCED_LABOUR: "In Konfliktgebieten werden Arbeitskräfte häufig unter Androhung von Gewalt zur Arbeit gezwungen. Staatliche Kontrollen brechen zusammen, Unternehmen verlieren den Überblick über ihre Lieferkette.",
+        _R.MODERN_SLAVERY: "Krieg und Vertreibung machen Menschen besonders anfällig für Menschenhandel und moderne Sklaverei. Geflüchtete ohne Dokumente werden gezielt ausgebeutet.",
+        _R.OCCUPATIONAL_SAFETY: "Zerstörte Infrastruktur, fehlende Schutzausrüstung und wegbrechende Behördenkontrollen machen sichere Arbeitsbedingungen in Konfliktregionen nahezu unmöglich.",
+        _R.ENVIRONMENTAL_DESTRUCTION: "Militärische Operationen und zerstörte Industrieanlagen verursachen unkontrollierte Umweltschäden — Böden, Gewässer und Luft werden dauerhaft belastet.",
+        _R.MIGRANT_WORKER_RIGHTS: "Migrantische Arbeitskräfte sind in Konflikten schutzlos: keine Dokumente, kein Zugang zu Botschaften, kein Rechtsschutz. Das Risiko schwerer Ausbeutung steigt stark.",
+        _R.FREEDOM_OF_EXPRESSION: "In Kriegsgebieten werden Pressefreiheit und freie Meinungsäußerung systematisch unterdrückt, oft als 'Sicherheitsmaßnahme' gerechtfertigt.",
+        _R.FREEDOM_OF_ASSOCIATION: "Gewerkschaften können in Konfliktgebieten nicht mehr frei operieren. Arbeitnehmerrechte werden oft per Notstandsgesetz ausgesetzt.",
+        _R.COMMUNITY_RIGHTS: "Militäroperationen verdrängen Gemeinden von ihrem Land und zerstören traditionelle Lebensweisen — oft ohne jede Entschädigung.",
+        _R.LAND_RIGHTS: "Zwangsvertreibungen, Besetzungen und die Vernichtung von Eigentumsbelegen untergraben Landrechte systematisch.",
+        _R.HUMAN_DIGNITY: "Kriegsverbrechen, Folter und erniedrigende Behandlung von Zivilisten und Arbeitern sind in bewaffneten Konflikten dokumentierte Realität.",
+        _R.WATER_RIGHTS: "Zerstörte Wasserinfrastruktur und strategische Blockaden gefährden den Zugang zu sauberem Wasser für Produktionsstandorte und Anwohner.",
+    },
+
+    ScenarioType.SANCTIONS_ESCALATION: {
+        _R.FORCED_LABOUR: "Sanktionierter Druck zwingt Unternehmen, auf informelle Lieferketten auszuweichen — dort sind Arbeitnehmerrechte kaum kontrolliert und Zwangsarbeit verbreitet.",
+        _R.MODERN_SLAVERY: "Wirtschaftssanktionen treiben Produktion in den Untergrund, wo Ausbeutung ohne staatliche Kontrolle möglich ist.",
+        _R.MIGRANT_WORKER_RIGHTS: "Sanktionen erhöhen den Kostendruck — migrantische Arbeitskräfte werden als Puffer genutzt und besonders stark ausgebeutet.",
+        _R.FREEDOM_OF_ASSOCIATION: "In sanktionierten Volkswirtschaften werden Gewerkschaftsrechte oft eingeschränkt, um die internationale Wettbewerbsfähigkeit zu erhalten.",
+        _R.COLLECTIVE_BARGAINING: "Unter starkem wirtschaftlichem Druck durch Sanktionen werden Tarifverhandlungen ausgesetzt oder von Behörden blockiert.",
+        _R.COMMUNITY_RIGHTS: "Sanktionierte Unternehmen umgehen Gemeinschaftskonsultationen, um Genehmigungsprozesse zu beschleunigen.",
+    },
+
+    ScenarioType.NATURAL_DISASTER: {
+        _R.OCCUPATIONAL_SAFETY: "Katastrophen zerstören Sicherheitsinfrastruktur sofort — Schutzausrüstung fehlt, Notfallsysteme fallen aus, Arbeitnehmer sind erhöhten physischen Risiken ausgesetzt.",
+        _R.ENVIRONMENTAL_DESTRUCTION: "Naturkatastrophen verursachen direkte, großflächige Umweltzerstörung. Dies ist der stärkste Faktor im Register (×2.0), da der Schaden nahezu unvermeidlich ist.",
+        _R.WATER_RIGHTS: "Überschwemmungen kontaminieren Trinkwasser, Dürren verknappen es drastisch — der Zugang zu sauberem Wasser wird für Betriebe und Bevölkerung akut gefährdet.",
+        _R.BIODIVERSITY: "Katastrophenereignisse zerstören Ökosysteme und Artenvielfalt großflächig und oft dauerhaft — Erholung dauert Jahrzehnte.",
+        _R.COMMUNITY_RIGHTS: "Evakuierungen und Katastrophennothilfe verdrängen Gemeinden oft dauerhaft von ihrem Land, ohne adäquate Entschädigung.",
+        _R.LAND_RIGHTS: "Überschwemmungen, Erdrutsche und Brände vernichten Grundstücke und Eigentumsbelege — Rückkehr und Wiederaufbau werden rechtlich unmöglich.",
+        _R.FORCED_LABOUR: "In der Katastrophennachsorge und beim Wiederaufbau werden Arbeitskräfte oft unter Druck und ohne faire Vergütung eingesetzt.",
+        _R.MIGRANT_WORKER_RIGHTS: "Katastrophengebiete ziehen migrantische Arbeitsmigration für den Wiederaufbau an — häufig ohne arbeitsrechtlichen Schutz.",
+        _R.HARMFUL_CHEMICALS: "Zerstörte Industrieanlagen und Lager setzen Chemikalien unkontrolliert frei — in Boden, Wasser und Luft.",
+        _R.HAZARDOUS_WASTE: "Beschädigte Deponien und Lagerstätten lassen gefährliche Abfälle in die Umwelt gelangen, oft ohne dass es zeitnah bemerkt wird.",
+    },
+
+    ScenarioType.REGULATORY_CHANGE: {
+        _R.CHILD_LABOUR: "CSDDD und LkSG erzwingen tiefere Lieferkettenprüfungen — bisher verborgene Kinderarbeit bei Unterlieferanten wird jetzt erstmals sichtbar.",
+        _R.FORCED_LABOUR: "Neue Sorgfaltspflichtgesetze verlangen Nachweise auf tieferen Lieferkettenstufen, wo Zwangsarbeit bisher nicht geprüft wurde.",
+        _R.OCCUPATIONAL_SAFETY: "Erweiterte Berichtspflichten legen Sicherheitsmängel offen, die nach bisherigem Recht nicht meldepflichtig waren.",
+        _R.ENVIRONMENTAL_DESTRUCTION: "CSDDD Annex I verpflichtet erstmals explizit zur Umweltprüfung in der Lieferkette — latente Risiken werden durch neue Audits sichtbar.",
+        _R.HARMFUL_CHEMICALS: "Neue Chemikalienvorschriften in CSDDD und REACH-Erweiterungen erfassen bisher ungemeldete Substanzen.",
+        _R.HAZARDOUS_WASTE: "Verschärfte Abfallvorschriften erhöhen den Prüfaufwand erheblich und decken bestehende Verstöße bei Lieferanten auf.",
+        _R.BIODIVERSITY: "CSRD-Biodiversitätsberichtspflichten sind neu — bisherige Aktivitäten wurden nie systematisch auf Naturverträglichkeit geprüft.",
+        _R.DISCRIMINATION: "Erweiterte ESG-Berichtsstandards schließen nun Diskriminierungsdaten (Lohngleichheit, Diversität) verpflichtend ein.",
+        _R.FREEDOM_OF_ASSOCIATION: "Neue Due-Diligence-Anforderungen umfassen erstmals systematische Prüfungen der Gewerkschaftsfreiheit bei Lieferanten.",
+    },
+
+    ScenarioType.LABOUR_UNREST: {
+        _R.FREEDOM_OF_ASSOCIATION: "Streiks und Arbeitskämpfe sind das deutlichste Signal dafür, dass Gewerkschaftsrechte unterdrückt werden oder es in Kürze sein werden.",
+        _R.COLLECTIVE_BARGAINING: "Arbeitskämpfe entstehen fast immer, weil Tarifverhandlungen scheitern oder vom Arbeitgeber verweigert werden — direkter Kausalzusammenhang.",
+        _R.WORKING_HOURS: "Übermäßige Arbeitszeiten ohne Ausgleich sind weltweit einer der häufigsten Auslöser für Streiks und Arbeitsniederlegungen.",
+        _R.MINIMUM_WAGE: "Lohnstreitigkeiten sind der häufigste Grund für Arbeitskampfmaßnahmen in Schwellen- und Entwicklungsländern.",
+        _R.OCCUPATIONAL_SAFETY: "Unsichere Arbeitsbedingungen ohne Verbesserung trotz Beschwerden sind ein zentraler Streikauslöser in Produktionsbetrieben.",
+        _R.DISCRIMINATION: "Arbeitskonflikte offenbaren oft tiefer liegende Diskriminierungsprobleme — z.B. nach Geschlecht, Herkunft oder Gewerkschaftsmitgliedschaft.",
+        _R.HUMAN_DIGNITY: "Erniedrigende Behandlung am Arbeitsplatz (Demütigungen, Schikanierung) ist ein dokumentierter Konflikttreiber in der Industrie.",
+        _R.FORCED_LABOUR: "In Regionen mit aktiven Arbeitskämpfen reagieren manche Arbeitgeber mit Einschüchterung oder Zwang — das Risiko eskaliert.",
+    },
+
+    ScenarioType.SUPPLY_SHORTAGE: {
+        _R.CHILD_LABOUR: "Engpässe zwingen Einkäufer zu Notlieferanten in wenig regulierten Regionen, wo Kinderarbeit nicht kontrolliert wird.",
+        _R.FORCED_LABOUR: "Extremer Preisdruck durch Materialknappheit fördert Ausbeutung in alternativen, unkontrollierten Lieferketten.",
+        _R.OCCUPATIONAL_SAFETY: "Beschleunigter Abbau und Produktion unter Zeitdruck erhöhen Unfallrisiken — Sicherheitsstandards werden für Schnelligkeit geopfert.",
+        _R.ENVIRONMENTAL_DESTRUCTION: "Rohstoffknappheit treibt den Abbau in ökologisch sensible Gebiete ohne Schutzauflagen und Umweltverträglichkeitsprüfungen.",
+        _R.HARMFUL_CHEMICALS: "Alternativlieferanten für kritische Materialien verwenden oft nicht zertifizierte Prozesschemikalien, da reguläre Quellen fehlen.",
+        _R.COMMUNITY_RIGHTS: "Eilprojekte zur Rohstoffbeschaffung umgehen Gemeinschaftskonsultationen, die gesetzlich oder nach FPIC-Standard erforderlich wären.",
+        _R.LAND_RIGHTS: "Notabbau in neuen Gebieten ignoriert häufig bestehende Landrechte indigener und lokaler Gemeinschaften.",
+        _R.MODERN_SLAVERY: "Hochpreisphasen für kritische Materialien (Kobalt, Lithium) korrelieren mit dokumentierten Sklaverei-Vorfällen in Minen.",
+        _R.MIGRANT_WORKER_RIGHTS: "Engpässe erhöhen die Nachfrage nach billigen migrantischen Arbeitskräften in der Extraktion — ohne ausreichenden Rechtsschutz.",
+    },
+}
+
+
 _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
 
     ScenarioType.GEOPOLITICAL_CONFLICT: ScenarioTemplate(
@@ -224,12 +304,16 @@ class ScenarioSimulationEngine:
             delta[right] = adjusted - base
 
             if factor > 1.0:
-                explanation[right] = (
-                    f"Base {base}/10 × {factor:.1f} ({template.name}) = {adjusted}/10. "
-                    f"Source: {template.sources[0]}."
+                custom = _EXPLANATIONS.get(scenario_type, {}).get(right)
+                explanation[right] = custom if custom else (
+                    f"Erhoeht um Faktor {factor:.1f} unter Szenario '{template.name}'. "
+                    f"Baseline: {base}/10, Szenario: {adjusted}/10. Quelle: {template.sources[0]}."
                 )
             else:
-                explanation[right] = f"Unaffected by {template.name} (factor 1.0). Base: {base}/10."
+                explanation[right] = (
+                    f"Dieses Recht ist von Szenario '{template.name}' nicht direkt betroffen. "
+                    f"Baseline-Wert {base}/10 bleibt unveraendert."
+                )
 
         section_info = NACE_2DIGIT.get(code)
         sector_name = get_division_name(code)
