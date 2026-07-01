@@ -180,6 +180,74 @@ function TrendBadge({ trend, delta }: { trend: string; delta: number }) {
   );
 }
 
+// ── Supplier Sector Right Row ─────────────────────────────────────────────────
+
+function SupplierSectorRightRow({ right, showScenario }: { right: import("@/lib/api/sector-risk").RightScore; showScenario: boolean }) {
+  const [open, setOpen] = useState(false);
+  const scenarioScore = right.scenario?.adjusted_probability;
+  const delta = right.scenario?.delta ?? 0;
+  const explanation = right.scenario?.explanation;
+  const displayScore = showScenario && scenarioScore !== undefined ? scenarioScore : right.probability;
+  const hasExplanation = showScenario && delta > 0 && !!explanation;
+  const pct = (displayScore / 10) * 100;
+  const barColor = displayScore >= 8 ? "bg-red-500" : displayScore >= 6 ? "bg-orange-400" : displayScore >= 4 ? "bg-amber-400" : "bg-green-500";
+  const pill = (score: number, faded = false) => {
+    const cls = score >= 8 ? "bg-red-100 text-red-800 border-red-200" : score >= 6 ? "bg-orange-100 text-orange-800 border-orange-200" : score >= 4 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-800 border-green-200";
+    return (
+      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${cls} ${faded ? "opacity-60" : ""}`}>
+        {score}
+      </span>
+    );
+  };
+  const colCount = showScenario ? 5 : 3;
+
+  return (
+    <>
+      <tr
+        className={`border-b border-border last:border-0 transition-colors ${hasExplanation ? "cursor-pointer hover:bg-amber-50/40" : "hover:bg-muted/20"}`}
+        onClick={() => hasExplanation && setOpen((v) => !v)}
+      >
+        <td className="px-4 py-2">
+          <div className="flex items-center gap-1.5">
+            {hasExplanation && (
+              <span className={`text-xs text-amber-500 transition-transform inline-block ${open ? "rotate-90" : ""}`}>▶</span>
+            )}
+            {right.right_name}
+          </div>
+        </td>
+        <td className="px-4 py-2 text-center">{pill(right.probability, showScenario)}</td>
+        {showScenario && (
+          <>
+            <td className="px-4 py-2 text-center">
+              {scenarioScore !== undefined ? pill(scenarioScore) : "—"}
+            </td>
+            <td className="px-4 py-2 text-center text-xs font-semibold">
+              {delta > 0 ? <span className="text-red-600">+{delta}</span> : delta < 0 ? <span className="text-green-600">{delta}</span> : <span className="text-muted-foreground">—</span>}
+            </td>
+          </>
+        )}
+        <td className="px-4 py-2">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+            </div>
+            <span className="text-xs font-medium w-4 text-right">{displayScore}</span>
+          </div>
+        </td>
+      </tr>
+      {hasExplanation && open && (
+        <tr className="bg-amber-50/60 border-b border-amber-100">
+          <td colSpan={colCount} className="px-6 py-2.5">
+            <p className="text-xs text-amber-800 leading-relaxed">
+              <span className="font-semibold">Begründung:</span> {explanation}
+            </p>
+          </td>
+        </tr>
+      )}
+    </>
+  );
+}
+
 // ── Twin Event Card ───────────────────────────────────────────────────────────
 
 function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
@@ -2865,46 +2933,13 @@ export default function SupplierDetailPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {(sectorScenario && sectorSimulation ? sectorSimulation.rights : sectorBaseline.rights).map((r) => {
-                          const delta = r.scenario?.delta ?? 0;
-                          const scenarioScore = r.scenario?.adjusted_probability;
-                          const displayScore = sectorScenario && scenarioScore !== undefined ? scenarioScore : r.probability;
-                          const pct = (displayScore / 10) * 100;
-                          const barColor = displayScore >= 8 ? "bg-red-500" : displayScore >= 6 ? "bg-orange-400" : displayScore >= 4 ? "bg-amber-400" : "bg-green-500";
-                          const pillColor = displayScore >= 8 ? "bg-red-100 text-red-800 border-red-200" : displayScore >= 6 ? "bg-orange-100 text-orange-800 border-orange-200" : displayScore >= 4 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-800 border-green-200";
-                          return (
-                            <tr key={r.right_id} className="border-b border-border last:border-0 hover:bg-muted/20 transition-colors">
-                              <td className="px-4 py-2">{r.right_name}</td>
-                              <td className="px-4 py-2 text-center">
-                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${displayScore >= 8 ? "bg-red-100 text-red-800 border-red-200" : displayScore >= 6 ? "bg-orange-100 text-orange-800 border-orange-200" : displayScore >= 4 ? "bg-amber-100 text-amber-800 border-amber-200" : "bg-green-100 text-green-800 border-green-200"} ${sectorScenario ? "opacity-60" : ""}`}>
-                                  {r.probability}
-                                </span>
-                              </td>
-                              {sectorScenario && sectorSimulation && (
-                                <>
-                                  <td className="px-4 py-2 text-center">
-                                    {scenarioScore !== undefined ? (
-                                      <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold border ${pillColor}`}>
-                                        {scenarioScore}
-                                      </span>
-                                    ) : "—"}
-                                  </td>
-                                  <td className="px-4 py-2 text-center text-xs font-semibold">
-                                    {delta > 0 ? <span className="text-red-600">+{delta}</span> : delta < 0 ? <span className="text-green-600">{delta}</span> : <span className="text-muted-foreground">—</span>}
-                                  </td>
-                                </>
-                              )}
-                              <td className="px-4 py-2">
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                                    <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
-                                  </div>
-                                  <span className="text-xs font-medium w-4 text-right">{displayScore}</span>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                        {(sectorScenario && sectorSimulation ? sectorSimulation.rights : sectorBaseline.rights).map((r) => (
+                          <SupplierSectorRightRow
+                            key={r.right_id}
+                            right={r}
+                            showScenario={!!(sectorScenario && sectorSimulation)}
+                          />
+                        ))}
                       </tbody>
                     </table>
                   </div>
