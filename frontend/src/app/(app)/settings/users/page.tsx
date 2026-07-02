@@ -62,8 +62,7 @@ function InviteModal({
             <h2 className="text-base font-semibold">{t("sec.inviteUser")}</h2>
           </div>
           <p className="mb-2 text-sm text-slate-600">
-            Share this temporary password with the new user. It will{" "}
-            <strong>not</strong> be shown again.
+            {t("users.tempPasswordDesc")}
           </p>
           <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 font-mono text-sm">
             {result.temp_password}
@@ -139,7 +138,7 @@ function InviteModal({
             disabled={loading || !email || !displayName}
             className="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {loading ? "Inviting…" : "Send Invite"}
+            {loading ? t("users.inviting") : t("users.sendInvite")}
           </button>
         </div>
       </div>
@@ -246,7 +245,7 @@ export default function UsersSettingsPage() {
                           {u.display_name}
                           {u.id === me?.id && (
                             <span className="ml-2 text-xs text-slate-400">
-                              (you)
+                              {t("users.you")}
                             </span>
                           )}
                         </p>
@@ -289,18 +288,18 @@ export default function UsersSettingsPage() {
                   <td className="px-4 py-3">
                     {u.mfa_enabled ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                        <ShieldCheck className="h-3 w-3" /> Enrolled
+                        <ShieldCheck className="h-3 w-3" /> {t("users.mfaEnrolled")}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">
-                        <ShieldOff className="h-3 w-3" /> Not set
+                        <ShieldOff className="h-3 w-3" /> {t("users.mfaNotSet")}
                       </span>
                     )}
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-400">
                     {u.last_login_at
                       ? new Date(u.last_login_at).toLocaleDateString()
-                      : "Never"}
+                      : t("common.never")}
                   </td>
                   <td className="px-4 py-3 text-right">
                     {u.id !== me?.id && (
@@ -317,7 +316,7 @@ export default function UsersSettingsPage() {
                             : "text-green-600 hover:bg-green-50"
                         }`}
                       >
-                        {u.is_active ? "Deactivate" : "Activate"}
+                        {u.is_active ? t("users.deactivate") : t("users.activate")}
                       </button>
                     )}
                   </td>

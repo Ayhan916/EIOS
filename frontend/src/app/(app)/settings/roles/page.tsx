@@ -51,6 +51,7 @@ function PermissionToggle({
   permissions: Array<{ resource: string; actions: string[] }>;
   onChange: (perms: Array<{ resource: string; actions: string[] }>) => void;
 }) {
+  const { t } = useLanguage();
   const getActions = (resource: string) =>
     permissions.find((p) => p.resource === resource)?.actions ?? [];
 
@@ -75,7 +76,7 @@ function PermissionToggle({
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b">
-            <th className="text-left py-1.5 pr-3 font-medium text-muted-foreground w-36">Resource</th>
+            <th className="text-left py-1.5 pr-3 font-medium text-muted-foreground w-36">{t("roles.resource")}</th>
             {ACTIONS.map((a) => (
               <th key={a} className="text-center py-1.5 px-1 font-medium text-muted-foreground capitalize">{a}</th>
             ))}
@@ -210,7 +211,7 @@ export default function CustomRolesPage() {
                 onClick={() => { setShowCreate(true); applyTemplate(key); setRoleName(info.label + " (Custom)"); }}
                 className="mt-1 text-xs text-primary hover:underline"
               >
-                Use template →
+                {t("roles.useTemplate")}
               </button>
             </div>
           ))}
@@ -254,7 +255,7 @@ export default function CustomRolesPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium mb-2">Permissions</label>
+              <label className="block text-sm font-medium mb-2">{t("roles.permissions")}</label>
               <PermissionToggle permissions={permissions} onChange={setPermissions} />
             </div>
 
@@ -270,11 +271,11 @@ export default function CustomRolesPage() {
               <Button variant="outline" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
               {createMutation.isSuccess && (
                 <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
-                  <CheckCircle2 className="h-4 w-4" /> Created
+                  <CheckCircle2 className="h-4 w-4" /> {t("roles.created")}
                 </span>
               )}
               {createMutation.isError && (
-                <span className="text-sm text-red-600">Failed to create. Check role name uniqueness.</span>
+                <span className="text-sm text-red-600">{t("roles.createFailed")}</span>
               )}
             </div>
           </CardContent>
@@ -301,11 +302,11 @@ export default function CustomRolesPage() {
                         <p className="font-semibold text-sm">{role.role_name}</p>
                         {role.base_template && (
                           <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                            based on: {role.base_template}
+                            {t("roles.basedOn").replace("{template}", role.base_template ?? "")}
                           </span>
                         )}
                         {role.is_system && (
-                          <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[10px] font-semibold">System</span>
+                          <span className="rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-[10px] font-semibold">{t("roles.system")}</span>
                         )}
                       </div>
                       {role.description && (

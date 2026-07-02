@@ -42,16 +42,17 @@ import { API_SCOPES, WEBHOOK_EVENT_TYPES } from "@/types/api";
 
 type Tab = "api-keys" | "service-accounts" | "webhooks" | "delivery-logs";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "api-keys", label: "API Keys" },
-  { id: "service-accounts", label: "Service Accounts" },
-  { id: "webhooks", label: "Webhooks" },
-  { id: "delivery-logs", label: "Delivery Logs" },
+const TABS: { id: Tab; labelKey: string }[] = [
+  { id: "api-keys", labelKey: "api.tabApiKeys" },
+  { id: "service-accounts", labelKey: "api.tabServiceAccounts" },
+  { id: "webhooks", labelKey: "api.tabWebhooks" },
+  { id: "delivery-logs", labelKey: "api.tabDeliveryLogs" },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function StatusBadge({ active, label }: { active: boolean; label?: string }) {
+  const { t } = useLanguage();
   return (
     <span
       className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -60,7 +61,7 @@ function StatusBadge({ active, label }: { active: boolean; label?: string }) {
           : "bg-slate-100 text-slate-500"
       }`}
     >
-      {label ?? (active ? "Active" : "Revoked")}
+      {label ?? (active ? t("api.keyActive") : t("api.keyRevoked"))}
     </span>
   );
 }
@@ -130,7 +131,7 @@ function CreateApiKeyModal({
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs font-medium text-slate-700">Scopes</label>
+            <label className="mb-2 block text-xs font-medium text-slate-700">{t("api.scopes")}</label>
             <div className="grid grid-cols-2 gap-2">
               {API_SCOPES.map((scope) => (
                 <label key={scope} className="flex items-center gap-2 text-xs text-slate-700">
@@ -180,13 +181,13 @@ function CreatedKeyBanner({
   return (
     <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
       <div className="mb-1 flex items-center justify-between">
-        <p className="text-sm font-semibold text-green-800">API key created — copy it now!</p>
+        <p className="text-sm font-semibold text-green-800">{t("api.keyCreated")}</p>
         <button onClick={onDismiss} className="text-green-600 hover:text-green-800">
           <X className="h-4 w-4" />
         </button>
       </div>
       <p className="mb-2 text-xs text-green-700">
-        This key will never be shown again. Store it securely.
+        {t("api.keyNeverShown")}
       </p>
       <div className="flex items-center gap-2 rounded border border-green-200 bg-white px-3 py-2 font-mono text-xs">
         <span className="flex-1 truncate">
@@ -222,7 +223,7 @@ function CreateWebhookModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-slate-900">Create Webhook</h2>
+          <h2 className="text-base font-semibold text-slate-900">{t("api.createWebhook")}</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X className="h-4 w-4" />
           </button>
@@ -238,7 +239,7 @@ function CreateWebhookModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-slate-700">Target URL</label>
+            <label className="mb-1 block text-xs font-medium text-slate-700">{t("api.targetUrl")}</label>
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
@@ -248,7 +249,7 @@ function CreateWebhookModal({
           </div>
           <div>
             <label className="mb-1 block text-xs font-medium text-slate-700">
-              Signing Secret (≥16 chars)
+              {t("api.signingSecret")}
             </label>
             <input
               type="password"
@@ -259,7 +260,7 @@ function CreateWebhookModal({
             />
           </div>
           <div>
-            <label className="mb-2 block text-xs font-medium text-slate-700">Events</label>
+            <label className="mb-2 block text-xs font-medium text-slate-700">{t("api.events")}</label>
             <div className="grid grid-cols-2 gap-1">
               {WEBHOOK_EVENT_TYPES.map((ev) => (
                 <label key={ev} className="flex items-center gap-2 text-xs text-slate-700">
@@ -389,17 +390,17 @@ export default function ApiPlatformPage() {
 
       {/* Tab bar */}
       <div className="mb-6 flex gap-1 border-b border-slate-200">
-        {TABS.map((t) => (
+        {TABS.map((tab_) => (
           <button
-            key={t.id}
-            onClick={() => setTab(t.id)}
+            key={tab_.id}
+            onClick={() => setTab(tab_.id)}
             className={`px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.id
+              tab === tab_.id
                 ? "border-b-2 border-blue-600 text-blue-700"
                 : "text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t.label}
+            {t(tab_.labelKey as any)}
           </button>
         ))}
       </div>
@@ -412,7 +413,7 @@ export default function ApiPlatformPage() {
           )}
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-slate-600">
-              API keys let external services authenticate as your organization.
+              {t("api.apiKeysDesc")}
             </p>
             <button
               onClick={() => setShowCreateKey(true)}
@@ -428,8 +429,8 @@ export default function ApiPlatformPage() {
                 <tr>
                   <th className="px-4 py-3 text-left">{t("common.name")}</th>
                   <th className="px-4 py-3 text-left">{t("sec.keyPrefix")}</th>
-                  <th className="px-4 py-3 text-left">Scopes</th>
-                  <th className="px-4 py-3 text-left">Requests</th>
+                  <th className="px-4 py-3 text-left">{t("api.scopes")}</th>
+                  <th className="px-4 py-3 text-left">{t("api.requests")}</th>
                   <th className="px-4 py-3 text-left">{t("common.status")}</th>
                   <th className="px-4 py-3" />
                 </tr>
@@ -458,7 +459,7 @@ export default function ApiPlatformPage() {
                         ))}
                         {k.scopes.length > 3 && (
                           <span className="text-xs text-slate-400">
-                            +{k.scopes.length - 3} more
+                            {t("api.moreScopes").replace("{n}", String(k.scopes.length - 3))}
                           </span>
                         )}
                       </div>
@@ -493,14 +494,14 @@ export default function ApiPlatformPage() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-slate-600">
-              Service accounts are machine identities that own API keys.
+              {t("api.serviceAccountsDesc")}
             </p>
             <button
               onClick={() => setShowCreateSA(true)}
               className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
-              New Service Account
+              {t("api.newServiceAccount")}
             </button>
           </div>
           <div className="overflow-hidden rounded-lg border border-slate-200">
@@ -517,7 +518,7 @@ export default function ApiPlatformPage() {
                 {serviceAccounts.length === 0 && (
                   <tr>
                     <td colSpan={4} className="px-4 py-6 text-center text-slate-400">
-                      No service accounts yet.
+                      {t("api.noServiceAccounts")}
                     </td>
                   </tr>
                 )}
@@ -534,7 +535,7 @@ export default function ApiPlatformPage() {
                           onClick={() => deactivateSAMut.mutate(sa.id)}
                           className="text-xs text-red-500 hover:text-red-700"
                         >
-                          Deactivate
+                          {t("users.deactivate")}
                         </button>
                       )}
                     </td>
@@ -551,14 +552,14 @@ export default function ApiPlatformPage() {
         <div>
           <div className="mb-4 flex items-center justify-between">
             <p className="text-sm text-slate-600">
-              Webhooks send signed HTTP POST requests to your services when events occur.
+              {t("api.webhooksDesc")}
             </p>
             <button
               onClick={() => setShowCreateHook(true)}
               className="inline-flex items-center gap-2 rounded bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
             >
               <Plus className="h-4 w-4" />
-              New Webhook
+              {t("api.newWebhook")}
             </button>
           </div>
           <div className="space-y-3">
@@ -594,7 +595,7 @@ export default function ApiPlatformPage() {
                     </div>
                     {wh.failure_count > 0 && (
                       <p className="mt-1 text-xs text-red-500">
-                        {wh.failure_count} failure{wh.failure_count !== 1 ? "s" : ""}
+                        {t("api.failureCount").replace("{n}", String(wh.failure_count))}
                       </p>
                     )}
                   </div>
@@ -616,7 +617,7 @@ export default function ApiPlatformPage() {
       {tab === "delivery-logs" && (
         <div>
           <p className="mb-4 text-sm text-slate-600">
-            Recent webhook delivery attempts across all subscriptions.
+            {t("api.deliveryLogsDesc")}
           </p>
           <div className="overflow-hidden rounded-lg border border-slate-200">
             <table className="w-full text-sm">
@@ -624,9 +625,9 @@ export default function ApiPlatformPage() {
                 <tr>
                   <th className="px-4 py-3 text-left">{t("eventBus.eventType")}</th>
                   <th className="px-4 py-3 text-left">{t("common.status")}</th>
-                  <th className="px-4 py-3 text-left">HTTP</th>
-                  <th className="px-4 py-3 text-left">Duration</th>
-                  <th className="px-4 py-3 text-left">Retries</th>
+                  <th className="px-4 py-3 text-left">{t("api.http")}</th>
+                  <th className="px-4 py-3 text-left">{t("api.duration")}</th>
+                  <th className="px-4 py-3 text-left">{t("api.retries")}</th>
                   <th className="px-4 py-3 text-left">{t("eventBus.timestamp")}</th>
                 </tr>
               </thead>
@@ -673,7 +674,7 @@ export default function ApiPlatformPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-xl">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold">Create Service Account</h2>
+              <h2 className="text-base font-semibold">{t("api.createServiceAccount")}</h2>
               <button
                 onClick={() => setShowCreateSA(false)}
                 className="text-slate-400 hover:text-slate-600"
@@ -684,7 +685,7 @@ export default function ApiPlatformPage() {
             <input
               value={saName}
               onChange={(e) => setSaName(e.target.value)}
-              placeholder="Service account name"
+              placeholder={t("api.serviceAccountPlaceholder")}
               className="w-full rounded border border-slate-200 px-3 py-2 text-sm"
             />
             <div className="mt-4 flex justify-end gap-2">

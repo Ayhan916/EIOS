@@ -133,10 +133,10 @@ export default function BrandingPage() {
               type="text"
               value={companyName}
               onChange={(e) => setCompanyName(e.target.value)}
-              placeholder="Leave blank to use default (EIOS)"
+              placeholder={t("branding.companyNamePlaceholder")}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
-            <p className="text-xs text-muted-foreground mt-1">Replaces "EIOS" in the sidebar and browser title.</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("branding.companyNameHint")}</p>
           </div>
 
           <div>
@@ -157,7 +157,7 @@ export default function BrandingPage() {
               />
             </div>
             <p className="text-xs text-muted-foreground mt-1.5">
-              Preset colors:
+              {t("branding.presetColors")}
               <span className="ml-2 inline-flex gap-1.5 flex-wrap">
                 {PRESET_COLORS.map((c) => (
                   <button
@@ -178,7 +178,7 @@ export default function BrandingPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <Image className="h-4 w-4" />
-            Logo & Favicon
+            {t("branding.logoFavicon")}
           </CardTitle>
           <CardDescription>{t("sec.logoUrl")}</CardDescription>
         </CardHeader>
@@ -202,11 +202,11 @@ export default function BrandingPage() {
                 />
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Square PNG or SVG, min 32×32px. Shown in the sidebar header.</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("branding.logoHint")}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1.5">{t("sec.logoUrl")} (Favicon)</label>
+            <label className="block text-sm font-medium mb-1.5">{t("sec.logoUrl")} ({t("branding.favicon")})</label>
             <input
               type="url"
               value={faviconUrl}
@@ -214,7 +214,7 @@ export default function BrandingPage() {
               placeholder="https://your-cdn.com/favicon.ico"
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
             />
-            <p className="text-xs text-muted-foreground mt-1">16×16 or 32×32 .ico or .png shown in browser tab.</p>
+            <p className="text-xs text-muted-foreground mt-1">{t("branding.faviconHint")}</p>
           </div>
         </CardContent>
       </Card>

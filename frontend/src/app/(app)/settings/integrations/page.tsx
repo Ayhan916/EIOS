@@ -187,11 +187,11 @@ export default function IntegrationSettingsPage() {
         </Button>
         {saveMutation.isSuccess && (
           <span className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
-            <CheckCircle2 className="h-4 w-4" /> Saved
+            <CheckCircle2 className="h-4 w-4" /> {t("common.saved")}
           </span>
         )}
         {saveMutation.isError && (
-          <span className="text-sm text-red-600">Failed to save. Admin role required.</span>
+          <span className="text-sm text-red-600">{t("settings.saveFailed")}</span>
         )}
       </div>
     </div>
