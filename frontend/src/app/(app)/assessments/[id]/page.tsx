@@ -247,7 +247,7 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
   }
 
   async function handleCreate(riskId: string) {
-    if (!recTitle.trim() || !recDesc.trim()) { setRecError("Title and description are required."); return; }
+    if (!recTitle.trim() || !recDesc.trim()) { setRecError(t("assessments.failedRec")); return; }
     setRecBusy(true);
     setRecError(null);
     try {
@@ -256,7 +256,7 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
       onRecCreated();
       setTimeout(() => { setOpenRiskId(null); setRecDone(null); }, 1500);
     } catch {
-      setRecError("Failed to create recommendation.");
+      setRecError(t("assessments.failedRec"));
     } finally {
       setRecBusy(false);
     }
@@ -276,10 +276,10 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
                 )}
                 <div className="mt-3 flex flex-wrap gap-2">
                   {r.probability != null && (
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">Probability: {Math.round(r.probability * 100)}%</span>
+                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">{t("assessments.probability")}: {Math.round(r.probability * 100)}%</span>
                   )}
                   {r.impact != null && (
-                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">Impact: {Math.round(r.impact * 100)}%</span>
+                    <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">{t("assessments.impact")}: {Math.round(r.impact * 100)}%</span>
                   )}
                   {r.category && (
                     <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">{r.category}</span>
@@ -673,7 +673,7 @@ export default function AssessmentDetailPage({
           <div className="flex-shrink-0 flex items-start gap-3">
             {qualityPct != null && (
               <div className="text-right">
-                <p className="text-xs text-muted-foreground">Quality Score</p>
+                <p className="text-xs text-muted-foreground">{t("assessments.qualityScore")}</p>
                 <p className={`text-2xl font-bold ${
                   qualityPct >= 70 ? "text-emerald-600" : qualityPct >= 40 ? "text-amber-600" : "text-red-600"
                 }`}>
@@ -713,7 +713,7 @@ export default function AssessmentDetailPage({
             <div className="flex items-center gap-3 min-w-0">
               <Send className="h-4 w-4 text-blue-500 flex-shrink-0" />
               <div className="min-w-0">
-                <p className="text-sm font-medium">Supplier Questionnaire</p>
+                <p className="text-sm font-medium">{t("assessments.supplierQuestionnaire")}</p>
                 {qAssignments && qAssignments.length > 0 ? (
                   <div className="flex flex-col gap-2 mt-1">
                     {qAssignments.map((a) => {
@@ -753,7 +753,7 @@ export default function AssessmentDetailPage({
                     })}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground mt-0.5">No questionnaire sent yet</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("assessments.noQuestionnaire")}</p>
                 )}
               </div>
             </div>
@@ -764,7 +764,7 @@ export default function AssessmentDetailPage({
               onClick={() => setShowQForm((v) => !v)}
             >
               <Send className="h-3.5 w-3.5" />
-              Send Questionnaire
+              {t("assessments.sendQuestionnaire")}
             </Button>
           </div>
 
@@ -772,20 +772,20 @@ export default function AssessmentDetailPage({
             <div className="mt-3 border-t border-border pt-3 space-y-2">
               <div className="flex flex-wrap gap-2 items-end">
                 <div className="flex-1 min-w-48">
-                  <p className="text-xs text-muted-foreground mb-1">Template</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("assessments.template")}</p>
                   <select
                     className="w-full h-8 rounded border border-input bg-background px-2 text-xs"
                     value={qTemplateId}
                     onChange={(e) => setQTemplateId(e.target.value)}
                   >
-                    <option value="">Select template…</option>
-                    {(qTemplates ?? []).map((t) => (
-                      <option key={t.id} value={t.id}>{t.template_name} v{t.version}</option>
+                    <option value="">{t("common.optional")}…</option>
+                    {(qTemplates ?? []).map((tpl) => (
+                      <option key={tpl.id} value={tpl.id}>{tpl.template_name} v{tpl.version}</option>
                     ))}
                   </select>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Due date (optional)</p>
+                  <p className="text-xs text-muted-foreground mb-1">{t("assessments.dueDateOptional")}</p>
                   <input
                     type="date"
                     className="h-8 rounded border border-input bg-background px-2 text-xs"
@@ -799,14 +799,14 @@ export default function AssessmentDetailPage({
                   onClick={() => sendQMutation.mutate()}
                   className="h-8"
                 >
-                  {sendQMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Send"}
+                  {sendQMutation.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("assessments.send")}
                 </Button>
               </div>
               {sendQMutation.isError && (
-                <p className="text-xs text-red-600">Failed to send — check template and supplier.</p>
+                <p className="text-xs text-red-600">{t("assessments.sendError")}</p>
               )}
               {sendQMutation.isSuccess && (
-                <p className="text-xs text-emerald-600">✓ Questionnaire sent successfully.</p>
+                <p className="text-xs text-emerald-600">{t("assessments.sendSuccess")}</p>
               )}
             </div>
           )}
@@ -851,31 +851,31 @@ export default function AssessmentDetailPage({
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">{findings?.length ?? "—"}</p>
-                <p className="text-xs text-muted-foreground mt-1">material ESG findings</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("assessments.materialFindings")}</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <ShieldAlert className="h-4 w-4 text-red-500" />
-                  <CardTitle className="text-sm font-medium">Risks</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("risks.title")}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">{risks?.length ?? "—"}</p>
-                <p className="text-xs text-muted-foreground mt-1">identified risk factors</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("assessments.identifiedRisks")}</p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Lightbulb className="h-4 w-4 text-blue-500" />
-                  <CardTitle className="text-sm font-medium">Actions</CardTitle>
+                  <CardTitle className="text-sm font-medium">{t("assessments.actions")}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold">{recs?.length ?? "—"}</p>
-                <p className="text-xs text-muted-foreground mt-1">remediation recommendations</p>
+                <p className="text-xs text-muted-foreground mt-1">{t("assessments.remediationRecs")}</p>
               </CardContent>
             </Card>
           </div>
@@ -885,7 +885,7 @@ export default function AssessmentDetailPage({
               <CardHeader>
                 <CardTitle className="text-base">{t("dashboard.complianceCoverage")}</CardTitle>
                 <CardDescription>
-                  Verdict:{" "}
+                  {t("assessments.verdict")}{" "}
                   <span className={`font-semibold capitalize ${verdictColor(compliance.verdict.status)}`}>
                     {compliance.verdict.status.replace(/_/g, " ")}
                   </span>
@@ -929,7 +929,7 @@ export default function AssessmentDetailPage({
           {loadingFindings ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !findings?.length ? (
-            <p className="py-12 text-center text-muted-foreground">No findings extracted.</p>
+            <p className="py-12 text-center text-muted-foreground">{t("assessments.noFindings")}</p>
           ) : (
             <div className="space-y-3">
               {findings.map((f) => (
@@ -951,7 +951,7 @@ export default function AssessmentDetailPage({
                             </span>
                           )}
                           <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">
-                            Confidence: {f.confidence}
+                            {t("assessments.coverage")}: {f.confidence}
                           </span>
                           {f.evidence_strength && (
                             <EvidenceStrengthBadge strength={f.evidence_strength} />
@@ -980,7 +980,7 @@ export default function AssessmentDetailPage({
           {loadingRisks ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !risks?.length ? (
-            <p className="py-12 text-center text-muted-foreground">No risks identified.</p>
+            <p className="py-12 text-center text-muted-foreground">{t("assessments.noRisks")}</p>
           ) : (
             <RiskList risks={risks} assessmentId={id} onRecCreated={() => queryClient.invalidateQueries({ queryKey: ["recommendations", id] })} />
           )}
@@ -991,7 +991,7 @@ export default function AssessmentDetailPage({
           {loadingRecs ? (
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !recs?.length ? (
-            <p className="py-12 text-center text-muted-foreground">No recommendations generated.</p>
+            <p className="py-12 text-center text-muted-foreground">{t("assessments.noRecommendations")}</p>
           ) : (() => {
             const now = new Date();
             const isOverdue = (due: string | null, actionStatus: ActionStatus) =>
@@ -1018,7 +1018,7 @@ export default function AssessmentDetailPage({
                   })}
                   <div className="rounded-lg p-3 text-center bg-red-100 text-red-700">
                     <p className="text-2xl font-bold">{overdueCount}</p>
-                    <p className="text-xs font-medium mt-0.5">Overdue</p>
+                    <p className="text-xs font-medium mt-0.5">{t("assessments.overdue")}</p>
                   </div>
                 </div>
 
@@ -1041,14 +1041,14 @@ export default function AssessmentDetailPage({
                               <p className="font-semibold text-foreground">{rec.title}</p>
                               {rec.action_required && (
                                 <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
-                                  Required
+                                  {t("assessments.required")}
                                 </Badge>
                               )}
                               <ActionStatusBadge status={rec.action_status} />
                               {overdue && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-red-100 text-red-700 px-2.5 py-0.5 text-xs font-semibold">
                                   <AlertTriangle className="h-3 w-3" />
-                                  Overdue
+                                  {t("assessments.overdue")}
                                 </span>
                               )}
                             </div>
@@ -1061,7 +1061,7 @@ export default function AssessmentDetailPage({
                             {/* Due date setter */}
                             <div className="mt-2 flex items-center gap-2">
                               <label className={`text-xs font-medium ${overdue ? "text-red-600" : "text-muted-foreground"}`}>
-                                Due date:
+                                {t("assessments.dueDate")}
                               </label>
                               <input
                                 type="date"
@@ -1091,10 +1091,10 @@ export default function AssessmentDetailPage({
                               }
                               className="text-xs rounded-md border border-border bg-background px-2 py-1 text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-ring"
                             >
-                              <option value="open">Open</option>
-                              <option value="in_progress">In Progress</option>
-                              <option value="resolved">Resolved</option>
-                              <option value="verified">Verified</option>
+                              <option value="open">{t("findings.open")}</option>
+                              <option value="in_progress">{t("findings.inProgress")}</option>
+                              <option value="resolved">{t("findings.resolved")}</option>
+                              <option value="verified">{t("findings.verified")}</option>
                             </select>
                           </div>
                         </div>
@@ -1113,14 +1113,14 @@ export default function AssessmentDetailPage({
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !compliance ? (
             <p className="py-12 text-center text-muted-foreground">
-              No compliance data available.
+              {t("assessments.noCompliance")}
             </p>
           ) : (
             <div className="space-y-6">
               {/* Verdict card */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Compliance Verdict</CardTitle>
+                  <CardTitle className="text-base">{t("assessments.complianceVerdict")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-3">
@@ -1133,10 +1133,10 @@ export default function AssessmentDetailPage({
                   </p>
                   <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 text-center">
                     {[
-                      { label: "Mandatory covered", value: `${compliance.verdict.covered_mandatory_count}/${compliance.verdict.total_mandatory_articles}` },
-                      { label: "Mandatory gaps", value: compliance.verdict.mandatory_gap_count },
-                      { label: "Critical gaps", value: compliance.verdict.critical_gap_count },
-                      { label: "High gaps", value: compliance.verdict.high_gap_count },
+                      { label: t("assessments.mandatoryCovered"), value: `${compliance.verdict.covered_mandatory_count}/${compliance.verdict.total_mandatory_articles}` },
+                      { label: t("assessments.mandatoryGaps"), value: compliance.verdict.mandatory_gap_count },
+                      { label: t("assessments.criticalGaps"), value: compliance.verdict.critical_gap_count },
+                      { label: t("assessments.highGaps"), value: compliance.verdict.high_gap_count },
                     ].map((stat) => (
                       <div key={stat.label} className="rounded-lg bg-muted/50 p-3">
                         <p className="text-xs text-muted-foreground">{stat.label}</p>
@@ -1154,7 +1154,7 @@ export default function AssessmentDetailPage({
                     <div className="flex items-center justify-between">
                       <CardTitle className="text-sm font-semibold">{fw.framework}</CardTitle>
                       <span className="text-sm font-medium text-muted-foreground">
-                        {fw.covered_count}/{fw.total_articles} articles covered
+                        {t("assessments.articlesCovered").replace("{covered}", String(fw.covered_count)).replace("{total}", String(fw.total_articles))}
                       </span>
                     </div>
                   </CardHeader>
@@ -1232,7 +1232,7 @@ export default function AssessmentDetailPage({
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !benchmark ? (
             <p className="py-12 text-center text-muted-foreground">
-              Benchmark data unavailable. Ensure the assessment has a sector assigned.
+              {t("assessments.benchmarkUnavailable")}
             </p>
           ) : (
             <div className="space-y-5">
@@ -1241,7 +1241,7 @@ export default function AssessmentDetailPage({
                 <CardHeader>
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <CardTitle className="text-base">Sector Benchmark</CardTitle>
+                      <CardTitle className="text-base">{t("assessments.sectorBenchmark")}</CardTitle>
                       <CardDescription>
                         {benchmark.sector_name} ({benchmark.sector_nace_code})
                       </CardDescription>
@@ -1265,15 +1265,15 @@ export default function AssessmentDetailPage({
               {/* Sector inherent risk */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Inherent Sector ESG Risk</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("assessments.inherentRisk")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {[
-                      { label: "Environmental", level: benchmark.environmental_risk },
-                      { label: "Social", level: benchmark.social_risk },
-                      { label: "Governance", level: benchmark.governance_risk },
-                      { label: "Overall", level: benchmark.overall_sector_risk },
+                      { label: t("assessments.environmental"), level: benchmark.environmental_risk },
+                      { label: t("assessments.social"), level: benchmark.social_risk },
+                      { label: t("assessments.governance"), level: benchmark.governance_risk },
+                      { label: t("assessments.overallRisk"), level: benchmark.overall_sector_risk },
                     ].map(({ label, level }) => {
                       const c = severityColor(level);
                       return (
@@ -1285,7 +1285,7 @@ export default function AssessmentDetailPage({
                     })}
                   </div>
                   <div className="mt-4 space-y-1">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Applicable Frameworks</p>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("assessments.applicableFrameworks")}</p>
                     <div className="flex flex-wrap gap-2">
                       {benchmark.applicable_frameworks.map((fw) => (
                         <span key={fw} className="rounded-full bg-blue-50 text-blue-700 px-2.5 py-0.5 text-xs font-medium">
@@ -1300,18 +1300,18 @@ export default function AssessmentDetailPage({
               {/* Coverage vs baseline */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Compliance Coverage vs Sector Baseline</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("assessments.complianceCoverageBaseline")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Sector Baseline</p>
+                      <p className="text-xs text-muted-foreground">{t("assessments.sectorBaseline")}</p>
                       <p className="text-xl font-bold mt-1">
                         {Math.round(benchmark.baseline_mandatory_coverage * 100)}%
                       </p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xs text-muted-foreground">This Assessment</p>
+                      <p className="text-xs text-muted-foreground">{t("assessments.thisAssessment")}</p>
                       <p className={`text-xl font-bold mt-1 ${
                         benchmark.mandatory_coverage == null
                           ? "text-muted-foreground"
@@ -1332,20 +1332,20 @@ export default function AssessmentDetailPage({
               {/* Finding adequacy */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Finding Adequacy</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("assessments.findingAdequacy")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-3 gap-3">
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Critical</p>
+                      <p className="text-xs text-muted-foreground">{t("findings.critical")}</p>
                       <p className="text-xl font-bold text-red-600">{benchmark.finding_distribution.critical}</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xs text-muted-foreground">High</p>
+                      <p className="text-xs text-muted-foreground">{t("findings.high")}</p>
                       <p className="text-xl font-bold text-orange-600">{benchmark.finding_distribution.high}</p>
                     </div>
                     <div className="rounded-lg bg-muted/50 p-3 text-center">
-                      <p className="text-xs text-muted-foreground">Medium + Low</p>
+                      <p className="text-xs text-muted-foreground">{t("assessments.mediumLow")}</p>
                       <p className="text-xl font-bold">{benchmark.finding_distribution.medium + benchmark.finding_distribution.low}</p>
                     </div>
                   </div>
@@ -1356,7 +1356,7 @@ export default function AssessmentDetailPage({
               {/* Key sector risk themes */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Key Sector Risk Themes</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("assessments.keySectorRiskThemes")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2">
                   {benchmark.key_risk_themes.map((theme) => {
@@ -1385,7 +1385,7 @@ export default function AssessmentDetailPage({
               {/* Regulatory exposure */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm font-semibold">Regulatory Exposure</CardTitle>
+                  <CardTitle className="text-sm font-semibold">{t("assessments.regulatoryExposure")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <p className="text-sm text-muted-foreground">{benchmark.regulatory_exposure_notes}</p>
@@ -1397,21 +1397,21 @@ export default function AssessmentDetailPage({
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-sm font-semibold">
-                      Organisational Peer Comparison ({benchmark.peer_count} peer{benchmark.peer_count !== 1 ? "s" : ""})
+                      {t("assessments.peerComparison")} ({benchmark.peer_count})
                     </CardTitle>
                     <CardDescription>
-                      Other assessments in the same sector within your organisation
+                      {t("assessments.peerDesc")}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {benchmark.org_avg_quality_score != null && (
                       <div className="grid grid-cols-2 gap-4">
                         <div className="rounded-lg bg-muted/50 p-3 text-center">
-                          <p className="text-xs text-muted-foreground">Org avg quality score</p>
+                          <p className="text-xs text-muted-foreground">{t("assessments.orgAvgQuality")}</p>
                           <p className="text-xl font-bold">{Math.round(benchmark.org_avg_quality_score * 100)}%</p>
                         </div>
                         <div className="rounded-lg bg-muted/50 p-3 text-center">
-                          <p className="text-xs text-muted-foreground">Org avg findings</p>
+                          <p className="text-xs text-muted-foreground">{t("assessments.orgAvgFindings")}</p>
                           <p className="text-xl font-bold">{benchmark.org_avg_finding_count}</p>
                         </div>
                       </div>
@@ -1444,18 +1444,18 @@ export default function AssessmentDetailPage({
             <div className="flex justify-center py-12"><Spinner /></div>
           ) : !evidenceInsights ? (
             <p className="py-12 text-center text-muted-foreground">
-              No evidence data available. Run a workflow to generate findings with evidence traceability.
+              {t("assessments.noEvidenceData")}
             </p>
           ) : (
             <div className="space-y-5">
               {/* Summary strip */}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { label: "Total Findings", value: evidenceInsights.total_findings },
-                  { label: "With Evidence Links", value: evidenceInsights.linked_findings },
-                  { label: "Evidence Links", value: evidenceInsights.total_evidence_links },
+                  { label: t("assessments.totalFindingsLabel"), value: evidenceInsights.total_findings },
+                  { label: t("assessments.withEvidenceLinks"), value: evidenceInsights.linked_findings },
+                  { label: t("assessments.evidenceLinks"), value: evidenceInsights.total_evidence_links },
                   {
-                    label: "Coverage",
+                    label: t("assessments.coverage"),
                     value: evidenceInsights.total_findings > 0
                       ? `${Math.round((evidenceInsights.linked_findings / evidenceInsights.total_findings) * 100)}%`
                       : "—",
@@ -1472,7 +1472,7 @@ export default function AssessmentDetailPage({
               {Object.keys(evidenceInsights.strength_distribution).length > 0 && (
                 <Card>
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Evidence Strength Distribution</CardTitle>
+                    <CardTitle className="text-sm">{t("assessments.evidenceStrengthDist")}</CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-wrap gap-2">
                     {(["Very Strong", "Strong", "Moderate", "Weak"] as const).map((s) => {
@@ -1539,7 +1539,7 @@ export default function AssessmentDetailPage({
                     </CardContent>
                   ) : (
                     <CardContent className="pt-0">
-                      <p className="text-xs text-muted-foreground italic">No evidence links for this finding.</p>
+                      <p className="text-xs text-muted-foreground italic">{t("assessments.noEvidenceLinks")}</p>
                     </CardContent>
                   )}
                 </Card>
@@ -1599,7 +1599,7 @@ export default function AssessmentDetailPage({
                             {report.title}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            Generated {formatDateTime(report.created_at)}
+                            {t("assessments.generated")} {formatDateTime(report.created_at)}
                           </p>
                           <div className="mt-2 flex flex-wrap gap-2">
                             <span className="rounded-full bg-secondary px-2.5 py-0.5 text-xs">
@@ -1738,7 +1738,7 @@ export default function AssessmentDetailPage({
                           onChange={(e) => setSelectedReviewerId(e.target.value)}
                           className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                         >
-                          <option value="">— choose a reviewer —</option>
+                          <option value="">{t("assessments.chooseReviewer")}</option>
                           {(orgUsers ?? [])
                             .filter((u) => isAtLeastReviewer(u.role) && u.is_active)
                             .map((u) => (
@@ -1810,14 +1810,14 @@ export default function AssessmentDetailPage({
                       <div className="flex items-center gap-2">
                         <ReviewActionBadge actionType={showActionPanel} />
                         <span className="text-sm font-medium">
-                          {showActionPanel === "approve" && "Approve this assessment"}
-                          {showActionPanel === "request_changes" && "Request changes"}
-                          {showActionPanel === "reject" && "Reject this assessment"}
+                          {showActionPanel === "approve" && t("assessments.approveThis")}
+                          {showActionPanel === "request_changes" && t("assessments.requestChanges")}
+                          {showActionPanel === "reject" && t("assessments.rejectThis")}
                         </span>
                       </div>
                       <textarea
                         rows={3}
-                        placeholder="Add a note (optional)…"
+                        placeholder={t("assessments.addNote")}
                         value={reviewComment}
                         onChange={(e) => setReviewComment(e.target.value)}
                         className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
@@ -1901,7 +1901,7 @@ export default function AssessmentDetailPage({
                 <textarea
                   ref={commentInputRef}
                   rows={3}
-                  placeholder="Write a comment… use @name to mention a colleague"
+                  placeholder={t("assessments.writeComment")}
                   value={commentDraft}
                   onChange={(e) => setCommentDraft(e.target.value)}
                   onKeyDown={(e) => {
@@ -1913,7 +1913,7 @@ export default function AssessmentDetailPage({
                   <p className="text-xs text-red-600">{commentError}</p>
                 )}
                 <div className="flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">⌘ + Enter to submit</p>
+                  <p className="text-xs text-muted-foreground">{t("assessments.cmdEnterSubmit")}</p>
                   <Button
                     size="sm"
                     onClick={handleSubmitComment}
@@ -1947,7 +1947,7 @@ export default function AssessmentDetailPage({
                               {formatDateTime(comment.created_at)}
                             </span>
                             {comment.is_edited && (
-                              <span className="text-[10px] text-muted-foreground italic">edited</span>
+                              <span className="text-[10px] text-muted-foreground italic">{t("assessments.edited")}</span>
                             )}
                           </div>
 
@@ -2052,7 +2052,7 @@ export default function AssessmentDetailPage({
                             </div>
                             {event.actor_name && (
                               <p className="text-xs text-muted-foreground">
-                                by {event.actor_name}
+                                {t("assessments.activityBy")} {event.actor_name}
                               </p>
                             )}
                             {event.detail && (

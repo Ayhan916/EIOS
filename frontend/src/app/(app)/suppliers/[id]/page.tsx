@@ -183,6 +183,7 @@ function TrendBadge({ trend, delta }: { trend: string; delta: number }) {
 // ── Supplier Sector Right Row ─────────────────────────────────────────────────
 
 function SupplierSectorRightRow({ right, showScenario }: { right: import("@/lib/api/sector-risk").RightScore; showScenario: boolean }) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const scenarioScore = right.scenario?.adjusted_probability;
   const delta = right.scenario?.delta ?? 0;
@@ -239,7 +240,7 @@ function SupplierSectorRightRow({ right, showScenario }: { right: import("@/lib/
         <tr className="bg-amber-50/60 border-b border-amber-100">
           <td colSpan={colCount} className="px-6 py-2.5">
             <p className="text-xs text-amber-800 leading-relaxed">
-              <span className="font-semibold">Begründung:</span> {explanation}
+              <span className="font-semibold">{t("sectorRisk.explanation")}:</span> {explanation}
             </p>
           </td>
         </tr>
@@ -251,6 +252,7 @@ function SupplierSectorRightRow({ right, showScenario }: { right: import("@/lib/
 // ── Twin Event Card ───────────────────────────────────────────────────────────
 
 function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
 
   const severityColors: Record<string, string> = {
@@ -336,26 +338,26 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
             onClick={() => setExpanded((v) => !v)}
             className="mt-2 text-xs text-blue-600 hover:text-blue-800"
           >
-            {expanded ? "Hide details ↑" : "Why does this matter? ↓"}
+            {expanded ? t("suppliers.hideDetails") : t("suppliers.showDetails")}
           </button>
 
           {expanded && (
             <div className="mt-3 space-y-3 border-t border-border pt-3">
               {event.why_important && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Why important</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("suppliers.whyImportant")}</p>
                   <p className="text-xs">{event.why_important}</p>
                 </div>
               )}
               {event.regulatory_impact && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Regulatory impact</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("suppliers.regulatoryImpact")}</p>
                   <p className="text-xs">{event.regulatory_impact}</p>
                 </div>
               )}
               {event.recommended_action && (
                 <div>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Recommended action</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("suppliers.recommendedAction")}</p>
                   <p className="text-xs whitespace-pre-line">{event.recommended_action}</p>
                 </div>
               )}
@@ -374,6 +376,7 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
 // ── Network Tab ───────────────────────────────────────────────────────────────
 
 function NetworkTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const { data: rels, isLoading: relsLoading } = useQuery({
     queryKey: ["supplier-network-rels", supplierId],
     queryFn: async () => {
@@ -416,7 +419,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
             <ShieldAlert className="h-4 w-4" />
-            Supplier Criticality
+            {t("suppliers.supplierCriticality")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -425,7 +428,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
           ) : criticality ? (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Classification</span>
+                <span className="text-sm text-slate-400">{t("suppliers.classification")}</span>
                 <span className={`text-sm font-bold ${
                   criticality.criticality === "CRITICAL" ? "text-red-400" :
                   criticality.criticality === "HIGH" ? "text-orange-400" :
@@ -433,25 +436,25 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
                 }`}>{criticality.criticality}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Score</span>
+                <span className="text-sm text-slate-400">{t("suppliers.score")}</span>
                 <span className="text-sm text-slate-200">{Math.round(criticality.criticality_score * 100)}%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Degree Centrality</span>
+                <span className="text-sm text-slate-400">{t("suppliers.degreeCentrality")}</span>
                 <span className="text-sm text-slate-200">{Math.round(criticality.degree_centrality * 100)}%</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Inbound / Outbound</span>
+                <span className="text-sm text-slate-400">{t("suppliers.inboundOutbound")}</span>
                 <span className="text-sm text-slate-200">{criticality.inbound_degree} / {criticality.outbound_degree}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Component Size</span>
+                <span className="text-sm text-slate-400">{t("suppliers.componentSize")}</span>
                 <span className="text-sm text-slate-200">{criticality.connected_component_size}</span>
               </div>
             </div>
           ) : (
             <p className="text-sm text-slate-500 py-4 text-center">
-              No criticality data yet. Compute centrality from the Network dashboard.
+              {t("suppliers.noCriticalityData")}
             </p>
           )}
         </CardContent>
@@ -469,7 +472,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
           {relsLoading ? (
             <div className="flex justify-center p-4"><Spinner /></div>
           ) : !rels?.length ? (
-            <p className="text-sm text-slate-500 py-4 text-center">No relationships found.</p>
+            <p className="text-sm text-slate-500 py-4 text-center">{t("suppliers.noRelationships")}</p>
           ) : (
             <div className="divide-y divide-slate-800">
               {rels.map((r: any) => (
@@ -507,7 +510,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
             <div className="flex justify-center p-4"><Spinner /></div>
           ) : !exposures?.length ? (
             <p className="text-sm text-slate-500 py-4 text-center">
-              No active exposure signals for this supplier.
+              {t("suppliers.noExposureSignals")}
             </p>
           ) : (
             <div className="divide-y divide-slate-800">
@@ -543,6 +546,7 @@ function NetworkTab({ supplierId }: { supplierId: string }) {
 // ── Portal Tab ────────────────────────────────────────────────────────────────
 
 function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; supplierName: string }) {
+  const { t } = useLanguage();
   const [newMessage, setNewMessage] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -607,12 +611,12 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
     <div className="grid gap-4 lg:grid-cols-3">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Conversations</CardTitle>
+          <CardTitle className="text-base">{t("suppliers.conversations")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {isLoading && <div className="flex justify-center py-6"><Spinner /></div>}
           {!isLoading && conversations.length === 0 && (
-            <p className="px-4 py-6 text-sm text-muted-foreground">No conversations yet.</p>
+            <p className="px-4 py-6 text-sm text-muted-foreground">{t("suppliers.noConversations")}</p>
           )}
           <div className="divide-y divide-border">
             {conversations.map((c) => (
@@ -621,7 +625,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
                 onClick={() => setActiveConvId(c.id)}
                 className={`w-full text-left px-4 py-3 hover:bg-muted/40 transition-colors ${activeConvId === c.id ? "bg-muted/60" : ""}`}
               >
-                <p className="text-sm font-medium truncate">{c.subject || "No subject"}</p>
+                <p className="text-sm font-medium truncate">{c.subject || t("suppliers.noConversations")}</p>
                 <p className="text-xs text-muted-foreground">
                   {c.message_count} message{c.message_count !== 1 ? "s" : ""}
                   {c.last_message_at && ` · ${new Date(c.last_message_at).toLocaleDateString()}`}
@@ -634,7 +638,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
               onClick={() => setActiveConvId(null)}
               className="text-xs text-blue-600 hover:text-blue-800"
             >
-              + New conversation
+              {t("suppliers.newConversation")}
             </button>
           </div>
         </CardContent>
@@ -652,7 +656,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
           {activeConvId && (
             <div className="max-h-64 overflow-y-auto space-y-2 rounded-lg border border-border bg-muted/20 p-3">
               {messages.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">No messages yet.</p>
+                <p className="text-xs text-muted-foreground text-center py-4">{t("suppliers.noMessages")}</p>
               ) : (
                 messages.map((m) => (
                   <div key={m.id} className={`flex ${m.sender_type === "internal" ? "justify-end" : "justify-start"}`}>
@@ -676,7 +680,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
               className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <Button onClick={sendMessage} disabled={sending || !newMessage.trim()} className="self-end">
-              {sending ? "…" : "Send"}
+              {sending ? "…" : t("suppliers.send")}
             </Button>
           </div>
           {sendError && <p className="text-xs text-red-500">{sendError}</p>}
@@ -689,6 +693,7 @@ function SupplierPortalTab({ supplierId, supplierName }: { supplierId: string; s
 // ── Locations Tab ─────────────────────────────────────────────────────────────
 
 function LocationsTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ location_type: "PLANT", name: "", country: "", city: "", address: "", employee_count: "" });
@@ -739,9 +744,9 @@ function LocationsTab({ supplierId }: { supplierId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Supplier Locations ({locations.length})</h3>
+        <h3 className="text-sm font-semibold">{t("suppliers.supplierLocations")} ({locations.length})</h3>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ Add Location"}
+          {showForm ? t("common.cancel") : t("suppliers.addLocation")}
         </Button>
       </div>
 
@@ -750,7 +755,7 @@ function LocationsTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Type *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.locationType")} *</label>
                 <select
                   value={form.location_type}
                   onChange={(e) => setForm((f) => ({ ...f, location_type: e.target.value }))}
@@ -762,7 +767,7 @@ function LocationsTab({ supplierId }: { supplierId: string }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Name *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.locationName")} *</label>
                 <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder="e.g. Main Manufacturing Plant" />
               </div>
               <div>
@@ -770,22 +775,22 @@ function LocationsTab({ supplierId }: { supplierId: string }) {
                 <Input value={form.country} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">City</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.city")}</label>
                 <Input value={form.city} onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))} placeholder="Munich" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Address</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.address")}</label>
                 <Input value={form.address} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} placeholder="Street address" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Employee Count</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.employeeCount")}</label>
                 <Input type="number" value={form.employee_count} onChange={(e) => setForm((f) => ({ ...f, employee_count: e.target.value }))} placeholder="0" />
               </div>
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Location"}</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? t("suppliers.saving") : t("suppliers.saveLocation")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -797,7 +802,7 @@ function LocationsTab({ supplierId }: { supplierId: string }) {
         <Card>
           <CardContent className="py-10 text-center">
             <Globe className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No locations recorded yet.</p>
+            <p className="text-sm text-muted-foreground">{t("suppliers.noLocations")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -841,6 +846,7 @@ function LocationsTab({ supplierId }: { supplierId: string }) {
 // ── Contacts Tab ──────────────────────────────────────────────────────────────
 
 function ContactsTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ first_name: "", last_name: "", email: "", phone: "", role: "ACCOUNT_MANAGER", job_title: "", department: "" });
@@ -875,9 +881,9 @@ function ContactsTab({ supplierId }: { supplierId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Supplier Contacts ({contacts.length})</h3>
+        <h3 className="text-sm font-semibold">{t("suppliers.supplierContacts")} ({contacts.length})</h3>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ Add Contact"}
+          {showForm ? t("common.cancel") : t("suppliers.addContact")}
         </Button>
       </div>
 
@@ -886,15 +892,15 @@ function ContactsTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">First Name *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.firstName")} *</label>
                 <Input value={form.first_name} onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))} placeholder="John" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Last Name</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.lastName")}</label>
                 <Input value={form.last_name} onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))} placeholder="Doe" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Role *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.role")} *</label>
                 <select
                   value={form.role}
                   onChange={(e) => setForm((f) => ({ ...f, role: e.target.value }))}
@@ -906,7 +912,7 @@ function ContactsTab({ supplierId }: { supplierId: string }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Job Title</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.jobTitle")}</label>
                 <Input value={form.job_title} onChange={(e) => setForm((f) => ({ ...f, job_title: e.target.value }))} placeholder="Head of ESG" />
               </div>
               <div>
@@ -918,14 +924,14 @@ function ContactsTab({ supplierId }: { supplierId: string }) {
                 <Input value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} placeholder="+49 89 123456" />
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Department</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.department")}</label>
                 <Input value={form.department} onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))} placeholder="Sustainability" />
               </div>
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Contact"}</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? t("suppliers.saving") : t("suppliers.saveContact")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -937,7 +943,7 @@ function ContactsTab({ supplierId }: { supplierId: string }) {
         <Card>
           <CardContent className="py-10 text-center">
             <Users className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No contacts recorded yet.</p>
+            <p className="text-sm text-muted-foreground">{t("suppliers.noContacts")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -967,6 +973,7 @@ function ContactsTab({ supplierId }: { supplierId: string }) {
 // ── Certifications Tab ────────────────────────────────────────────────────────
 
 function CertificationsTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ cert_type: "ISO_14001", issuing_body: "", certificate_number: "", valid_from: "", valid_until: "", scope_description: "" });
@@ -1012,9 +1019,9 @@ function CertificationsTab({ supplierId }: { supplierId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Certifications ({certs.length})</h3>
+        <h3 className="text-sm font-semibold">{t("suppliers.certifications")} ({certs.length})</h3>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ Add Certification"}
+          {showForm ? t("common.cancel") : t("suppliers.addCertification")}
         </Button>
       </div>
 
@@ -1023,7 +1030,7 @@ function CertificationsTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Certification Type *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.certType")} *</label>
                 <select
                   value={form.cert_type}
                   onChange={(e) => setForm((f) => ({ ...f, cert_type: e.target.value }))}
@@ -1035,30 +1042,30 @@ function CertificationsTab({ supplierId }: { supplierId: string }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Issuing Body</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.issuingBody")}</label>
                 <Input value={form.issuing_body} onChange={(e) => setForm((f) => ({ ...f, issuing_body: e.target.value }))} placeholder="TÜV SÜD" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Certificate Number</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.certNumber")}</label>
                 <Input value={form.certificate_number} onChange={(e) => setForm((f) => ({ ...f, certificate_number: e.target.value }))} placeholder="DE-12345-2024" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Scope</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.scope")}</label>
                 <Input value={form.scope_description} onChange={(e) => setForm((f) => ({ ...f, scope_description: e.target.value }))} placeholder="Manufacturing operations" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Valid From</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.validFrom")}</label>
                 <Input type="date" value={form.valid_from} onChange={(e) => setForm((f) => ({ ...f, valid_from: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Valid Until</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.validUntil")}</label>
                 <Input type="date" value={form.valid_until} onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))} />
               </div>
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Certification"}</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? t("suppliers.saving") : t("suppliers.saveCertification")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -1070,7 +1077,7 @@ function CertificationsTab({ supplierId }: { supplierId: string }) {
         <Card>
           <CardContent className="py-10 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No certifications recorded yet.</p>
+            <p className="text-sm text-muted-foreground">{t("suppliers.noCertifications")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -1105,6 +1112,7 @@ function CertificationsTab({ supplierId }: { supplierId: string }) {
 // ── Ownership Tab ─────────────────────────────────────────────────────────────
 
 function OwnershipTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
@@ -1179,9 +1187,9 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Ownership Structure</h3>
+        <h3 className="text-sm font-semibold">{t("suppliers.ownershipTitle")}</h3>
         <Button size="sm" onClick={editing ? () => setEditing(false) : startEdit}>
-          {editing ? "Cancel" : (ownership ? "Edit" : "+ Add Ownership")}
+          {editing ? t("common.cancel") : (ownership ? t("common.edit") : t("suppliers.addOwnership"))}
         </Button>
       </div>
 
@@ -1190,7 +1198,7 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ownership Type *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.ownershipType")} *</label>
                 <select
                   value={form.ownership_type}
                   onChange={(e) => setForm((f) => ({ ...f, ownership_type: e.target.value }))}
@@ -1202,56 +1210,56 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Parent Company</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.parentCompany")}</label>
                 <Input value={form.parent_company_name} onChange={(e) => setForm((f) => ({ ...f, parent_company_name: e.target.value }))} placeholder="Acme Holdings GmbH" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Parent Country</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.parentCountry")}</label>
                 <Input value={form.parent_company_country} onChange={(e) => setForm((f) => ({ ...f, parent_company_country: e.target.value }))} placeholder="DE" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ultimate Parent</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.ultimateParent")}</label>
                 <Input value={form.ultimate_parent_name} onChange={(e) => setForm((f) => ({ ...f, ultimate_parent_name: e.target.value }))} placeholder="Global Corp Inc." />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ultimate Parent Country</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.ultimateParentCountry")}</label>
                 <Input value={form.ultimate_parent_country} onChange={(e) => setForm((f) => ({ ...f, ultimate_parent_country: e.target.value }))} placeholder="US" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">LEI Code</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.leiCode")}</label>
                 <Input value={form.lei_code} onChange={(e) => setForm((f) => ({ ...f, lei_code: e.target.value }))} placeholder="5493001KJTIIGC8Y1R12" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">D-U-N-S Number</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.dunsNumber")}</label>
                 <Input value={form.duns_number} onChange={(e) => setForm((f) => ({ ...f, duns_number: e.target.value }))} placeholder="12-345-6789" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Stock Exchange</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.stockExchange")}</label>
                 <Input value={form.stock_exchange} onChange={(e) => setForm((f) => ({ ...f, stock_exchange: e.target.value }))} placeholder="NYSE" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ticker Symbol</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.tickerSymbol")}</label>
                 <Input value={form.ticker_symbol} onChange={(e) => setForm((f) => ({ ...f, ticker_symbol: e.target.value }))} placeholder="ACME" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">State Ownership %</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.stateOwnershipPct")}</label>
                 <Input type="number" value={form.state_ownership_pct} onChange={(e) => setForm((f) => ({ ...f, state_ownership_pct: e.target.value }))} placeholder="0" />
               </div>
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
                   <input type="checkbox" checked={form.is_state_owned} onChange={(e) => setForm((f) => ({ ...f, is_state_owned: e.target.checked }))} className="rounded" />
-                  State Owned
+                  {t("suppliers.stateOwned")}
                 </label>
                 <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
                   <input type="checkbox" checked={form.publicly_listed} onChange={(e) => setForm((f) => ({ ...f, publicly_listed: e.target.checked }))} className="rounded" />
-                  Publicly Listed
+                  {t("suppliers.publiclyListed")}
                 </label>
               </div>
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setEditing(false); setError(null); }}>Cancel</Button>
-              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</Button>
+              <Button variant="outline" size="sm" onClick={() => { setEditing(false); setError(null); }}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>{saving ? t("suppliers.saving") : t("common.save")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -1261,7 +1269,7 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
         <Card>
           <CardContent className="py-10 text-center">
             <Briefcase className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No ownership data recorded yet.</p>
+            <p className="text-sm text-muted-foreground">{t("suppliers.noOwnership")}</p>
           </CardContent>
         </Card>
       )}
@@ -1271,29 +1279,29 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
               <div>
-                <dt className="text-xs text-muted-foreground">Ownership Type</dt>
+                <dt className="text-xs text-muted-foreground">{t("suppliers.ownershipType")}</dt>
                 <dd className="font-medium">{ownership.ownership_type.replace(/_/g, " ")}</dd>
               </div>
               {ownership.parent_company_name && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">Parent Company</dt>
+                  <dt className="text-xs text-muted-foreground">{t("suppliers.parentCompany")}</dt>
                   <dd className="font-medium">{ownership.parent_company_name} {ownership.parent_company_country && <span className="text-muted-foreground">({ownership.parent_company_country})</span>}</dd>
                 </div>
               )}
               {ownership.ultimate_parent_name && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">Ultimate Parent</dt>
+                  <dt className="text-xs text-muted-foreground">{t("suppliers.ultimateParent")}</dt>
                   <dd className="font-medium">{ownership.ultimate_parent_name} {ownership.ultimate_parent_country && <span className="text-muted-foreground">({ownership.ultimate_parent_country})</span>}</dd>
                 </div>
               )}
               <div>
-                <dt className="text-xs text-muted-foreground">State Owned</dt>
+                <dt className="text-xs text-muted-foreground">{t("suppliers.stateOwned")}</dt>
                 <dd className={`font-medium ${ownership.is_state_owned ? "text-amber-600" : "text-muted-foreground"}`}>
                   {ownership.is_state_owned ? `Yes ${ownership.state_ownership_pct != null ? `(${ownership.state_ownership_pct}%)` : ""}` : "No"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted-foreground">Publicly Listed</dt>
+                <dt className="text-xs text-muted-foreground">{t("suppliers.publiclyListed")}</dt>
                 <dd className="font-medium">
                   {ownership.publicly_listed
                     ? `Yes${ownership.stock_exchange ? ` · ${ownership.stock_exchange}` : ""}${ownership.ticker_symbol ? ` : ${ownership.ticker_symbol}` : ""}`
@@ -1302,13 +1310,13 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
               </div>
               {ownership.lei_code && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">LEI</dt>
+                  <dt className="text-xs text-muted-foreground">{t("suppliers.leiCode")}</dt>
                   <dd className="font-mono text-xs">{ownership.lei_code}</dd>
                 </div>
               )}
               {ownership.duns_number && (
                 <div>
-                  <dt className="text-xs text-muted-foreground">D-U-N-S</dt>
+                  <dt className="text-xs text-muted-foreground">{t("suppliers.dunsNumber")}</dt>
                   <dd className="font-mono text-xs">{ownership.duns_number}</dd>
                 </div>
               )}
@@ -1323,6 +1331,7 @@ function OwnershipTab({ supplierId }: { supplierId: string }) {
 // ── ESG Metrics Tab ───────────────────────────────────────────────────────────
 
 function ESGMetricsTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [yearFilter, setYearFilter] = useState<string>("");
@@ -1388,19 +1397,19 @@ function ESGMetricsTab({ supplierId }: { supplierId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
-        <h3 className="text-sm font-semibold flex-1">ESG Metrics ({metrics.length})</h3>
+        <h3 className="text-sm font-semibold flex-1">{t("suppliers.esgMetricsTitle")} ({metrics.length})</h3>
         <select
           value={yearFilter}
           onChange={(e) => setYearFilter(e.target.value)}
           className="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
         >
-          <option value="">All Years</option>
+          <option value="">{t("suppliers.allYears")}</option>
           {[2025, 2024, 2023, 2022, 2021].map((y) => (
             <option key={y} value={y.toString()}>{y}</option>
           ))}
         </select>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ Record Metric"}
+          {showForm ? t("common.cancel") : t("suppliers.recordMetric")}
         </Button>
       </div>
 
@@ -1409,52 +1418,52 @@ function ESGMetricsTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Metric Type *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.metricType")} *</label>
                 <select
                   value={form.metric_type}
                   onChange={(e) => setForm((f) => ({ ...f, metric_type: e.target.value }))}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 >
-                  {["GHG_SCOPE1_TONNES_CO2E", "GHG_SCOPE2_TONNES_CO2E", "GHG_SCOPE3_TONNES_CO2E", "GHG_INTENSITY_TONNE_PER_REVENUE", "ENERGY_TOTAL_MWH", "ENERGY_RENEWABLE_PCT", "WATER_WITHDRAWAL_M3", "WATER_RECYCLED_PCT", "WASTE_TOTAL_TONNES", "WASTE_RECYCLED_PCT", "HAZARDOUS_WASTE_TONNES", "FEMALE_LEADERSHIP_PCT", "GENDER_PAY_GAP_PCT", "INJURY_RATE_PER_1M_HOURS", "LOST_TIME_INJURY_RATE", "FATALITIES", "CHILD_LABOUR_INCIDENTS", "FORCED_LABOUR_INCIDENTS", "COLLECTIVE_BARGAINING_COVERAGE_PCT", "EMPLOYEE_TRAINING_HOURS", "SUPPLY_CHAIN_DUE_DILIGENCE_COVERAGE_PCT", "SUPPLIERS_AUDITED_PCT", "SUPPLIERS_WITH_CODE_OF_CONDUCT_PCT", "CUSTOM"].map((t) => (
-                    <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+                  {["GHG_SCOPE1_TONNES_CO2E", "GHG_SCOPE2_TONNES_CO2E", "GHG_SCOPE3_TONNES_CO2E", "GHG_INTENSITY_TONNE_PER_REVENUE", "ENERGY_TOTAL_MWH", "ENERGY_RENEWABLE_PCT", "WATER_WITHDRAWAL_M3", "WATER_RECYCLED_PCT", "WASTE_TOTAL_TONNES", "WASTE_RECYCLED_PCT", "HAZARDOUS_WASTE_TONNES", "FEMALE_LEADERSHIP_PCT", "GENDER_PAY_GAP_PCT", "INJURY_RATE_PER_1M_HOURS", "LOST_TIME_INJURY_RATE", "FATALITIES", "CHILD_LABOUR_INCIDENTS", "FORCED_LABOUR_INCIDENTS", "COLLECTIVE_BARGAINING_COVERAGE_PCT", "EMPLOYEE_TRAINING_HOURS", "SUPPLY_CHAIN_DUE_DILIGENCE_COVERAGE_PCT", "SUPPLIERS_AUDITED_PCT", "SUPPLIERS_WITH_CODE_OF_CONDUCT_PCT", "CUSTOM"].map((mt) => (
+                    <option key={mt} value={mt}>{mt.replace(/_/g, " ")}</option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Reporting Year *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.reportingYear")} *</label>
                 <Input type="number" value={form.reporting_year} onChange={(e) => setForm((f) => ({ ...f, reporting_year: e.target.value }))} placeholder="2024" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Value *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.value")} *</label>
                 <Input type="number" value={form.value} onChange={(e) => setForm((f) => ({ ...f, value: e.target.value }))} placeholder="0.0" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Unit</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.unit")}</label>
                 <Input value={form.unit} onChange={(e) => setForm((f) => ({ ...f, unit: e.target.value }))} placeholder="tCO2e" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">ESRS Reference</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.esrsReference")}</label>
                 <Input value={form.esrs_reference} onChange={(e) => setForm((f) => ({ ...f, esrs_reference: e.target.value }))} placeholder="E1-5" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">GRI Reference</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.griReference")}</label>
                 <Input value={form.gri_reference} onChange={(e) => setForm((f) => ({ ...f, gri_reference: e.target.value }))} placeholder="GRI 305-1" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Data Source</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.dataSource")}</label>
                 <Input value={form.data_source} onChange={(e) => setForm((f) => ({ ...f, data_source: e.target.value }))} placeholder="Annual sustainability report" />
               </div>
               <div className="flex items-center gap-2 pt-4">
                 <label className="flex items-center gap-2 text-xs font-medium cursor-pointer">
                   <input type="checkbox" checked={form.is_third_party_verified} onChange={(e) => setForm((f) => ({ ...f, is_third_party_verified: e.target.checked }))} className="rounded" />
-                  Third-party verified
+                  {t("suppliers.thirdPartyVerified")}
                 </label>
               </div>
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Record Metric"}</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? t("suppliers.saving") : t("suppliers.saveMetric")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -1466,7 +1475,7 @@ function ESGMetricsTab({ supplierId }: { supplierId: string }) {
         <Card>
           <CardContent className="py-10 text-center">
             <BarChart3 className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No ESG metrics recorded yet.</p>
+            <p className="text-sm text-muted-foreground">{t("suppliers.noEsgMetrics")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -1520,6 +1529,7 @@ const PROVIDER_META: Record<string, { label: string; color: string; maxScore?: n
 };
 
 function ESGRatingsTab({ supplierId }: { supplierId: string }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -1607,13 +1617,13 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold">External ESG Ratings ({ratings.length})</h3>
+          <h3 className="text-sm font-semibold">{t("suppliers.esgRatingsTitle")} ({ratings.length})</h3>
           {latestByProvider.length > 0 && (
-            <p className="text-xs text-muted-foreground mt-0.5">{latestByProvider.length} provider{latestByProvider.length !== 1 ? "s" : ""} tracked</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("suppliers.providersTracked").replace("{n}", String(latestByProvider.length))}</p>
           )}
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          {showForm ? "Cancel" : "+ Add Rating"}
+          {showForm ? t("common.cancel") : t("suppliers.addRating")}
         </Button>
       </div>
 
@@ -1622,7 +1632,7 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
           <CardContent className="pt-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Provider *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.provider")} *</label>
                 <select
                   value={form.provider}
                   onChange={(e) => setForm((f) => ({ ...f, provider: e.target.value }))}
@@ -1634,68 +1644,68 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Rating Date *</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.ratingDate")} *</label>
                 <input type="date" value={form.rating_date} onChange={(e) => setForm((f) => ({ ...f, rating_date: e.target.value }))}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Score</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.score")}</label>
                 <Input type="number" value={form.score} onChange={(e) => setForm((f) => ({ ...f, score: e.target.value }))} placeholder="62" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Max Score</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.maxScore")}</label>
                 <Input type="number" value={form.max_score} onChange={(e) => setForm((f) => ({ ...f, max_score: e.target.value }))} placeholder="100" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Score % (0–100)</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.scorePct")}</label>
                 <Input type="number" value={form.score_pct} onChange={(e) => setForm((f) => ({ ...f, score_pct: e.target.value }))} placeholder="62" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Grade / Tier</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.gradeTier")}</label>
                 <Input value={form.grade} onChange={(e) => setForm((f) => ({ ...f, grade: e.target.value }))} placeholder="GOLD / AA / CDP_A" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Percentile (0–100)</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.ratingPercentile")}</label>
                 <Input type="number" value={form.percentile} onChange={(e) => setForm((f) => ({ ...f, percentile: e.target.value }))} placeholder="82" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Peer Group</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.peerGroup")}</label>
                 <Input value={form.peer_group} onChange={(e) => setForm((f) => ({ ...f, peer_group: e.target.value }))} placeholder="Automotive Components" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">E-Score</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.eScore")}</label>
                 <Input type="number" value={form.environmental_score} onChange={(e) => setForm((f) => ({ ...f, environmental_score: e.target.value }))} placeholder="65" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">S-Score</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.sScore")}</label>
                 <Input type="number" value={form.social_score} onChange={(e) => setForm((f) => ({ ...f, social_score: e.target.value }))} placeholder="60" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">G-Score</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.gScore")}</label>
                 <Input type="number" value={form.governance_score} onChange={(e) => setForm((f) => ({ ...f, governance_score: e.target.value }))} placeholder="58" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Ethics Score (EcoVadis)</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.ethicsScore")}</label>
                 <Input type="number" value={form.ethics_score} onChange={(e) => setForm((f) => ({ ...f, ethics_score: e.target.value }))} placeholder="55" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Valid Until</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.validUntil")}</label>
                 <input type="date" value={form.valid_until} onChange={(e) => setForm((f) => ({ ...f, valid_until: e.target.value }))}
                   className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Report URL</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.reportUrl")}</label>
                 <Input value={form.report_url} onChange={(e) => setForm((f) => ({ ...f, report_url: e.target.value }))} placeholder="https://ecovadis.com/..." />
               </div>
               <div className="col-span-2">
-                <label className="mb-1 block text-xs font-medium text-muted-foreground">Methodology Version</label>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">{t("suppliers.methodologyVersion")}</label>
                 <Input value={form.methodology_version} onChange={(e) => setForm((f) => ({ ...f, methodology_version: e.target.value }))} placeholder="EcoVadis 2024" />
               </div>
             </div>
             {error && <p className="text-xs text-red-500">{error}</p>}
             <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>Cancel</Button>
-              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? "Saving…" : "Save Rating"}</Button>
+              <Button variant="outline" size="sm" onClick={() => { setShowForm(false); setError(null); }}>{t("common.cancel")}</Button>
+              <Button size="sm" onClick={handleCreate} disabled={saving}>{saving ? t("suppliers.saving") : t("suppliers.saveRating")}</Button>
             </div>
           </CardContent>
         </Card>
@@ -1707,8 +1717,8 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
         <Card>
           <CardContent className="py-10 text-center">
             <TrendingUp className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No external ESG ratings recorded yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Add scores from EcoVadis, MSCI, Sustainalytics, CDP, or other providers.</p>
+            <p className="text-sm text-muted-foreground">{t("suppliers.noEsgRatings")}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t("suppliers.noEsgRatingsHint")}</p>
           </CardContent>
         </Card>
       ) : (
@@ -1716,7 +1726,7 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
           {/* Latest per provider summary */}
           {latestByProvider.length > 1 && (
             <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">Latest per Provider</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">{t("suppliers.latestPerProvider")}</p>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {latestByProvider.map((r) => {
                   const meta = PROVIDER_META[r.provider] ?? PROVIDER_META.OTHER;
@@ -1748,7 +1758,7 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
 
           {/* All ratings */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">All Ratings</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3">{t("suppliers.allRatings")}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {ratings.map((r) => {
                 const meta = PROVIDER_META[r.provider] ?? PROVIDER_META.OTHER;
@@ -1819,6 +1829,23 @@ type Tab = typeof TABS[number];
 export default function SupplierDetailPage() {
   const { t } = useLanguage();
   const { id } = useParams<{ id: string }>();
+  const TAB_LABELS: Record<Tab, string> = {
+    Overview: t("suppliers.tab.overview"),
+    Assessments: t("assessments.title"),
+    Findings: t("findings.title"),
+    "Risk Profile": t("suppliers.tab.riskProfile"),
+    "Sector Risk": t("suppliers.tab.sectorRisk"),
+    Intelligence: t("suppliers.tab.intelligence"),
+    Twin: t("suppliers.tab.twin"),
+    Network: t("suppliers.tab.network"),
+    Portal: t("suppliers.tab.portal"),
+    Locations: t("suppliers.tab.locations"),
+    Contacts: t("suppliers.tab.contacts"),
+    Certifications: t("suppliers.tab.certifications"),
+    Ownership: t("suppliers.tab.ownership"),
+    "ESG Metrics": t("suppliers.tab.esgMetrics"),
+    "ESG Ratings": t("suppliers.tab.esgRatings"),
+  };
   const router = useRouter();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("Overview");
@@ -2216,17 +2243,17 @@ export default function SupplierDetailPage() {
       {/* Tabs */}
       <div className="border-b border-border">
         <nav className="flex gap-6">
-          {TABS.map((t) => (
+          {TABS.map((tabKey) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={tabKey}
+              onClick={() => setTab(tabKey)}
               className={`pb-3 text-sm font-medium transition-colors ${
-                tab === t
+                tab === tabKey
                   ? "border-b-2 border-blue-600 text-blue-600"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t}
+              {TAB_LABELS[tabKey]}
             </button>
           ))}
         </nav>
@@ -2248,7 +2275,7 @@ export default function SupplierDetailPage() {
                   <p className="font-medium">{supplier.industry || "—"}</p>
                 </div>
                 <div>
-                  <p className="text-muted-foreground">NACE Code</p>
+                  <p className="text-muted-foreground">{t("suppliers.naceCode")}</p>
                   <p className="font-mono font-medium">{supplier.nace_code || "—"}</p>
                 </div>
                 <div>
@@ -2287,25 +2314,25 @@ export default function SupplierDetailPage() {
                   <CardTitle className="text-sm flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
                       <BarChart3 className="h-4 w-4 text-violet-500" />
-                      Peer Benchmark
+                      {t("suppliers.peerBenchmark")}
                     </span>
                     <button
                       onClick={() => { setTab("Intelligence"); setIntelligenceSubTab("benchmark"); }}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Full view →
+                      {t("suppliers.fullView")}
                     </button>
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs text-muted-foreground">Risk Score</span>
+                    <span className="text-xs text-muted-foreground">{t("suppliers.riskScore")}</span>
                     <span className="text-lg font-bold tabular-nums">{benchmark.risk_score?.toFixed(0) ?? "—"}</span>
                   </div>
                   {benchmark.sector_percentile != null && (
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Sector percentile</span>
+                        <span>{t("suppliers.sectorPercentile")}</span>
                         <span className="font-medium text-foreground">{benchmark.sector_percentile.toFixed(0)}th</span>
                       </div>
                       <div className="h-1.5 bg-muted rounded-full overflow-hidden">
@@ -2328,12 +2355,12 @@ export default function SupplierDetailPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-1.5">
-                    <FileText className="h-4 w-4 text-blue-500" /> Portal Questionnaire
+                    <FileText className="h-4 w-4 text-blue-500" /> {t("suppliers.portalQuestionnaire")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-2">
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Completion</span>
+                    <span className="text-muted-foreground">{t("suppliers.completion")}</span>
                     <span className="font-semibold">{questionnaireProgress.questionnaire_pct}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -2355,7 +2382,7 @@ export default function SupplierDetailPage() {
                 <CardTitle className="text-sm flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
                     <GitBranch className="h-4 w-4 text-orange-500" />
-                    Due Diligence
+                    {t("suppliers.dueDiligence")}
                   </span>
                   <button
                     onClick={async () => {
@@ -2375,52 +2402,52 @@ export default function SupplierDetailPage() {
                     disabled={ddBusy}
                     className="text-xs text-blue-600 hover:text-blue-800 disabled:opacity-50"
                   >
-                    {ddBusy ? "Running…" : "Run"}
+                    {ddBusy ? t("suppliers.running") : t("suppliers.run")}
                   </button>
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 {ddError && <p className="text-xs text-red-500 mb-2">{ddError}</p>}
-                {ddSuccess && <p className="text-xs text-emerald-600 mb-2">3 reports generated successfully.</p>}
+                {ddSuccess && <p className="text-xs text-emerald-600 mb-2">{t("suppliers.reportsGenerated")}</p>}
                 {dueDiligence ? (
                   <div className="space-y-2 text-xs">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Risk Band</span>
+                      <span className="text-muted-foreground">{t("suppliers.riskBand")}</span>
                       <span className={`font-semibold ${dueDiligence.risk_band === "Critical" || dueDiligence.risk_band === "High" ? "text-red-600" : dueDiligence.risk_band === "Moderate" ? "text-amber-600" : "text-emerald-600"}`}>
                         {dueDiligence.risk_band}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">ESG Score</span>
+                      <span className="text-muted-foreground">{t("suppliers.esgScore")}</span>
                       <span className="font-medium">{dueDiligence.esg_score?.toFixed(0) ?? "—"}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">CSDDD Coverage</span>
+                      <span className="text-muted-foreground">{t("suppliers.csdddCoverage")}</span>
                       <span className={`font-medium ${dueDiligence.csddd_coverage === "Compliant" ? "text-emerald-600" : dueDiligence.csddd_coverage === "Partially Compliant" ? "text-amber-600" : "text-red-600"}`}>
                         {dueDiligence.csddd_coverage}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Critical Findings</span>
+                      <span className="text-muted-foreground">{t("suppliers.criticalFindings")}</span>
                       <span className={`font-semibold ${dueDiligence.critical_findings > 0 ? "text-red-600" : "text-emerald-600"}`}>
                         {dueDiligence.critical_findings}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Open Actions</span>
+                      <span className="text-muted-foreground">{t("suppliers.openActions")}</span>
                       <span className={`font-semibold ${dueDiligence.open_actions > 0 ? "text-amber-600" : "text-emerald-600"}`}>
                         {dueDiligence.open_actions}
                       </span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">LkSG Coverage</span>
+                      <span className="text-muted-foreground">{t("suppliers.lksgCoverage")}</span>
                       <span className={`font-medium ${dueDiligence.lksgg_coverage === "High" ? "text-emerald-600" : dueDiligence.lksgg_coverage === "Partial" ? "text-amber-600" : "text-red-600"}`}>
                         {dueDiligence.lksgg_coverage}
                       </span>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground">No due diligence data yet. Click Run to generate.</p>
+                  <p className="text-xs text-muted-foreground">{t("suppliers.noDueDiligenceData")}</p>
                 )}
               </CardContent>
             </Card>
@@ -2430,7 +2457,7 @@ export default function SupplierDetailPage() {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm flex items-center gap-1.5">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Certificates
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> {t("suppliers.certifications")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-0 space-y-1.5">
@@ -2443,9 +2470,9 @@ export default function SupplierDetailPage() {
                       <div key={cert.id} className="flex items-center justify-between text-xs">
                         <span className="truncate max-w-[120px]" title={cert.certificate_type}>{cert.certificate_type}</span>
                         {daysLeft == null ? (
-                          <span className="text-muted-foreground">No expiry</span>
+                          <span className="text-muted-foreground">{t("suppliers.noExpiry")}</span>
                         ) : expired ? (
-                          <span className="text-red-600 font-semibold">Expired</span>
+                          <span className="text-red-600 font-semibold">{t("suppliers.expired")}</span>
                         ) : expiring ? (
                           <span className="text-amber-600 font-semibold">{daysLeft}d left</span>
                         ) : (
@@ -2458,7 +2485,7 @@ export default function SupplierDetailPage() {
               </Card>
             )}
 
-            {(["Assessments", "Findings", "Risk Profile", "Intelligence"] as Tab[]).map((t) => {
+            {(["Assessments", "Findings", "Risk Profile", "Intelligence"] as Tab[]).map((navTab) => {
               const icons: Record<string, React.ReactNode> = {
                 Assessments: <FileText className="h-8 w-8 text-blue-500" />,
                 Findings: <AlertTriangle className="h-8 w-8 text-red-500" />,
@@ -2466,18 +2493,18 @@ export default function SupplierDetailPage() {
                 Intelligence: <Target className="h-8 w-8 text-violet-500" />,
               };
               const subtitles: Record<string, string> = {
-                Assessments: "View all assessments",
-                Findings: "All findings across assessments",
-                "Risk Profile": "Findings, risks, actions",
-                Intelligence: "ESG & risk scores, trend",
+                Assessments: t("suppliers.viewAssessments"),
+                Findings: t("suppliers.viewFindings"),
+                "Risk Profile": t("suppliers.viewRiskProfile"),
+                Intelligence: t("suppliers.viewIntelligence"),
               };
               return (
-                <Card key={t} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setTab(t)}>
+                <Card key={navTab} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setTab(navTab)}>
                   <CardContent className="flex items-center gap-4 p-4">
-                    {icons[t]}
+                    {icons[navTab]}
                     <div>
-                      <p className="font-semibold">{t}</p>
-                      <p className="text-xs text-muted-foreground">{subtitles[t]}</p>
+                      <p className="font-semibold">{TAB_LABELS[navTab]}</p>
+                      <p className="text-xs text-muted-foreground">{subtitles[navTab]}</p>
                     </div>
                     <ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" />
                   </CardContent>
@@ -2501,7 +2528,7 @@ export default function SupplierDetailPage() {
                 onClick={() => { setShowSchedule((v) => !v); }}
               >
                 <Clock className="h-3.5 w-3.5" />
-                {existingSchedule ? t("common.edit") : "Schedule Reassessment"}
+                {existingSchedule ? t("common.edit") : t("suppliers.scheduleReassessment")}
               </Button>
               <Button
                 size="sm"
@@ -2517,9 +2544,9 @@ export default function SupplierDetailPage() {
             <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm flex items-center gap-2 dark:border-emerald-800 dark:bg-emerald-950/30">
               <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
               <span className="text-emerald-800 dark:text-emerald-300">
-                Reassessment scheduled every <strong>{existingSchedule.frequency_days} days</strong>
+                {t("suppliers.reassessmentEvery").replace("{n}", String(existingSchedule.frequency_days))}
                 {existingSchedule.next_due_at && (
-                  <> — next due <strong>{new Date(existingSchedule.next_due_at).toLocaleDateString()}</strong></>
+                  <>{t("suppliers.nextDue")} <strong>{new Date(existingSchedule.next_due_at).toLocaleDateString()}</strong></>
                 )}
               </span>
             </div>
@@ -2528,10 +2555,10 @@ export default function SupplierDetailPage() {
           {showSchedule && (
             <Card className="mb-4">
               <CardContent className="pt-4 pb-4 space-y-3">
-                <p className="text-sm font-medium">Schedule Reassessment for {supplier.name}</p>
+                <p className="text-sm font-medium">{t("suppliers.scheduleReassessment")} — {supplier.name}</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Frequency</label>
+                    <label className="block text-xs text-muted-foreground mb-1">{t("suppliers.frequency")}</label>
                     <select
                       className="w-full rounded border px-3 py-1.5 text-sm bg-background"
                       value={scheduleFrequency}
@@ -2544,7 +2571,7 @@ export default function SupplierDetailPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs text-muted-foreground mb-1">Next due date (optional)</label>
+                    <label className="block text-xs text-muted-foreground mb-1">{t("suppliers.nextDueDate")}</label>
                     <input
                       type="date"
                       className="w-full rounded border px-3 py-1.5 text-sm bg-background"
@@ -2554,10 +2581,10 @@ export default function SupplierDetailPage() {
                   </div>
                 </div>
                 {scheduleMutation.isError && (
-                  <p className="text-xs text-red-600">Failed to save schedule — a schedule may already exist for this supplier.</p>
+                  <p className="text-xs text-red-600">{t("suppliers.scheduleError")}</p>
                 )}
                 {scheduleMutation.isSuccess && (
-                  <p className="text-xs text-emerald-600">Schedule saved.</p>
+                  <p className="text-xs text-emerald-600">{t("suppliers.scheduleSaved")}</p>
                 )}
                 <div className="flex gap-2">
                   <Button size="sm" disabled={scheduleMutation.isPending} onClick={() => scheduleMutation.mutate()}>
@@ -2572,7 +2599,7 @@ export default function SupplierDetailPage() {
           {startAssessment && (
             <Card className="mb-4">
               <CardContent className="pt-4 pb-4 space-y-3">
-                <p className="text-sm font-medium">New Assessment for {supplier.name}</p>
+                <p className="text-sm font-medium">{t("assessments.newAssessment")} — {supplier.name}</p>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
                     <label className="block text-xs text-muted-foreground mb-1">Title</label>
@@ -2613,7 +2640,7 @@ export default function SupplierDetailPage() {
             <Card>
               <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
                 <FileText className="h-10 w-10 text-muted-foreground/40" />
-                <p className="text-muted-foreground">No assessments for this supplier yet.</p>
+                <p className="text-muted-foreground">{t("assessments.noAssessments")}</p>
               </CardContent>
             </Card>
           ) : (
@@ -2680,8 +2707,8 @@ export default function SupplierDetailPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <AlertTriangle className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No findings for this supplier yet.</p>
-                <p className="mt-1 text-xs text-muted-foreground">Findings are surfaced when assessments are run.</p>
+                <p className="text-sm text-muted-foreground">{t("findings.noFindings")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("findings.noFindingsDesc")}</p>
               </CardContent>
             </Card>
           ) : (
@@ -2754,10 +2781,10 @@ export default function SupplierDetailPage() {
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  { label: "Total Assessments", value: profile.total_assessments, icon: FileText, sub: `${profile.approved_assessments} approved`, color: "text-blue-600" },
-                  { label: "Total Findings", value: profile.total_findings, icon: AlertTriangle, sub: `${profile.findings_by_severity["Critical"] ?? 0} critical`, color: profile.findings_by_severity["Critical"] ? "text-red-600" : "text-amber-500" },
-                  { label: "Total Risks", value: profile.total_risks, icon: ShieldAlert, sub: `${profile.risks_by_severity["Critical"] ?? 0} critical`, color: profile.risks_by_severity["Critical"] ? "text-red-600" : "text-orange-500" },
-                  { label: "Open Actions", value: profile.open_actions, icon: Clock, sub: profile.overdue_actions > 0 ? `${profile.overdue_actions} overdue` : "None overdue", color: profile.overdue_actions > 0 ? "text-red-600" : "text-muted-foreground" },
+                  { label: t("suppliers.totalAssessments"), value: profile.total_assessments, icon: FileText, sub: t("suppliers.approvedCount").replace("{n}", String(profile.approved_assessments)), color: "text-blue-600" },
+                  { label: t("suppliers.totalFindings"), value: profile.total_findings, icon: AlertTriangle, sub: t("suppliers.criticalCount").replace("{n}", String(profile.findings_by_severity["Critical"] ?? 0)), color: profile.findings_by_severity["Critical"] ? "text-red-600" : "text-amber-500" },
+                  { label: t("suppliers.totalRisks"), value: profile.total_risks, icon: ShieldAlert, sub: t("suppliers.criticalCount").replace("{n}", String(profile.risks_by_severity["Critical"] ?? 0)), color: profile.risks_by_severity["Critical"] ? "text-red-600" : "text-orange-500" },
+                  { label: t("suppliers.openActions"), value: profile.open_actions, icon: Clock, sub: profile.overdue_actions > 0 ? t("suppliers.overdueCount").replace("{n}", String(profile.overdue_actions)) : t("suppliers.noneOverdue"), color: profile.overdue_actions > 0 ? "text-red-600" : "text-muted-foreground" },
                 ].map(({ label, value, icon: Icon, sub, color }) => (
                   <Card key={label}>
                     <CardContent className="p-4">
@@ -2780,7 +2807,7 @@ export default function SupplierDetailPage() {
                   const total = kind === "Findings" ? profile.total_findings : profile.total_risks;
                   return (
                     <Card key={kind}>
-                      <CardHeader><CardTitle className="text-base">{kind} by Severity</CardTitle></CardHeader>
+                      <CardHeader><CardTitle className="text-base">{TAB_LABELS[kind as Tab] ?? kind} by Severity</CardTitle></CardHeader>
                       <CardContent>
                         {["Critical", "High", "Medium", "Low"].map((sev) => {
                           const count = data[sev] ?? 0;
@@ -2840,13 +2867,10 @@ export default function SupplierDetailPage() {
           {!supplier?.nace_code ? (
             <div className="rounded-lg border border-dashed border-border p-8 text-center space-y-2">
               <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
-              <p className="font-medium">Kein NACE-Code hinterlegt</p>
-              <p className="text-sm text-muted-foreground">
-                Bitte den NACE-2-digit-Code im Lieferantenprofil (Übersicht → Bearbeiten) eintragen,
-                damit das sektorspezifische Risikoregister angezeigt werden kann.
-              </p>
+              <p className="font-medium">{t("suppliers.noNaceCode")}</p>
+              <p className="text-sm text-muted-foreground">{t("suppliers.noNaceCodeDesc")}</p>
               <button onClick={() => setTab("Overview")} className="text-sm text-blue-600 hover:underline">
-                Zum Profil →
+                {t("suppliers.toProfile")}
               </button>
             </div>
           ) : (
@@ -2861,16 +2885,14 @@ export default function SupplierDetailPage() {
                         <span className="text-muted-foreground">·</span>
                         <span className="font-medium">{sectorBaseline.sector_name}</span>
                         {sectorBaseline.is_fully_calibrated ? (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">Kalibriert</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">{t("suppliers.calibrated")}</span>
                         ) : (
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">Fallback-Scores</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border">{t("suppliers.fallbackScores")}</span>
                         )}
                       </>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    CSDDD Sector Risk Register · 21 Schutzrechte (Annex I) · deterministisch
-                  </p>
+                  <p className="text-xs text-muted-foreground">{t("suppliers.csdddRegisterDesc")}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="relative">
@@ -2891,7 +2913,7 @@ export default function SupplierDetailPage() {
                   </div>
                   {sectorSimLoading && <RefreshCw className="h-4 w-4 animate-spin text-muted-foreground" />}
                   <Link href={`/sector-risk/${supplier.nace_code}`} className="text-xs text-blue-600 hover:underline whitespace-nowrap">
-                    Vollansicht →
+                    {t("suppliers.fullView")}
                   </Link>
                 </div>
               </div>
@@ -2905,11 +2927,11 @@ export default function SupplierDetailPage() {
                   </div>
                   <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-orange-50 border border-orange-200 text-orange-800">
                     <TrendingUp className="h-4 w-4" />
-                    <span>{sectorSimulation.summary.rights_increased} Rechte erhöht</span>
+                    <span>{t("suppliers.rightsIncreased").replace("{n}", String(sectorSimulation.summary.rights_increased))}</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm px-3 py-1.5 rounded-md bg-red-50 border border-red-200 text-red-800">
                     <AlertTriangle className="h-4 w-4" />
-                    <span>{sectorSimulation.summary.rights_above_7_scenario} Rechte ≥ 7</span>
+                    <span>{t("suppliers.rightsAbove7").replace("{n}", String(sectorSimulation.summary.rights_above_7_scenario))}</span>
                   </div>
                 </div>
               )}
@@ -2921,15 +2943,15 @@ export default function SupplierDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border text-left bg-muted/30">
-                          <th className="px-4 py-2.5 font-medium text-muted-foreground">CSDDD-Schutzrecht</th>
-                          <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-20">Baseline</th>
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground">{t("suppliers.csdddRight")}</th>
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-20">{t("sectorRisk.baseline")}</th>
                           {sectorScenario && sectorSimulation && (
                             <>
-                              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-24">Szenario</th>
-                              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">Delta</th>
+                              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-24">{t("suppliers.tab.sectorRisk")}</th>
+                              <th className="px-4 py-2.5 font-medium text-muted-foreground text-center w-16">{t("sectorRisk.delta")}</th>
                             </>
                           )}
-                          <th className="px-4 py-2.5 font-medium text-muted-foreground w-36">Wahrscheinlichkeit</th>
+                          <th className="px-4 py-2.5 font-medium text-muted-foreground w-36">{t("sectorRisk.probability")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2970,7 +2992,7 @@ export default function SupplierDetailPage() {
                       : "text-muted-foreground hover:text-foreground"
                   }`}
                 >
-                  {st === "benchmark" ? "Benchmark" : st.charAt(0).toUpperCase() + st.slice(1)}
+                  {st === "score" ? t("suppliers.riskScore") : st === "history" ? t("common.overview") : st === "benchmark" ? t("suppliers.peerBenchmark") : t("dashboard.riskHeatmap")}
                 </button>
               ))}
             </div>
@@ -2983,7 +3005,7 @@ export default function SupplierDetailPage() {
                 disabled={ofacBusy}
               >
                 <ShieldAlert className={`h-3.5 w-3.5 ${ofacBusy ? "animate-pulse" : ""}`} />
-                {ofacBusy ? "Scanning…" : "OFAC Scan"}
+                {ofacBusy ? t("suppliers.scanning") : t("suppliers.ofacScan")}
               </Button>
               <Button
                 variant="outline"
@@ -2993,7 +3015,7 @@ export default function SupplierDetailPage() {
                 disabled={recalcMutation.isPending}
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${recalcMutation.isPending ? "animate-spin" : ""}`} />
-                Recalculate
+                {t("suppliers.recalculate")}
               </Button>
               <Button
                 variant="default"
@@ -3017,7 +3039,7 @@ export default function SupplierDetailPage() {
                 }}
               >
                 <Globe className={`h-3.5 w-3.5 ${collecting ? "animate-spin" : ""}`} />
-                {collecting ? "Collecting…" : "Collect Intelligence"}
+                {collecting ? t("suppliers.collecting") : t("suppliers.collectIntelligence")}
               </Button>
             </div>
           </div>
@@ -3084,7 +3106,7 @@ export default function SupplierDetailPage() {
               ) : !intelligence ? (
                 <Card>
                   <CardContent className="py-12 text-center text-muted-foreground">
-                    No score calculated yet. Click Recalculate to generate the first score.
+                    {t("suppliers.noScore")}
                   </CardContent>
                 </Card>
               ) : (
@@ -3101,7 +3123,7 @@ export default function SupplierDetailPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="flex items-center justify-around py-2">
-                          <ScoreRing score={intelligence.esg_score} label="Total ESG" color="stroke-blue-500" />
+                          <ScoreRing score={intelligence.esg_score} label={t("suppliers.esgTotal")} color="stroke-blue-500" />
                           <ScoreRing score={intelligence.environmental_score} label="Environmental" color="stroke-emerald-500" />
                           <ScoreRing score={intelligence.social_score} label="Social" color="stroke-violet-500" />
                           <ScoreRing score={intelligence.governance_score} label="Governance" color="stroke-amber-500" />
@@ -3119,7 +3141,7 @@ export default function SupplierDetailPage() {
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-5xl font-bold tabular-nums">{intelligence.risk_score.toFixed(0)}</p>
-                            <p className="text-sm text-muted-foreground mt-1">out of 100</p>
+                            <p className="text-sm text-muted-foreground mt-1">{t("suppliers.outOf100")}</p>
                           </div>
                           <span className={`rounded-lg px-4 py-2 text-lg font-bold ${riskBandColor(intelligence.risk_band)}`}>
                             {intelligence.risk_band}
@@ -3136,14 +3158,14 @@ export default function SupplierDetailPage() {
                           />
                         </div>
                         <div className="grid grid-cols-4 gap-1 text-center text-xs text-muted-foreground">
-                          <span>Low<br/>0–25</span>
+                          <span>{t("suppliers.low")}<br/>0–25</span>
                           <span>Moderate<br/>26–50</span>
-                          <span>High<br/>51–75</span>
-                          <span>Critical<br/>76–100</span>
+                          <span>{t("suppliers.high")}<br/>51–75</span>
+                          <span>{t("findings.critical")}<br/>76–100</span>
                         </div>
                         {intelligence.sector_percentile != null && (
                           <p className="text-xs text-muted-foreground text-center">
-                            Better than {intelligence.sector_percentile.toFixed(0)}% of industry peers
+                            {t("suppliers.betterThanPeers").replace("{pct}", intelligence.sector_percentile.toFixed(0))}
                           </p>
                         )}
                       </CardContent>
@@ -3154,15 +3176,13 @@ export default function SupplierDetailPage() {
                   <Card>
                     <CardHeader>
                       <CardTitle className="text-base">{t("suppliers.riskLevel")}</CardTitle>
-                      <p className="text-xs text-muted-foreground">
-                        Why this score was assigned — ordered by impact
-                      </p>
+                      <p className="text-xs text-muted-foreground">{t("suppliers.whyScore")}</p>
                     </CardHeader>
                     <CardContent>
                       {intelligence.drivers.length === 0 ? (
                         <div className="flex flex-col items-center gap-2 py-6 text-center">
                           <CheckCircle2 className="h-8 w-8 text-emerald-500" />
-                          <p className="text-sm text-muted-foreground">No risk drivers identified. This supplier has a clean profile.</p>
+                          <p className="text-sm text-muted-foreground">{t("suppliers.noRiskDrivers")}</p>
                         </div>
                       ) : (
                         <div className="space-y-3">
@@ -3189,7 +3209,7 @@ export default function SupplierDetailPage() {
                   {/* Raw inputs (collapsible audit data) */}
                   <details className="rounded-lg border border-border">
                     <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground">
-                      Raw Score Inputs (Audit Data)
+                      {t("suppliers.rawScoreInputs")}
                     </summary>
                     <div className="grid grid-cols-2 gap-2 px-4 pb-4 pt-2 text-xs sm:grid-cols-3 lg:grid-cols-4">
                       {Object.entries(intelligence.inputs).map(([k, v]) => (
@@ -3213,16 +3233,16 @@ export default function SupplierDetailPage() {
                 {!history ? (
                   <div className="flex justify-center py-8"><Spinner size="lg" /></div>
                 ) : history.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">No score history yet.</p>
+                  <p className="py-8 text-center text-sm text-muted-foreground">{t("suppliers.noScoreHistory")}</p>
                 ) : (
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-border text-muted-foreground">
-                        <th className="pb-2 text-left font-medium">Date</th>
-                        <th className="pb-2 text-right font-medium">ESG Score</th>
-                        <th className="pb-2 text-right font-medium">Risk Score</th>
-                        <th className="pb-2 text-center font-medium">Risk Band</th>
-                        <th className="pb-2 text-center font-medium">Trend</th>
+                        <th className="pb-2 text-left font-medium">{t("common.date")}</th>
+                        <th className="pb-2 text-right font-medium">{t("suppliers.esgScore")}</th>
+                        <th className="pb-2 text-right font-medium">{t("suppliers.riskScore")}</th>
+                        <th className="pb-2 text-center font-medium">{t("suppliers.riskBand")}</th>
+                        <th className="pb-2 text-center font-medium">{t("suppliers.trend")}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border">
@@ -3258,12 +3278,12 @@ export default function SupplierDetailPage() {
               ) : (
                 <>
                   <Card>
-                    <CardHeader><CardTitle className="text-base">Peer Benchmark — {benchmark.industry || "All Industries"}</CardTitle></CardHeader>
+                    <CardHeader><CardTitle className="text-base">{t("suppliers.peerBenchmark")} — {benchmark.industry || t("common.all")}</CardTitle></CardHeader>
                     <CardContent className="space-y-6">
                       <div className="grid gap-4 sm:grid-cols-3">
                         <div className="text-center">
                           <p className="text-4xl font-bold tabular-nums">{benchmark.risk_score.toFixed(0)}</p>
-                          <p className="text-xs text-muted-foreground mt-1">Risk Score</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t("suppliers.riskScore")}</p>
                           <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${riskBandColor(benchmark.risk_band)}`}>
                             {benchmark.risk_band}
                           </span>
@@ -3272,7 +3292,7 @@ export default function SupplierDetailPage() {
                           <p className="text-4xl font-bold tabular-nums">
                             {benchmark.sector_percentile != null ? `${benchmark.sector_percentile.toFixed(0)}th` : "—"}
                           </p>
-                          <p className="text-xs text-muted-foreground mt-1">Percentile</p>
+                          <p className="text-xs text-muted-foreground mt-1">{t("suppliers.sectorPercentile")}</p>
                         </div>
                         <div className="text-center">
                           <p className="text-sm font-semibold mt-2">{benchmark.peer_comparison}</p>
@@ -3283,8 +3303,8 @@ export default function SupplierDetailPage() {
                       {benchmark.sector_percentile != null && (
                         <div>
                           <div className="mb-1 flex justify-between text-xs text-muted-foreground">
-                            <span>Worst (0th)</span>
-                            <span>Best (100th)</span>
+                            <span>{t("suppliers.worst")}</span>
+                            <span>{t("suppliers.best")}</span>
                           </div>
                           <div className="relative h-3 w-full rounded-full bg-gradient-to-r from-red-400 via-amber-400 to-emerald-500">
                             <div
@@ -3300,16 +3320,14 @@ export default function SupplierDetailPage() {
                       )}
                     </CardContent>
                   </Card>
-                  <p className="text-xs text-muted-foreground text-center">
-                    Benchmarking is within your organization's supplier portfolio.
-                  </p>
+                  <p className="text-xs text-muted-foreground text-center">{t("suppliers.benchmarkingNote")}</p>
 
                   {/* #87 Sector intelligence comparison */}
                   {sectorProfile && (
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-base">
-                          Sector Risk Profile — {sectorProfile.section_name}
+                          {t("suppliers.tab.sectorRisk")} — {sectorProfile.section_name}
                         </CardTitle>
                         <p className="text-xs text-muted-foreground">
                           NACE {supplier?.nace_code} · Industry-level E/S/G risk baseline
@@ -3333,7 +3351,7 @@ export default function SupplierDetailPage() {
                         </div>
                         {sectorProfile.key_risk_themes.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Key Risk Themes</p>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">{t("suppliers.keyRiskThemes")}</p>
                             <div className="flex flex-wrap gap-1">
                               {sectorProfile.key_risk_themes.slice(0, 6).map((t) => (
                                 <span key={t} className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-700">{t}</span>
@@ -3343,7 +3361,7 @@ export default function SupplierDetailPage() {
                         )}
                         {sectorProfile.applicable_frameworks.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">Applicable Frameworks</p>
+                            <p className="text-xs font-semibold text-muted-foreground mb-1.5 uppercase tracking-wide">{t("suppliers.applicableFrameworks")}</p>
                             <div className="flex flex-wrap gap-1">
                               {sectorProfile.applicable_frameworks.slice(0, 6).map((f) => (
                                 <span key={f} className="rounded-full bg-blue-50 text-blue-700 px-2 py-0.5 text-[10px]">{f}</span>
@@ -3374,7 +3392,7 @@ export default function SupplierDetailPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b border-border">
-                          <th className="py-2 text-left font-medium text-muted-foreground w-32">Pillar</th>
+                          <th className="py-2 text-left font-medium text-muted-foreground w-32">{t("suppliers.pillar")}</th>
                           {["Critical", "High", "Medium", "Low"].map((s) => (
                             <th key={s} className={`py-2 text-center font-medium ${severityColor(s)}`}>{s}</th>
                           ))}
@@ -3428,9 +3446,7 @@ export default function SupplierDetailPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold">{t("strategy.digitalTwinTitle")}</h2>
-              <p className="text-xs text-muted-foreground">
-                Continuously updated from external intelligence sources
-              </p>
+              <p className="text-xs text-muted-foreground">{t("suppliers.twinUpdated")}</p>
             </div>
             <button
               onClick={async () => {
@@ -3448,7 +3464,7 @@ export default function SupplierDetailPage() {
               className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors disabled:opacity-50"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${processingSignals ? "animate-spin" : ""}`} />
-              {processingSignals ? "Processing…" : "Sync Intelligence"}
+              {processingSignals ? t("suppliers.processing") : t("suppliers.syncIntelligence")}
             </button>
           </div>
           {processResult && (
@@ -3474,7 +3490,7 @@ export default function SupplierDetailPage() {
                     twin.overall_health < 60 ? "text-orange-700" :
                     twin.overall_health < 75 ? "text-amber-700" : "text-emerald-700"
                   }`}>{twin.overall_health.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Overall Health Score</p>
+                  <p className="text-xs text-muted-foreground">{t("suppliers.overallHealth")}</p>
                 </div>
                 <div className="text-right space-y-1">
                   <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
@@ -3487,7 +3503,7 @@ export default function SupplierDetailPage() {
                      <Minus className="h-3 w-3" />}
                     {twin.health_trend}
                   </span>
-                  <p className="text-xs text-muted-foreground">{twin.event_count} events processed</p>
+                  <p className="text-xs text-muted-foreground">{t("suppliers.eventsProcessed").replace("{n}", String(twin.event_count))}</p>
                   {twin.last_event_at && (
                     <p className="text-xs text-muted-foreground">
                       Last event {new Date(twin.last_event_at).toLocaleDateString()}
@@ -3544,10 +3560,8 @@ export default function SupplierDetailPage() {
                   <Card>
                     <CardContent className="py-10 text-center">
                       <Target className="mx-auto mb-3 h-8 w-8 text-muted-foreground/40" />
-                      <p className="text-sm text-muted-foreground">No intelligence events yet.</p>
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Click "Sync Intelligence" to process external signals into the twin.
-                      </p>
+                      <p className="text-sm text-muted-foreground">{t("suppliers.noIntelligenceEvents")}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{t("suppliers.syncHint")}</p>
                     </CardContent>
                   </Card>
                 ) : (
@@ -3563,8 +3577,8 @@ export default function SupplierDetailPage() {
             <Card>
               <CardContent className="py-10 text-center">
                 <Target className="mx-auto mb-3 h-10 w-10 text-muted-foreground/40" />
-                <p className="text-muted-foreground">Twin not yet initialized.</p>
-                <p className="mt-1 text-xs text-muted-foreground">Click "Sync Intelligence" to initialize this supplier's Digital Twin.</p>
+                <p className="text-muted-foreground">{t("suppliers.twinNotInit")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t("suppliers.twinInitHint")}</p>
               </CardContent>
             </Card>
           )}
@@ -3633,7 +3647,7 @@ export default function SupplierDetailPage() {
                   <Input value={editForm.country ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, country: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="mb-1 block text-sm font-medium">NACE Code</label>
+                  <label className="mb-1 block text-sm font-medium">{t("suppliers.naceCode")}</label>
                   <Input value={editForm.nace_code ?? ""} onChange={(e) => setEditForm((f) => ({ ...f, nace_code: e.target.value }))} />
                 </div>
               </div>
