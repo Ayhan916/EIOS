@@ -98,7 +98,7 @@ function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
       <table className="w-full text-xs">
         <thead>
           <tr>
-            <th className="text-left py-2 pr-4 font-semibold text-muted-foreground uppercase tracking-wide">Control Type</th>
+            <th className="text-left py-2 pr-4 font-semibold text-muted-foreground uppercase tracking-wide">{t("compliance.controlType")}</th>
             {STATUSES.map((s) => (
               <th key={s} className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{s}</th>
             ))}
@@ -177,9 +177,9 @@ export default function ComplianceCenterPage() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
         <Lock className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm font-medium">Admin access required</p>
-        <p className="text-xs text-muted-foreground">This page is restricted to organization administrators.</p>
-        <Link href="/dashboard" className="text-xs text-blue-600 hover:underline">← Back to Dashboard</Link>
+        <p className="text-sm font-medium">{t("settings.adminOnly")}</p>
+        <p className="text-xs text-muted-foreground">{t("compliance.adminRestricted")}</p>
+        <Link href="/dashboard" className="text-xs text-blue-600 hover:underline">{t("compliance.backToDashboard")}</Link>
       </div>
     );
   }
@@ -190,7 +190,7 @@ export default function ComplianceCenterPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{t("nav.complianceCenter")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">SOC 2 readiness, control status, and audit trail</p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("compliance.centerSubtitle")}</p>
         </div>
         <div className="flex gap-2">
           <Link
@@ -198,14 +198,14 @@ export default function ComplianceCenterPage() {
             className="flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
           >
             <FileText className="h-4 w-4" />
-            Audit Trail
+            {t("compliance.auditTrail")}
           </Link>
           <Link
             href="/reports"
             className="flex items-center gap-2 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
           >
             <BarChart3 className="h-4 w-4" />
-            Compliance Reports
+            {t("compliance.complianceReports")}
           </Link>
         </div>
       </div>
@@ -220,7 +220,7 @@ export default function ComplianceCenterPage() {
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">SOC 2 Readiness</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("compliance.soc2Readiness")}</p>
                     <p className={`mt-1 text-3xl font-bold ${(data?.soc2_readiness_pct ?? 0) >= 80 ? "text-emerald-600" : "text-amber-600"}`}>
                       {data?.soc2_readiness_pct != null ? `${data.soc2_readiness_pct.toFixed(0)}%` : "—"}
                     </p>
@@ -233,9 +233,9 @@ export default function ComplianceCenterPage() {
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">Implemented</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("compliance.implemented")}</p>
                     <p className="mt-1 text-3xl font-bold text-emerald-600">{data?.soc2_implemented ?? "—"}</p>
-                    <p className="text-xs text-muted-foreground">of {data?.soc2_total ?? "—"} controls</p>
+                    <p className="text-xs text-muted-foreground">{t("compliance.ofControls").replace("{n}", String(data?.soc2_total ?? "—"))}</p>
                   </div>
                   <CheckCircle2 className="h-5 w-5 text-emerald-500 mt-0.5" />
                 </div>
@@ -245,7 +245,7 @@ export default function ComplianceCenterPage() {
               <CardContent className="pt-5">
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wide">In Progress</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wide">{t("compliance.inProgress")}</p>
                     <p className="mt-1 text-3xl font-bold text-blue-600">{data?.soc2_in_progress ?? "—"}</p>
                   </div>
                   <Clock className="h-5 w-5 text-blue-500 mt-0.5" />
@@ -272,21 +272,21 @@ export default function ComplianceCenterPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Shield className="h-4 w-4 text-blue-500" />
-                SOC 2 Type II Control Progress
+                {t("compliance.controlProgress")}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {[
-                { label: "Implemented", count: data?.soc2_implemented ?? 0, color: "bg-emerald-500", textColor: "text-emerald-600" },
-                { label: "In Progress",  count: data?.soc2_in_progress  ?? 0, color: "bg-blue-500",    textColor: "text-blue-600" },
-                { label: "Not Started",  count: data?.soc2_not_started  ?? 0, color: "bg-slate-300",   textColor: "text-slate-500" },
-              ].map(({ label, count, color, textColor }) => {
+                { labelKey: "compliance.implemented", count: data?.soc2_implemented ?? 0, color: "bg-emerald-500", textColor: "text-emerald-600" },
+                { labelKey: "compliance.inProgress",  count: data?.soc2_in_progress  ?? 0, color: "bg-blue-500",    textColor: "text-blue-600" },
+                { labelKey: "compliance.notStarted",  count: data?.soc2_not_started  ?? 0, color: "bg-slate-300",   textColor: "text-slate-500" },
+              ].map(({ labelKey, count, color, textColor }) => {
                 const total = data?.soc2_total ?? 1;
                 const pct = Math.round((count / total) * 100);
                 return (
-                  <div key={label}>
+                  <div key={labelKey}>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-xs font-medium">{label}</span>
+                      <span className="text-xs font-medium">{t(labelKey as any)}</span>
                       <span className={`text-xs font-bold ${textColor}`}>{count} ({pct}%)</span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -303,7 +303,7 @@ export default function ComplianceCenterPage() {
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-blue-500" />
-                Control Coverage Heatmap
+                {t("compliance.coverageHeatmap")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -314,10 +314,10 @@ export default function ComplianceCenterPage() {
           {/* Quick links */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {[
-              { icon: Shield,      label: "View all controls",            href: "/operating-system/controls",            desc: "Control library and test status" },
-              { icon: FileText,    label: "Compliance operations",         href: "/operating-system/compliance-operations", desc: "Operational compliance tracking" },
-              { icon: ShieldCheck, label: "Compliance gap analysis",       href: "/compliance/gaps",                      desc: "Framework gap identification" },
-            ].map(({ icon: Icon, label, href, desc }) => (
+              { icon: Shield,      labelKey: "compliance.viewAllControls",   href: "/operating-system/controls",            descKey: "compliance.controlLibraryDesc" },
+              { icon: FileText,    labelKey: "nav.complianceOps",            href: "/operating-system/compliance-operations", descKey: "compliance.operationsDesc" },
+              { icon: ShieldCheck, labelKey: "compliance.gapAnalysis",       href: "/compliance/gaps",                      descKey: "compliance.gapAnalysisDesc" },
+            ].map(({ icon: Icon, labelKey, href, descKey }) => (
               <Link
                 key={href}
                 href={href}
@@ -327,8 +327,8 @@ export default function ComplianceCenterPage() {
                   <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold group-hover:text-primary">{label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{desc}</p>
+                  <p className="text-sm font-semibold group-hover:text-primary">{t(labelKey as any)}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t(descKey as any)}</p>
                 </div>
               </Link>
             ))}

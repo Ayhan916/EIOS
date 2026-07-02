@@ -77,7 +77,7 @@ function LinkToControlPanel({ evidenceId, onClose }: { evidenceId: string; onClo
         value={controlId}
         onChange={(e) => setControlId(e.target.value)}
       >
-        <option value="">Select control…</option>
+        <option value="">{t("evidence.selectControl")}</option>
         {controls.map((c) => (
           <option key={c.id} value={c.id}>{c.control_name}</option>
         ))}
@@ -130,7 +130,7 @@ function EvidencePreview({ ev }: { ev: any }) {
   }, [ev.id]);
 
   if (loading) return <div className="flex justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>;
-  if (error || !objectUrl) return <p className="py-4 text-center text-xs text-muted-foreground">Preview unavailable — document not yet uploaded or access denied.</p>;
+  if (error || !objectUrl) return <p className="py-4 text-center text-xs text-muted-foreground">{t("evidence.previewUnavailable")}</p>;
 
   if (isPdf(ev.file_name)) {
     return <iframe src={objectUrl} className="w-full rounded border" style={{ height: 480 }} title={ev.title} />;
@@ -141,7 +141,7 @@ function EvidencePreview({ ev }: { ev: any }) {
   return (
     <div className="flex flex-col items-center gap-2 py-6 text-center">
       <FileText className="h-8 w-8 text-muted-foreground/40" />
-      <p className="text-xs text-muted-foreground">No in-browser preview for this file type.</p>
+      <p className="text-xs text-muted-foreground">{t("evidence.noPreviewType")}</p>
       <a href={objectUrl} download={ev.file_name} className="text-xs text-blue-600 hover:underline">{t("common.download")}</a>
     </div>
   );
@@ -290,19 +290,19 @@ export default function EvidencePage() {
         return (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 font-medium">
             <CheckCircle2 className="h-3 w-3" />
-            {chunks} chunks
+            {t("evidence.chunks").replace("{n}", String(chunks))}
           </span>
         );
       case "ocr_required":
         return (
           <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700 font-medium">
-            OCR required
+            {t("evidence.ocrRequired")}
           </span>
         );
       case "failed":
         return (
           <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs text-red-700 font-medium">
-            Failed
+            {t("evidence.failed")}
           </span>
         );
       default:
@@ -378,7 +378,7 @@ export default function EvidencePage() {
                 }}
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
               >
-                <X className="h-3 w-3" /> Remove file
+                <X className="h-3 w-3" /> {t("evidence.removeFile")}
               </button>
             )}
 
@@ -416,15 +416,16 @@ export default function EvidencePage() {
 
             {uploadState.stage === "creating" && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Spinner size="sm" /> Creating evidence record…
+                <Spinner size="sm" /> {t("evidence.creating")}
               </div>
             )}
 
             {uploadState.stage === "done" && uploadState.result && (
               <div className="flex items-center gap-2 rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
                 <CheckCircle2 className="h-4 w-4" />
-                Ingested {uploadState.result.chunks_created} chunks via{" "}
-                {uploadState.result.parser_used}.{" "}
+                {t("evidence.ingested")
+                  .replace("{chunks}", String(uploadState.result.chunks_created))
+                  .replace("{parser}", uploadState.result.parser_used)}
                 <button
                   type="button"
                   className="ml-auto text-xs underline"
@@ -437,7 +438,7 @@ export default function EvidencePage() {
                     })
                   }
                 >
-                  Upload another
+                  {t("evidence.uploadAnother")}
                 </button>
               </div>
             )}
@@ -466,7 +467,7 @@ export default function EvidencePage() {
               ) : (
                 <>
                   <Upload className="h-4 w-4" />
-                  Upload & Ingest
+                  {t("evidence.uploadIngest")}
                 </>
               )}
             </Button>
@@ -477,10 +478,10 @@ export default function EvidencePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {data ? `${data.total} document${data.total !== 1 ? "s" : ""}` : "Documents"}
+              {data ? `${data.total} ${t("evidence.document")}` : t("evidence.document")}
             </CardTitle>
             <CardDescription>
-              Source files available for assessment
+              {t("evidence.documentsSubtitle")}
             </CardDescription>
           </CardHeader>
           <CardContent>

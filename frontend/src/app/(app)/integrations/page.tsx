@@ -123,6 +123,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 function IntegrationCard({ integration }: { integration: Integration }) {
+  const { t } = useLanguage();
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<"ok" | "error" | null>(null);
   const Icon = integration.icon;
@@ -176,11 +177,11 @@ function IntegrationCard({ integration }: { integration: Integration }) {
               disabled={testing}
               onClick={runTest}
             >
-              {testing ? "Testing…" : "Test Connection"}
+              {testing ? t("integrations.testing") : t("integrations.testConnection")}
             </Button>
           ) : (
             <Button size="sm" variant="outline" className="h-7 text-xs" disabled>
-              Configure in Settings
+              {t("integrations.configureInSettings")}
             </Button>
           )}
           {integration.docsUrl && (
@@ -190,12 +191,12 @@ function IntegrationCard({ integration }: { integration: Integration }) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
             >
-              Docs <ExternalLink className="h-3 w-3" />
+              {t("integrations.docs")} <ExternalLink className="h-3 w-3" />
             </a>
           )}
         </div>
         {testResult === "error" && (
-          <p className="text-xs text-amber-600">Connection failed — check credentials in Settings.</p>
+          <p className="text-xs text-amber-600">{t("integrations.connectionFailed")}</p>
         )}
       </CardContent>
     </Card>
@@ -217,7 +218,7 @@ export default function IntegrationsPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("sec.integrationsTitle")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            {INTEGRATIONS.length} integrations available — connect EIOS to your existing toolchain
+            {INTEGRATIONS.length} {t("integrations.subtitle")}
           </p>
         </div>
       </div>

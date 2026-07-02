@@ -112,6 +112,7 @@ function CompleteDisclosureWizard({
   framework: FrameworkDisclosureSummary;
   onClose: () => void;
 }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<string | null>(null);
@@ -179,7 +180,7 @@ function CompleteDisclosureWizard({
           <div>
             <p className="font-semibold">{framework.framework_name}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Step-by-step disclosure completion
+              {t("reports.disclosureCompletion")}
             </p>
           </div>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
@@ -190,7 +191,7 @@ function CompleteDisclosureWizard({
         {/* Progress */}
         <div className="px-5 py-3 border-b border-border bg-muted/30">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
-            <span>{done} of {total} requirements complete</span>
+            <span>{t("reports.reqComplete").replace("{done}", String(done)).replace("{total}", String(total))}</span>
             <span className="font-semibold text-foreground">{pct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -201,12 +202,12 @@ function CompleteDisclosureWizard({
           </div>
           <div className="mt-2 flex gap-3 text-[10px]">
             {[
-              { label: "Published", val: published, cls: "text-emerald-600" },
-              { label: "Approved", val: approved, cls: "text-blue-600" },
-              { label: "In Review", val: inReview, cls: "text-amber-600" },
-              { label: "Remaining", val: incomplete.length, cls: "text-muted-foreground" },
-            ].map(({ label, val, cls }) => (
-              <span key={label} className={cls}><span className="font-semibold">{val}</span> {label}</span>
+              { labelKey: "reports.published", val: published, cls: "text-emerald-600" },
+              { labelKey: "reports.approved", val: approved, cls: "text-blue-600" },
+              { labelKey: "reports.inReview", val: inReview, cls: "text-amber-600" },
+              { labelKey: "reports.remaining", val: incomplete.length, cls: "text-muted-foreground" },
+            ].map(({ labelKey, val, cls }) => (
+              <span key={labelKey} className={cls}><span className="font-semibold">{val}</span> {t(labelKey as any)}</span>
             ))}
           </div>
         </div>
@@ -218,9 +219,9 @@ function CompleteDisclosureWizard({
           ) : incomplete.length === 0 ? (
             <div className="text-center py-8">
               <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-500 mb-3" />
-              <p className="font-medium">All requirements addressed!</p>
+              <p className="font-medium">{t("reports.allAddressed")}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                {inReview} in review · {approved} approved · {published} published
+                {inReview} {t("reports.inReview")} · {approved} {t("reports.approved")} · {published} {t("reports.published")}
               </p>
             </div>
           ) : current ? (
@@ -232,15 +233,15 @@ function CompleteDisclosureWizard({
                   disabled={step === 0}
                   className="flex items-center gap-1 hover:text-foreground disabled:opacity-40"
                 >
-                  ← Previous
+                  ← {t("common.back")}
                 </button>
-                <span>Requirement {step + 1} of {incomplete.length} remaining</span>
+                <span>{t("reports.requirementOf").replace("{n}", String(step + 1)).replace("{m}", String(incomplete.length))}</span>
                 <button
                   onClick={() => setStep((s) => Math.min(incomplete.length - 1, s + 1))}
                   disabled={step === incomplete.length - 1}
                   className="flex items-center gap-1 hover:text-foreground disabled:opacity-40"
                 >
-                  Next →
+                  {t("common.next")} →
                 </button>
               </div>
 
@@ -277,7 +278,7 @@ function CompleteDisclosureWizard({
                       className="gap-1.5 text-xs"
                     >
                       {busy === current.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRight className="h-3.5 w-3.5" />}
-                      Begin Draft
+                      {t("reports.beginDraft")}
                     </Button>
                   ) : (
                     <Button
@@ -287,7 +288,7 @@ function CompleteDisclosureWizard({
                       className="gap-1.5 text-xs"
                     >
                       {busy === current.id + "-submit" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                      Submit for Review
+                      {t("reports.submitReview")}
                     </Button>
                   )}
                   <Button
@@ -297,7 +298,7 @@ function CompleteDisclosureWizard({
                     className="text-xs text-muted-foreground"
                     disabled={step === incomplete.length - 1}
                   >
-                    Skip for now
+                    {t("reports.skipForNow")}
                   </Button>
                 </div>
               </div>
@@ -306,7 +307,7 @@ function CompleteDisclosureWizard({
               {incomplete.length > 1 && (
                 <div className="space-y-1">
                   <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Remaining requirements
+                    {t("reports.remainingRequirements")}
                   </p>
                   <div className="max-h-32 overflow-y-auto space-y-1">
                     {incomplete.map((r, i) => (
@@ -336,6 +337,7 @@ function CompleteDisclosureWizard({
 // ── #95 Disclosure gap analysis ───────────────────────────────────────────────
 
 function DisclosureGapAnalysis() {
+  const { t } = useLanguage();
   const [wizard, setWizard] = useState<FrameworkDisclosureSummary | null>(null);
 
   const { data: dashboard, isLoading } = useQuery<DisclosureDashboardResponse>({
@@ -352,7 +354,7 @@ function DisclosureGapAnalysis() {
     return (
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Disclosure Gap Analysis
+          {t("reports.disclosureGap")}
         </h2>
         <Card><CardContent className="flex justify-center py-8"><Spinner /></CardContent></Card>
       </section>
@@ -367,10 +369,10 @@ function DisclosureGapAnalysis() {
     <section className="space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Disclosure Gap Analysis
+          {t("reports.disclosureGap")}
         </h2>
         <span className="text-xs text-muted-foreground">
-          {dashboard.total_requirements} total requirements across {dashboard.frameworks.length} frameworks
+          {t("reports.totalRequirements").replace("{n}", String(dashboard.total_requirements)).replace("{m}", String(dashboard.frameworks.length))}
         </span>
       </div>
 
@@ -382,12 +384,12 @@ function DisclosureGapAnalysis() {
               <p className={`text-3xl font-bold ${overall >= 80 ? "text-emerald-600" : overall >= 50 ? "text-amber-600" : "text-red-600"}`}>
                 {overall}%
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">Overall Coverage</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("reports.overallCoverage")}</p>
             </div>
             <div className="flex-1">
               <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                <span>Current</span>
-                <span>Required: 100%</span>
+                <span>{t("reports.current")}</span>
+                <span>{t("reports.required100")}</span>
               </div>
               <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
                 <div
@@ -397,12 +399,12 @@ function DisclosureGapAnalysis() {
               </div>
               <div className="mt-2 flex gap-4 text-[10px]">
                 {[
-                  { label: "Published", val: dashboard.total_published, cls: "text-emerald-600 font-semibold" },
-                  { label: "Approved", val: dashboard.total_approved, cls: "text-blue-600" },
-                  { label: "Draft", val: dashboard.total_draft, cls: "text-amber-600" },
-                  { label: "Not Started", val: dashboard.total_not_started, cls: "text-slate-500" },
-                ].map(({ label, val, cls }) => (
-                  <span key={label} className={cls}>{val} {label}</span>
+                  { labelKey: "reports.published", val: dashboard.total_published, cls: "text-emerald-600 font-semibold" },
+                  { labelKey: "reports.approved", val: dashboard.total_approved, cls: "text-blue-600" },
+                  { labelKey: "reports.draft", val: dashboard.total_draft, cls: "text-amber-600" },
+                  { labelKey: "reports.notStarted", val: dashboard.total_not_started, cls: "text-slate-500" },
+                ].map(({ labelKey, val, cls }) => (
+                  <span key={labelKey} className={cls}>{val} {t(labelKey as any)}</span>
                 ))}
               </div>
             </div>
@@ -417,11 +419,11 @@ function DisclosureGapAnalysis() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="pb-2 text-left text-xs font-medium text-muted-foreground">Framework</th>
-                  <th className="pb-2 text-right text-xs font-medium text-muted-foreground">Current</th>
-                  <th className="pb-2 text-right text-xs font-medium text-muted-foreground">Gap</th>
-                  <th className="pb-2 text-left text-xs font-medium text-muted-foreground px-4">Status Breakdown</th>
-                  <th className="pb-2 text-center text-xs font-medium text-muted-foreground">Blockers</th>
+                  <th className="pb-2 text-left text-xs font-medium text-muted-foreground">{t("reports.framework")}</th>
+                  <th className="pb-2 text-right text-xs font-medium text-muted-foreground">{t("reports.current")}</th>
+                  <th className="pb-2 text-right text-xs font-medium text-muted-foreground">{t("reports.gap")}</th>
+                  <th className="pb-2 text-left text-xs font-medium text-muted-foreground px-4">{t("reports.statusBreakdown")}</th>
+                  <th className="pb-2 text-center text-xs font-medium text-muted-foreground">{t("reports.blockers")}</th>
                   <th className="pb-2 text-right text-xs font-medium text-muted-foreground" />
                 </tr>
               </thead>
@@ -444,7 +446,7 @@ function DisclosureGapAnalysis() {
                       </td>
                       <td className="py-3 pr-4 text-right">
                         <span className={`text-xs font-medium ${gapCls}`}>
-                          {gap === 0 ? "✓ Complete" : `−${gap}%`}
+                          {gap === 0 ? t("reports.complete") : `−${gap}%`}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -477,7 +479,7 @@ function DisclosureGapAnalysis() {
                             onClick={() => setWizard(fw)}
                             className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 hover:bg-blue-100 transition-colors"
                           >
-                            Complete <ChevronRight className="h-3.5 w-3.5" />
+                            {t("reports.beginDraft")} <ChevronRight className="h-3.5 w-3.5" />
                           </button>
                         )}
                       </td>
@@ -555,6 +557,7 @@ const DIRECT_REPORTS = [
 // ── CDP Module card (#99) ─────────────────────────────────────────────────────
 
 function CDPModuleCard() {
+  const { t } = useLanguage();
   const { data: settings } = useQuery({
     queryKey: ["org-settings-cdp"],
     queryFn: async () => {
@@ -586,15 +589,15 @@ function CDPModuleCard() {
             <Globe className="h-5 w-5 text-amber-600" />
           </div>
           <div className="flex-1">
-            <p className="font-medium text-sm">CDP Climate Report</p>
+            <p className="font-medium text-sm">{t("reports.cdpClimate")}</p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Carbon Disclosure Project annual submission
+              {t("reports.cdpClimateDesc")}
             </p>
           </div>
         </div>
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-amber-800">
-            <span>Module Completion</span>
+            <span>{t("reports.moduleCompletion")}</span>
             <span className="font-semibold">{completedCount}/{CDP_MODULES.length}</span>
           </div>
           <div className="h-1.5 w-full rounded-full bg-amber-200 overflow-hidden">
@@ -613,7 +616,7 @@ function CDPModuleCard() {
         </div>
         {!cdpConnected && (
           <p className="text-xs text-amber-700">
-            Connect CDP integration in Settings → Integrations to complete modules.
+            {t("reports.connectCdp")}
           </p>
         )}
       </CardContent>
@@ -646,7 +649,7 @@ function DirectReportCard({
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Download failed");
+      setError(e instanceof Error ? e.message : t("reports.downloadFailed"));
     } finally {
       setDownloading(false);
     }
@@ -659,7 +662,7 @@ function DirectReportCard({
       const r = await apiClient.get(`/executive/tcfd?reporting_year=${year}`);
       setPreviewData(r.data);
       setPreviewOpen(true);
-    } catch { setError("Preview unavailable"); }
+    } catch { setError(t("reports.previewUnavailable")); }
     finally { setPreviewLoading(false); }
   }
 
@@ -704,7 +707,7 @@ function DirectReportCard({
                 title="Preview in browser"
               >
                 {previewLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Eye className="h-3.5 w-3.5" />}
-                {previewOpen ? "Hide" : "Preview"}
+                {previewOpen ? t("reports.hide") : t("reports.preview")}
               </Button>
             )}
             <Button
@@ -721,7 +724,7 @@ function DirectReportCard({
               ) : (
                 <Download className="h-3.5 w-3.5" />
               )}
-              {success ? "Downloaded" : t("common.export")}
+              {success ? t("reports.downloaded") : t("common.export")}
             </Button>
           </div>
         </div>
@@ -730,7 +733,7 @@ function DirectReportCard({
         {previewOpen && previewData && (
           <div className="rounded-lg border border-teal-200 bg-teal-50/40 p-4 space-y-3 text-xs">
             <div className="flex items-center justify-between">
-              <p className="font-semibold text-teal-800">TCFD Report Preview — {year}</p>
+              <p className="font-semibold text-teal-800">{t("reports.tcfdPreview").replace("{year}", String(year))}</p>
               <button onClick={() => setPreviewOpen(false)} className="text-teal-600 hover:text-teal-900">✕</button>
             </div>
             {Object.entries(previewData).slice(0, 12).map(([key, val]) => (
@@ -741,7 +744,7 @@ function DirectReportCard({
                 </span>
               </div>
             ))}
-            <p className="text-teal-600 text-[10px]">Full data available via Export.</p>
+            <p className="text-teal-600 text-[10px]">{t("reports.previewFull")}</p>
           </div>
         )}
       </CardContent>
@@ -752,6 +755,7 @@ function DirectReportCard({
 // ── Disclosure packages section ───────────────────────────────────────────────
 
 function PackageExportButtons({ pkg }: { pkg: DisclosurePackage }) {
+  const { t } = useLanguage();
   const [busy, setBusy] = useState<"ixbrl" | "gri" | "json" | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -766,7 +770,7 @@ function PackageExportButtons({ pkg }: { pkg: DisclosurePackage }) {
         name,
       );
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Export failed");
+      setError(e instanceof Error ? e.message : t("reports.exportFailed"));
     } finally {
       setBusy(null);
     }
@@ -839,10 +843,10 @@ function GeneratePackageForm({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="rounded-lg border border-dashed border-border p-5 space-y-4">
-      <p className="text-sm font-medium">Generate New Reporting Package</p>
+      <p className="text-sm font-medium">{t("reports.newPackage")}</p>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
-          <Label className="text-xs">Package Name</Label>
+          <Label className="text-xs">{t("reports.packageName")}</Label>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -851,7 +855,7 @@ function GeneratePackageForm({ onSuccess }: { onSuccess: () => void }) {
           />
         </div>
         <div>
-          <Label className="text-xs">Frameworks (comma-separated)</Label>
+          <Label className="text-xs">{t("reports.frameworks")}</Label>
           <Input
             value={frameworks}
             onChange={(e) => setFrameworks(e.target.value)}
@@ -860,7 +864,7 @@ function GeneratePackageForm({ onSuccess }: { onSuccess: () => void }) {
           />
         </div>
         <div>
-          <Label className="text-xs">Publication Date</Label>
+          <Label className="text-xs">{t("reports.pubDate")}</Label>
           <Input
             type="date"
             value={pubDate}
@@ -913,7 +917,7 @@ export default function ReportsCenterPage() {
         <div>
           <h1 className="text-2xl font-bold">{t("reports.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Generate and download all regulatory and compliance reports
+            {t("reports.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -924,7 +928,7 @@ export default function ReportsCenterPage() {
           <Button asChild variant="outline" size="sm">
             <Link href="/executive/reports">
               <FileText className="mr-1.5 h-4 w-4" />
-              Board Reports
+              {t("reports.boardReports")}
             </Link>
           </Button>
         </div>
@@ -936,7 +940,7 @@ export default function ReportsCenterPage() {
       {/* Direct reports */}
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Regulatory Reports
+          {t("reports.regulatoryReports")}
         </h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {DIRECT_REPORTS.map((r) => (
@@ -951,13 +955,13 @@ export default function ReportsCenterPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Disclosure Packages (GRI / iXBRL / CSRD)
+            {t("reports.disclosurePackages")}
           </h2>
           <Link
             href="/regulatory"
             className="text-xs text-blue-600 hover:underline"
           >
-            Manage frameworks →
+            {t("reports.manageFrameworks")}
           </Link>
         </div>
 
@@ -1013,7 +1017,7 @@ export default function ReportsCenterPage() {
                           {hasGRI && griPct != null && (
                             <div className="mt-2 space-y-1">
                               <div className="flex justify-between text-[10px] text-muted-foreground">
-                                <span>GRI Coverage</span>
+                                <span>{t("reports.griCoverage")}</span>
                                 <span className="font-semibold">{griPct}%</span>
                               </div>
                               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -1044,15 +1048,15 @@ export default function ReportsCenterPage() {
               <Calendar className="h-5 w-5 text-blue-600" />
               <div>
                 <p className="text-sm font-medium text-blue-900">
-                  Regulatory Calendar
+                  {t("reports.regulatoryCalendar")}
                 </p>
                 <p className="text-xs text-blue-700">
-                  View upcoming filing deadlines — CSRD, GRI, TCFD, SFDR
+                  {t("reports.calendarDesc")}
                 </p>
               </div>
             </div>
             <Button asChild variant="outline" size="sm" className="border-blue-300 text-blue-700 hover:bg-blue-100">
-              <Link href="/regulatory">View Calendar →</Link>
+              <Link href="/regulatory">{t("reports.viewCalendar")}</Link>
             </Button>
           </CardContent>
         </Card>

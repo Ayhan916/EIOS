@@ -309,6 +309,7 @@ function FieldEditor({
   value: string | number | boolean | string[];
   onChange: (v: string | number | boolean | string[]) => void;
 }) {
+  const { t } = useLanguage();
   if (field.type === "boolean") {
     const checked = value as boolean;
     return (
@@ -321,7 +322,7 @@ function FieldEditor({
         >
           <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} />
         </button>
-        <span className="text-xs text-muted-foreground">{checked ? "Enabled" : "Disabled"}</span>
+        <span className="text-xs text-muted-foreground">{checked ? t("common.enabled") : t("common.disabled")}</span>
       </div>
     );
   }
@@ -397,6 +398,7 @@ function RuleCard({
   onChange: (s: RuleState) => void;
   configuredIntegrations: string[];
 }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const Icon = rule.icon;
 
@@ -435,8 +437,7 @@ function RuleCard({
           {blocked && (
             <div className="mt-2 flex items-center gap-1.5 rounded-md bg-amber-50 border border-amber-200 px-2.5 py-1.5 text-xs text-amber-700">
               <Lock className="h-3 w-3 flex-shrink-0" />
-              Requires {missingIntegrations.join(", ")} integration to be configured in{" "}
-              <a href="/settings/integrations" className="underline hover:text-amber-900">Settings → Integrations</a>
+              {t("automations.requiresIntegration").replace("{name}", missingIntegrations.join(", "))}
             </div>
           )}
 
@@ -446,7 +447,7 @@ function RuleCard({
               className="mt-2 flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
             >
               {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {expanded ? "Hide" : "Configure"} ({rule.fields.length} option{rule.fields.length !== 1 ? "s" : ""})
+              {expanded ? t("common.hide") : t("common.configure")} ({rule.fields.length})
             </button>
           )}
 
@@ -482,6 +483,7 @@ const OUTCOME_STYLES: Record<string, string> = {
 const RULE_TITLE_MAP = Object.fromEntries(RULES.map((r) => [r.id, r.title]));
 
 function ActivityTab() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery<ActivityEvent[]>({
     queryKey: ["automation-activity"],
     queryFn: async () => {
@@ -498,7 +500,7 @@ function ActivityTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{events.length} event{events.length !== 1 ? "s" : ""} logged</p>
+        <p className="text-sm text-muted-foreground">{events.length} {t("automations.eventsLogged")}</p>
       </div>
 
       {isLoading ? (
@@ -506,8 +508,8 @@ function ActivityTab() {
       ) : events.length === 0 ? (
         <div className="rounded-xl border border-dashed py-16 text-center">
           <Zap className="mx-auto mb-3 h-8 w-8 text-muted-foreground/30" />
-          <p className="text-sm font-medium text-muted-foreground">No automation events yet</p>
-          <p className="text-xs text-muted-foreground mt-1">Events will appear here as rules trigger.</p>
+          <p className="text-sm font-medium text-muted-foreground">{t("automations.noEvents")}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("automations.noEventsHint")}</p>
         </div>
       ) : (
         <Card>
@@ -612,8 +614,7 @@ export default function AutomationsPage() {
     return (
       <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
         <Lock className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm font-medium">Admin access required</p>
-        <p className="text-xs text-muted-foreground">{t("settings.adminOnly")}</p>
+        <p className="text-sm font-medium">{t("settings.adminOnly")}</p>
       </div>
     );
   }
@@ -634,14 +635,13 @@ export default function AutomationsPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight">Workflow Automations</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("automations.title")}</h1>
             <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-semibold text-blue-700">
-              {enabledCount}/{RULES.length} active
+              {t("automations.rulesEnabledOf").replace("{enabled}", String(enabledCount)).replace("{total}", String(RULES.length))}
             </span>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            Configure which workflow events trigger automatic actions in EIOS.
-            Changes take effect immediately on save.
+            {t("automations.subtitle")}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -649,10 +649,10 @@ export default function AutomationsPage() {
             setRuleStates(defaultState());
             setSaved(false);
           }} className="gap-2">
-            <RefreshCw className="h-3.5 w-3.5" /> Reset to defaults
+            <RefreshCw className="h-3.5 w-3.5" /> {t("automations.resetDefaults")}
           </Button>
           <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> {t("settings.saving")}</> : saved ? "✓ Saved" : <><Zap className="h-3.5 w-3.5" /> {t("settings.saveChanges")}</>}
+            {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> {t("settings.saving")}</> : saved ? `✓ ${t("automations.saved")}` : <><Zap className="h-3.5 w-3.5" /> {t("settings.saveChanges")}</>}
           </Button>
         </div>
       </div>
@@ -669,7 +669,7 @@ export default function AutomationsPage() {
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {tab}
+            {tab === "Rules" ? t("automations.rulesTab") : t("automations.activityTab")}
           </button>
         ))}
       </div>
@@ -731,9 +731,9 @@ export default function AutomationsPage() {
 
           {/* Sticky save bar */}
           <div className="sticky bottom-0 border-t border-border bg-background/95 backdrop-blur py-3 px-1 flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">{enabledCount} of {RULES.length} rules enabled</p>
+            <p className="text-xs text-muted-foreground">{t("automations.rulesEnabledOf").replace("{enabled}", String(enabledCount)).replace("{total}", String(RULES.length))}</p>
             <div className="flex items-center gap-3">
-              {saved && <span className="text-xs text-emerald-600 font-medium">Changes saved</span>}
+              {saved && <span className="text-xs text-emerald-600 font-medium">{t("automations.saved")}</span>}
               <Button size="sm" onClick={handleSave} disabled={saving} className="gap-2">
                 {saving ? <><Zap className="h-3.5 w-3.5 animate-pulse" /> {t("settings.saving")}</> : <><Zap className="h-3.5 w-3.5" /> {t("settings.saveChanges")}</>}
               </Button>

@@ -10,26 +10,26 @@ import {
 import type { NotificationPreferences } from "@/types/api";
 import { useLanguage } from "@/lib/i18n/context";
 
-const PREFS: { key: keyof NotificationPreferences; label: string; description: string }[] = [
+const PREFS: { key: keyof NotificationPreferences; labelKey: string; descKey: string }[] = [
   {
     key: "email_workflow_completed",
-    label: "Workflow completed",
-    description: "Receive an email when an AI workflow analysis finishes.",
+    labelKey: "notifPref.workflowCompleted",
+    descKey: "notifPref.workflowCompletedDesc",
   },
   {
     key: "email_action_overdue",
-    label: "Action overdue",
-    description: "Receive an email when a recommendation assigned to you is past its due date.",
+    labelKey: "notifPref.actionOverdue",
+    descKey: "notifPref.actionOverdueDesc",
   },
   {
     key: "email_assessment_approved",
-    label: "Assessment approved",
-    description: "Receive an email when an assessment you created is approved.",
+    labelKey: "notifPref.assessmentApproved",
+    descKey: "notifPref.assessmentApprovedDesc",
   },
   {
     key: "email_recommendation_assigned",
-    label: "Recommendation assigned",
-    description: "Receive an email when a recommendation is assigned to you.",
+    labelKey: "notifPref.recommendationAssigned",
+    descKey: "notifPref.recommendationAssignedDesc",
   },
 ];
 
@@ -43,7 +43,7 @@ export default function NotificationSettingsPage() {
   useEffect(() => {
     getNotificationPreferences()
       .then(setPrefs)
-      .catch(() => setError("Failed to load preferences."));
+      .catch(() => setError(t("notifPref.loadError")));
   }, []);
 
   function toggle(key: keyof NotificationPreferences) {
@@ -60,7 +60,7 @@ export default function NotificationSettingsPage() {
       await updateNotificationPreferences(prefs);
       setSaved(true);
     } catch {
-      setError("Failed to save preferences.");
+      setError(t("notifPref.saveError"));
     } finally {
       setSaving(false);
     }
@@ -88,11 +88,11 @@ export default function NotificationSettingsPage() {
       </div>
 
       <div className="rounded-lg border border-border divide-y divide-border">
-        {PREFS.map(({ key, label, description }) => (
+        {PREFS.map(({ key, labelKey, descKey }) => (
           <div key={key} className="flex items-start justify-between gap-4 p-4">
             <div>
-              <p className="text-sm font-medium">{label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
+              <p className="text-sm font-medium">{t(labelKey as any)}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t(descKey as any)}</p>
             </div>
             <button
               role="switch"
@@ -116,14 +116,14 @@ export default function NotificationSettingsPage() {
       <div>
         <div className="mb-3 flex items-center gap-2">
           <Mail className="h-4 w-4 text-blue-500" />
-          <h2 className="text-sm font-semibold">Weekly ESG Digest</h2>
+          <h2 className="text-sm font-semibold">{t("notifPref.weeklyDigestTitle")}</h2>
         </div>
         <div className="rounded-lg border border-border divide-y divide-border">
           <div className="flex items-start justify-between gap-4 p-4">
             <div>
-              <p className="text-sm font-medium">Weekly summary email</p>
+              <p className="text-sm font-medium">{t("notifPref.weeklySummaryLabel")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Receive a weekly ESG portfolio digest: top risks, KPI changes, pending actions, and compliance status.
+                {t("notifPref.weeklySummaryDesc")}
               </p>
             </div>
             <button
@@ -142,8 +142,8 @@ export default function NotificationSettingsPage() {
           {prefs.email_weekly_digest && (
             <div className="flex items-center justify-between gap-4 p-4">
               <div>
-                <p className="text-sm font-medium">Send on</p>
-                <p className="text-xs text-muted-foreground mt-0.5">Which weekday to receive the digest.</p>
+                <p className="text-sm font-medium">{t("notifPref.sendOn")}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("notifPref.sendOnDesc")}</p>
               </div>
               <select
                 value={prefs.digest_day ?? "Monday"}
@@ -167,7 +167,7 @@ export default function NotificationSettingsPage() {
           {saving ? t("settings.saving") : t("settings.saveChanges")}
         </Button>
         {saved && (
-          <span className="text-sm text-green-600 dark:text-green-400">Saved!</span>
+          <span className="text-sm text-green-600 dark:text-green-400">{t("notifPref.saved")}</span>
         )}
       </div>
     </div>
