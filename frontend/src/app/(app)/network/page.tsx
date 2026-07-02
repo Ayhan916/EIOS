@@ -136,17 +136,17 @@ async function getGraphData(): Promise<{
   relationships: GraphRelationship[];
 }> {
   const [suppRes, relRes] = await Promise.all([
-    apiClient.get("/suppliers?limit=200"),
+    apiClient.get("/executive/suppliers"),
     apiClient.get("/network/relationships?limit=500"),
   ]);
   const tierNum: Record<string, number> = { "Tier 1": 1, "Tier 2": 2, "Tier 3": 3 };
-  const suppliers: GraphSupplier[] = (suppRes.data.items ?? suppRes.data ?? []).map((s: any) => ({
+  const suppliers: GraphSupplier[] = (suppRes.data ?? []).map((s: any) => ({
     id: s.id,
     name: s.name,
     tier: tierNum[s.supplier_tier] ?? 4,
-    overall_risk_level: s.overall_risk_level,
+    overall_risk_level: s.risk_level ? String(s.risk_level).toUpperCase() : null,
     country: s.country ?? null,
-    score: s.overall_esg_score ?? null,
+    score: s.esg_score ?? null,
     industry: s.industry ?? null,
   }));
   const relationships: GraphRelationship[] = (relRes.data ?? []).map((r: any) => ({
