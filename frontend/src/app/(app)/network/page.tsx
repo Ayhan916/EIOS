@@ -28,10 +28,10 @@ import type { GraphSupplier, GraphRelationship } from "@/components/network/supp
 const TOUR_KEY = "eios_network_tour_seen";
 
 const TOUR_STEPS = [
-  { title: "Supplier Network Graph", desc: "This interactive graph shows your suppliers as nodes, connected by their relationships. Zoom and pan to explore." },
-  { title: "Exposure Signals", desc: "Active exposure signals highlight indirect risk propagation across your supply chain network." },
-  { title: "Incident Clusters", desc: "Clusters group suppliers that share common root-cause incidents for efficient remediation." },
-  { title: "Filters", desc: "Use the Tier, Risk Level, and Country filters above the graph to focus on specific subsets of your network." },
+  { titleKey: "network.tourStep1Title", descKey: "network.tourStep1Desc" },
+  { titleKey: "network.tourStep2Title", descKey: "network.tourStep2Desc" },
+  { titleKey: "network.tourStep3Title", descKey: "network.tourStep3Desc" },
+  { titleKey: "network.tourStep4Title", descKey: "network.tourStep4Desc" },
 ];
 
 function NetworkTour() {
@@ -63,13 +63,13 @@ function NetworkTour() {
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white">
               {step + 1}
             </span>
-            <p className="text-sm font-semibold text-white">{current.title}</p>
+            <p className="text-sm font-semibold text-white">{t(current.titleKey as any)}</p>
           </div>
           <button onClick={dismiss} className="text-slate-400 hover:text-white">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <p className="text-xs text-slate-300 leading-relaxed mb-4">{current.desc}</p>
+        <p className="text-xs text-slate-300 leading-relaxed mb-4">{t(current.descKey as any)}</p>
         <div className="flex items-center justify-between">
           <div className="flex gap-1">
             {TOUR_STEPS.map((_, i) => (
@@ -84,7 +84,7 @@ function NetworkTour() {
             )}
             {isLast ? (
               <button onClick={dismiss} className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
-                Done <ArrowRight className="h-3 w-3" />
+                {t("common.done")} <ArrowRight className="h-3 w-3" />
               </button>
             ) : (
               <button onClick={() => setStep((s) => s + 1)} className="flex items-center gap-1 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700">
@@ -235,11 +235,11 @@ function NetworkGraphSection() {
             onClick={() => { setTierFilter(""); setRiskFilter(""); setCountryFilter(""); }}
             className="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
           >
-            <X className="h-3 w-3" /> Clear filters
+            <X className="h-3 w-3" /> {t("network.clearFilters")}
           </button>
         )}
         <span className="ml-auto text-xs text-slate-500">
-          {filteredSuppliers.length} of {allSuppliers.length} suppliers
+          {t("network.suppliersOf").replace("{n}", String(filteredSuppliers.length)).replace("{total}", String(allSuppliers.length))}
         </span>
       </div>
       <SupplierGraph
@@ -310,6 +310,7 @@ function StatCard({
 // ── Sections ──────────────────────────────────────────────────────────────────
 
 function RelationshipsSection() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-relationships"],
     queryFn: getRelationships,
@@ -325,7 +326,7 @@ function RelationshipsSection() {
   if (!data?.length)
     return (
       <p className="text-center text-sm text-slate-500 py-6">
-        No active relationships. Add one or run discovery.
+        {t("network.noRelationships")}
       </p>
     );
 
@@ -349,7 +350,7 @@ function RelationshipsSection() {
           </div>
           <div className="flex-shrink-0 text-right">
             <p className="text-xs text-slate-400">
-              {Math.round(rel.confidence * 100)}% confidence
+              {Math.round(rel.confidence * 100)}{t("network.confidence")}
             </p>
             <p className="text-xs text-slate-500">{rel.source}</p>
           </div>
@@ -360,6 +361,7 @@ function RelationshipsSection() {
 }
 
 function SuggestionsSection() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-suggestions-pending"],
     queryFn: getPendingSuggestions,
@@ -375,7 +377,7 @@ function SuggestionsSection() {
   if (!data?.length)
     return (
       <p className="text-center text-sm text-slate-500 py-6">
-        No pending suggestions. Run discovery to generate proposals.
+        {t("network.noSuggestions")}
       </p>
     );
 
@@ -397,7 +399,7 @@ function SuggestionsSection() {
           </div>
           <p className="mt-1 text-xs text-slate-400 truncate">{s.rationale}</p>
           <p className="mt-0.5 text-xs text-slate-500">
-            Source: {s.suggestion_source} · {Math.round(s.confidence * 100)}% confidence
+            {t("network.source")}: {s.suggestion_source} · {Math.round(s.confidence * 100)}{t("network.confidence")}
           </p>
         </div>
       ))}
@@ -406,6 +408,7 @@ function SuggestionsSection() {
 }
 
 function ExposuresSection() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-exposures"],
     queryFn: getExposureSignals,
@@ -421,7 +424,7 @@ function ExposuresSection() {
   if (!data?.length)
     return (
       <p className="text-center text-sm text-slate-500 py-6">
-        No active exposure signals.
+        {t("network.noExposures")}
       </p>
     );
 
@@ -435,12 +438,12 @@ function ExposuresSection() {
               {e.exposure_type.replace(/_/g, " ")}
             </span>
             <span className="ml-auto text-xs text-slate-500">
-              {Math.round(e.confidence * 100)}% · {e.path_length} hop(s)
+              {Math.round(e.confidence * 100)}{t("network.confidence")} · {e.path_length} {t("network.hops")}
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-400 truncate">{e.rationale}</p>
           <p className="mt-0.5 text-xs text-slate-500">
-            Origin: {e.origin_supplier_id.slice(0, 8)}… → Impacted: {e.impacted_supplier_id.slice(0, 8)}…
+            {t("network.origin")}: {e.origin_supplier_id.slice(0, 8)}… → {t("network.impacted")}: {e.impacted_supplier_id.slice(0, 8)}…
           </p>
         </div>
       ))}
@@ -449,6 +452,7 @@ function ExposuresSection() {
 }
 
 function ClustersSection() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-clusters"],
     queryFn: getClusters,
@@ -464,7 +468,7 @@ function ClustersSection() {
   if (!data?.length)
     return (
       <p className="text-center text-sm text-slate-500 py-6">
-        No active incident clusters.
+        {t("network.noClusters")}
       </p>
     );
 
@@ -480,7 +484,7 @@ function ClustersSection() {
           </div>
           <p className="mt-1 text-xs text-slate-400 truncate">{c.root_cause}</p>
           <p className="mt-0.5 text-xs text-slate-500">
-            {c.affected_supplier_ids.length} suppliers · {c.finding_ids.length} findings
+            {t("network.suppliersPlural").replace("{n}", String(c.affected_supplier_ids.length))} · {t("network.findingsPlural").replace("{n}", String(c.finding_ids.length))}
           </p>
         </div>
       ))}
@@ -510,64 +514,64 @@ function DashboardOverview() {
   return (
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <StatCard
-        title="Relationships"
+        title={t("network.relationships")}
         value={d.total_relationships ?? 0}
         icon={Share2}
         sub={t("common.active")}
       />
       <StatCard
-        title="Pending Suggestions"
+        title={t("network.pendingSuggestions")}
         value={d.pending_suggestions ?? 0}
         icon={GitBranch}
-        sub="Awaiting review"
+        sub={t("network.awaitingReview")}
       />
       <StatCard
-        title="Active Exposures"
+        title={t("network.activeExposures")}
         value={d.active_exposures ?? 0}
         icon={AlertTriangle}
-        sub="Network signals"
+        sub={t("network.networkSignals")}
       />
       <StatCard
-        title="Incident Clusters"
+        title={t("network.incidentClusters")}
         value={d.active_clusters ?? 0}
         icon={Zap}
-        sub="Active clusters"
+        sub={t("network.activeClusters")}
       />
       <StatCard
-        title="Critical Suppliers"
+        title={t("network.criticalSuppliers")}
         value={d.critical_suppliers ?? 0}
         icon={Shield}
-        sub="Highest risk nodes"
+        sub={t("network.highestRiskNodes")}
       />
       <StatCard
-        title="Resilience Score"
+        title={t("network.resilienceScore")}
         value={
           d.resilience_score !== null && d.resilience_score !== undefined
             ? `${Math.round(d.resilience_score * 100)}%`
             : "—"
         }
         icon={Activity}
-        sub="Org-wide resilience"
+        sub={t("network.orgWideResilience")}
       />
       <StatCard
-        title="Dependency Score"
+        title={t("network.dependencyScore")}
         value={
           d.dependency_score !== null && d.dependency_score !== undefined
             ? `${Math.round(d.dependency_score * 100)}%`
             : "—"
         }
         icon={TrendingDown}
-        sub="Critical concentration"
+        sub={t("network.criticalConcentration")}
       />
       <StatCard
-        title="Network Nodes"
+        title={t("network.networkNodes")}
         value={
           (d.total_relationships ?? 0) > 0
-            ? "Connected"
-            : "No graph yet"
+            ? t("network.connected")
+            : t("network.noGraph")
         }
         icon={Network}
-        sub="Supplier graph"
+        sub={t("network.supplierGraphSub")}
       />
     </div>
   );
@@ -576,17 +580,17 @@ function DashboardOverview() {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function NetworkPage() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-6 p-6">
       {/* #115 First-time guided tour */}
       <NetworkTour />
       <div>
         <h1 className="text-2xl font-bold text-slate-100">
-          Supplier Network Intelligence
+          {t("network.pageTitle")}
         </h1>
         <p className="mt-1 text-sm text-slate-400">
-          Relationship graph, indirect exposure, cascading risk, and resilience
-          metrics across your supplier ecosystem.
+          {t("network.pageSubtitle")}
         </p>
       </div>
 
@@ -596,7 +600,7 @@ export default function NetworkPage() {
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
             <Network className="h-4 w-4" aria-hidden="true" />
-            Supplier Network Graph
+            {t("network.supplierGraph")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -609,7 +613,7 @@ export default function NetworkPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
               <Share2 className="h-4 w-4" />
-              Active Relationships
+              {t("network.activeRelationships")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -621,7 +625,7 @@ export default function NetworkPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
               <GitBranch className="h-4 w-4" />
-              Pending Suggestions
+              {t("network.pendingSuggestions")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -633,7 +637,7 @@ export default function NetworkPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
               <AlertTriangle className="h-4 w-4 text-orange-400" />
-              Active Exposure Signals
+              {t("network.exposureSignals")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -645,7 +649,7 @@ export default function NetworkPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-slate-400">
               <Zap className="h-4 w-4 text-yellow-400" />
-              Incident Clusters
+              {t("network.incidentClusters")}
             </CardTitle>
           </CardHeader>
           <CardContent>
