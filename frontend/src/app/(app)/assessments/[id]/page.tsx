@@ -48,6 +48,7 @@ import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
 import { ScoreBreakdownPanel } from "@/components/assessments/score-breakdown-panel";
+import { ScoreSimulationPanel } from "@/components/assessments/score-simulation-panel";
 import { UncertaintyBadge } from "@/components/ui/uncertainty-badge";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
@@ -713,6 +714,9 @@ export default function AssessmentDetailPage({
 
       {/* ── Score Explainability Panel (GAP-01) ─────────────────────────────── */}
       <ScoreBreakdownPanel assessmentId={id} />
+
+      {/* ── Counterfactual Score Simulation (GAP-25) ────────────────────────── */}
+      <ScoreSimulationPanel assessmentId={id} />
 
       {/* ── Questionnaire Panel (Item 34 + 35) ─────────────────────────────── */}
       {assessment.supplier_id && (

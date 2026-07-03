@@ -592,6 +592,215 @@ async def get_assessment_uncertainty(
     )
 
 
+class ScoreSimulation(BaseModel):
+    scenario: str               # "Wenn alle kritischen Findings geschlossen werden..."
+    action_label: str           # Short label for the action button
+    action_href: str | None     # Link to the relevant tab/page
+    simulated_risk_score: float
+    risk_score_delta: float     # negative = improvement
+    simulated_esg_total: float
+    esg_delta: float            # positive = improvement
+    effort: str                 # Low | Medium | High
+    items_affected: int
+
+
+class ScoreSimulationResponse(BaseModel):
+    assessment_id: str
+    current_risk_score: float
+    current_risk_band: str
+    current_esg_total: float
+    simulations: list[ScoreSimulation]
+
+
+@router.get("/{assessment_id}/score-simulation", response_model=ScoreSimulationResponse)
+async def get_score_simulation(
+    assessment_id: str,
+    current_user: User = Depends(get_current_user),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    finding_repo: SQLFindingRepository = Depends(get_finding_repo),
+    risk_repo: SQLRiskRepository = Depends(get_risk_repo),
+    rec_repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
+) -> ScoreSimulationResponse:
+    """Counterfactual score simulation — what would the score be if specific issues were resolved?
+
+    Deterministic: all simulations re-run calculate_risk_score with modified inputs.
+    Sorted by risk_score_delta ascending (biggest improvement first).
+    """
+    from datetime import date as _date
+    from dataclasses import replace
+
+    assessment = await assessment_repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    findings = await finding_repo.list_by_assessment(assessment_id)
+    risks = await risk_repo.list_by_assessment(assessment_id)
+    recs = await rec_repo.list_by_assessment(assessment_id)
+    today = _date.today()
+
+    ESG_CATS = {"Environmental", "Environment", "E"}
+    SOC_CATS = {"Social", "S"}
+    GOV_CATS = {"Governance", "G"}
+
+    def _pillar(f):
+        cat = (f.category or "").strip()
+        if cat in ESG_CATS: return "env"
+        if cat in SOC_CATS: return "social"
+        if cat in GOV_CATS: return "gov"
+        return "other"
+
+    def _count(items, **filters):
+        return sum(1 for item in items if all(getattr(item, k, None) == v for k, v in filters.items()))
+
+    base = ScoreInputs(
+        total_assessments=1,
+        approved_assessments=1 if assessment.status == "approved" else 0,
+        critical_findings=_count(findings, severity="Critical"),
+        high_findings=_count(findings, severity="High"),
+        medium_findings=_count(findings, severity="Medium"),
+        low_findings=_count(findings, severity="Low"),
+        critical_risks=_count(risks, risk_level="Critical"),
+        high_risks=_count(risks, risk_level="High"),
+        medium_risks=_count(risks, risk_level="Medium"),
+        low_risks=_count(risks, risk_level="Low"),
+        open_actions=sum(1 for r in recs if r.action_status.value in ("open", "in_progress")),
+        overdue_actions=sum(
+            1 for r in recs
+            if r.due_date is not None
+            and r.action_status.value not in ("resolved", "verified")
+            and (r.due_date.date() if hasattr(r.due_date, "date") else r.due_date) < today
+        ),
+        env_critical=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Critical"),
+        env_high=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "High"),
+        env_medium=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Medium"),
+        env_low=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Low"),
+        social_critical=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Critical"),
+        social_high=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "High"),
+        social_medium=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Medium"),
+        social_low=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Low"),
+        gov_critical=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Critical"),
+        gov_high=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "High"),
+        gov_medium=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Medium"),
+        gov_low=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Low"),
+    )
+
+    current_score, current_band = calculate_risk_score(base)
+    current_esg, _, _, _ = calculate_esg_scores(base)
+
+    def _sim(modified: ScoreInputs, scenario: str, action_label: str, action_href: str | None, effort: str, items: int) -> ScoreSimulation | None:
+        new_score, _ = calculate_risk_score(modified)
+        new_esg, _, _, _ = calculate_esg_scores(modified)
+        risk_delta = round(new_score - current_score, 1)
+        esg_delta = round(new_esg - current_esg, 1)
+        if risk_delta == 0 and esg_delta == 0:
+            return None  # no improvement — skip
+        return ScoreSimulation(
+            scenario=scenario,
+            action_label=action_label,
+            action_href=action_href,
+            simulated_risk_score=new_score,
+            risk_score_delta=risk_delta,
+            simulated_esg_total=new_esg,
+            esg_delta=esg_delta,
+            effort=effort,
+            items_affected=items,
+        )
+
+    simulations: list[ScoreSimulation] = []
+    findings_href = f"/assessments/{assessment_id}?tab=findings"
+    risks_href = f"/assessments/{assessment_id}?tab=risks"
+    recs_href = f"/assessments/{assessment_id}?tab=recommendations"
+
+    # Scenario 1: Close all critical findings
+    if base.critical_findings > 0:
+        s = _sim(
+            replace(base, critical_findings=0, env_critical=0, social_critical=0, gov_critical=0),
+            f"Wenn alle {base.critical_findings} kritischen Finding(s) geschlossen werden",
+            "Kritische Findings schließen",
+            findings_href,
+            "High",
+            base.critical_findings,
+        )
+        if s: simulations.append(s)
+
+    # Scenario 2: Close all high findings
+    if base.high_findings > 0:
+        s = _sim(
+            replace(base, high_findings=0, env_high=0, social_high=0, gov_high=0),
+            f"Wenn alle {base.high_findings} High-Severity Finding(s) adressiert werden",
+            "High-Findings adressieren",
+            findings_href,
+            "High",
+            base.high_findings,
+        )
+        if s: simulations.append(s)
+
+    # Scenario 3: Resolve all overdue actions
+    if base.overdue_actions > 0:
+        s = _sim(
+            replace(base, overdue_actions=0),
+            f"Wenn alle {base.overdue_actions} überfälligen Maßnahme(n) abgeschlossen werden",
+            "Überfällige Maßnahmen abschließen",
+            recs_href,
+            "Medium",
+            base.overdue_actions,
+        )
+        if s: simulations.append(s)
+
+    # Scenario 4: Close all critical risks
+    if base.critical_risks > 0:
+        s = _sim(
+            replace(base, critical_risks=0),
+            f"Wenn alle {base.critical_risks} kritischen Risiken auf 'Reviewed' gesetzt werden",
+            "Kritische Risiken reviewen",
+            risks_href,
+            "High",
+            base.critical_risks,
+        )
+        if s: simulations.append(s)
+
+    # Scenario 5: Resolve all open actions
+    if base.open_actions > 0:
+        s = _sim(
+            replace(base, open_actions=0, overdue_actions=0),
+            f"Wenn alle {base.open_actions} offenen Empfehlungen umgesetzt werden",
+            "Alle Empfehlungen umsetzen",
+            recs_href,
+            "Medium",
+            base.open_actions,
+        )
+        if s: simulations.append(s)
+
+    # Scenario 6: Downgrade all critical findings to Medium (partial improvement)
+    if base.critical_findings > 0:
+        s = _sim(
+            replace(base,
+                critical_findings=0, medium_findings=base.medium_findings + base.critical_findings,
+                env_critical=0, env_medium=base.env_medium + base.env_critical,
+                social_critical=0, social_medium=base.social_medium + base.social_critical,
+                gov_critical=0, gov_medium=base.gov_medium + base.gov_critical,
+            ),
+            f"Wenn alle {base.critical_findings} kritischen Findings zu Medium herabgestuft werden (Teilmaßnahme)",
+            "Kritische Findings abschwächen",
+            findings_href,
+            "Medium",
+            base.critical_findings,
+        )
+        if s: simulations.append(s)
+
+    # Sort: biggest risk reduction first, then ESG improvement
+    simulations.sort(key=lambda s: (s.risk_score_delta, -s.esg_delta))
+
+    return ScoreSimulationResponse(
+        assessment_id=assessment_id,
+        current_risk_score=current_score,
+        current_risk_band=current_band.value,
+        current_esg_total=current_esg,
+        simulations=simulations,
+    )
+
+
 @router.patch(
     "/{assessment_id}/approve",
     response_model=AssessmentResponse,

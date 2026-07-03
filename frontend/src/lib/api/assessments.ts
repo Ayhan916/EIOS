@@ -126,3 +126,30 @@ export async function getScoreBreakdown(id: string): Promise<ScoreBreakdown> {
   );
   return data;
 }
+
+export interface ScoreSimulation {
+  scenario: string;
+  action_label: string;
+  action_href: string | null;
+  simulated_risk_score: number;
+  risk_score_delta: number;
+  simulated_esg_total: number;
+  esg_delta: number;
+  effort: "Low" | "Medium" | "High";
+  items_affected: number;
+}
+
+export interface ScoreSimulationResponse {
+  assessment_id: string;
+  current_risk_score: number;
+  current_risk_band: string;
+  current_esg_total: number;
+  simulations: ScoreSimulation[];
+}
+
+export async function getScoreSimulation(id: string): Promise<ScoreSimulationResponse> {
+  const { data } = await apiClient.get<ScoreSimulationResponse>(
+    `/assessments/${id}/score-simulation`
+  );
+  return data;
+}
