@@ -7,6 +7,9 @@ from domain.enums import ActionStatus, ConfidenceLevel, RiskLevel
 from .base import EntityResponse
 
 
+COMPLEXITY_VALUES = ("Low", "Medium", "High", "Very High")
+
+
 class RecommendationCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)
     description: str = Field(min_length=1)
@@ -16,12 +19,20 @@ class RecommendationCreate(BaseModel):
     action_required: bool = True
     due_date: datetime | None = None
     assessment_id: str | None = None
+    expected_benefit: str | None = None
+    expected_risk: str | None = None
+    expected_roi: str | None = None
+    implementation_complexity: str | None = Field(default=None)
 
 
 class RecommendationUpdate(BaseModel):
     action_status: ActionStatus | None = None
     assigned_to_id: str | None = None
     due_date: datetime | None = None
+    expected_benefit: str | None = None
+    expected_risk: str | None = None
+    expected_roi: str | None = None
+    implementation_complexity: str | None = None
 
 
 class RecommendationResponse(EntityResponse):
@@ -35,3 +46,7 @@ class RecommendationResponse(EntityResponse):
     approved_by: str | None = None
     action_status: ActionStatus = ActionStatus.OPEN
     assigned_to_id: str | None = None
+    expected_benefit: str | None = None
+    expected_risk: str | None = None
+    expected_roi: str | None = None
+    implementation_complexity: str | None = None

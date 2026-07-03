@@ -5,12 +5,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Clock,
   Download,
   ExternalLink,
   Filter,
   Layers,
   Loader2,
+  Pencil,
   UserCheck,
 } from "lucide-react";
 import Link from "next/link";
@@ -67,7 +70,18 @@ interface OrgRecommendation {
   supplier_id: string;
   is_overdue: boolean;
   assigned_to_id: string | null;
+  expected_benefit: string | null;
+  expected_risk: string | null;
+  expected_roi: string | null;
+  implementation_complexity: string | null;
 }
+
+const COMPLEXITY_STYLES: Record<string, string> = {
+  "Low":       "bg-emerald-100 text-emerald-700",
+  "Medium":    "bg-amber-100 text-amber-700",
+  "High":      "bg-orange-100 text-orange-700",
+  "Very High": "bg-red-100 text-red-700",
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -84,6 +98,147 @@ const STATUS_STYLES: Record<string, string> = {
   resolved:    "bg-amber-100 text-amber-700",
   verified:    "bg-emerald-100 text-emerald-700",
 };
+
+// ── Evidence Fields Panel (FR-015) ────────────────────────────────────────────
+
+function EvidenceFieldsPanel({ rec, onDone }: { rec: OrgRecommendation; onDone: () => void }) {
+  const [editing, setEditing] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [benefit, setBenefit] = useState(rec.expected_benefit ?? "");
+  const [risk, setRisk] = useState(rec.expected_risk ?? "");
+  const [roi, setRoi] = useState(rec.expected_roi ?? "");
+  const [complexity, setComplexity] = useState(rec.implementation_complexity ?? "");
+
+  const hasAny = rec.expected_benefit || rec.expected_risk || rec.expected_roi || rec.implementation_complexity;
+
+  async function save() {
+    setBusy(true);
+    try {
+      await updateRecommendation(rec.id, {
+        expected_benefit: benefit || null,
+        expected_risk: risk || null,
+        expected_roi: roi || null,
+        implementation_complexity: complexity || null,
+      });
+      setEditing(false);
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="mt-2 rounded-lg border border-blue-200 bg-blue-50/40 p-3 space-y-2">
+        <p className="text-xs font-semibold text-blue-800">Evidenz-Felder (FR-015)</p>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground">Expected Benefit</label>
+            <input
+              className="mt-0.5 w-full rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Was verbessert sich?"
+              value={benefit}
+              onChange={(e) => setBenefit(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground">Expected Risk</label>
+            <input
+              className="mt-0.5 w-full rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="Was passiert wenn nicht umgesetzt?"
+              value={risk}
+              onChange={(e) => setRisk(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground">Expected ROI</label>
+            <input
+              className="mt-0.5 w-full rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              placeholder="z.B. Audit €3k / Risiko €50k"
+              value={roi}
+              onChange={(e) => setRoi(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-[10px] font-medium text-muted-foreground">Implementation Complexity</label>
+            <select
+              className="mt-0.5 w-full rounded border border-border bg-background px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              value={complexity}
+              onChange={(e) => setComplexity(e.target.value)}
+            >
+              <option value="">— wählen —</option>
+              <option value="Low">Low</option>
+              <option value="Medium">Medium</option>
+              <option value="High">High</option>
+              <option value="Very High">Very High</option>
+            </select>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={save}
+            disabled={busy}
+            className="inline-flex items-center gap-1 rounded bg-blue-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <CheckCircle2 className="h-3 w-3" />}
+            Speichern
+          </button>
+          <button onClick={() => setEditing(false)} className="text-xs text-muted-foreground hover:text-foreground">
+            Abbrechen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-1.5">
+      {hasAny ? (
+        <div>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:underline font-medium"
+          >
+            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            Evidenz-Felder anzeigen
+          </button>
+          {expanded && (
+            <div className="mt-1.5 rounded-md border border-border bg-muted/30 p-2 space-y-1.5 text-xs">
+              {rec.expected_benefit && (
+                <div><span className="font-semibold text-emerald-700">Benefit: </span>{rec.expected_benefit}</div>
+              )}
+              {rec.expected_risk && (
+                <div><span className="font-semibold text-red-600">Risk: </span>{rec.expected_risk}</div>
+              )}
+              {rec.expected_roi && (
+                <div><span className="font-semibold text-violet-700">ROI: </span>{rec.expected_roi}</div>
+              )}
+              {rec.implementation_complexity && (
+                <div>
+                  <span className="font-semibold text-muted-foreground">Complexity: </span>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${COMPLEXITY_STYLES[rec.implementation_complexity] ?? "bg-slate-100 text-slate-600"}`}>
+                    {rec.implementation_complexity}
+                  </span>
+                </div>
+              )}
+              <button onClick={() => setEditing(true)} className="inline-flex items-center gap-1 text-[10px] text-blue-600 hover:underline mt-1">
+                <Pencil className="h-2.5 w-2.5" /> Bearbeiten
+              </button>
+            </div>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={() => setEditing(true)}
+          className="inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-blue-600 transition-colors"
+        >
+          <Pencil className="h-2.5 w-2.5" /> Evidenz-Felder ergänzen
+        </button>
+      )}
+    </div>
+  );
+}
 
 // ── Quick status update button ────────────────────────────────────────────────
 
@@ -379,6 +534,12 @@ export default function RecommendationsPage() {
                               <Clock className="h-3 w-3" /> {t("recommendations.overdue")}
                             </span>
                           )}
+                          {r.implementation_complexity && (
+                            <span className={`mt-1 inline-flex rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${COMPLEXITY_STYLES[r.implementation_complexity] ?? "bg-slate-100 text-slate-600"}`}>
+                              {r.implementation_complexity}
+                            </span>
+                          )}
+                          <EvidenceFieldsPanel rec={r} onDone={invalidate} />
                         </td>
                         <td className="px-4 py-3 hidden sm:table-cell">
                           <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${PRIORITY_STYLES[r.priority] ?? "bg-slate-100 text-slate-700"}`}>

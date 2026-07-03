@@ -1348,6 +1348,11 @@ async def list_org_recommendations(
             RecommendationModel.due_date,
             RecommendationModel.assessment_id,
             RecommendationModel.created_at,
+            RecommendationModel.assigned_to_id,
+            RecommendationModel.expected_benefit,
+            RecommendationModel.expected_risk,
+            RecommendationModel.expected_roi,
+            RecommendationModel.implementation_complexity,
             SupplierModel.name.label("supplier_name"),
             SupplierModel.id.label("supplier_id"),
         )
@@ -1374,6 +1379,11 @@ async def list_org_recommendations(
             "created_at": r.created_at.isoformat() if r.created_at else None,
             "supplier_name": r.supplier_name,
             "supplier_id": r.supplier_id,
+            "assigned_to_id": r.assigned_to_id,
+            "expected_benefit": r.expected_benefit,
+            "expected_risk": r.expected_risk,
+            "expected_roi": r.expected_roi,
+            "implementation_complexity": r.implementation_complexity,
             "is_overdue": (
                 r.action_status not in ("resolved", "verified")
                 and r.due_date is not None

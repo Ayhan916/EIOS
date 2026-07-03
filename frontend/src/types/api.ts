@@ -296,12 +296,20 @@ export interface RecommendationResponse extends EntityResponse {
   approved_by: string | null;
   action_status: ActionStatus;
   assigned_to_id: string | null;
+  expected_benefit: string | null;
+  expected_risk: string | null;
+  expected_roi: string | null;
+  implementation_complexity: string | null;
 }
 
 export interface RecommendationUpdate {
   action_status?: ActionStatus;
   assigned_to_id?: string | null;
   due_date?: string | null;
+  expected_benefit?: string | null;
+  expected_risk?: string | null;
+  expected_roi?: string | null;
+  implementation_complexity?: string | null;
 }
 
 export interface Page<T> {

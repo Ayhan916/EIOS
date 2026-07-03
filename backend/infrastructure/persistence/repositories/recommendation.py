@@ -35,6 +35,10 @@ class SQLRecommendationRepository(BaseRepository[Recommendation, RecommendationM
             approved_by=entity.approved_by,
             action_status=entity.action_status.value,
             assigned_to_id=entity.assigned_to_id,
+            expected_benefit=entity.expected_benefit,
+            expected_risk=entity.expected_risk,
+            expected_roi=entity.expected_roi,
+            implementation_complexity=entity.implementation_complexity,
         )
 
     def _to_domain(self, model: RecommendationModel) -> Recommendation:
@@ -58,6 +62,10 @@ class SQLRecommendationRepository(BaseRepository[Recommendation, RecommendationM
             approved_by=model.approved_by,
             action_status=ActionStatus(model.action_status),
             assigned_to_id=model.assigned_to_id,
+            expected_benefit=model.expected_benefit,
+            expected_risk=model.expected_risk,
+            expected_roi=model.expected_roi,
+            implementation_complexity=model.implementation_complexity,
         )
 
     async def list_by_assessment(self, assessment_id: str) -> list[Recommendation]:

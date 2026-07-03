@@ -89,6 +89,10 @@ async def create_recommendation(
         due_date=body.due_date,
         assessment_id=body.assessment_id,
         created_by=current_user.id,
+        expected_benefit=body.expected_benefit,
+        expected_risk=body.expected_risk,
+        expected_roi=body.expected_roi,
+        implementation_complexity=body.implementation_complexity,
     )
     saved = await repo.save(recommendation)
     if current_user.organization_id:
@@ -204,6 +208,10 @@ async def update_recommendation_action(
                 actor_email=current_user.email,
             )
         )
+
+    for field in ("expected_benefit", "expected_risk", "expected_roi", "implementation_complexity"):
+        if field in changed:
+            setattr(existing, field, getattr(body, field))
 
     if "assigned_to_id" in changed and body.assigned_to_id is not None:
         existing.assigned_to_id = body.assigned_to_id

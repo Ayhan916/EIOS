@@ -28,3 +28,7 @@ class Recommendation(BaseEntity):
     approved_by: str | None = None
     action_status: ActionStatus = field(default=ActionStatus.OPEN)
     assigned_to_id: str | None = None
+    expected_benefit: str | None = None
+    expected_risk: str | None = None
+    expected_roi: str | None = None
+    implementation_complexity: str | None = None

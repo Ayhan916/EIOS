@@ -25,6 +25,10 @@ class RecommendationModel(BaseModel):
     approved_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     action_status: Mapped[str] = mapped_column(String(20), nullable=False, default="open")
     assigned_to_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    expected_benefit: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expected_risk: Mapped[str | None] = mapped_column(Text, nullable=True)
+    expected_roi: Mapped[str | None] = mapped_column(Text, nullable=True)
+    implementation_complexity: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     risks: Mapped[list[RiskModel]] = relationship(
         secondary=recommendation_risk, back_populates="recommendations"
