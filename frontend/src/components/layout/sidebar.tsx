@@ -22,6 +22,7 @@ import {
   Leaf,
   LogOut,
   Network,
+  PlayCircle,
   Radio,
   Shield,
   ShieldCheck,
@@ -43,10 +44,15 @@ import {
   Plug2,
   Puzzle,
   ShieldAlert,
+  MessageCircle,
   Package,
   Link2,
   Moon,
   Sun,
+  Wind,
+  BookOpen,
+  Fingerprint,
+  ScrollText,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -75,115 +81,128 @@ interface NavSection {
 }
 
 const NAV_SECTIONS: NavSection[] = [
+  // ── 1. Lieferketten-Management ───────────────────────────────────────────────
   {
     id: "supply-chain",
     labelKey: "nav.supplyChain",
     icon: Link2,
     color: "text-blue-400",
     items: [
-      { labelKey: "nav.suppliers", href: "/suppliers", icon: Briefcase },
-      { labelKey: "nav.materials", href: "/materials", icon: FlaskConical },
-      { labelKey: "nav.products", href: "/products", icon: Package },
-      { labelKey: "nav.dpp", href: "/dpp", icon: ClipboardCheck },
-      { labelKey: "nav.scCompliance", href: "/compliance/supply-chain", icon: ShieldCheck },
-      { labelKey: "nav.scope3Carbon", href: "/scope3", icon: Leaf },
-      { labelKey: "nav.erp", href: "/erp", icon: Plug2 },
-      { labelKey: "nav.eventBus", href: "/supply-chain/events", icon: Zap },
+      { labelKey: "nav.suppliers",       href: "/suppliers",         icon: Briefcase },
+      { labelKey: "nav.dueDiligence",    href: "/due-diligence",     icon: Shield },
+      { labelKey: "nav.supplierPortal",  href: "/suppliers/portal",  icon: Users },
+      { labelKey: "nav.supplierNetwork", href: "/network",            icon: Network },
+      { labelKey: "nav.dpp",             href: "/dpp",                icon: ClipboardCheck },
+      { labelKey: "nav.scope3Carbon",    href: "/scope3",             icon: Leaf },
     ],
   },
+  // ── 2. Risiko & Bewertung ────────────────────────────────────────────────────
   {
     id: "risk",
     labelKey: "nav.risk",
     icon: AlertTriangle,
     color: "text-amber-400",
     items: [
-      { labelKey: "nav.assessments", href: "/assessments", icon: FileText },
-      { labelKey: "nav.findings", href: "/findings", icon: AlertTriangle },
-      { labelKey: "nav.risks", href: "/risks", icon: ShieldAlert },
-      { labelKey: "nav.sectorRisk", href: "/sector-risk", icon: Layers },
-      { labelKey: "nav.recommendations", href: "/recommendations", icon: CheckSquare },
-      { labelKey: "nav.evidence", href: "/evidence", icon: Upload },
-      { labelKey: "nav.surveillance", href: "/surveillance", icon: Radio },
-      { labelKey: "nav.supplierNetwork", href: "/network", icon: Network },
+      { labelKey: "nav.assessments",         href: "/assessments",          icon: FileText },
+      { labelKey: "nav.assessmentSchedules", href: "/assessments/schedules", icon: CalendarDays },
+      { labelKey: "nav.findings",            href: "/findings",             icon: AlertTriangle },
+      { labelKey: "nav.risks",               href: "/risks",                icon: ShieldAlert },
+      { labelKey: "nav.recommendations",     href: "/recommendations",      icon: CheckSquare },
+      { labelKey: "nav.evidence",            href: "/evidence",             icon: Upload },
     ],
   },
+  // ── 3. Überwachung & Intelligence ────────────────────────────────────────────
+  {
+    id: "monitoring",
+    labelKey: "nav.monitoring",
+    icon: Radio,
+    color: "text-cyan-400",
+    items: [
+      { labelKey: "nav.intelligence", href: "/intelligence", icon: Cpu },
+      { labelKey: "nav.sectorRisk",   href: "/sector-risk",  icon: Layers },
+    ],
+  },
+  // ── 4. Compliance & Regulatorik ──────────────────────────────────────────────
+  {
+    id: "compliance",
+    labelKey: "nav.complianceSection",
+    icon: Shield,
+    color: "text-rose-400",
+    items: [
+      { labelKey: "nav.complianceCenter", href: "/compliance/center",      icon: Shield },
+      { labelKey: "nav.scCompliance",     href: "/compliance/supply-chain", icon: ShieldCheck },
+      { labelKey: "nav.regulatoryHub",    href: "/regulatory",              icon: ClipboardList },
+    ],
+  },
+  // ── 5. Nachhaltigkeit ────────────────────────────────────────────────────────
   {
     id: "sustainability",
     labelKey: "nav.sustainability",
     icon: Leaf,
     color: "text-emerald-400",
     items: [
-      { labelKey: "nav.sustainabilityKpis", href: "/sustainability/kpis", icon: BarChart3 },
-      { labelKey: "nav.sustainabilityObjectives", href: "/sustainability/objectives", icon: Target },
-      { labelKey: "nav.sustainabilityTargets", href: "/sustainability/targets", icon: Target },
-      { labelKey: "nav.scienceBasedTargets", href: "/sustainability/science-based-targets", icon: FlaskConical },
-      { labelKey: "nav.sustainabilityCarbon", href: "/sustainability/carbon", icon: Zap },
-      { labelKey: "nav.sustainabilityInitiatives", href: "/sustainability/initiatives", icon: TrendingDown },
-      { labelKey: "nav.sustainabilityRoadmaps", href: "/sustainability/roadmaps", icon: Globe },
-      { labelKey: "nav.sustainabilityRollups", href: "/sustainability/rollups", icon: Building2 },
-      { labelKey: "nav.sustainabilityReports", href: "/sustainability/reports", icon: FileText },
+      { labelKey: "nav.sustainabilityKpis",        href: "/sustainability/kpis",                icon: BarChart3 },
+      { labelKey: "nav.sustainabilityObjectives",  href: "/sustainability/objectives",          icon: Target },
+      { labelKey: "nav.scienceBasedTargets",       href: "/sustainability/science-based-targets", icon: FlaskConical },
+      { labelKey: "nav.ghgCalculator",             href: "/sustainability/ghg",                 icon: Wind },
+      { labelKey: "nav.sustainabilityInitiatives", href: "/sustainability/initiatives",         icon: TrendingDown },
     ],
   },
+  // ── 6. Finanzen & Strategie ──────────────────────────────────────────────────
+  {
+    id: "finance-strategy",
+    labelKey: "nav.financeStrategy",
+    icon: LineChart,
+    color: "text-violet-400",
+    items: [
+      { labelKey: "nav.carbonEconomics", href: "/financial-esg/carbon-economics", icon: Zap },
+      { labelKey: "nav.taxonomy",        href: "/financial-esg/taxonomy",          icon: Leaf },
+      { labelKey: "nav.digitalTwin",     href: "/strategy/digital-twin",           icon: Cpu },
+      { labelKey: "nav.scenarios",       href: "/strategy/scenarios",              icon: GitBranch },
+      { labelKey: "nav.forecasts",       href: "/strategy/forecasts",              icon: BarChart3 },
+    ],
+  },
+  // ── 7. ESG Operating System ──────────────────────────────────────────────────
   {
     id: "esg-os",
     labelKey: "nav.esgOs",
     icon: Layers,
     color: "text-purple-400",
     items: [
-      { labelKey: "nav.calendar", href: "/operating-system/calendar", icon: CalendarDays },
-      { labelKey: "nav.programs", href: "/operating-system/programs", icon: Layers },
-      { labelKey: "nav.controls", href: "/operating-system/controls", icon: Shield },
-      { labelKey: "nav.tests", href: "/operating-system/tests", icon: ClipboardCheck },
-      { labelKey: "nav.complianceOps", href: "/operating-system/compliance-operations", icon: CheckSquare },
-      { labelKey: "nav.accountability", href: "/operating-system/accountability", icon: Users },
+      { labelKey: "nav.processOverview", href: "/process",                       icon: Network },
+      { labelKey: "nav.osDashboard",   href: "/operating-system/dashboard",   icon: LayoutDashboard },
+      { labelKey: "nav.programs",      href: "/operating-system/programs",     icon: Layers },
+      { labelKey: "nav.calendar",      href: "/operating-system/calendar",     icon: CalendarDays },
+      { labelKey: "nav.controls",      href: "/operating-system/controls",     icon: Shield },
+      { labelKey: "nav.okrs",          href: "/operating-system/okrs",         icon: Target },
     ],
   },
+  // ── 8. Reporting & Disclosure ────────────────────────────────────────────────
   {
-    id: "financial-esg",
-    labelKey: "nav.financialEsg",
-    icon: DollarSign,
-    color: "text-green-400",
+    id: "reporting",
+    labelKey: "nav.reporting",
+    icon: FileText,
+    color: "text-teal-400",
     items: [
-      { labelKey: "nav.carbonEconomics", href: "/financial-esg/carbon-economics", icon: Zap },
-      { labelKey: "nav.valueCreation", href: "/financial-esg/value-creation", icon: TrendingUp },
-      { labelKey: "nav.sustainableFinance", href: "/financial-esg/sustainable-finance", icon: BarChart3 },
-      { labelKey: "nav.taxonomy", href: "/financial-esg/taxonomy", icon: Leaf },
-      { labelKey: "nav.greenRevenue", href: "/financial-esg/green-revenue", icon: Globe },
-      { labelKey: "nav.capitalMarkets", href: "/financial-esg/capital-markets", icon: Building2 },
-      { labelKey: "nav.financialReports", href: "/financial-esg/reports", icon: FileText },
+      { labelKey: "nav.reports",    href: "/reports",    icon: FileText },
+      { labelKey: "nav.disclosure", href: "/disclosure", icon: ScrollText },
     ],
   },
-  {
-    id: "strategy",
-    labelKey: "nav.strategy",
-    icon: LineChart,
-    color: "text-violet-400",
-    items: [
-      { labelKey: "nav.digitalTwin", href: "/strategy/digital-twin", icon: Cpu },
-      { labelKey: "nav.scenarios", href: "/strategy/scenarios", icon: GitBranch },
-      { labelKey: "nav.pathways", href: "/strategy/pathways", icon: TrendingDown },
-      { labelKey: "nav.forecasts", href: "/strategy/forecasts", icon: BarChart3 },
-      { labelKey: "nav.stressTests", href: "/strategy/stress-tests", icon: Zap },
-      { labelKey: "nav.boardSimulation", href: "/strategy/board-simulation", icon: Users },
-      { labelKey: "nav.strategyTemplates", href: "/strategy/templates", icon: Puzzle },
-      { labelKey: "nav.strategyReports", href: "/strategy/reports", icon: FileText },
-    ],
-  },
+  // ── 9. AI & Plattform ────────────────────────────────────────────────────────
   {
     id: "ai-governance",
     labelKey: "nav.aiGovernance",
     icon: Bot,
     color: "text-sky-400",
     items: [
-      { labelKey: "nav.aiModels", href: "/ai-governance/models", icon: Layers },
-      { labelKey: "nav.aiMonitoring", href: "/ai-governance/monitoring", icon: Radio },
-      { labelKey: "nav.aiUseCases", href: "/ai-governance/use-cases", icon: ClipboardList },
-      { labelKey: "nav.aiControls", href: "/ai-governance/controls", icon: Shield },
-      { labelKey: "nav.aiPrompts", href: "/ai-governance/prompts", icon: FileCode },
-      { labelKey: "nav.aiIncidents", href: "/ai-governance/incidents", icon: AlertTriangle },
-      { labelKey: "nav.aiReports", href: "/ai-governance/reports", icon: FileText },
+      { labelKey: "nav.copilot",         href: "/copilot",                  icon: MessageCircle },
+      { labelKey: "nav.knowledgeBase",   href: "/knowledge",                icon: BookOpen },
+      { labelKey: "nav.aiModels",        href: "/ai-governance/models",     icon: Layers },
+      { labelKey: "nav.aiMonitoring",    href: "/ai-governance/monitoring", icon: Radio },
+      { labelKey: "nav.workflowMonitor", href: "/workflows",                icon: PlayCircle },
     ],
   },
+  // ── 10. Executive ────────────────────────────────────────────────────────────
   {
     id: "executive",
     labelKey: "nav.executive",
@@ -191,11 +210,13 @@ const NAV_SECTIONS: NavSection[] = [
     color: "text-blue-300",
     roleGuard: ["executive", "admin"],
     items: [
-      { labelKey: "nav.executiveSummary", href: "/executive", icon: BarChart3 },
-      { labelKey: "nav.boardSummary", href: "/executive/reports", icon: FileText },
-      { labelKey: "nav.reports", href: "/reports", icon: FileText },
+      { labelKey: "nav.executiveSummary",   href: "/executive",                icon: BarChart3 },
+      { labelKey: "nav.boardSummary",        href: "/executive/board-summary",  icon: ScrollText },
+      { labelKey: "nav.executiveDecisions",  href: "/executive/decisions",      icon: CheckSquare },
+      { labelKey: "nav.commercial",          href: "/commercial",               icon: TrendingUp },
     ],
   },
+  // ── 11. Administration ───────────────────────────────────────────────────────
   {
     id: "enterprise",
     labelKey: "nav.enterprise",
@@ -203,23 +224,15 @@ const NAV_SECTIONS: NavSection[] = [
     color: "text-slate-300",
     roleGuard: ["admin", "enterprise_admin", "bu_admin", "regional_admin"],
     items: [
-      { labelKey: "nav.businessUnits", href: "/enterprise/business-units", icon: Building2 },
-      { labelKey: "nav.regions", href: "/enterprise/regions", icon: Globe },
-      { labelKey: "nav.enterprisePolicies", href: "/enterprise/policies", icon: ClipboardList },
-      { labelKey: "nav.enterpriseIdentity", href: "/enterprise/identity", icon: KeyRound },
-      { labelKey: "nav.enterpriseAudit", href: "/enterprise/audit", icon: CheckSquare },
-      { labelKey: "nav.enterpriseNotifications", href: "/enterprise/notifications", icon: Bell },
-    ],
-  },
-  {
-    id: "security",
-    labelKey: "nav.security",
-    icon: Shield,
-    color: "text-rose-400",
-    items: [
-      { labelKey: "nav.auditLog", href: "/auditor", icon: ShieldCheck },
-      { labelKey: "nav.complianceCenter", href: "/compliance/center", icon: Shield },
-      { labelKey: "nav.integrations", href: "/integrations", icon: Puzzle },
+      { labelKey: "nav.businessUnits",           href: "/enterprise/business-units", icon: Building2 },
+      { labelKey: "nav.regions",                 href: "/enterprise/regions",        icon: Globe },
+      { labelKey: "nav.enterprisePolicies",      href: "/enterprise/policies",       icon: ClipboardList },
+      { labelKey: "nav.enterpriseIdentity",      href: "/enterprise/identity",       icon: KeyRound },
+      { labelKey: "nav.enterpriseSso",           href: "/enterprise/sso",            icon: Fingerprint },
+      { labelKey: "nav.enterpriseAudit",         href: "/enterprise/audit",          icon: CheckSquare },
+      { labelKey: "nav.enterpriseNotifications", href: "/enterprise/notifications",  icon: Bell },
+      { labelKey: "nav.auditLog",                href: "/auditor",                   icon: ShieldCheck },
+      { labelKey: "nav.integrations",            href: "/integrations",              icon: Puzzle },
     ],
   },
 ];
@@ -317,7 +330,7 @@ export function Sidebar() {
 
   const [openSections, setOpenSections] = useState<Set<string>>(() => {
     const active = getActiveSectionId();
-    return new Set(active ? [active] : ["supply-chain"]);
+    return new Set(active ? [active] : ["risk"]);
   });
 
   useEffect(() => {
