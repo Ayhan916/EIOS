@@ -37,6 +37,7 @@ from domain.enums import EntityStatus, RiskBand, SupplierStatus
 from domain.supplier_score import SupplierScore
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
+from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.models.risk import RiskModel
@@ -98,6 +99,42 @@ class SegmentationResponse(_BaseModel):
     unscored_count: int
     total_suppliers: int
     total_scored: int
+
+
+# ── GAP-23 Geo-Heatmap schemas ────────────────────────────────────────────────
+
+class GeoSupplierSummary(_BaseModel):
+    supplier_id: str
+    name: str
+    industry: str
+    supplier_tier: str
+    risk_score: float
+    risk_band: str
+    esg_score: float
+    trend: str
+
+
+class GeoCountryEntry(_BaseModel):
+    country: str
+    supplier_count: int
+    avg_risk_score: float
+    avg_esg_score: float
+    worst_band: str         # worst risk_band among suppliers in this country
+    critical_count: int
+    high_count: int
+    improving: int
+    deteriorating: int
+    # External country risk profile (enrichment, best-effort)
+    country_risk_score: float | None
+    country_risk_level: str | None
+    sanctions_status: str | None
+    suppliers: list[GeoSupplierSummary]
+
+
+class GeoHeatmapResponse(_BaseModel):
+    countries: list[GeoCountryEntry]   # sorted by worst_band severity, then avg_risk_score desc
+    total_suppliers: int
+    countries_count: int
 
 logger = structlog.get_logger(__name__)
 
@@ -672,6 +709,103 @@ async def get_supplier_segmentation(
         unscored_count=unscored if unscored > 0 else 0,
         total_suppliers=total_count,
         total_scored=len(latest_scores),
+    )
+
+
+_BAND_SEVERITY = {"Critical": 4, "High": 3, "Moderate": 2, "Low": 1, "": 0}
+
+
+@router.get("/analytics/geo-heatmap", response_model=GeoHeatmapResponse)
+async def get_geo_heatmap(
+    current_user: User = Depends(get_current_user),
+    score_repo: SQLSupplierScoreRepository = Depends(get_supplier_score_repo),
+    supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
+    session: AsyncSession = Depends(get_db),
+) -> GeoHeatmapResponse:
+    """Geographic portfolio heatmap — aggregates supplier risk by country.
+
+    Deterministic, org-scoped. Enriches with CountryRiskProfile where the
+    supplier.country string matches a country_code (best-effort, case-insensitive).
+    """
+    if not current_user.organization_id:
+        return GeoHeatmapResponse(countries=[], total_suppliers=0, countries_count=0)
+
+    all_suppliers, total_count = await supplier_repo.list_org_paged(
+        organization_id=current_user.organization_id, page=1, page_size=10_000,
+    )
+    supplier_map = {s.id: s for s in all_suppliers}
+
+    latest_scores = await score_repo.get_latest_for_org(current_user.organization_id)
+    scored_by_sid = {s.supplier_id: s for s in latest_scores}
+
+    # Group by country
+    from collections import defaultdict
+    by_country: dict[str, list[GeoSupplierSummary]] = defaultdict(list)
+    for sup in all_suppliers:
+        country = sup.country.strip() or "Unknown"
+        score = scored_by_sid.get(sup.id)
+        if score is None:
+            continue
+        tier_val = sup.supplier_tier.value if hasattr(sup.supplier_tier, "value") else str(sup.supplier_tier)
+        by_country[country].append(GeoSupplierSummary(
+            supplier_id=sup.id,
+            name=sup.name,
+            industry=sup.industry,
+            supplier_tier=tier_val,
+            risk_score=round(score.risk_score, 1),
+            risk_band=score.risk_band.value,
+            esg_score=round(score.esg_score, 1),
+            trend=score.trend.value,
+        ))
+
+    # Fetch all CountryRiskProfiles in one query (platform-global, no org filter)
+    stmt = select(CountryRiskProfileModel)
+    crp_rows = (await session.execute(stmt)).scalars().all()
+    # Build lookup: uppercase country_code → latest profile (by id desc as proxy)
+    crp_map: dict[str, CountryRiskProfileModel] = {}
+    for row in crp_rows:
+        key = row.country_code.upper()
+        if key not in crp_map:
+            crp_map[key] = row
+
+    entries: list[GeoCountryEntry] = []
+    for country, sups in by_country.items():
+        bands = [s.risk_band for s in sups]
+        worst = max(bands, key=lambda b: _BAND_SEVERITY.get(b, 0))
+        avg_risk = round(sum(s.risk_score for s in sups) / len(sups), 1)
+        avg_esg  = round(sum(s.esg_score  for s in sups) / len(sups), 1)
+        critical = sum(1 for s in sups if s.risk_band == "Critical")
+        high     = sum(1 for s in sups if s.risk_band == "High")
+        improving    = sum(1 for s in sups if s.trend == "Improving")
+        deteriorating = sum(1 for s in sups if s.trend == "Deteriorating")
+
+        # Enrich: try country.upper() as ISO code lookup
+        crp = crp_map.get(country.upper())
+        entries.append(GeoCountryEntry(
+            country=country,
+            supplier_count=len(sups),
+            avg_risk_score=avg_risk,
+            avg_esg_score=avg_esg,
+            worst_band=worst,
+            critical_count=critical,
+            high_count=high,
+            improving=improving,
+            deteriorating=deteriorating,
+            country_risk_score=round(crp.overall_risk_score, 1) if crp else None,
+            country_risk_level=crp.risk_level if crp else None,
+            sanctions_status=crp.sanctions_status if crp else None,
+            suppliers=sorted(sups, key=lambda s: s.risk_score, reverse=True),
+        ))
+
+    # Sort: worst band first, then avg_risk_score descending
+    entries.sort(
+        key=lambda e: (_BAND_SEVERITY.get(e.worst_band, 0) * -1, -e.avg_risk_score)
+    )
+
+    return GeoHeatmapResponse(
+        countries=entries,
+        total_suppliers=sum(e.supplier_count for e in entries),
+        countries_count=len(entries),
     )
 
 

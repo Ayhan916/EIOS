@@ -95,6 +95,7 @@ const de = {
   "nav.supplyChain": "Lieferkette",
   "nav.suppliers": "Lieferanten",
   "nav.supplierSegmentation": "Risiko-Tiering",
+  "nav.geoHeatmap": "Geo-Heatmap",
   "nav.materials": "Materialien",
   "nav.products": "Produkte",
   "nav.dpp": "Produktpässe",
