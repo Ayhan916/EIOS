@@ -53,6 +53,7 @@ import {
   BookOpen,
   Fingerprint,
   ScrollText,
+  Megaphone,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -133,6 +134,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.regulatoryHub",    href: "/regulatory",               icon: ClipboardList },
       { labelKey: "nav.taxonomy",         href: "/financial-esg/taxonomy",   icon: BookOpen },
       { labelKey: "nav.scCompliance",     href: "/compliance/supply-chain",  icon: ShieldCheck },
+      { labelKey: "nav.grievances",       href: "/compliance/grievances",    icon: Megaphone },
     ],
   },
   // ── 5. Nachhaltigkeit ────────────────────────────────────────────────────────

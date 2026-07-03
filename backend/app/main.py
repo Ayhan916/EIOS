@@ -93,6 +93,7 @@ from interfaces.api.routers import (
     news_router,
     automations_router,
     pipeline_router,
+    grievance_router,
 )
 from shared.config import settings
 
@@ -472,3 +473,4 @@ app.include_router(sector_risk_register_router, prefix=API_V1)
 app.include_router(news_router, prefix=API_V1)
 app.include_router(automations_router, prefix=API_V1)
 app.include_router(pipeline_router, prefix=API_V1)
+app.include_router(grievance_router, prefix=API_V1)

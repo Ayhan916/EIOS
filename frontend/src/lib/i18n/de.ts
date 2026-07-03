@@ -98,6 +98,7 @@ const de = {
   "nav.products": "Produkte",
   "nav.dpp": "Produktpässe",
   "nav.scCompliance": "SC Compliance",
+  "nav.grievances": "Beschwerdemechanismus",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Konnektoren",
   "nav.eventBus": "Event Bus",

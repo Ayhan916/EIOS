@@ -14,6 +14,8 @@ from .base_entity import BaseEntity
 from .enums import (
     EvidenceRequestStatus,
     EvidenceSubmissionStatus,
+    GrievanceCategory,
+    GrievanceStatus,
     QuestionnaireStatus,
     QuestionType,
     RemediationStatus,
@@ -210,3 +212,47 @@ class SupplierActivityEvent:
     entity_id: str = ""
     metadata_json: str = "{}"
     created_at: datetime | None = None
+
+
+@dataclass(slots=True, kw_only=True)
+class GrievanceReport(BaseEntity):
+    """LkSG §8 / CSDDD Art. 14 — confidential grievance report.
+
+    A GrievanceReport is submitted by an external party (worker, community
+    member, trade union) via the public submit endpoint. The submitter's
+    identity is protected: submitted_by_email is stored but NEVER returned
+    in API responses visible to internal users (only used for blind reply).
+
+    The anonymized_reference_code allows the reporter to track status
+    without disclosing their identity to the processing team.
+    """
+
+    organization_id: str
+    category: str = GrievanceCategory.OTHER.value
+    grievance_status: str = GrievanceStatus.RECEIVED.value
+
+    title: str = ""
+    description: str = ""
+
+    # Reporter contact — confidential, never exposed via API
+    submitted_by_email: str | None = None
+    submitted_by_name: str | None = None
+    is_anonymous: bool = True
+
+    # Public reference code for status lookups (shown to reporter at submission)
+    anonymized_reference_code: str = ""
+
+    # Supplier this grievance relates to (optional — reporter may not know)
+    related_supplier_id: str | None = None
+
+    # Internal processing
+    assigned_to_user_id: str | None = None
+    reviewer_notes: str | None = None
+    resolution_notes: str | None = None
+    resolved_at: datetime | None = None
+
+    # Regulatory mapping
+    regulation_refs: str = "LkSG §8; CSDDD Art. 14"
+
+    # Auto-created finding reference (set when status → investigating)
+    linked_finding_id: str | None = None

@@ -362,3 +362,49 @@ class SupplierPasswordResetTokenModel(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class GrievanceReportModel(Base):
+    """LkSG §8 / CSDDD Art. 14 — confidential grievance report table."""
+
+    __tablename__ = "grievance_reports"
+    __table_args__ = (
+        Index("ix_grievance_reports_organization_id", "organization_id"),
+        Index("ix_grievance_reports_status", "grievance_status"),
+        Index("ix_grievance_reports_reference_code", "anonymized_reference_code"),
+        Index("ix_grievance_reports_related_supplier", "related_supplier_id"),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    grievance_status: Mapped[str] = mapped_column(String(30), nullable=False, default="received")
+
+    title: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+    # Confidential reporter data — NEVER returned via API
+    submitted_by_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    submitted_by_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    is_anonymous: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    anonymized_reference_code: Mapped[str] = mapped_column(String(20), nullable=False, default="")
+
+    related_supplier_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    assigned_to_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    reviewer_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    regulation_refs: Mapped[str] = mapped_column(String(255), nullable=False, default="LkSG §8; CSDDD Art. 14")
+    linked_finding_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    # BaseEntity fields
+    status: Mapped[str] = mapped_column(String(30), nullable=False, default="active")
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    owner: Mapped[str] = mapped_column(String(36), nullable=False, default="")
+    created_by: Mapped[str] = mapped_column(String(36), nullable=False, default="")
+    updated_by: Mapped[str] = mapped_column(String(36), nullable=False, default="")

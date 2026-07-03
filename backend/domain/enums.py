@@ -558,3 +558,25 @@ class ScenarioSuggestionStatus(str, Enum):
     PENDING = "pending"
     ACTIVE = "active"
     DISMISSED = "dismissed"
+
+
+class GrievanceStatus(str, Enum):
+    """Lifecycle of a GrievanceReport — LkSG §8, CSDDD Art. 14."""
+    RECEIVED = "received"
+    UNDER_REVIEW = "under_review"
+    INVESTIGATING = "investigating"
+    RESOLVED = "resolved"
+    REJECTED = "rejected"
+
+
+class GrievanceCategory(str, Enum):
+    """Category of a grievance report — aligned to LkSG risk areas."""
+    LABOUR_RIGHTS = "labour_rights"
+    CHILD_LABOUR = "child_labour"
+    FORCED_LABOUR = "forced_labour"
+    HEALTH_AND_SAFETY = "health_and_safety"
+    ENVIRONMENTAL = "environmental"
+    DISCRIMINATION = "discrimination"
+    CORRUPTION = "corruption"
+    HUMAN_RIGHTS = "human_rights"
+    OTHER = "other"
