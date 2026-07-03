@@ -48,6 +48,7 @@ import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
 import { ScoreBreakdownPanel } from "@/components/assessments/score-breakdown-panel";
+import { UncertaintyBadge } from "@/components/ui/uncertainty-badge";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
 import type { ActionStatus, CommentResponse } from "@/types/api";
@@ -675,13 +676,14 @@ export default function AssessmentDetailPage({
           </div>
           <div className="flex-shrink-0 flex items-start gap-3">
             {qualityPct != null && (
-              <div className="text-right">
+              <div className="text-right space-y-1">
                 <p className="text-xs text-muted-foreground">{t("assessments.qualityScore")}</p>
                 <p className={`text-2xl font-bold ${
                   qualityPct >= 70 ? "text-emerald-600" : qualityPct >= 40 ? "text-amber-600" : "text-red-600"
                 }`}>
                   {qualityPct}%
                 </p>
+                <UncertaintyBadge assessmentId={id} size="xs" />
               </div>
             )}
             <Button variant="outline" size="sm" onClick={() => window.print()} className="gap-1.5 print:hidden">
@@ -847,7 +849,7 @@ export default function AssessmentDetailPage({
 
         {/* ── OVERVIEW ── */}
         <TabsContent value="overview" className="mt-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-4">
             <Card className="flex flex-col">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -882,6 +884,17 @@ export default function AssessmentDetailPage({
               <CardContent>
                 <p className="text-3xl font-bold">{recs?.length ?? "—"}</p>
                 <p className="text-xs text-muted-foreground mt-1">{t("assessments.remediationRecs")}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <CardTitle className="text-sm font-medium">Datenunsicherheit</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-1">
+                <UncertaintyBadge assessmentId={id} showReason size="xs" />
               </CardContent>
             </Card>
           </div>

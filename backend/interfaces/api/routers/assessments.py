@@ -536,6 +536,62 @@ async def get_score_breakdown(
     )
 
 
+class UncertaintyResponse(BaseModel):
+    assessment_id: str
+    uncertainty: str          # Low | Medium | High
+    uncertainty_reason: str
+    data_completeness: int    # 0–100
+
+
+@router.get("/{assessment_id}/uncertainty", response_model=UncertaintyResponse)
+async def get_assessment_uncertainty(
+    assessment_id: str,
+    current_user: User = Depends(get_current_user),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    finding_repo: SQLFindingRepository = Depends(get_finding_repo),
+    risk_repo: SQLRiskRepository = Depends(get_risk_repo),
+    rec_repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
+) -> UncertaintyResponse:
+    """Lightweight endpoint returning only the uncertainty signal for an assessment."""
+    assessment = await assessment_repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    findings = await finding_repo.list_by_assessment(assessment_id)
+    risks = await risk_repo.list_by_assessment(assessment_id)
+    recs = await rec_repo.list_by_assessment(assessment_id)
+
+    completeness = 0
+    if findings:
+        completeness += 30
+    if risks:
+        completeness += 25
+    if recs:
+        completeness += 20
+    if assessment.quality_score is not None:
+        completeness += 15
+    if assessment.methodology:
+        completeness += 10
+
+    if completeness >= 75:
+        uncertainty = "Low"
+        reason = "Solide Datenbasis: Findings, Risks und Empfehlungen vorhanden."
+    elif completeness >= 40:
+        uncertainty = "Medium"
+        reason = "Partielle Datenbasis — nicht alle Bewertungsdimensionen vollständig erfasst."
+    else:
+        uncertainty = "High"
+        reason = "Wenige Daten erfasst — Score basiert auf unvollständiger Evidenz."
+
+    return UncertaintyResponse(
+        assessment_id=assessment_id,
+        uncertainty=uncertainty,
+        uncertainty_reason=reason,
+        data_completeness=completeness,
+    )
+
+
 @router.patch(
     "/{assessment_id}/approve",
     response_model=AssessmentResponse,

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { UncertaintyBadge } from "@/components/ui/uncertainty-badge";
 
 const STATUS_OPTIONS = ["", "pending", "reviewed", "active", "archived"];
 
@@ -237,7 +238,10 @@ export default function AssessmentsPage() {
                           )}
                         </td>
                         <td className="py-3 pr-4">
-                          {qualityBadge(a.quality_score)}
+                          <div className="space-y-1">
+                            {qualityBadge(a.quality_score)}
+                            <UncertaintyBadge assessmentId={a.id} size="xs" />
+                          </div>
                         </td>
                         <td className="py-3 text-muted-foreground whitespace-nowrap">
                           {formatDateTime(a.created_at)}
