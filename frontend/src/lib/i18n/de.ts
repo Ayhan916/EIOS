@@ -2816,6 +2816,14 @@ const de = {
   "schedules.dueIn": "Fällig in {n} Tagen",
   "schedules.daysAgo": "Vor {n} Tagen",
   "schedules.never": "Nie ausgelöst",
+  "readiness.actionRequired": "Aktion erforderlich",
+  "readiness.incomplete": "Informationen unvollständig",
+  "readiness.suffix": "— damit dieser Schritt vollständig ist:",
+  "readiness.whatsMissing": "Was fehlt?",
+  "readiness.score": "Vollständigkeit",
+  "readiness.overallScore": "Pipeline-Vollständigkeit",
+  "readiness.upload": "Bitte hochladen:",
+  "readiness.data": "Fehlende Daten:",
 } as const;
 
 export default de;

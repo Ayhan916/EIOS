@@ -61,6 +61,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/components/theme-provider";
 import { listNotifications } from "@/lib/api/notifications";
 import { useLanguage, type TranslationKey } from "@/lib/i18n/context";
+import { useReadiness } from "@/hooks/use-readiness";
 
 // ─── Nav section definitions ──────────────────────────────────────────────────
 
@@ -237,6 +238,15 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+// ─── Readiness: which pipeline steps belong to each sidebar section ───────────
+
+const SECTION_STEPS: Record<string, string[]> = {
+  "supply-chain": ["onboard"],
+  "risk":         ["plan", "assess", "findings", "risks", "recommendations"],
+  "esg-os":       ["remediation", "verification"],
+  "reporting":    ["reporting"],
+};
+
 // ─── Collapsible section component ───────────────────────────────────────────
 
 function SectionBlock({
@@ -246,6 +256,7 @@ function SectionBlock({
   isActive,
   onNav,
   t,
+  warningLevel,
 }: {
   section: NavSection;
   isOpen: boolean;
@@ -253,6 +264,7 @@ function SectionBlock({
   isActive: (href: string) => boolean;
   onNav: (href: string) => void;
   t: (key: TranslationKey) => string;
+  warningLevel: "error" | "warning" | null;
 }) {
   const SectionIcon = section.icon;
   const hasActiveChild = section.items.some((i) => isActive(i.href));
@@ -270,6 +282,12 @@ function SectionBlock({
       >
         <SectionIcon className={cn("h-3.5 w-3.5 flex-shrink-0", section.color)} />
         <span className="flex-1 text-left">{t(section.labelKey)}</span>
+        {warningLevel && (
+          <span className={cn(
+            "h-2 w-2 rounded-full shrink-0",
+            warningLevel === "error" ? "bg-red-500" : "bg-amber-400"
+          )} title={warningLevel === "error" ? "Aktion erforderlich" : "Daten unvollständig"} />
+        )}
         {isOpen ? (
           <ChevronDown className="h-3 w-3 text-slate-600" />
         ) : (
@@ -372,6 +390,16 @@ export function Sidebar() {
   const unreadCount =
     notifData?.items.filter((n: { is_read: boolean }) => !n.is_read).length ?? 0;
 
+  const { data: readinessData } = useReadiness();
+  function getSectionWarning(sectionId: string): "error" | "warning" | null {
+    const steps = SECTION_STEPS[sectionId];
+    if (!steps || !readinessData) return null;
+    const relevant = readinessData.steps.filter((s) => steps.includes(s.key));
+    if (relevant.some((s) => s.status === "error")) return "error";
+    if (relevant.some((s) => s.status === "warning")) return "warning";
+    return null;
+  }
+
   const visibleSections = NAV_SECTIONS.filter((s) => {
     if (!s.roleGuard) return true;
     return s.roleGuard.includes(user?.role ?? "");
@@ -455,6 +483,7 @@ export function Sidebar() {
               isActive={isActive}
               onNav={handleNav}
               t={t}
+              warningLevel={getSectionWarning(section.id)}
             />
           ))}
         </div>

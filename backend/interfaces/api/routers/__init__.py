@@ -59,6 +59,8 @@ from .supply_chain_compliance import router as supply_chain_compliance_router
 from .scope3 import router as scope3_router
 from .news import router as news_router
 from .sector_risk_register import router as sector_risk_register_router
+from .automations import router as automations_router
+from .pipeline import router as pipeline_router
 
 __all__ = [
     "agents_router",
@@ -124,4 +126,6 @@ __all__ = [
     "scope3_router",
     "news_router",
     "sector_risk_register_router",
+    "automations_router",
+    "pipeline_router",
 ]

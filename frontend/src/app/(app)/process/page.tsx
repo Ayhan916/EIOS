@@ -8,6 +8,7 @@ import {
   Building2,
   CheckCircle2,
   ChevronDown,
+  ChevronUp,
   ClipboardList,
   FileCheck,
   FileText,
@@ -15,13 +16,17 @@ import {
   Radio,
   Search,
   Shield,
+  Upload,
   Wrench,
 } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import apiClient from "@/lib/api/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useLanguage } from "@/lib/i18n/context";
+import { useReadiness } from "@/hooks/use-readiness";
+import type { StepReadiness } from "@/lib/api/pipeline";
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -81,24 +86,43 @@ const HUE_CLASSES: Record<string, { badge: string; icon: string; border: string;
 
 // ── Step card ─────────────────────────────────────────────────────────────────
 
-function StepCard({ step, index, count, isLoading }: {
-  step: StepDef; index: number; count: number; isLoading: boolean;
+function StepCard({ step, index, count, isLoading, readiness }: {
+  step: StepDef;
+  index: number;
+  count: number;
+  isLoading: boolean;
+  readiness: StepReadiness | undefined;
 }) {
   const { t } = useLanguage();
+  const [showMissing, setShowMissing] = useState(false);
   const Icon = step.icon;
   const hue = HUE_CLASSES[step.hue] ?? HUE_CLASSES["blue"];
   const isActive = count > 0;
+  const hasMissing = readiness && readiness.status !== "ok" && readiness.missing.length > 0;
+  const isError = readiness?.status === "error";
+
+  const cardBorder = hasMissing
+    ? (isError ? "border-red-300 dark:border-red-700" : "border-amber-300 dark:border-amber-700")
+    : isActive ? `border ${hue.border}` : "border-border";
 
   return (
-    <Card className={`group relative transition-all duration-200 hover:shadow-md ${isActive ? `border ${hue.border}` : "border-border"}`}>
+    <Card className={`group relative transition-all duration-200 hover:shadow-md ${cardBorder}`}>
       <CardContent className="py-5 space-y-3">
         {/* Step number + icon row */}
         <div className="flex items-start justify-between gap-2">
           <div className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold shrink-0 ${isActive ? hue.badge : "bg-slate-100 text-slate-500"}`}>
             {index + 1}
           </div>
-          <div className={`rounded-lg p-2 ${isActive ? `ring-2 ${hue.ring}` : "bg-slate-50"}`}>
-            <Icon className={`h-4 w-4 ${isActive ? hue.icon : "text-slate-400"}`} />
+          <div className="flex items-center gap-1.5">
+            {hasMissing && (
+              <AlertTriangle className={`h-3.5 w-3.5 ${isError ? "text-red-500" : "text-amber-500"}`} />
+            )}
+            {readiness && readiness.status === "ok" && (
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            )}
+            <div className={`rounded-lg p-2 ${isActive ? `ring-2 ${hue.ring}` : "bg-slate-50"}`}>
+              <Icon className={`h-4 w-4 ${isActive ? hue.icon : "text-slate-400"}`} />
+            </div>
           </div>
         </div>
 
@@ -107,6 +131,28 @@ function StepCard({ step, index, count, isLoading }: {
           <p className="font-semibold text-sm leading-tight">{t(step.labelKey)}</p>
           <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{t(step.descKey)}</p>
         </div>
+
+        {/* Readiness score bar */}
+        {readiness && (
+          <div>
+            <div className="flex items-center justify-between mb-0.5">
+              <span className="text-[10px] text-muted-foreground">{t("readiness.score")}</span>
+              <span className={`text-[10px] font-bold ${
+                readiness.score >= 80 ? "text-emerald-600" :
+                readiness.score >= 50 ? "text-amber-600" : "text-red-600"
+              }`}>{readiness.score}%</span>
+            </div>
+            <div className="h-1 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${
+                  readiness.score >= 80 ? "bg-emerald-500" :
+                  readiness.score >= 50 ? "bg-amber-400" : "bg-red-500"
+                }`}
+                style={{ width: `${readiness.score}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Count + status */}
         <div className="flex items-center justify-between gap-2">
@@ -117,12 +163,45 @@ function StepCard({ step, index, count, isLoading }: {
               : <span className={`text-sm font-bold tabular-nums ${isActive ? "text-foreground" : "text-slate-400"}`}>{count}</span>}
             <span className="text-xs text-muted-foreground">{t("process.openItems")}</span>
           </div>
-          {isActive && (
+          {isActive && !hasMissing && (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 flex items-center gap-0.5">
               <CheckCircle2 className="h-2.5 w-2.5" /> Aktiv
             </span>
           )}
         </div>
+
+        {/* Missing items toggle */}
+        {hasMissing && (
+          <div className={`rounded-md border px-2.5 py-2 text-xs ${
+            isError
+              ? "border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950/30"
+              : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
+          }`}>
+            <button
+              onClick={() => setShowMissing(!showMissing)}
+              className={`flex w-full items-center gap-1.5 font-medium ${isError ? "text-red-700 dark:text-red-300" : "text-amber-700 dark:text-amber-300"}`}
+            >
+              {isError
+                ? <AlertTriangle className="h-3 w-3 shrink-0" />
+                : <AlertTriangle className="h-3 w-3 shrink-0" />
+              }
+              <span className="flex-1 text-left">{t("readiness.whatsMissing")} ({readiness.missing.length})</span>
+              {showMissing ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </button>
+            {showMissing && (
+              <ul className={`mt-1.5 space-y-1 ${isError ? "text-red-600 dark:text-red-400" : "text-amber-700 dark:text-amber-300"}`}>
+                {readiness.missing.map((item, i) => (
+                  <li key={i} className="flex items-start gap-1.5">
+                    {item.type === "upload" ? <Upload className="h-3 w-3 shrink-0 mt-0.5" /> : <ArrowRight className="h-3 w-3 shrink-0 mt-0.5" />}
+                    <Link href={item.href} className="underline underline-offset-2 hover:opacity-80 leading-snug">
+                      {item.label}{item.count > 0 ? ` (${item.count})` : ""}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Link */}
         <Link href={step.href}
@@ -158,6 +237,11 @@ const PHASE_LABELS = ["Eingang & Analyse", "Bewertung & Steuerung", "Aktion & Ab
 
 export default function ProcessPage() {
   const { t } = useLanguage();
+  const { data: readinessData } = useReadiness();
+
+  function getReadiness(key: string): StepReadiness | undefined {
+    return readinessData?.steps.find((s) => s.key === key);
+  }
 
   const results = useQueries({
     queries: STEPS.map((step) => ({
@@ -214,7 +298,17 @@ export default function ProcessPage() {
           <CardContent className="pt-4 pb-3">
             <div className="flex justify-between items-center mb-1.5">
               <p className="text-xs text-muted-foreground">Pipeline-Auslastung</p>
-              <p className="text-xs font-semibold">{completionPct}%</p>
+              <div className="flex items-center gap-3">
+                {readinessData && (
+                  <span className={`text-[10px] font-semibold ${
+                    readinessData.overall_score >= 80 ? "text-emerald-600" :
+                    readinessData.overall_score >= 50 ? "text-amber-600" : "text-red-600"
+                  }`}>
+                    {t("readiness.overallScore")}: {readinessData.overall_score}%
+                  </span>
+                )}
+                <p className="text-xs font-semibold">{completionPct}%</p>
+              </div>
             </div>
             <div className="h-2.5 w-full rounded-full bg-muted overflow-hidden">
               <div
@@ -247,7 +341,7 @@ export default function ProcessPage() {
         {/* Row 1 */}
         {row1.map((step, i) => (
           <div key={step.key} className="relative">
-            <StepCard step={step} index={i} count={counts[i]} isLoading={results[i].isLoading} />
+            <StepCard step={step} index={i} count={counts[i]} isLoading={results[i].isLoading} readiness={getReadiness(step.key)} />
             {i < 2 && (
               <div className="hidden sm:flex absolute -right-2 top-1/2 -translate-y-1/2 z-10 items-center justify-center h-4 w-4 rounded-full bg-border">
                 <ArrowRight className="h-2.5 w-2.5 text-muted-foreground" />
@@ -267,7 +361,7 @@ export default function ProcessPage() {
           const globalIdx = i + 3;
           return (
             <div key={step.key} className="relative">
-              <StepCard step={step} index={globalIdx} count={counts[globalIdx]} isLoading={results[globalIdx].isLoading} />
+              <StepCard step={step} index={globalIdx} count={counts[globalIdx]} isLoading={results[globalIdx].isLoading} readiness={getReadiness(step.key)} />
               {i < 2 && (
                 <div className="hidden sm:flex absolute -right-2 top-1/2 -translate-y-1/2 z-10 items-center justify-center h-4 w-4 rounded-full bg-border">
                   <ArrowRight className="h-2.5 w-2.5 text-muted-foreground" />
@@ -288,7 +382,7 @@ export default function ProcessPage() {
           const globalIdx = i + 6;
           return (
             <div key={step.key} className="relative">
-              <StepCard step={step} index={globalIdx} count={counts[globalIdx]} isLoading={results[globalIdx].isLoading} />
+              <StepCard step={step} index={globalIdx} count={counts[globalIdx]} isLoading={results[globalIdx].isLoading} readiness={getReadiness(step.key)} />
               {i < 2 && (
                 <div className="hidden sm:flex absolute -right-2 top-1/2 -translate-y-1/2 z-10 items-center justify-center h-4 w-4 rounded-full bg-border">
                   <ArrowRight className="h-2.5 w-2.5 text-muted-foreground" />

@@ -22,6 +22,7 @@ import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { ReadinessBanner } from "@/components/layout/readiness-banner";
 
 function authenticatedDownload(url: string, filename: string) {
   const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
@@ -273,6 +274,7 @@ export default function RecommendationsPage() {
 
   return (
     <div className="space-y-6">
+      <ReadinessBanner stepKey="recommendations" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

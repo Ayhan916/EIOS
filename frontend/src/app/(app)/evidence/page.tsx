@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/lib/i18n/context";
+import { ReadinessBanner } from "@/components/layout/readiness-banner";
 import { CheckCircle2, Eye, EyeOff, FileText, FileUp, Link2, Loader2, Upload, X } from "lucide-react";
 import {
   createEvidence,
@@ -319,6 +320,7 @@ export default function EvidencePage() {
 
   return (
     <div className="space-y-6">
+      <ReadinessBanner stepKey="assess" />
       <div>
         <h1 className="text-2xl font-bold">{t("evidence.title")}</h1>
         <p className="mt-1 text-sm text-muted-foreground">

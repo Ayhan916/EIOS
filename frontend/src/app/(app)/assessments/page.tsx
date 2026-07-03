@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarClock, FileText, Plus, Search } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/context";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadinessBanner } from "@/components/layout/readiness-banner";
 import { listAssessments } from "@/lib/api/assessments";
 import apiClient from "@/lib/api/client";
 import { formatDateTime, severityColor } from "@/lib/utils";
@@ -70,6 +71,7 @@ export default function AssessmentsPage() {
 
   return (
     <div className="space-y-6">
+      <ReadinessBanner stepKey="assess" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

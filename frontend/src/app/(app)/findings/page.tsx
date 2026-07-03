@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Download, ExternalLink, Filter, GitBranch, Layers, Loader2, Plus, ShieldAlert, UserCheck, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/context";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadinessBanner } from "@/components/layout/readiness-banner";
 import Link from "next/link";
 import apiClient from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
@@ -502,7 +503,7 @@ function BulkLinkToRiskPanel({
     if (!riskId) return;
     setBusy(true);
     await Promise.all(findings.map((f) =>
-      apiClient.post(`/findings/${f.id}/link-risk`, { risk_id: riskId })
+      apiClient.post(`/findings/${f.id}/risks/${riskId}`)
         .catch(() => {})
     ));
     qc.invalidateQueries({ queryKey: ["org-findings"] });
@@ -697,6 +698,7 @@ export default function FindingsPage() {
 
   return (
     <div className="space-y-6">
+      <ReadinessBanner stepKey="findings" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

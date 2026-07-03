@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadinessBanner } from "@/components/layout/readiness-banner";
 import {
   AlertTriangle,
   ArrowUpCircle,
@@ -528,6 +529,7 @@ export default function RisksPage() {
 
   return (
     <div className="space-y-6">
+      <ReadinessBanner stepKey="risks" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

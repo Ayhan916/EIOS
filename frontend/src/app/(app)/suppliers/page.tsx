@@ -24,6 +24,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { EmptyState } from "@/components/ui/empty-state";
+import { ReadinessBanner } from "@/components/layout/readiness-banner";
 import {
   BarChart,
   Bar,
@@ -90,43 +91,35 @@ function toTitleCase(s: string): string {
   return s.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function getToken() {
-  return typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
-}
-
 async function searchGleif(query: string, options?: { country?: string; legalForm?: string; category?: string }): Promise<GleifCompany[]> {
-  const token = getToken();
-  const params = new URLSearchParams({ q: query });
-  if (options?.country) params.set("country", options.country);
-  if (options?.legalForm) params.set("legal_form", options.legalForm);
-  if (options?.category) params.set("category", options.category);
-  const res = await fetch(
-    `http://localhost:8000/api/v1/suppliers/company-search?${params}`,
-    { headers: { Authorization: token ? `Bearer ${token}` : "" } }
-  );
-  if (!res.ok) return [];
-  return res.json();
+  const params: Record<string, string> = { q: query };
+  if (options?.country) params.country = options.country;
+  if (options?.legalForm) params.legal_form = options.legalForm;
+  if (options?.category) params.category = options.category;
+  try {
+    const res = await apiClient.get("/suppliers/company-search", { params });
+    return res.data;
+  } catch {
+    return [];
+  }
 }
 
 async function fetchCompanyDetail(lei: string): Promise<CompanyDetail | null> {
-  const token = getToken();
-  const res = await fetch(
-    `http://localhost:8000/api/v1/suppliers/company-detail?lei=${encodeURIComponent(lei)}`,
-    { headers: { Authorization: token ? `Bearer ${token}` : "" } }
-  );
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await apiClient.get("/suppliers/company-detail", { params: { lei } });
+    return res.data;
+  } catch {
+    return null;
+  }
 }
 
 async function enrichCompany(lei: string, name: string) {
-  const token = getToken();
-  const params = new URLSearchParams({ lei, name });
-  const res = await fetch(
-    `http://localhost:8000/api/v1/suppliers/company-enrich?${params}`,
-    { headers: { Authorization: token ? `Bearer ${token}` : "" } }
-  );
-  if (!res.ok) return null;
-  return res.json();
+  try {
+    const res = await apiClient.get("/suppliers/company-enrich", { params: { lei, name } });
+    return res.data;
+  } catch {
+    return null;
+  }
 }
 
 interface SupplierScore {
@@ -561,6 +554,7 @@ export default function SuppliersPage() {
 
   return (
     <div className="space-y-6">
+      <ReadinessBanner stepKey="onboard" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
