@@ -99,6 +99,7 @@ const en = {
   "nav.dpp": "Product Passports",
   "nav.scCompliance": "SC Compliance",
   "nav.grievances": "Grievance Mechanism",
+  "nav.prioritization": "Prioritisation",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Connectors",
   "nav.eventBus": "Event Bus",

@@ -54,6 +54,7 @@ import {
   Fingerprint,
   ScrollText,
   Megaphone,
+  ListOrdered,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -135,6 +136,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.taxonomy",         href: "/financial-esg/taxonomy",   icon: BookOpen },
       { labelKey: "nav.scCompliance",     href: "/compliance/supply-chain",  icon: ShieldCheck },
       { labelKey: "nav.grievances",       href: "/compliance/grievances",    icon: Megaphone },
+      { labelKey: "nav.prioritization",   href: "/compliance/prioritization", icon: ListOrdered },
     ],
   },
   // ── 5. Nachhaltigkeit ────────────────────────────────────────────────────────

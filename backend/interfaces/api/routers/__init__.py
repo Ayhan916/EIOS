@@ -62,6 +62,7 @@ from .sector_risk_register import router as sector_risk_register_router
 from .automations import router as automations_router
 from .pipeline import router as pipeline_router
 from .grievance import router as grievance_router
+from .prioritization import router as prioritization_router
 
 __all__ = [
     "agents_router",
@@ -130,4 +131,5 @@ __all__ = [
     "automations_router",
     "pipeline_router",
     "grievance_router",
+    "prioritization_router",
 ]
