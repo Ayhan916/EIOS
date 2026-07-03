@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.due_diligence.csddd_engine import build_csddd_report
 from application.due_diligence.environmental_engine import build_environmental_report
 from application.due_diligence.human_rights_engine import build_human_rights_report
+from application.due_diligence.lksg_statement_engine import build_lksg_statement
 from application.due_diligence.lksgg_engine import build_lksgg_report
 from application.due_diligence.preventive_measures_engine import build_preventive_measures_report
 from application.due_diligence.remediation_engine import build_remediation_report
@@ -230,6 +231,8 @@ async def _gather_org_data(
     org_id: str,
 ) -> dict:
     """Pull all data needed by the DD engines in one pass."""
+    from infrastructure.persistence.models.supplier_portal import GrievanceReportModel
+
     supplier_repo = SQLSupplierRepository(session)
     score_repo = SQLSupplierScoreRepository(session)
     gap_repo = SQLComplianceGapRepository(session)
@@ -250,6 +253,16 @@ async def _gather_org_data(
 
     gaps = await gap_repo.list_for_org(org_id)
 
+    # Grievances (GAP-16 / LkSG §8) — for §10 statement section (f)
+    grievance_result = await session.execute(
+        select(GrievanceReportModel.id, GrievanceReportModel.category, GrievanceReportModel.grievance_status)
+        .where(GrievanceReportModel.organization_id == org_id)
+    )
+    grievances = [
+        {"id": row.id, "category": row.category, "grievance_status": row.grievance_status}
+        for row in grievance_result.all()
+    ]
+
     now = _now()
 
     return {
@@ -261,6 +274,7 @@ async def _gather_org_data(
         "recommendations": recommendations,
         "controls": controls,
         "gaps": gaps,
+        "grievances": grievances,
         "now": now,
     }
 
@@ -489,6 +503,7 @@ async def generate_report(
 
     _FRAMEWORK_MAP = {
         "lksgg_annual": ("LkSG", "2023"),
+        "lksg_statement": ("LkSG", "2023"),
         "csddd": ("CSDDD", "2024/1760"),
         "human_rights": ("UN Guiding Principles", "2011"),
         "environmental": ("ESRS E1-E5 / TCFD", "2024"),
@@ -497,7 +512,22 @@ async def generate_report(
     }
     framework, fw_version = _FRAMEWORK_MAP.get(body.report_type, ("", ""))
 
-    if body.report_type == DueDiligenceReportType.LKSGG_ANNUAL.value:
+    if body.report_type == DueDiligenceReportType.LKSG_STATEMENT.value:
+        report_data = build_lksg_statement(
+            organization_id=org_id,
+            organization_name=getattr(current_user, "organization_name", "") or org_id,
+            reporting_year=body.reporting_year or now.year,
+            suppliers=inputs["suppliers"],
+            supplier_scores=inputs["supplier_scores"],
+            findings=inputs["findings"],
+            risks=inputs["risks"],
+            recommendations=inputs["recommendations"],
+            compliance_gaps=inputs["compliance_gaps"],
+            controls=inputs["controls"],
+            evidence_items=inputs["evidence_items"],
+            grievances=data.get("grievances", []),
+        )
+    elif body.report_type == DueDiligenceReportType.LKSGG_ANNUAL.value:
         report_data = build_lksgg_report(
             organization_id=org_id,
             reporting_year=body.reporting_year or now.year,
@@ -627,6 +657,108 @@ async def download_report(
             "X-Report-ID": rpt.id,
             "X-Report-Hash": rpt.report_hash,
             "X-Framework": rpt.framework,
+        },
+    )
+
+
+@router.get(
+    "/reports/{report_id}/download-xml",
+    summary="Download LkSG §10 statement as structured XML for regulatory submission (BAFA)",
+)
+async def download_report_xml(
+    report_id: str,
+    session: AsyncSession = Depends(get_db),
+    current_user: User = Depends(require_analyst),
+) -> StreamingResponse:
+    """XML export for submission to BAFA or other competent authorities.
+
+    Only available for lksg_statement report type.
+    Schema follows the LkSG §10 reporting structure.
+    """
+    rpt_repo = SQLDueDiligenceReportRepository(session)
+    rpt = await rpt_repo.get_by_id(report_id)
+    if rpt is None or rpt.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=404, detail="Due diligence report not found")
+    if rpt.report_type != DueDiligenceReportType.LKSG_STATEMENT.value:
+        raise HTTPException(
+            status_code=400,
+            detail="XML export is only available for lksg_statement reports.",
+        )
+
+    d = rpt.report_data
+    meta = d.get("meta", {})
+    s_a = d.get("section_a_measures", {})
+    s_b = d.get("section_b_risk_analysis", {})
+    s_c = d.get("section_c_prioritisation", {})
+    s_d = d.get("section_d_actions", {})
+    s_e = d.get("section_e_effectiveness", {})
+    s_f = d.get("section_f_grievance", {})
+
+    def _x(v: object) -> str:
+        return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+    xml_lines = [
+        '<?xml version="1.0" encoding="UTF-8"?>',
+        '<LkSGStatement xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">',
+        f'  <Meta>',
+        f'    <Framework>{_x(meta.get("framework", "LkSG"))}</Framework>',
+        f'    <FrameworkVersion>{_x(meta.get("framework_version", "2023"))}</FrameworkVersion>',
+        f'    <LegalBasis>{_x(meta.get("legal_basis", ""))}</LegalBasis>',
+        f'    <OrganizationId>{_x(meta.get("organization_id", ""))}</OrganizationId>',
+        f'    <OrganizationName>{_x(meta.get("organization_name", ""))}</OrganizationName>',
+        f'    <ReportingYear>{_x(meta.get("reporting_year", ""))}</ReportingYear>',
+        f'    <GeneratedAt>{_x(rpt.generated_at.isoformat())}</GeneratedAt>',
+        f'    <ReportHash>{_x(rpt.report_hash)}</ReportHash>',
+        f'  </Meta>',
+        f'  <SectionA_DueDiligenceMeasures>',
+        f'    <RiskAnalysisConducted>{_x(s_a.get("risk_analysis_conducted", True))}</RiskAnalysisConducted>',
+        f'    <TotalControls>{_x(s_a.get("total_controls", 0))}</TotalControls>',
+        f'    <PreventiveControls>{_x(s_a.get("preventive_count", 0))}</PreventiveControls>',
+        f'    <ComplaintMechanismOperational>{_x(s_a.get("complaint_mechanism_operational", True))}</ComplaintMechanismOperational>',
+        f'  </SectionA_DueDiligenceMeasures>',
+        f'  <SectionB_RiskAnalysis>',
+        f'    <TotalSuppliersInScope>{_x(s_b.get("total_suppliers_in_scope", 0))}</TotalSuppliersInScope>',
+        f'    <HighRiskSupplierCount>{_x(s_b.get("high_risk_supplier_count", 0))}</HighRiskSupplierCount>',
+        f'    <TotalFindings>{_x(s_b.get("total_findings", 0))}</TotalFindings>',
+        f'    <TotalRisks>{_x(s_b.get("total_risks", 0))}</TotalRisks>',
+        f'    <OpenComplianceGaps>{_x(s_b.get("open_compliance_gaps", 0))}</OpenComplianceGaps>',
+        f'  </SectionB_RiskAnalysis>',
+        f'  <SectionC_Prioritisation>',
+        f'    <Framework>{_x(s_c.get("framework", ""))}</Framework>',
+        f'    <Priority1Suppliers>{_x(s_c.get("priority_1_suppliers", 0))}</Priority1Suppliers>',
+        f'    <Priority2Suppliers>{_x(s_c.get("priority_2_suppliers", 0))}</Priority2Suppliers>',
+        f'    <Justification>{_x(s_c.get("justification", ""))}</Justification>',
+        f'  </SectionC_Prioritisation>',
+        f'  <SectionD_Actions>',
+        f'    <PreventiveControls>{_x(s_d.get("preventive", {}).get("total_controls", 0))}</PreventiveControls>',
+        f'    <RemediationTotal>{_x(s_d.get("remediation", {}).get("total_recommendations", 0))}</RemediationTotal>',
+        f'    <RemediationResolved>{_x(s_d.get("remediation", {}).get("resolved", 0))}</RemediationResolved>',
+        f'    <RemediationOverdue>{_x(s_d.get("remediation", {}).get("overdue", 0))}</RemediationOverdue>',
+        f'    <ClosureRate>{_x(s_d.get("remediation", {}).get("closure_rate", 0))}</ClosureRate>',
+        f'  </SectionD_Actions>',
+        f'  <SectionE_Effectiveness>',
+        f'    <OverallLabel>{_x(s_e.get("overall_label", ""))}</OverallLabel>',
+        f'    <RemediationClosureRate>{_x(s_e.get("remediation_closure_rate", 0))}</RemediationClosureRate>',
+        f'    <ControlEffectivenessRate>{_x(s_e.get("control_effectiveness_rate", 0))}</ControlEffectivenessRate>',
+        f'  </SectionE_Effectiveness>',
+        f'  <SectionF_GrievanceMechanism>',
+        f'    <MechanismInPlace>{_x(s_f.get("mechanism_in_place", True))}</MechanismInPlace>',
+        f'    <LegalBasis>{_x(s_f.get("legal_basis", "LkSG §8"))}</LegalBasis>',
+        f'    <TotalReportsReceived>{_x(s_f.get("total_reports_received", 0))}</TotalReportsReceived>',
+        f'    <Resolved>{_x(s_f.get("resolved", 0))}</Resolved>',
+        f'    <ResolutionRate>{_x(s_f.get("resolution_rate", 0))}</ResolutionRate>',
+        f'  </SectionF_GrievanceMechanism>',
+        f'</LkSGStatement>',
+    ]
+    xml_content = "\n".join(xml_lines).encode("utf-8")
+
+    return StreamingResponse(
+        BytesIO(xml_content),
+        media_type="application/xml",
+        headers={
+            "Content-Disposition": f'attachment; filename="lksg-statement-{meta.get("reporting_year", "")}-{report_id[:8]}.xml"',
+            "X-Report-ID": rpt.id,
+            "X-Framework": "LkSG",
         },
     )
 

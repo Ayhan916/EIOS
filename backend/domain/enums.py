@@ -349,6 +349,7 @@ class AuditVerificationStatus(str, Enum):
 
 class DueDiligenceReportType(str, Enum):
     LKSGG_ANNUAL = "lksgg_annual"
+    LKSG_STATEMENT = "lksg_statement"      # LkSG §10 annual declaration (5 mandatory sections)
     CSDDD = "csddd"
     HUMAN_RIGHTS = "human_rights"
     ENVIRONMENTAL = "environmental"
