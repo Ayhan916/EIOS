@@ -73,6 +73,7 @@ interface NavItem {
   href: string;
   icon: React.ElementType;
   badge?: string;
+  roleGuard?: string[];
 }
 
 interface NavSection {
@@ -208,6 +209,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.aiMonitoring",    href: "/ai-governance/monitoring", icon: Radio },
       { labelKey: "nav.workflowMonitor", href: "/workflows",                icon: PlayCircle },
       { labelKey: "nav.evaluation",      href: "/evaluation",               icon: Activity },
+      { labelKey: "nav.missionControl",  href: "/mission-control",          icon: Zap, roleGuard: ["admin"] },
     ],
   },
   // ── 10. Executive ────────────────────────────────────────────────────────────
@@ -263,6 +265,7 @@ function SectionBlock({
   onNav,
   t,
   warningLevel,
+  userRole,
 }: {
   section: NavSection;
   isOpen: boolean;
@@ -271,6 +274,7 @@ function SectionBlock({
   onNav: (href: string) => void;
   t: (key: TranslationKey) => string;
   warningLevel: "error" | "warning" | null;
+  userRole?: string;
 }) {
   const SectionIcon = section.icon;
   const hasActiveChild = section.items.some((i) => isActive(i.href));
@@ -303,7 +307,7 @@ function SectionBlock({
 
       {isOpen && (
         <div className="mt-0.5 space-y-0.5 pl-2">
-          {section.items.map((item) => {
+          {section.items.filter((item) => !item.roleGuard || item.roleGuard.includes(userRole ?? "")).map((item) => {
             const active = isActive(item.href);
             const Icon = item.icon;
             return (
@@ -490,6 +494,7 @@ export function Sidebar() {
               onNav={handleNav}
               t={t}
               warningLevel={getSectionWarning(section.id)}
+              userRole={user?.role}
             />
           ))}
         </div>

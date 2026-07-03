@@ -43,6 +43,31 @@ export interface TriggerResponse {
   benchmark_results: BenchmarkResult[];
 }
 
+export interface AgentStatusSummary {
+  active: number;
+  idle: number;
+  error: number;
+  disabled: number;
+  total: number;
+}
+
+export interface SystemStatus {
+  platform_health_score: number;
+  benchmark_status: "green" | "yellow" | "red" | "unknown";
+  benchmark_passed: number;
+  benchmark_total: number;
+  accuracy_score: number;
+  confidence_score: number;
+  hallucination_rate: number;
+  error_rate: number;
+  cost_usd_last_7d: number;
+  cost_usd_last_30d: number;
+  agent_run_count: number;
+  latest_run_id: string | null;
+  computed_at: string | null;
+  agents: AgentStatusSummary;
+}
+
 export const evaluationApi = {
   triggerRun: async (windowDays = 30): Promise<TriggerResponse> => {
     const res = await apiClient.post(`/evaluation/run?window_days=${windowDays}`);
@@ -61,6 +86,11 @@ export const evaluationApi = {
 
   getBenchmarks: async (runId: string): Promise<BenchmarkResult[]> => {
     const res = await apiClient.get(`/evaluation/benchmarks/${runId}`);
+    return res.data;
+  },
+
+  getSystemStatus: async (): Promise<SystemStatus> => {
+    const res = await apiClient.get("/evaluation/system-status");
     return res.data;
   },
 };
