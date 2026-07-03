@@ -17,6 +17,7 @@ from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,8 +34,9 @@ from application.copilot.retrieval.executive_retriever import retrieve_executive
 from application.copilot.retrieval.supplier_retriever import retrieve_supplier_context
 from application.copilot.suggested_questions import get_suggested_questions
 from application.ports.llm import LLMProvider, Message
-from domain.copilot import CopilotConversation
+from domain.copilot import CopilotConversation, CopilotMessage
 from domain.copilot_audit import CopilotAnswerReview, CopilotFeedback
+from domain.enums import CopilotMessageRole
 from domain.enums import EntityStatus
 from infrastructure.llm.deps import get_llm_provider
 from infrastructure.observability.metrics import (
@@ -465,6 +467,176 @@ async def action_advisor(
         citations=_citations(citations),
         model_used=f"{llm.provider_name()}:{llm.model_name()}",
         generated_at=datetime.now(UTC),
+    )
+
+
+# ── GAP-04 Founder Chat ────────────────────────────────────────────────────────
+
+_FOUNDER_SYSTEM_PROMPT = """You are the EIOS Founder Intelligence Assistant.
+
+You answer questions about EIOS platform health, AI quality metrics, evaluation
+benchmark results, agent monitoring status, and cost trends.
+
+STRICT RULES:
+1. Answer ONLY from the PLATFORM DATA below — never use outside knowledge.
+2. If the data does not contain enough information to answer a question, say so
+   explicitly: "The platform does not have sufficient data to answer this."
+3. Never invent numbers, scores, agent names, or benchmark results.
+4. Structure every response as:
+   **Observed Facts:** (what the data shows)
+   **Inference:** (what this means, clearly labelled as inference)
+   **Assumptions:** (what you assumed when the data was ambiguous)
+   **Uncertainty:** (what you cannot determine from available data)
+5. This endpoint is admin-only — do not include supplier or customer PII.
+
+PLATFORM DATA:
+{context}
+"""
+
+_FOUNDER_NO_DATA = (
+    "The EIOS platform has not run any evaluation yet. "
+    "Please trigger an evaluation run from the Mission Control dashboard "
+    "before asking platform health questions."
+)
+
+_FOUNDER_QUICK_ACTIONS = [
+    "Wie ist der aktuelle Platform Health Score?",
+    "Warum hat sich die Accuracy verschlechtert?",
+    "Welches Modul performt am schlechtesten?",
+    "Was sollte als nächstes verbessert werden?",
+    "Welche Agents haben Fehler?",
+    "Wie hoch sind die API-Kosten dieser Woche?",
+]
+
+
+class FounderAskRequest(BaseModel):
+    question: str = Field(..., min_length=3, max_length=2000)
+    conversation_id: str | None = None
+    window_days: int = Field(default=30, ge=1, le=365)
+
+
+class FounderChatResponse(BaseModel):
+    conversation_id: str
+    answer: str
+    model_used: str
+    generation_ms: int | None
+    context_available: bool
+    quick_actions: list[str]
+
+
+@router.post(
+    "/founder",
+    response_model=FounderChatResponse,
+    dependencies=[Depends(require_admin)],
+    summary="Founder Chat — platform health Q&A grounded in internal EIOS metrics",
+)
+async def founder_chat(
+    body: FounderAskRequest,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+    llm: LLMProvider = Depends(get_llm_provider),
+) -> FounderChatResponse:
+    """Founder-only chat grounded exclusively in internal EIOS platform data.
+
+    Answers questions about evaluation metrics, benchmark status, agent errors,
+    and cost trends. Never uses supplier or ESG data.
+    """
+    from uuid import uuid4 as _uuid4
+    from application.copilot.founder_context import build_founder_context
+
+    org_id = current_user.organization_id
+    context_json = await build_founder_context(session, window_days=body.window_days)
+
+    # Detect if we have real data
+    import json as _json
+    ctx_data = _json.loads(context_json)
+    context_available = ctx_data.get("platform_health") is not None
+
+    if not context_available:
+        conv_id = body.conversation_id or str(_uuid4())
+        return FounderChatResponse(
+            conversation_id=conv_id,
+            answer=_FOUNDER_NO_DATA,
+            model_used="none",
+            generation_ms=0,
+            context_available=False,
+            quick_actions=_FOUNDER_QUICK_ACTIONS,
+        )
+
+    system = _FOUNDER_SYSTEM_PROMPT.format(context=context_json[:8000])
+
+    t0 = time.perf_counter()
+    llm_resp = await llm.complete(
+        messages=[Message(role="user", content=body.question)],
+        system=system,
+        max_tokens=1500,
+        temperature=0.0,
+    )
+    generation_ms = int((time.perf_counter() - t0) * 1000)
+
+    # Persist conversation + messages for audit trail
+    conv_repo = SQLCopilotConversationRepository(session)
+    msg_repo = SQLCopilotMessageRepository(session)
+
+    conv_id = body.conversation_id or str(_uuid4())
+    conv = await conv_repo.get_by_id(conv_id)
+    if conv is None:
+        conv = CopilotConversation(
+            id=conv_id,
+            organization_id=org_id,
+            user_id=current_user.id,
+            title=body.question[:80],
+            context_type="founder",
+            message_count=2,
+            status=EntityStatus.ACTIVE,
+        )
+    else:
+        conv.message_count += 2
+    await conv_repo.save(conv)
+
+    user_id = str(current_user.id)
+    user_msg = CopilotMessage(
+        conversation_id=conv_id,
+        organization_id=org_id,
+        user_id=user_id,
+        role=CopilotMessageRole.USER,
+        content=body.question,
+        intent="founder_platform_health",
+        status=EntityStatus.ACTIVE,
+        citations=[],
+        retrieved_sources={},
+        confidence_factors={},
+        freshness_summary={},
+        retrieval_snapshot={},
+    )
+    assistant_msg = CopilotMessage(
+        conversation_id=conv_id,
+        organization_id=org_id,
+        user_id=user_id,
+        role=CopilotMessageRole.ASSISTANT,
+        content=llm_resp.content,
+        intent="founder_platform_health",
+        model_used=f"{llm.provider_name()}:{llm.model_name()}",
+        generation_ms=generation_ms,
+        confidence_level="data_grounded",
+        status=EntityStatus.ACTIVE,
+        citations=[],
+        retrieved_sources={"founder_context": True},
+        confidence_factors={"source": "internal_metrics_only"},
+        freshness_summary={},
+        retrieval_snapshot={},
+    )
+    await msg_repo.save(user_msg)
+    await msg_repo.save(assistant_msg)
+    await session.commit()
+
+    return FounderChatResponse(
+        conversation_id=conv_id,
+        answer=llm_resp.content,
+        model_used=f"{llm.provider_name()}:{llm.model_name()}",
+        generation_ms=generation_ms,
+        context_available=True,
+        quick_actions=_FOUNDER_QUICK_ACTIONS,
     )
 
 

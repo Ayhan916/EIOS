@@ -27,6 +27,7 @@ import {
 } from "recharts";
 import { evaluationApi, BenchmarkResult, EvaluationRun } from "@/lib/api/evaluation";
 import apiClient from "@/lib/api/client";
+import { FounderChat } from "@/components/founder-chat";
 
 // ── Agent monitoring types ────────────────────────────────────────────────────
 
@@ -449,6 +450,14 @@ export default function MissionControlPage() {
           )}
         </>
       )}
+
+      {/* Founder Chat — always visible (no data prompts to run evaluation first) */}
+      <div>
+        <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
+          Founder Intelligence Chat
+        </h2>
+        <FounderChat />
+      </div>
     </div>
   );
 }
