@@ -147,6 +147,7 @@ const de = {
   "nav.risk": "Risiko & Compliance",
   "nav.assessments": "Assessments",
   "nav.findings": "Befunde",
+  "nav.correctiveActionPlans": "Maßnahmenpläne",
   "nav.risks": "Risiken",
   "nav.recommendations": "Empfehlungen",
   "nav.evidence": "Nachweise",

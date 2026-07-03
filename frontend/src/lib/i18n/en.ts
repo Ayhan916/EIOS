@@ -147,6 +147,7 @@ const en = {
   "nav.risk": "Risk & Compliance",
   "nav.assessments": "Assessments",
   "nav.findings": "Findings",
+  "nav.correctiveActionPlans": "Corrective Action Plans",
   "nav.risks": "Risks",
   "nav.recommendations": "Recommendations",
   "nav.evidence": "Evidence",
