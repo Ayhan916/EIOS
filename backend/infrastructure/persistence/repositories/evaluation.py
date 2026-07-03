@@ -89,6 +89,10 @@ class SQLEvaluationRunRepository(BaseRepository[EvaluationRun, EvaluationRunMode
         model = result.scalar_one_or_none()
         return self._to_domain(model) if model else None
 
+    async def get_by_id(self, run_id: str) -> EvaluationRun | None:
+        model = await self._session.get(EvaluationRunModel, run_id)
+        return self._to_domain(model) if model else None
+
     async def list_recent(self, limit: int = 12) -> list[EvaluationRun]:
         stmt = (
             select(EvaluationRunModel)

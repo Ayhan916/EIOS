@@ -103,6 +103,7 @@ const en = {
   "reg.changesTab": "Reg. Changes",
   "nav.evaluation": "Evaluation Engine",
   "nav.missionControl": "Mission Control",
+  "nav.selfImprovement": "Self-Improvement",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Connectors",
   "nav.eventBus": "Event Bus",
