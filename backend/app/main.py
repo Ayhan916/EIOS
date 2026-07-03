@@ -95,6 +95,7 @@ from interfaces.api.routers import (
     pipeline_router,
     grievance_router,
     prioritization_router,
+    regulatory_change_router,
 )
 from shared.config import settings
 
@@ -476,3 +477,4 @@ app.include_router(automations_router, prefix=API_V1)
 app.include_router(pipeline_router, prefix=API_V1)
 app.include_router(grievance_router, prefix=API_V1)
 app.include_router(prioritization_router, prefix=API_V1)
+app.include_router(regulatory_change_router, prefix=API_V1)

@@ -100,6 +100,7 @@ const en = {
   "nav.scCompliance": "SC Compliance",
   "nav.grievances": "Grievance Mechanism",
   "nav.prioritization": "Prioritisation",
+  "reg.changesTab": "Reg. Changes",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Connectors",
   "nav.eventBus": "Event Bus",

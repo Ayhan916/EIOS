@@ -100,6 +100,7 @@ class NotificationType(str, Enum):
     REVIEW_SUBMITTED = "review_submitted"
     CHANGES_REQUESTED = "changes_requested"
     COMMENT_MENTION = "comment_mention"
+    REGULATORY_CHANGE = "regulatory_change"
 
 
 class EvidenceStrength(str, Enum):
@@ -581,3 +582,20 @@ class GrievanceCategory(str, Enum):
     CORRUPTION = "corruption"
     HUMAN_RIGHTS = "human_rights"
     OTHER = "other"
+
+
+class RegulatoryChangeSeverity(str, Enum):
+    """How significantly the change impacts existing assessments and compliance programmes."""
+    MINOR = "minor"
+    MODERATE = "moderate"
+    MAJOR = "major"
+    CRITICAL = "critical"
+
+
+class RegulatoryChangeStatus(str, Enum):
+    """Lifecycle of a detected regulatory change."""
+    NEW = "new"
+    SCANNING = "scanning"
+    IMPACTS_IDENTIFIED = "impacts_identified"
+    NOTIFIED = "notified"
+    ACKNOWLEDGED = "acknowledged"

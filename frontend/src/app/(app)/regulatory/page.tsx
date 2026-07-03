@@ -3,18 +3,23 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   CalendarDays,
   CheckCircle2,
   ClipboardList,
   Download,
   FileText,
   Loader2,
+  Radio,
   RefreshCw,
   Scale,
   Send,
   ShieldAlert,
+  ScanSearch,
+  X,
 } from "lucide-react";
 import apiClient from "@/lib/api/client";
+import { regulatoryChangesApi, RegulatoryChange } from "@/lib/api/regulatory-changes";
 import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -851,17 +856,263 @@ function ExportsTab() {
   );
 }
 
+// ── Regulatory Change Monitoring (GAP-19) ─────────────────────────────────────
+
+const SEVERITY_STYLES: Record<string, string> = {
+  critical: "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300",
+  major: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-900/30 dark:text-orange-300",
+  moderate: "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300",
+  minor: "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-900/30 dark:text-blue-300",
+};
+
+const STATUS_STYLES: Record<string, string> = {
+  new: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300",
+  scanning: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300",
+  impacts_identified: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  notified: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  acknowledged: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+};
+
+function ChangesTab() {
+  const qc = useQueryClient();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [framework, setFramework] = useState("");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [article, setArticle] = useState("");
+  const [severity, setSeverity] = useState("moderate");
+  const [sourceName, setSourceName] = useState("Manual");
+
+  const { data: changes = [], isLoading } = useQuery({
+    queryKey: ["regulatory-changes"],
+    queryFn: () => regulatoryChangesApi.list(),
+  });
+
+  const seedMutation = useMutation({
+    mutationFn: () => regulatoryChangesApi.seed(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["regulatory-changes"] }),
+  });
+
+  const scanMutation = useMutation({
+    mutationFn: (changeId: string) => regulatoryChangesApi.scanImpact(changeId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["regulatory-changes"] });
+      qc.invalidateQueries({ queryKey: ["regulatory-changes-summary"] });
+    },
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () =>
+      regulatoryChangesApi.create({
+        framework_code: framework,
+        change_title: title,
+        change_description: description,
+        affected_article: article,
+        severity,
+        source_name: sourceName,
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["regulatory-changes"] });
+      setShowAddForm(false);
+      setFramework(""); setTitle(""); setDescription(""); setArticle("");
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      {/* Actions bar */}
+      <div className="flex items-center gap-3 justify-between">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => seedMutation.mutate()}
+            disabled={seedMutation.isPending}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+          >
+            <RefreshCw className={`h-4 w-4 ${seedMutation.isPending ? "animate-spin" : ""}`} />
+            Load Curated Feed
+          </button>
+          <button
+            onClick={() => setShowAddForm((v) => !v)}
+            className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            + Log Manual Change
+          </button>
+        </div>
+        <span className="text-xs text-gray-400">{changes.length} change(s) tracked</span>
+      </div>
+
+      {/* Add form */}
+      {showAddForm && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Log Regulatory Change</span>
+            <button onClick={() => setShowAddForm(false)}><X className="h-4 w-4 text-gray-400" /></button>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Framework</label>
+              <input value={framework} onChange={(e) => setFramework(e.target.value)}
+                placeholder="LkSG / CSDDD / CSRD"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Affected Article</label>
+              <input value={article} onChange={(e) => setArticle(e.target.value)}
+                placeholder="e.g. Art. 10 Abs. 2"
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-500 mb-1">Title</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs text-gray-500 mb-1">Description</label>
+              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm resize-none" />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Severity</label>
+              <select value={severity} onChange={(e) => setSeverity(e.target.value)}
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm">
+                <option value="minor">Minor</option>
+                <option value="moderate">Moderate</option>
+                <option value="major">Major</option>
+                <option value="critical">Critical</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Source</label>
+              <input value={sourceName} onChange={(e) => setSourceName(e.target.value)}
+                className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
+            </div>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={() => createMutation.mutate()}
+              disabled={!framework || !title || createMutation.isPending}
+              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
+              {createMutation.isPending ? "Saving…" : "Save Change"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Change list */}
+      {isLoading ? (
+        <div className="py-10 text-center text-sm text-gray-400">Loading…</div>
+      ) : changes.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center text-gray-400">
+          No regulatory changes tracked. Click "Load Curated Feed" to seed known EU/German changes.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {changes.map((c: RegulatoryChange) => (
+            <div key={c.id}
+              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                      {c.framework_code}
+                    </span>
+                    {c.affected_article && (
+                      <span className="text-xs text-gray-400">{c.affected_article}</span>
+                    )}
+                    <span className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${SEVERITY_STYLES[c.severity] ?? ""}`}>
+                      {c.severity}
+                    </span>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_STYLES[c.change_status] ?? ""}`}>
+                      {c.change_status.replace("_", " ")}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                    {c.change_title}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
+                    {c.change_description}
+                  </p>
+                  {c.impact_summary && (
+                    <p className="mt-1 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded px-2 py-1">
+                      {c.impact_summary}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
+                    <span>Source: {c.source_name}</span>
+                    {c.effective_date && <span>Effective: {c.effective_date}</span>}
+                    {c.impacted_assessment_count > 0 && (
+                      <span className="text-orange-500">
+                        {c.impacted_assessment_count} assessment(s) flagged
+                      </span>
+                    )}
+                    {c.impacted_gap_count > 0 && (
+                      <span className="text-orange-500">
+                        {c.impacted_gap_count} gap(s) flagged
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <button
+                  onClick={() => scanMutation.mutate(c.id)}
+                  disabled={scanMutation.isPending}
+                  title="Run impact scan"
+                  className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 shrink-0"
+                >
+                  <ScanSearch className="h-3.5 w-3.5" />
+                  Scan Impact
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Regulatory Change Banner (shown when new unscanned changes exist) ──────────
+
+function RegulatoryChangeBanner() {
+  const [dismissed, setDismissed] = useState(false);
+  const { data: summary } = useQuery({
+    queryKey: ["regulatory-changes-summary"],
+    queryFn: () => regulatoryChangesApi.getSummary(),
+    staleTime: 60_000,
+  });
+
+  if (dismissed || !summary || summary.new_changes === 0) return null;
+
+  return (
+    <div className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+      <Radio className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
+      <div className="flex-1">
+        <span className="font-semibold">{summary.new_changes} new regulatory change(s)</span>{" "}
+        require impact assessment.
+        {summary.pending_re_reviews > 0 && (
+          <span className="ml-1">
+            {summary.pending_re_reviews} assessment(s) pending re-review.
+          </span>
+        )}{" "}
+        Go to the <strong>Changes</strong> tab to run impact scans.
+      </div>
+      <button onClick={() => setDismissed(true)} className="text-amber-500 hover:text-amber-700">
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-type Tab = "dashboard" | "regulations" | "gaps" | "reports" | "calendar" | "exports";
+type Tab = "dashboard" | "regulations" | "gaps" | "reports" | "calendar" | "exports" | "changes";
 
 const tab_defs: { key: Tab; labelKey: string; icon: React.ElementType }[] = [
   { key: "dashboard",   labelKey: "reg.dashboardTab",    icon: ClipboardList },
   { key: "regulations", labelKey: "reg.regulationsTab",  icon: Scale },
   { key: "gaps",        labelKey: "reg.gapsTab",         icon: ShieldAlert },
   { key: "reports",     labelKey: "reg.reportsTab",      icon: FileText },
-  { key: "calendar",    labelKey: "reg.calendarTab",     icon: CalendarDays },
+  { key: "calendar",   labelKey: "reg.calendarTab",     icon: CalendarDays },
   { key: "exports",     labelKey: "reg.exportsTab",      icon: Download },
+  { key: "changes",     labelKey: "reg.changesTab",      icon: Radio },
 ];
 
 export default function RegulatoryPage() {
@@ -870,6 +1121,8 @@ export default function RegulatoryPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <RegulatoryChangeBanner />
+
       <div className="flex items-center gap-3">
         <Scale className="h-7 w-7 text-primary" />
         <div>
@@ -902,6 +1155,7 @@ export default function RegulatoryPage() {
         {activeTab === "reports"     && <ReportsTab />}
         {activeTab === "calendar"    && <CalendarTab />}
         {activeTab === "exports"     && <ExportsTab />}
+        {activeTab === "changes"     && <ChangesTab />}
       </div>
     </div>
   );
