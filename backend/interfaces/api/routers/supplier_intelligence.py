@@ -38,6 +38,7 @@ from domain.supplier_score import SupplierScore
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
+from infrastructure.persistence.models.supplier_extensions import SupplierCertificationModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.models.risk import RiskModel
@@ -135,6 +136,40 @@ class GeoHeatmapResponse(_BaseModel):
     countries: list[GeoCountryEntry]   # sorted by worst_band severity, then avg_risk_score desc
     total_suppliers: int
     countries_count: int
+
+
+# ── GAP-24 Certificate Lifecycle schemas ──────────────────────────────────────
+
+class CertificateAlertEntry(_BaseModel):
+    cert_id: str
+    supplier_id: str
+    supplier_name: str
+    cert_type: str
+    custom_cert_name: str | None
+    issuing_body: str | None
+    valid_until: str | None      # ISO date string
+    days_until_expiry: int | None  # negative = already expired
+    lifecycle_status: str        # EXPIRED | EXPIRING_SOON | EXPIRING_60D | EXPIRING_90D | ACTIVE
+    is_verified: bool
+
+
+class CertTypeCount(_BaseModel):
+    cert_type: str
+    total: int
+    expired: int
+    expiring_soon: int
+
+
+class CertificateLifecycleResponse(_BaseModel):
+    total: int
+    active: int
+    expiring_soon: int       # ≤30 days
+    expiring_60d: int        # 31–60 days
+    expiring_90d: int        # 61–90 days
+    expired: int
+    verified: int
+    alerts: list[CertificateAlertEntry]   # EXPIRED + EXPIRING_* sorted by days_until_expiry
+    by_cert_type: list[CertTypeCount]
 
 logger = structlog.get_logger(__name__)
 
@@ -806,6 +841,126 @@ async def get_geo_heatmap(
         countries=entries,
         total_suppliers=sum(e.supplier_count for e in entries),
         countries_count=len(entries),
+    )
+
+
+@router.get("/analytics/certificate-lifecycle", response_model=CertificateLifecycleResponse)
+async def get_certificate_lifecycle(
+    days_window: int = Query(default=90, ge=1, le=365),
+    current_user: User = Depends(get_current_user),
+    supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
+    session: AsyncSession = Depends(get_db),
+) -> CertificateLifecycleResponse:
+    """Org-wide certificate lifecycle dashboard (GAP-24).
+
+    Computes lifecycle status deterministically from valid_until vs today.
+    Lifecycle thresholds (default window=90d):
+      EXPIRED      — valid_until < today
+      EXPIRING_SOON — valid_until within 30 days
+      EXPIRING_60D  — valid_until within 31–60 days
+      EXPIRING_90D  — valid_until within 61–days_window days
+      ACTIVE        — valid_until beyond window or None
+    """
+    from datetime import date as _date
+
+    org_id = current_user.organization_id or ""
+    if not org_id:
+        return CertificateLifecycleResponse(
+            total=0, active=0, expiring_soon=0, expiring_60d=0,
+            expiring_90d=0, expired=0, verified=0, alerts=[], by_cert_type=[],
+        )
+
+    # Load suppliers for name lookup
+    all_suppliers, _ = await supplier_repo.list_org_paged(org_id, page=1, page_size=10_000)
+    supplier_map = {s.id: s.name for s in all_suppliers}
+
+    # Load all certs for org
+    stmt = (
+        select(SupplierCertificationModel)
+        .where(SupplierCertificationModel.organization_id == org_id)
+        .order_by(SupplierCertificationModel.valid_until.asc().nullslast())
+    )
+    rows = (await session.execute(stmt)).scalars().all()
+
+    today = _date.today()
+    total = expired = active = expiring_soon = expiring_60d = expiring_90d = verified = 0
+    alerts: list[CertificateAlertEntry] = []
+    by_type: dict[str, dict] = {}
+
+    for row in rows:
+        total += 1
+        if row.is_verified:
+            verified += 1
+
+        # Compute days_until_expiry
+        if row.valid_until is None:
+            lifecycle = "ACTIVE"
+            days_left: int | None = None
+        else:
+            days_left = (row.valid_until - today).days
+            if days_left < 0:
+                lifecycle = "EXPIRED"
+            elif days_left <= 30:
+                lifecycle = "EXPIRING_SOON"
+            elif days_left <= 60:
+                lifecycle = "EXPIRING_60D"
+            elif days_left <= days_window:
+                lifecycle = "EXPIRING_90D"
+            else:
+                lifecycle = "ACTIVE"
+
+        if lifecycle == "EXPIRED":
+            expired += 1
+        elif lifecycle == "EXPIRING_SOON":
+            expiring_soon += 1
+        elif lifecycle == "EXPIRING_60D":
+            expiring_60d += 1
+        elif lifecycle == "EXPIRING_90D":
+            expiring_90d += 1
+        else:
+            active += 1
+
+        # Build cert_type stats
+        ct = by_type.setdefault(row.cert_type, {"total": 0, "expired": 0, "expiring_soon": 0})
+        ct["total"] += 1
+        if lifecycle == "EXPIRED":
+            ct["expired"] += 1
+        if lifecycle == "EXPIRING_SOON":
+            ct["expiring_soon"] += 1
+
+        # Build alert entry for non-ACTIVE certs
+        if lifecycle != "ACTIVE":
+            alerts.append(CertificateAlertEntry(
+                cert_id=row.id,
+                supplier_id=row.supplier_id,
+                supplier_name=supplier_map.get(row.supplier_id, "Unknown"),
+                cert_type=row.cert_type,
+                custom_cert_name=row.custom_cert_name,
+                issuing_body=row.issuing_body,
+                valid_until=row.valid_until.isoformat() if row.valid_until else None,
+                days_until_expiry=days_left,
+                lifecycle_status=lifecycle,
+                is_verified=row.is_verified,
+            ))
+
+    # Sort alerts: expired first (most negative days_left), then by days ascending
+    alerts.sort(key=lambda a: (a.days_until_expiry if a.days_until_expiry is not None else -9999))
+
+    by_cert_type = [
+        CertTypeCount(cert_type=k, total=v["total"], expired=v["expired"], expiring_soon=v["expiring_soon"])
+        for k, v in sorted(by_type.items(), key=lambda x: x[1]["total"], reverse=True)
+    ]
+
+    return CertificateLifecycleResponse(
+        total=total,
+        active=active,
+        expiring_soon=expiring_soon,
+        expiring_60d=expiring_60d,
+        expiring_90d=expiring_90d,
+        expired=expired,
+        verified=verified,
+        alerts=alerts,
+        by_cert_type=by_cert_type,
     )
 
 

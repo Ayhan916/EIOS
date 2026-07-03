@@ -94,8 +94,9 @@ const NAV_SECTIONS: NavSection[] = [
     color: "text-blue-400",
     items: [
       { labelKey: "nav.suppliers",            href: "/suppliers",              icon: Briefcase },
-      { labelKey: "nav.supplierSegmentation", href: "/suppliers/segmentation", icon: ShieldAlert },
-      { labelKey: "nav.geoHeatmap",           href: "/suppliers/geo-heatmap",  icon: Globe },
+      { labelKey: "nav.supplierSegmentation",  href: "/suppliers/segmentation",  icon: ShieldAlert },
+      { labelKey: "nav.geoHeatmap",            href: "/suppliers/geo-heatmap",   icon: Globe },
+      { labelKey: "nav.certificates",          href: "/suppliers/certificates",  icon: CheckSquare },
       { labelKey: "nav.supplierNetwork",  href: "/network",           icon: Network },
       { labelKey: "nav.supplierPortal",   href: "/suppliers/portal", icon: Users },
       { labelKey: "nav.dueDiligence",     href: "/due-diligence",    icon: Shield },

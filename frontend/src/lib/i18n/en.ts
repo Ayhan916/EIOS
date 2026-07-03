@@ -96,6 +96,7 @@ const en = {
   "nav.suppliers": "Suppliers",
   "nav.supplierSegmentation": "Risk Tiering",
   "nav.geoHeatmap": "Geo Heatmap",
+  "nav.certificates": "Certificate Lifecycle",
   "nav.materials": "Materials",
   "nav.products": "Products",
   "nav.dpp": "Product Passports",
