@@ -101,6 +101,50 @@ async def create_recommendation(
     return RecommendationResponse.model_validate(saved)
 
 
+_DECISION_MAP = {
+    "in_progress": "ChangesRequested",
+    "resolved": "Approved",
+    "verified": "Approved",
+}
+
+
+@router.get("/decisions")
+async def list_decisions(
+    limit: int = Query(default=100, le=500),
+    current_user: User = Depends(get_current_user),
+    repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
+) -> list[dict]:
+    if not current_user.organization_id:
+        return []
+    results = []
+    for status in (
+        "in_progress",
+        "resolved",
+        "verified",
+    ):
+        from domain.enums import ActionStatus as _AS
+
+        recs = await repo.list_by_org_and_status(
+            current_user.organization_id,
+            _AS(status),
+        )
+        results.extend(recs)
+    results = results[:limit]
+    return [
+        {
+            "id": r.id,
+            "title": r.title,
+            "decision": _DECISION_MAP.get(r.action_status.value, "ChangesRequested"),
+            "decided_by": r.approved_by or r.created_by or "",
+            "decided_at": r.updated_at.isoformat() if r.updated_at else "",
+            "comment": r.description[:120] if r.description else None,
+            "priority": r.priority.value if hasattr(r.priority, "value") else str(r.priority),
+            "entity_type": "recommendation",
+        }
+        for r in results
+    ]
+
+
 @router.get("/{recommendation_id}", response_model=RecommendationResponse)
 async def get_recommendation(
     recommendation_id: str,

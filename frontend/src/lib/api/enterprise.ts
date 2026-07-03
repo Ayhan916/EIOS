@@ -418,6 +418,109 @@ export async function getEnterpriseAudit(
   return res.data;
 }
 
+// SCIM Token Management
+
+export interface SCIMToken {
+  id: string;
+  enterprise_id: string;
+  idp_id: string | null;
+  scope: string;
+  label: string | null;
+  is_active: boolean;
+  expires_at: string | null;
+  last_used_at: string | null;
+  use_count: number;
+  created_at: string;
+}
+
+export interface SCIMTokenCreateResponse extends SCIMToken {
+  raw_token: string;
+}
+
+export interface SCIMTokenRotateResponse {
+  revoked_token_id: string;
+  new_token: SCIMTokenCreateResponse;
+}
+
+export interface SCIMPerIdpUsage {
+  idp_id: string | null;
+  token_count: number;
+  active_count: number;
+  last_used_at: string | null;
+}
+
+export interface SCIMUsageResponse {
+  enterprise_id: string;
+  token_count: number;
+  active_tokens: number;
+  last_provisioning: string | null;
+  last_sync: string | null;
+  per_idp_usage: SCIMPerIdpUsage[];
+}
+
+export interface SecretHealthResponse {
+  provider_type: string;
+  is_connected: boolean;
+  last_probe_at: string;
+}
+
+export interface SecretRotateResponse {
+  idp_id: string;
+  new_reference_id: string;
+  rotated_at: string;
+}
+
+export async function listSCIMTokens(enterpriseId: string): Promise<SCIMToken[]> {
+  const res = await apiClient.get(`${BASE}/${enterpriseId}/scim/tokens`);
+  return res.data;
+}
+
+export async function createSCIMToken(
+  enterpriseId: string,
+  payload: { label?: string; ttl_days?: number; idp_id?: string; scope?: string }
+): Promise<SCIMTokenCreateResponse> {
+  const res = await apiClient.post(`${BASE}/${enterpriseId}/scim/tokens`, payload);
+  return res.data;
+}
+
+export async function revokeSCIMToken(enterpriseId: string, tokenId: string): Promise<void> {
+  await apiClient.delete(`${BASE}/${enterpriseId}/scim/tokens/${tokenId}`);
+}
+
+export async function rotateSCIMToken(
+  enterpriseId: string,
+  tokenId: string,
+  payload: { label?: string; ttl_days?: number; scope?: string }
+): Promise<SCIMTokenRotateResponse> {
+  const res = await apiClient.post(`${BASE}/${enterpriseId}/scim/tokens/${tokenId}/rotate`, payload);
+  return res.data;
+}
+
+export async function getSCIMUsage(enterpriseId: string): Promise<SCIMUsageResponse> {
+  const res = await apiClient.get(`${BASE}/${enterpriseId}/scim/usage`);
+  return res.data;
+}
+
+export async function getSecretsHealth(): Promise<SecretHealthResponse> {
+  const res = await apiClient.get(`${BASE}/secrets/health`);
+  return res.data;
+}
+
+export async function deleteIdentityProvider(enterpriseId: string, idpId: string): Promise<void> {
+  await apiClient.delete(`${BASE}/${enterpriseId}/identity/${idpId}`);
+}
+
+export async function rotateIdPSecret(
+  enterpriseId: string,
+  idpId: string,
+  newClientSecret: string
+): Promise<SecretRotateResponse> {
+  const res = await apiClient.post(`${BASE}/${enterpriseId}/identity/${idpId}/rotate-secret`, {
+    new_client_secret: newClientSecret,
+  });
+  return res.data;
+}
+
 // SCIM
 export async function scimProvisionUser(
   enterpriseId: string,

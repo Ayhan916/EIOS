@@ -1,13 +1,16 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import Link from "next/link";
 import {
   Activity,
   AlertTriangle,
   ArrowRight,
+  Check,
   GitBranch,
   Network,
+  Plus,
   Shield,
   Share2,
   TrendingDown,
@@ -17,6 +20,9 @@ import {
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import apiClient from "@/lib/api/client";
 import { useLanguage } from "@/lib/i18n/context";
@@ -309,100 +315,266 @@ function StatCard({
 
 // ── Sections ──────────────────────────────────────────────────────────────────
 
-function RelationshipsSection() {
+const REL_TYPES = [
+  "TIER_1_SUPPLIER", "TIER_2_SUPPLIER", "SUB_SUPPLIER",
+  "CO_SUPPLIER", "CONTRACT_MANUFACTURER", "RAW_MATERIAL_SUPPLIER",
+  "LOGISTICS_PARTNER", "SERVICE_PROVIDER",
+];
+
+function RelationshipsSection({ nameMap }: { nameMap: Map<string, string> }) {
   const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
+  const [sup1, setSup1] = useState("");
+  const [sup2, setSup2] = useState("");
+  const [relType, setRelType] = useState("TIER_1_SUPPLIER");
+  const [confidence, setConfidence] = useState(1.0);
+  const [rationale, setRationale] = useState("");
+
   const { data, isLoading } = useQuery({
     queryKey: ["network-relationships"],
     queryFn: getRelationships,
     refetchInterval: 60_000,
   });
 
-  if (isLoading)
-    return (
-      <div className="flex justify-center p-8">
-        <Spinner />
-      </div>
-    );
-  if (!data?.length)
-    return (
-      <p className="text-center text-sm text-slate-500 py-6">
-        {t("network.noRelationships")}
-      </p>
-    );
+  const create = useMutation({
+    mutationFn: () => apiClient.post("/network/relationships", {
+      supplier_id: sup1,
+      related_supplier_id: sup2,
+      relationship_type: relType,
+      confidence,
+      rationale,
+    }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["network-relationships"] });
+      qc.invalidateQueries({ queryKey: ["network-graph"] });
+      qc.invalidateQueries({ queryKey: ["network-dashboard"] });
+      setShowCreate(false);
+      setSup1(""); setSup2(""); setRationale(""); setConfidence(1.0);
+    },
+  });
+
+  const supplierOptions = Array.from(nameMap.entries());
+  const name = (id: string) => nameMap.get(id) ?? id.slice(0, 10) + "…";
 
   return (
-    <div className="divide-y divide-slate-800">
-      {data.map((rel: any) => (
-        <div key={rel.id} className="flex items-center gap-3 py-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-medium text-slate-100 truncate max-w-[120px]">
-                {rel.supplier_id.slice(0, 8)}…
-              </span>
-              <RelationshipTypeBadge type={rel.relationship_type} />
-              <span className="text-sm font-medium text-slate-100 truncate max-w-[120px]">
-                {rel.related_supplier_id.slice(0, 8)}…
-              </span>
+    <div>
+      {/* Create form toggle */}
+      <div className="mb-3 flex justify-end">
+        <Button size="sm" variant="outline" className="gap-1.5 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+          onClick={() => setShowCreate(!showCreate)}>
+          <Plus className="h-3.5 w-3.5" />
+          {t("network.createRelationship")}
+        </Button>
+      </div>
+
+      {showCreate && (
+        <div className="mb-4 rounded-lg border border-slate-700 bg-slate-800/60 p-4 space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-slate-400">{t("network.supplier1")} *</Label>
+              <select className="mt-1 h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
+                value={sup1} onChange={(e) => setSup1(e.target.value)}>
+                <option value="">— select —</option>
+                {supplierOptions.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+              </select>
             </div>
-            <p className="mt-0.5 text-xs text-slate-500 truncate">
-              {rel.rationale || "—"}
-            </p>
+            <div>
+              <Label className="text-xs text-slate-400">{t("network.supplier2")} *</Label>
+              <select className="mt-1 h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
+                value={sup2} onChange={(e) => setSup2(e.target.value)}>
+                <option value="">— select —</option>
+                {supplierOptions.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
+              </select>
+            </div>
           </div>
-          <div className="flex-shrink-0 text-right">
-            <p className="text-xs text-slate-400">
-              {Math.round(rel.confidence * 100)}{t("network.confidence")}
-            </p>
-            <p className="text-xs text-slate-500">{rel.source}</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs text-slate-400">{t("network.relationshipType")}</Label>
+              <select className="mt-1 h-9 w-full rounded-md border border-slate-700 bg-slate-900 px-2 text-sm text-slate-200"
+                value={relType} onChange={(e) => setRelType(e.target.value)}>
+                {REL_TYPES.map((r) => <option key={r} value={r}>{r.replace(/_/g, " ")}</option>)}
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs text-slate-400">Confidence (0–1)</Label>
+              <Input type="number" min={0} max={1} step={0.05}
+                className="mt-1 bg-slate-900 border-slate-700 text-slate-200 text-sm"
+                value={confidence} onChange={(e) => setConfidence(parseFloat(e.target.value))} />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs text-slate-400">{t("network.rationale")}</Label>
+            <Input className="mt-1 bg-slate-900 border-slate-700 text-slate-200 text-sm"
+              value={rationale} onChange={(e) => setRationale(e.target.value)} />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="outline" className="border-slate-700 text-slate-400 hover:bg-slate-800"
+              onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
+            <Button size="sm" disabled={!sup1 || !sup2 || sup1 === sup2 || create.isPending}
+              onClick={() => create.mutate()} className="gap-1">
+              {create.isPending && <Spinner className="h-4 w-4" />}
+              {t("network.createRelationship")}
+            </Button>
           </div>
         </div>
-      ))}
+      )}
+
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Spinner /></div>
+      ) : !data?.length ? (
+        <p className="text-center text-sm text-slate-500 py-6">{t("network.noRelationships")}</p>
+      ) : (
+        <div className="divide-y divide-slate-800">
+          {data.map((rel: any) => (
+            <div key={rel.id} className="flex items-center gap-3 py-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link href={`/suppliers/${rel.supplier_id}`}
+                    className="text-sm font-medium text-slate-100 hover:text-blue-400 truncate max-w-[140px]">
+                    {name(rel.supplier_id)}
+                  </Link>
+                  <RelationshipTypeBadge type={rel.relationship_type} />
+                  <Link href={`/suppliers/${rel.related_supplier_id}`}
+                    className="text-sm font-medium text-slate-100 hover:text-blue-400 truncate max-w-[140px]">
+                    {name(rel.related_supplier_id)}
+                  </Link>
+                </div>
+                <p className="mt-0.5 text-xs text-slate-500 truncate">{rel.rationale || "—"}</p>
+              </div>
+              <div className="flex-shrink-0 text-right">
+                <p className="text-xs text-slate-400">{Math.round(rel.confidence * 100)}{t("network.confidence")}</p>
+                <p className="text-xs text-slate-500">{rel.source}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function SuggestionsSection() {
+function SuggestionsSection({ nameMap }: { nameMap: Map<string, string> }) {
   const { t } = useLanguage();
+  const qc = useQueryClient();
+  const [reviewNote, setReviewNote] = useState<Record<string, string>>({});
+  const [reviewed, setReviewed] = useState<Record<string, "approved" | "rejected">>({});
+  const [discoveryResult, setDiscoveryResult] = useState<{ total: number } | null>(null);
+
   const { data, isLoading } = useQuery({
     queryKey: ["network-suggestions-pending"],
     queryFn: getPendingSuggestions,
     refetchInterval: 60_000,
   });
 
-  if (isLoading)
-    return (
-      <div className="flex justify-center p-8">
-        <Spinner />
-      </div>
-    );
-  if (!data?.length)
-    return (
-      <p className="text-center text-sm text-slate-500 py-6">
-        {t("network.noSuggestions")}
-      </p>
-    );
+  const discover = useMutation({
+    mutationFn: () => apiClient.post("/network/discovery/run"),
+    onSuccess: (res) => {
+      setDiscoveryResult({ total: res.data?.total ?? 0 });
+      qc.invalidateQueries({ queryKey: ["network-suggestions-pending"] });
+      qc.invalidateQueries({ queryKey: ["network-dashboard"] });
+    },
+  });
+
+  const approve = useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      apiClient.post(`/network/suggested-relationships/${id}/approve`, { review_note: note }),
+    onSuccess: (_, { id }) => {
+      setReviewed((prev) => ({ ...prev, [id]: "approved" }));
+      qc.invalidateQueries({ queryKey: ["network-suggestions-pending"] });
+      qc.invalidateQueries({ queryKey: ["network-relationships"] });
+      qc.invalidateQueries({ queryKey: ["network-dashboard"] });
+    },
+  });
+
+  const reject = useMutation({
+    mutationFn: ({ id, note }: { id: string; note: string }) =>
+      apiClient.post(`/network/suggested-relationships/${id}/reject`, { review_note: note }),
+    onSuccess: (_, { id }) => {
+      setReviewed((prev) => ({ ...prev, [id]: "rejected" }));
+      qc.invalidateQueries({ queryKey: ["network-suggestions-pending"] });
+    },
+  });
+
+  const name = (id: string) => nameMap.get(id) ?? id.slice(0, 10) + "…";
 
   return (
-    <div className="divide-y divide-slate-800">
-      {data.map((s: any) => (
-        <div key={s.id} className="py-3">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-medium text-slate-100">
-              {s.supplier_id.slice(0, 8)}…
-            </span>
-            <RelationshipTypeBadge type={s.relationship_type} />
-            <span className="text-sm font-medium text-slate-100">
-              {s.related_supplier_id.slice(0, 8)}…
-            </span>
-            <Badge variant="outline" className="text-yellow-400 border-yellow-700 ml-auto">
-              PENDING
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs text-slate-400 truncate">{s.rationale}</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {t("network.source")}: {s.suggestion_source} · {Math.round(s.confidence * 100)}{t("network.confidence")}
+    <div>
+      {/* Discovery button */}
+      <div className="mb-3 flex items-center justify-between">
+        {discoveryResult && (
+          <p className="text-xs text-green-400">
+            {t("network.discoveryResult").replace("{n}", String(discoveryResult.total))}
           </p>
+        )}
+        <Button size="sm" variant="outline"
+          className="ml-auto gap-1.5 border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white"
+          disabled={discover.isPending}
+          onClick={() => { setDiscoveryResult(null); discover.mutate(); }}>
+          {discover.isPending ? <Spinner className="h-3.5 w-3.5" /> : <GitBranch className="h-3.5 w-3.5" />}
+          {discover.isPending ? "Running…" : t("network.runDiscovery")}
+        </Button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex justify-center p-8"><Spinner /></div>
+      ) : !data?.length ? (
+        <p className="text-center text-sm text-slate-500 py-6">{t("network.noSuggestions")}</p>
+      ) : (
+        <div className="divide-y divide-slate-800">
+          {data.map((s: any) => {
+            const result = reviewed[s.id];
+            return (
+              <div key={s.id} className="py-3 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link href={`/suppliers/${s.supplier_id}`}
+                    className="text-sm font-medium text-slate-100 hover:text-blue-400 truncate max-w-[130px]">
+                    {name(s.supplier_id)}
+                  </Link>
+                  <RelationshipTypeBadge type={s.relationship_type} />
+                  <Link href={`/suppliers/${s.related_supplier_id}`}
+                    className="text-sm font-medium text-slate-100 hover:text-blue-400 truncate max-w-[130px]">
+                    {name(s.related_supplier_id)}
+                  </Link>
+                  {result ? (
+                    <span className={`ml-auto rounded-full px-2 py-0.5 text-[11px] font-bold ${result === "approved" ? "bg-green-800 text-green-300" : "bg-red-900 text-red-300"}`}>
+                      {result === "approved" ? t("network.approved") : t("network.rejected")}
+                    </span>
+                  ) : (
+                    <Badge variant="outline" className="text-yellow-400 border-yellow-700 ml-auto">PENDING</Badge>
+                  )}
+                </div>
+                <p className="text-xs text-slate-400 truncate">{s.rationale}</p>
+                <p className="text-xs text-slate-500">
+                  {t("network.source")}: {s.suggestion_source} · {Math.round(s.confidence * 100)}{t("network.confidence")}
+                </p>
+                {!result && (
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      className="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-300 placeholder:text-slate-600"
+                      placeholder={t("network.reviewNote")}
+                      value={reviewNote[s.id] ?? ""}
+                      onChange={(e) => setReviewNote((prev) => ({ ...prev, [s.id]: e.target.value }))}
+                    />
+                    <Button size="sm"
+                      className="h-7 gap-1 bg-green-700 hover:bg-green-600 text-white text-xs px-2"
+                      disabled={approve.isPending}
+                      onClick={() => approve.mutate({ id: s.id, note: reviewNote[s.id] ?? "" })}>
+                      <Check className="h-3 w-3" /> {t("network.approve")}
+                    </Button>
+                    <Button size="sm" variant="outline"
+                      className="h-7 gap-1 border-red-800 text-red-400 hover:bg-red-900/30 text-xs px-2"
+                      disabled={reject.isPending}
+                      onClick={() => reject.mutate({ id: s.id, note: reviewNote[s.id] ?? "" })}>
+                      <X className="h-3 w-3" /> {t("network.reject")}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
-      ))}
+      )}
     </div>
   );
 }
@@ -581,6 +753,18 @@ function DashboardOverview() {
 
 export default function NetworkPage() {
   const { t } = useLanguage();
+
+  // Pre-fetch supplier names for relationship + suggestion sections
+  const { data: graphData } = useQuery({
+    queryKey: ["network-graph"],
+    queryFn: getGraphData,
+    staleTime: 5 * 60_000,
+  });
+  const nameMap = useMemo(
+    () => new Map<string, string>((graphData?.suppliers ?? []).map((s) => [s.id, s.name])),
+    [graphData]
+  );
+
   return (
     <div className="space-y-6 p-6">
       {/* #115 First-time guided tour */}
@@ -617,7 +801,7 @@ export default function NetworkPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <RelationshipsSection />
+            <RelationshipsSection nameMap={nameMap} />
           </CardContent>
         </Card>
 
@@ -629,7 +813,7 @@ export default function NetworkPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <SuggestionsSection />
+            <SuggestionsSection nameMap={nameMap} />
           </CardContent>
         </Card>
 

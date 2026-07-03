@@ -280,3 +280,48 @@ export async function generateAssuranceReport(
   );
   return data;
 }
+
+// Controls
+export async function listControls(orgId: string): Promise<AIControl[]> {
+  const { data } = await apiClient.get(`${BASE(orgId)}/controls`);
+  return data;
+}
+
+export async function createControl(
+  orgId: string,
+  payload: { name: string; control_type: string; description?: string; model_id?: string }
+): Promise<AIControl> {
+  const { data } = await apiClient.post(`${BASE(orgId)}/controls`, payload);
+  return data;
+}
+
+// Flat incident create (no modelId required)
+export async function reportIncidentFlat(
+  orgId: string,
+  payload: { incident_type: string; severity: string; description: string; model_id?: string; reported_by?: string }
+): Promise<AIIncident> {
+  const { data } = await apiClient.post(`${BASE(orgId)}/incidents`, payload);
+  return data;
+}
+
+// Use-case create
+export async function createUseCase(
+  orgId: string,
+  modelId: string,
+  payload: { title: string; description?: string; risk_level?: string; business_owner?: string; technical_owner?: string }
+): Promise<AIUseCase> {
+  const { data } = await apiClient.post(`${BASE(orgId)}/models/${modelId}/use-cases`, payload);
+  return data;
+}
+
+export interface AIControl {
+  id: string;
+  organization_id: string;
+  name: string;
+  control_type: string;
+  description: string | null;
+  examples: string[];
+  model_id: string | null;
+  is_active: boolean;
+  created_at: string;
+}
