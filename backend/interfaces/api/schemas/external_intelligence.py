@@ -104,6 +104,10 @@ class ExternalRiskSignalResponse(BaseModel):
     organization_id: str
     is_active: bool
     created_at: datetime
+    # GAP-10: Event-Attribution completeness
+    esg_category: str | None = None
+    protected_right: str | None = None
+    frequency: int = 0
 
     model_config = {"from_attributes": True}
 
@@ -119,6 +123,9 @@ class CreateSignalRequest(BaseModel):
     country_code: str = ""
     sector_code: str = ""
     supplier_id: str = ""
+    # Optional overrides; auto-derived if omitted
+    esg_category: str | None = None
+    protected_right: str | None = None
 
 
 class SignalListResponse(BaseModel):

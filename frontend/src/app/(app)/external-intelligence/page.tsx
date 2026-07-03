@@ -24,6 +24,9 @@ interface RiskSignal {
   sector_code: string;
   supplier_id: string;
   is_active: boolean;
+  esg_category: string | null;
+  protected_right: string | null;
+  frequency: number;
 }
 
 interface ConnectorGroup {
@@ -236,6 +239,21 @@ function SignalsTab() {
                             <div className="flex flex-wrap items-center gap-2 mb-1.5">
                               <SeverityBadge severity={sig.severity} />
                               <span className="text-xs text-slate-400 capitalize">{sig.signal_type.replace(/_/g, " ")}</span>
+                              {sig.esg_category && (
+                                <span className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                  sig.esg_category === "Environmental" ? "bg-emerald-100 text-emerald-700"
+                                  : sig.esg_category === "Social" ? "bg-blue-100 text-blue-700"
+                                  : "bg-violet-100 text-violet-700"
+                                }`}>{sig.esg_category}</span>
+                              )}
+                              {sig.protected_right && (
+                                <span className="rounded-full bg-amber-50 border border-amber-200 px-2 py-0.5 text-[10px] text-amber-700 capitalize">
+                                  {sig.protected_right.replace(/_/g, " ")}
+                                </span>
+                              )}
+                              {sig.frequency > 0 && (
+                                <span className="text-[10px] text-slate-400">{sig.frequency}× / 12m</span>
+                              )}
                               {sig.country_code && (
                                 <span className="text-xs text-slate-400">{sig.country_code}</span>
                               )}

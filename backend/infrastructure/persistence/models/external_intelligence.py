@@ -107,6 +107,10 @@ class ExternalRiskSignalModel(BaseModel):
     supplier_id: Mapped[str] = mapped_column(String(36), nullable=False, default="")
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, default="")
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # GAP-10: Event-Attribution completeness (FR-005)
+    esg_category: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    protected_right: Mapped[str | None] = mapped_column(String(60), nullable=True)
+    frequency: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class SupplierEnrichmentModel(BaseModel):

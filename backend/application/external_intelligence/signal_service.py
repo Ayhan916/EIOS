@@ -13,14 +13,44 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
 from domain.external_intelligence import ExternalRiskSignal
+from .event_attribution import derive_esg_category, derive_protected_right
 
 
 async def create_signal(
     signal: ExternalRiskSignal,
     session: AsyncSession,
 ) -> ExternalRiskSignal:
-    """Persist a new ExternalRiskSignal."""
+    """Persist a new ExternalRiskSignal.
+
+    Auto-derives esg_category and protected_right from signal_type when not
+    explicitly provided (deterministic mapping, GAP-10).
+    """
     from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+    from sqlalchemy import func, select as sa_select
+
+    sig_type_str = signal.signal_type.value if hasattr(signal.signal_type, "value") else signal.signal_type
+    if not signal.esg_category:
+        signal.esg_category = derive_esg_category(sig_type_str)
+    if not signal.protected_right:
+        signal.protected_right = derive_protected_right(sig_type_str)
+
+    # Compute frequency: count matching active signals for same scope+type in last 12 months
+    from datetime import timedelta
+    from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel as _M
+    cutoff = signal.observed_at.replace(tzinfo=None) if signal.observed_at.tzinfo else signal.observed_at
+    from datetime import timezone
+    cutoff_utc = signal.observed_at.astimezone(timezone.utc) if signal.observed_at.tzinfo else signal.observed_at.replace(tzinfo=timezone.utc)
+    twelve_months_ago = cutoff_utc - timedelta(days=365)
+    freq_stmt = sa_select(func.count()).select_from(_M).where(
+        _M.signal_type == sig_type_str,
+        _M.is_active.is_(True),
+        _M.observed_at >= twelve_months_ago,
+    )
+    if signal.supplier_id:
+        freq_stmt = freq_stmt.where(_M.supplier_id == signal.supplier_id)
+    elif signal.country_code:
+        freq_stmt = freq_stmt.where(_M.country_code == signal.country_code)
+    signal.frequency = (await session.execute(freq_stmt)).scalar_one() or 0
 
     model = _domain_to_model(signal)
     session.add(model)
@@ -116,6 +146,9 @@ def _domain_to_model(s: ExternalRiskSignal):
         supplier_id=s.supplier_id or "",
         organization_id=s.organization_id or "",
         is_active=s.is_active,
+        esg_category=s.esg_category,
+        protected_right=s.protected_right,
+        frequency=s.frequency,
     )
 
 
@@ -141,4 +174,7 @@ def _model_to_domain(m) -> ExternalRiskSignal:
         supplier_id=m.supplier_id or "",
         organization_id=m.organization_id or "",
         is_active=bool(m.is_active),
+        esg_category=getattr(m, "esg_category", None),
+        protected_right=getattr(m, "protected_right", None),
+        frequency=getattr(m, "frequency", 0) or 0,
     )

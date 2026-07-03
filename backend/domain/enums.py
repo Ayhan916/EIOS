@@ -407,6 +407,13 @@ class RiskSignalType(str, Enum):
     GOVERNANCE = "governance"
 
 
+class EsgCategory(str, Enum):
+    """Top-level ESG pillar for event attribution (GAP-10 / FR-005)."""
+    ENVIRONMENTAL = "Environmental"
+    SOCIAL = "Social"
+    GOVERNANCE = "Governance"
+
+
 class SignalSeverity(str, Enum):
     CRITICAL = "critical"
     HIGH = "high"

@@ -114,6 +114,10 @@ class ExternalRiskSignal(BaseEntity):
     supplier_id: str = ""    # Filled when signal is linked to a specific supplier
     organization_id: str = ""  # Tenant scope when supplier_id is set
     is_active: bool = True
+    # GAP-10: Event-Attribution completeness (FR-005)
+    esg_category: str | None = None     # EsgCategory value
+    protected_right: str | None = None  # CSDDDRight value
+    frequency: int = 0                  # Occurrences of this signal type for supplier/sector/country in last 12 months
 
 
 @dataclass(slots=True, kw_only=True)

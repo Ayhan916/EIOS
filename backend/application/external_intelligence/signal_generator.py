@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus, ExternalSourceName, RiskSignalType, SignalSeverity
 from domain.external_intelligence import ExternalRiskSignal
+from .event_attribution import derive_esg_category, derive_protected_right
 
 logger = structlog.get_logger(__name__)
 
@@ -139,6 +140,9 @@ async def generate_signals_for_supplier(
             supplier_id=supplier_id,
             organization_id=organization_id,
             is_active=True,
+            esg_category=derive_esg_category(signal_type),
+            protected_right=derive_protected_right(signal_type),
+            frequency=0,
         )
         session.add(model)
         created += 1

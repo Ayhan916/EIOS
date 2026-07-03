@@ -315,21 +315,25 @@ async def create_risk_signal(
     session: AsyncSession = Depends(get_db),
 ) -> ExternalRiskSignalResponse:
     from domain.enums import EntityStatus, RiskSignalType, SignalSeverity
-    signal = await create_signal(
-        signal_type=RiskSignalType(body.signal_type),
-        severity=SignalSeverity(body.severity),
+    from domain.external_intelligence import ExternalRiskSignal
+    signal_obj = ExternalRiskSignal(
+        signal_type=RiskSignalType(body.signal_type).value,
+        severity=SignalSeverity(body.severity).value,
         description=body.description,
         source_name=body.source_name,
         source_version=body.source_version,
         observed_at=body.observed_at,
-        organization_id=current_user.organization_id,
-        session=session,
+        organization_id=current_user.organization_id or "",
         dataset_id=body.dataset_id or "",
         country_code=body.country_code,
         sector_code=body.sector_code,
         supplier_id=body.supplier_id,
+        esg_category=body.esg_category,
+        protected_right=body.protected_right,
+        created_by=current_user.id,
     )
-    return _signal_to_response(signal)
+    saved = await create_signal(signal_obj, session)
+    return _signal_to_response(saved)
 
 
 # ── Enrichments ───────────────────────────────────────────────────────────────
@@ -472,6 +476,9 @@ def _signal_to_response(s) -> ExternalRiskSignalResponse:
         organization_id=s.organization_id,
         is_active=s.is_active,
         created_at=s.created_at,
+        esg_category=getattr(s, "esg_category", None),
+        protected_right=getattr(s, "protected_right", None),
+        frequency=getattr(s, "frequency", 0) or 0,
     )
 
 
