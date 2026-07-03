@@ -49,6 +49,7 @@ import { generateReport, listReports, downloadReportPdf } from "@/lib/api/report
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
 import { ScoreBreakdownPanel } from "@/components/assessments/score-breakdown-panel";
 import { ScoreSimulationPanel } from "@/components/assessments/score-simulation-panel";
+import { EvidenceChainTab } from "@/components/assessments/evidence-chain-tab";
 import { UncertaintyBadge } from "@/components/ui/uncertainty-badge";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
@@ -845,6 +846,7 @@ export default function AssessmentDetailPage({
           <TabsTrigger value="reports">
             {t("nav.reports")} {reports ? `(${reports.length})` : ""}
           </TabsTrigger>
+          <TabsTrigger value="chain">Evidence Chain</TabsTrigger>
           <TabsTrigger value="review" className="gap-1.5">
             <GitPullRequest className="h-3.5 w-3.5" />
             {t("assessments.reviewed")}
@@ -2168,6 +2170,11 @@ export default function AssessmentDetailPage({
             </Card>
           )}
 
+        </TabsContent>
+
+        {/* ── Evidence Chain (GAP-26) ──────────────────────────────────────── */}
+        <TabsContent value="chain" className="mt-6">
+          <EvidenceChainTab assessmentId={id} />
         </TabsContent>
 
       </Tabs>

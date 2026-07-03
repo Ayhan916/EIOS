@@ -592,6 +592,224 @@ async def get_assessment_uncertainty(
     )
 
 
+class ChainNode(BaseModel):
+    id: str
+    node_type: str          # finding | risk | recommendation | evidence | cap
+    label: str
+    detail: str             # severity / risk_level / status / evidence_type
+    href: str | None = None
+
+
+class ChainEdge(BaseModel):
+    source: str
+    target: str
+    label: str = ""
+
+
+class FindingFilterOption(BaseModel):
+    id: str
+    title: str
+    severity: str
+
+
+class EvidenceChainResponse(BaseModel):
+    assessment_id: str
+    nodes: list[ChainNode]
+    edges: list[ChainEdge]
+    finding_filter_options: list[FindingFilterOption]
+
+
+@router.get("/{assessment_id}/evidence-chain", response_model=EvidenceChainResponse)
+async def get_evidence_chain(
+    assessment_id: str,
+    finding_id: str | None = None,
+    current_user: User = Depends(get_current_user),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    finding_repo: SQLFindingRepository = Depends(get_finding_repo),
+    risk_repo: SQLRiskRepository = Depends(get_risk_repo),
+    rec_repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
+    session: AsyncSession = Depends(get_db),
+) -> EvidenceChainResponse:
+    """Build the full evidence→finding→risk→recommendation→CAP graph for an assessment.
+
+    Optionally filtered to a single finding via ?finding_id=...
+    """
+    from sqlalchemy import select, text
+    from infrastructure.persistence.models.associations import (
+        finding_evidence, risk_finding, recommendation_risk, recommendation_finding,
+    )
+    from infrastructure.persistence.models.evidence import EvidenceModel
+    from infrastructure.persistence.models.recommendation import RecommendationModel
+    from infrastructure.persistence.models.corrective_action_plan import CorrectiveActionPlanModel
+
+    assessment = await assessment_repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    findings = await finding_repo.list_by_assessment(assessment_id)
+    risks = await risk_repo.list_by_assessment(assessment_id)
+    recs = await rec_repo.list_by_assessment(assessment_id)
+
+    # Optionally filter to a single finding subtree
+    if finding_id:
+        findings = [f for f in findings if f.id == finding_id]
+
+    finding_ids = {f.id for f in findings}
+    risk_ids = {r.id for r in risks}
+    rec_ids = {r.id for r in recs}
+
+    # ── evidence links ──────────────────────────────────────────────────────────
+    ev_links: list[tuple[str, str]] = []  # (finding_id, evidence_id)
+    ev_ids: set[str] = set()
+    if finding_ids:
+        rows = (await session.execute(
+            select(finding_evidence.c.finding_id, finding_evidence.c.evidence_id)
+            .where(finding_evidence.c.finding_id.in_(finding_ids))
+        )).all()
+        ev_links = [(r.finding_id, r.evidence_id) for r in rows]
+        ev_ids = {r.evidence_id for r in rows}
+
+    # ── load evidence metadata ──────────────────────────────────────────────────
+    ev_map: dict[str, EvidenceModel] = {}
+    if ev_ids:
+        ev_rows = (await session.execute(
+            select(EvidenceModel).where(EvidenceModel.id.in_(ev_ids))
+        )).scalars().all()
+        ev_map = {e.id: e for e in ev_rows}
+
+    # ── risk–finding links ──────────────────────────────────────────────────────
+    rf_links: list[tuple[str, str]] = []  # (risk_id, finding_id)
+    if risk_ids and finding_ids:
+        rows = (await session.execute(
+            select(risk_finding.c.risk_id, risk_finding.c.finding_id)
+            .where(
+                risk_finding.c.risk_id.in_(risk_ids),
+                risk_finding.c.finding_id.in_(finding_ids),
+            )
+        )).all()
+        rf_links = [(r.risk_id, r.finding_id) for r in rows]
+
+    linked_risk_ids = {r for r, _ in rf_links}
+
+    # ── recommendation–risk links ───────────────────────────────────────────────
+    rr_links: list[tuple[str, str]] = []  # (rec_id, risk_id)
+    if rec_ids and linked_risk_ids:
+        rows = (await session.execute(
+            select(recommendation_risk.c.recommendation_id, recommendation_risk.c.risk_id)
+            .where(
+                recommendation_risk.c.recommendation_id.in_(rec_ids),
+                recommendation_risk.c.risk_id.in_(linked_risk_ids),
+            )
+        )).all()
+        rr_links = [(r.recommendation_id, r.risk_id) for r in rows]
+
+    # ── recommendation–finding links ────────────────────────────────────────────
+    rfind_links: list[tuple[str, str]] = []  # (rec_id, finding_id)
+    if rec_ids and finding_ids:
+        rows = (await session.execute(
+            select(recommendation_finding.c.recommendation_id, recommendation_finding.c.finding_id)
+            .where(
+                recommendation_finding.c.recommendation_id.in_(rec_ids),
+                recommendation_finding.c.finding_id.in_(finding_ids),
+            )
+        )).all()
+        rfind_links = [(r.recommendation_id, r.finding_id) for r in rows]
+
+    linked_rec_ids = {r for r, _ in rr_links} | {r for r, _ in rfind_links}
+
+    # ── CAPs linked to findings ─────────────────────────────────────────────────
+    caps: list[CorrectiveActionPlanModel] = []
+    if finding_ids:
+        caps = (await session.execute(
+            select(CorrectiveActionPlanModel)
+            .where(CorrectiveActionPlanModel.finding_id.in_(finding_ids))
+        )).scalars().all()
+
+    # ── Build nodes ─────────────────────────────────────────────────────────────
+    nodes: list[ChainNode] = []
+    edges: list[ChainEdge] = []
+
+    for f in findings:
+        sev = f.severity.value if hasattr(f.severity, "value") else str(f.severity)
+        nodes.append(ChainNode(
+            id=f"finding:{f.id}", node_type="finding",
+            label=f.title[:60] + ("…" if len(f.title) > 60 else ""),
+            detail=sev,
+            href=f"/assessments/{assessment_id}?tab=findings",
+        ))
+
+    for r in risks:
+        if r.id not in linked_risk_ids:
+            continue
+        lvl = r.risk_level.value if hasattr(r.risk_level, "value") else str(r.risk_level)
+        nodes.append(ChainNode(
+            id=f"risk:{r.id}", node_type="risk",
+            label=r.title[:60] + ("…" if len(r.title) > 60 else ""),
+            detail=lvl,
+            href=f"/risks/{r.id}",
+        ))
+
+    for rec in recs:
+        if rec.id not in linked_rec_ids:
+            continue
+        stat = rec.action_status.value if hasattr(rec.action_status, "value") else str(rec.action_status)
+        nodes.append(ChainNode(
+            id=f"rec:{rec.id}", node_type="recommendation",
+            label=rec.title[:60] + ("…" if len(rec.title) > 60 else ""),
+            detail=stat,
+            href=f"/assessments/{assessment_id}?tab=recommendations",
+        ))
+
+    for ev_id, ev in ev_map.items():
+        nodes.append(ChainNode(
+            id=f"evidence:{ev_id}", node_type="evidence",
+            label=ev.title[:60] + ("…" if len(ev.title) > 60 else ""),
+            detail=ev.evidence_type,
+            href=None,
+        ))
+
+    for cap in caps:
+        nodes.append(ChainNode(
+            id=f"cap:{cap.id}", node_type="cap",
+            label=cap.title[:60] + ("…" if len(cap.title) > 60 else ""),
+            detail=cap.cap_status,
+            href="/corrective-action-plans",
+        ))
+
+    # ── Build edges ─────────────────────────────────────────────────────────────
+    for fid, eid in ev_links:
+        edges.append(ChainEdge(source=f"evidence:{eid}", target=f"finding:{fid}", label="supports"))
+
+    for rid, fid in rf_links:
+        edges.append(ChainEdge(source=f"finding:{fid}", target=f"risk:{rid}", label="contributes to"))
+
+    for rid, risk_id in rr_links:
+        edges.append(ChainEdge(source=f"risk:{risk_id}", target=f"rec:{rid}", label="addressed by"))
+
+    for rid, fid in rfind_links:
+        edges.append(ChainEdge(source=f"finding:{fid}", target=f"rec:{rid}", label="addressed by"))
+
+    for cap in caps:
+        edges.append(ChainEdge(source=f"finding:{cap.finding_id}", target=f"cap:{cap.id}", label="remediated by"))
+
+    filter_options = [
+        FindingFilterOption(
+            id=f.id,
+            title=f.title[:80],
+            severity=f.severity.value if hasattr(f.severity, "value") else str(f.severity),
+        )
+        for f in await finding_repo.list_by_assessment(assessment_id)
+    ]
+
+    return EvidenceChainResponse(
+        assessment_id=assessment_id,
+        nodes=nodes,
+        edges=edges,
+        finding_filter_options=filter_options,
+    )
+
+
 class ScoreSimulation(BaseModel):
     scenario: str               # "Wenn alle kritischen Findings geschlossen werden..."
     action_label: str           # Short label for the action button
