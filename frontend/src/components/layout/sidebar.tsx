@@ -93,11 +93,12 @@ const NAV_SECTIONS: NavSection[] = [
     icon: Link2,
     color: "text-blue-400",
     items: [
-      { labelKey: "nav.suppliers",       href: "/suppliers",        icon: Briefcase },
-      { labelKey: "nav.supplierNetwork", href: "/network",           icon: Network },
-      { labelKey: "nav.supplierPortal",  href: "/suppliers/portal", icon: Users },
-      { labelKey: "nav.dueDiligence",    href: "/due-diligence",    icon: Shield },
-      { labelKey: "nav.dpp",             href: "/dpp",               icon: ClipboardCheck },
+      { labelKey: "nav.suppliers",            href: "/suppliers",              icon: Briefcase },
+      { labelKey: "nav.supplierSegmentation", href: "/suppliers/segmentation", icon: ShieldAlert },
+      { labelKey: "nav.supplierNetwork",  href: "/network",           icon: Network },
+      { labelKey: "nav.supplierPortal",   href: "/suppliers/portal", icon: Users },
+      { labelKey: "nav.dueDiligence",     href: "/due-diligence",    icon: Shield },
+      { labelKey: "nav.dpp",              href: "/dpp",               icon: ClipboardCheck },
     ],
   },
   // ── 2. Risiko & Bewertung ────────────────────────────────────────────────────

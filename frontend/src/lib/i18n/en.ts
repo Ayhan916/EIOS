@@ -94,6 +94,7 @@ const en = {
   // Supply Chain
   "nav.supplyChain": "Supply Chain",
   "nav.suppliers": "Suppliers",
+  "nav.supplierSegmentation": "Risk Tiering",
   "nav.materials": "Materials",
   "nav.products": "Products",
   "nav.dpp": "Product Passports",

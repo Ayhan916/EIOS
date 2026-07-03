@@ -94,6 +94,7 @@ const de = {
   // Supply Chain
   "nav.supplyChain": "Lieferkette",
   "nav.suppliers": "Lieferanten",
+  "nav.supplierSegmentation": "Risiko-Tiering",
   "nav.materials": "Materialien",
   "nav.products": "Produkte",
   "nav.dpp": "Produktpässe",

@@ -53,6 +53,7 @@ from interfaces.api.deps import (
     get_supplier_repo,
     get_supplier_score_repo,
 )
+from pydantic import BaseModel as _BaseModel
 from interfaces.api.schemas.supplier_score import (
     ExecutiveRankingEntry,
     HeatmapCell,
@@ -64,6 +65,39 @@ from interfaces.api.schemas.supplier_score import (
     SupplierScoreResponse,
     WatchlistEntry,
 )
+
+
+# ── GAP-22 Segmentation schemas ───────────────────────────────────────────────
+
+class SegmentedSupplierEntry(_BaseModel):
+    supplier_id: str
+    name: str
+    country: str
+    industry: str
+    supplier_tier: str
+    risk_score: float
+    risk_band: str
+    esg_score: float
+    trend: str
+    trend_delta: float
+
+
+class RiskSegment(_BaseModel):
+    risk_band: str
+    count: int
+    avg_risk_score: float
+    avg_esg_score: float
+    improving: int
+    deteriorating: int
+    stable: int
+    suppliers: list[SegmentedSupplierEntry]
+
+
+class SegmentationResponse(_BaseModel):
+    segments: list[RiskSegment]   # ordered Critical → Low
+    unscored_count: int
+    total_suppliers: int
+    total_scored: int
 
 logger = structlog.get_logger(__name__)
 
@@ -552,6 +586,93 @@ async def get_supplier_benchmark(
 
 
 # ── Organization-level analytics endpoints ────────────────────────────────────
+
+_BAND_ORDER = ["Critical", "High", "Moderate", "Low"]
+
+
+@router.get("/analytics/segmentation", response_model=SegmentationResponse)
+async def get_supplier_segmentation(
+    current_user: User = Depends(get_current_user),
+    score_repo: SQLSupplierScoreRepository = Depends(get_supplier_score_repo),
+    supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
+) -> SegmentationResponse:
+    """Risk Tiering — groups suppliers by latest risk_band.
+
+    Deterministic: uses persisted SupplierScore rows, no LLM.
+    All queries are org-scoped via organization_id.
+    """
+    if not current_user.organization_id:
+        return SegmentationResponse(
+            segments=[], unscored_count=0, total_suppliers=0, total_scored=0
+        )
+
+    all_suppliers, total_count = await supplier_repo.list_org_paged(
+        organization_id=current_user.organization_id,
+        page=1,
+        page_size=10_000,
+    )
+    supplier_map = {s.id: s for s in all_suppliers}
+
+    latest_scores = await score_repo.get_latest_for_org(current_user.organization_id)
+    scored_ids = {s.supplier_id for s in latest_scores}
+    unscored = total_count - len(scored_ids)
+
+    # Group by band
+    from collections import defaultdict
+    bands: dict[str, list[SegmentedSupplierEntry]] = defaultdict(list)
+
+    for score in latest_scores:
+        sup = supplier_map.get(score.supplier_id)
+        if sup is None:
+            continue
+        bands[score.risk_band.value].append(
+            SegmentedSupplierEntry(
+                supplier_id=score.supplier_id,
+                name=sup.name,
+                country=sup.country,
+                industry=sup.industry,
+                supplier_tier=sup.supplier_tier.value if hasattr(sup.supplier_tier, "value") else str(sup.supplier_tier),
+                risk_score=round(score.risk_score, 1),
+                risk_band=score.risk_band.value,
+                esg_score=round(score.esg_score, 1),
+                trend=score.trend.value,
+                trend_delta=round(score.trend_delta, 2),
+            )
+        )
+
+    segments: list[RiskSegment] = []
+    for band in _BAND_ORDER:
+        entries = bands.get(band, [])
+        if not entries:
+            # Always include all tiers even if empty
+            segments.append(RiskSegment(
+                risk_band=band, count=0, avg_risk_score=0.0, avg_esg_score=0.0,
+                improving=0, deteriorating=0, stable=0, suppliers=[],
+            ))
+            continue
+        entries.sort(key=lambda e: e.risk_score, reverse=True)
+        avg_risk = round(sum(e.risk_score for e in entries) / len(entries), 1)
+        avg_esg  = round(sum(e.esg_score  for e in entries) / len(entries), 1)
+        improving    = sum(1 for e in entries if e.trend == "Improving")
+        deteriorating = sum(1 for e in entries if e.trend == "Deteriorating")
+        stable       = sum(1 for e in entries if e.trend == "Stable")
+        segments.append(RiskSegment(
+            risk_band=band,
+            count=len(entries),
+            avg_risk_score=avg_risk,
+            avg_esg_score=avg_esg,
+            improving=improving,
+            deteriorating=deteriorating,
+            stable=stable,
+            suppliers=entries,
+        ))
+
+    return SegmentationResponse(
+        segments=segments,
+        unscored_count=unscored if unscored > 0 else 0,
+        total_suppliers=total_count,
+        total_scored=len(latest_scores),
+    )
 
 
 @router.get("/analytics/portfolio", response_model=PortfolioAnalytics)
