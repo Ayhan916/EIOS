@@ -77,6 +77,8 @@ async def create_finding(
         confidence=body.confidence,
         reasoning=body.reasoning,
         uncertainty=body.uncertainty,
+        severity_score=body.severity_score,
+        probability_score=body.probability_score,
         created_by=current_user.id,
     )
     saved = await repo.save(finding)

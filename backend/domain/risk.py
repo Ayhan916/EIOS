@@ -26,3 +26,6 @@ class Risk(BaseEntity):
     confidence: ConfidenceLevel = field(default=ConfidenceLevel.MEDIUM)
     reasoning: str | None = None
     uncertainty: str | None = None
+    # GAP-08: Numeric 1-10 scoring
+    severity_score: int | None = None
+    probability_score: int | None = None

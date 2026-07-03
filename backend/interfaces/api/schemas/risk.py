@@ -17,6 +17,16 @@ class RiskCreate(BaseModel):
     confidence: ConfidenceLevel = ConfidenceLevel.MEDIUM
     reasoning: str | None = None
     uncertainty: str | None = None
+    severity_score: int | None = Field(default=None, ge=1, le=10)
+    probability_score: int | None = Field(default=None, ge=1, le=10)
+
+
+class RiskPatch(BaseModel):
+    status: str | None = None
+    risk_level: RiskLevel | None = None
+    owner: str | None = None
+    severity_score: int | None = Field(default=None, ge=1, le=10)
+    probability_score: int | None = Field(default=None, ge=1, le=10)
 
 
 class RiskResponse(EntityResponse):
@@ -33,3 +43,5 @@ class RiskResponse(EntityResponse):
     uncertainty: str | None = None
     status: str = "Active"
     owner: str | None = None
+    severity_score: int | None = None
+    probability_score: int | None = None

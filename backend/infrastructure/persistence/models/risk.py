@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import Float, ForeignKey, String, Text
+from sqlalchemy import Float, ForeignKey, SmallInteger, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .associations import control_risk, recommendation_risk, risk_finding
@@ -25,6 +25,9 @@ class RiskModel(BaseModel):
     confidence: Mapped[str] = mapped_column(String(20), nullable=False, default="Medium")
     reasoning: Mapped[str | None] = mapped_column(Text, nullable=True)
     uncertainty: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # GAP-08: Numeric 1-10 scoring
+    severity_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    probability_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
 
     assessment: Mapped[AssessmentModel | None] = relationship(back_populates="risks")
     findings: Mapped[list[FindingModel]] = relationship(

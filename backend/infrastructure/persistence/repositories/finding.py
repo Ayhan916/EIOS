@@ -30,6 +30,8 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
             uncertainty=entity.uncertainty,
             evidence_strength=entity.evidence_strength.value if entity.evidence_strength else None,
             evidence_source_count=entity.evidence_source_count,
+            severity_score=entity.severity_score,
+            probability_score=entity.probability_score,
         )
 
     def _to_domain(self, model: FindingModel) -> Finding:
@@ -52,6 +54,8 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
             uncertainty=model.uncertainty,
             evidence_strength=EvidenceStrength(model.evidence_strength) if model.evidence_strength else None,
             evidence_source_count=model.evidence_source_count or 0,
+            severity_score=model.severity_score,
+            probability_score=model.probability_score,
         )
 
     async def list_by_assessment(self, assessment_id: str) -> list[Finding]:

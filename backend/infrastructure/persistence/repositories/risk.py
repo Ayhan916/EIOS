@@ -31,6 +31,8 @@ class SQLRiskRepository(BaseRepository[Risk, RiskModel]):
             confidence=entity.confidence.value,
             reasoning=entity.reasoning,
             uncertainty=entity.uncertainty,
+            severity_score=entity.severity_score,
+            probability_score=entity.probability_score,
         )
 
     def _to_domain(self, model: RiskModel) -> Risk:
@@ -54,6 +56,8 @@ class SQLRiskRepository(BaseRepository[Risk, RiskModel]):
             confidence=ConfidenceLevel(model.confidence),
             reasoning=model.reasoning,
             uncertainty=model.uncertainty,
+            severity_score=model.severity_score,
+            probability_score=model.probability_score,
         )
 
     async def list_by_assessment(self, assessment_id: str) -> list[Risk]:

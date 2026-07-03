@@ -26,3 +26,6 @@ class Finding(BaseEntity):
     # M25: Evidence intelligence fields
     evidence_strength: EvidenceStrength | None = None
     evidence_source_count: int = 0
+    # GAP-08: Numeric 1-10 scoring
+    severity_score: int | None = None
+    probability_score: int | None = None

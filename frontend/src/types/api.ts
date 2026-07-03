@@ -241,6 +241,8 @@ export interface FindingResponse extends EntityResponse {
   uncertainty: string | null;
   evidence_strength: "Weak" | "Moderate" | "Strong" | "Very Strong" | null;
   evidence_source_count: number;
+  severity_score: number | null;
+  probability_score: number | null;
 }
 
 export interface FindingEvidenceLinkResponse extends EntityResponse {
@@ -281,6 +283,8 @@ export interface RiskResponse extends EntityResponse {
   uncertainty: string | null;
   status: string;
   owner: string | null;
+  severity_score: number | null;
+  probability_score: number | null;
 }
 
 export type ActionStatus = "open" | "in_progress" | "resolved" | "verified";

@@ -1,7 +1,6 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from pydantic import BaseModel
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -20,13 +19,7 @@ from interfaces.api.deps import (
 )
 from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.finding import FindingResponse
-from interfaces.api.schemas.risk import RiskCreate, RiskResponse
-
-
-class RiskPatch(BaseModel):
-    status: str | None = None       # Active | Reviewed | Archived
-    risk_level: str | None = None   # Critical | High | Medium | Low
-    owner: str | None = None        # free-text assignee (email/name)
+from interfaces.api.schemas.risk import RiskCreate, RiskPatch, RiskResponse
 
 router = APIRouter(
     prefix="/risks",
@@ -74,6 +67,8 @@ async def create_risk(
         confidence=body.confidence,
         reasoning=body.reasoning,
         uncertainty=body.uncertainty,
+        severity_score=body.severity_score,
+        probability_score=body.probability_score,
         created_by=current_user.id,
     )
     saved = await repo.save(risk)
@@ -149,6 +144,10 @@ async def patch_risk(
         values["risk_level"] = body.risk_level
     if body.owner is not None:
         values["owner"] = body.owner or None
+    if body.severity_score is not None:
+        values["severity_score"] = body.severity_score
+    if body.probability_score is not None:
+        values["probability_score"] = body.probability_score
 
     await session.execute(update(RiskModel).where(RiskModel.id == risk_id).values(**values))
     await session.commit()

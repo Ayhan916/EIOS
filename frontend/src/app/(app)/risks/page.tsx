@@ -44,6 +44,8 @@ interface OrgRisk {
   category: string;
   probability: number | null;
   impact: number | null;
+  severity_score: number | null;
+  probability_score: number | null;
   assessment_id: string;
   created_at: string | null;
   supplier_name: string;
@@ -370,6 +372,124 @@ function RiskHeatmap({ risks }: { risks: OrgRisk[] }) {
   );
 }
 
+// ── 10×10 Risk Matrix ─────────────────────────────────────────────────────────
+
+function cellColor(row: number, col: number): string {
+  const score = row * col;
+  if (score >= 64) return "bg-red-500";
+  if (score >= 36) return "bg-orange-400";
+  if (score >= 16) return "bg-amber-300";
+  return "bg-emerald-200";
+}
+
+function RiskMatrix10x10({ risks }: { risks: OrgRisk[] }) {
+  const scored = risks.filter(
+    (r) => r.severity_score != null && r.probability_score != null
+  );
+  if (scored.length === 0) return null;
+
+  // Build cell → risks map
+  const cells: Record<string, OrgRisk[]> = {};
+  for (const r of scored) {
+    const key = `${r.probability_score}-${r.severity_score}`;
+    if (!cells[key]) cells[key] = [];
+    cells[key].push(r);
+  }
+
+  const [hovered, setHovered] = useState<{ row: number; col: number } | null>(null);
+
+  return (
+    <Card>
+      <CardContent className="pt-4">
+        <p className="text-sm font-semibold mb-1">Risk Matrix (Probability × Severity — 1–10)</p>
+        <p className="text-xs text-muted-foreground mb-3">
+          Only risks with numeric scores are plotted ({scored.length}/{risks.length}).
+        </p>
+        <div className="overflow-x-auto">
+          <div className="inline-flex flex-col gap-0.5 select-none">
+            {/* Y-axis label */}
+            <div className="flex gap-0.5 items-end">
+              <div className="w-5 flex items-center justify-center" style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", fontSize: 9, color: "#94a3b8", height: 10 * 28 }}>
+                Probability →
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {Array.from({ length: 10 }, (_, ri) => {
+                  const row = 10 - ri; // row 10 (top) → probability 10
+                  return (
+                    <div key={row} className="flex gap-0.5 items-center">
+                      <span className="w-5 text-right text-[9px] text-muted-foreground pr-1">{row}</span>
+                      {Array.from({ length: 10 }, (_, ci) => {
+                        const col = ci + 1; // col 1–10 = severity
+                        const key = `${row}-${col}`;
+                        const cellRisks = cells[key] ?? [];
+                        const isHovered = hovered?.row === row && hovered?.col === col;
+                        return (
+                          <div
+                            key={col}
+                            onMouseEnter={() => setHovered({ row, col })}
+                            onMouseLeave={() => setHovered(null)}
+                            className={`relative w-7 h-7 rounded-sm flex items-center justify-center text-[10px] font-bold cursor-default transition-all ${cellColor(row, col)} ${
+                              cellRisks.length > 0
+                                ? "ring-2 ring-offset-0 ring-slate-700/40"
+                                : "opacity-60"
+                            } ${isHovered ? "scale-110 z-10 shadow-lg" : ""}`}
+                          >
+                            {cellRisks.length > 0 && (
+                              <span className="text-slate-800">{cellRisks.length}</span>
+                            )}
+                            {isHovered && cellRisks.length > 0 && (
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-20 w-48 rounded-md border bg-white shadow-xl p-2 text-left pointer-events-none">
+                                <p className="text-[10px] font-semibold text-slate-600 mb-1">
+                                  P:{row} × S:{col} ({cellRisks.length} risk{cellRisks.length !== 1 ? "s" : ""})
+                                </p>
+                                {cellRisks.slice(0, 4).map((r) => (
+                                  <p key={r.id} className="text-[10px] truncate text-slate-700">• {r.title}</p>
+                                ))}
+                                {cellRisks.length > 4 && (
+                                  <p className="text-[10px] text-muted-foreground">+{cellRisks.length - 4} more</p>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+                {/* X axis labels */}
+                <div className="flex gap-0.5 mt-0.5">
+                  <span className="w-5" />
+                  {Array.from({ length: 10 }, (_, ci) => (
+                    <span key={ci + 1} className="w-7 text-center text-[9px] text-muted-foreground">{ci + 1}</span>
+                  ))}
+                </div>
+                <p className="text-[9px] text-muted-foreground text-center mt-0.5 ml-5">Severity →</p>
+              </div>
+            </div>
+          </div>
+          {/* Legend */}
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            {[["bg-emerald-200", "Low (1–15)"], ["bg-amber-300", "Moderate (16–35)"], ["bg-orange-400", "High (36–63)"], ["bg-red-500", "Critical (64–100)"]] as const}
+            {(
+              [
+                ["bg-emerald-200", "Low (1–15)"],
+                ["bg-amber-300", "Moderate (16–35)"],
+                ["bg-orange-400", "High (36–63)"],
+                ["bg-red-500", "Critical (64–100)"],
+              ] as [string, string][]
+            ).map(([cls, label]) => (
+              <span key={label} className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <span className={`h-2.5 w-2.5 rounded-sm ${cls}`} />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Summary Cards ─────────────────────────────────────────────────────────────
 
 function LevelSummary({ risks }: { risks: OrgRisk[] }) {
@@ -635,6 +755,7 @@ export default function RisksPage() {
         <>
           {levelFilter === "all" && <LevelSummary risks={allRisks} />}
           {levelFilter === "all" && <RiskHeatmap risks={allRisks} />}
+          {levelFilter === "all" && <RiskMatrix10x10 risks={allRisks} />}
 
           {allRisks.length === 0 ? (
             <div className="rounded-lg border border-dashed">

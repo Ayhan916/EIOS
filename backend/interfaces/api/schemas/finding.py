@@ -14,6 +14,8 @@ class FindingCreate(BaseModel):
     confidence: ConfidenceLevel = ConfidenceLevel.HIGH
     reasoning: str | None = None
     uncertainty: str | None = None
+    severity_score: int | None = Field(default=None, ge=1, le=10)
+    probability_score: int | None = Field(default=None, ge=1, le=10)
 
 
 class FindingResponse(EntityResponse):
@@ -27,6 +29,8 @@ class FindingResponse(EntityResponse):
     uncertainty: str | None = None
     evidence_strength: str | None = None
     evidence_source_count: int = 0
+    severity_score: int | None = None
+    probability_score: int | None = None
 
 
 class FindingEvidenceLinkResponse(EntityResponse):
