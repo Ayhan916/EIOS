@@ -210,6 +210,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.aiMonitoring",    href: "/ai-governance/monitoring", icon: Radio },
       { labelKey: "nav.workflowMonitor", href: "/workflows",                icon: PlayCircle },
       { labelKey: "nav.evaluation",      href: "/evaluation",               icon: Activity },
+      { labelKey: "nav.benchmarks",      href: "/benchmarks",               icon: BarChart3, roleGuard: ["admin"] },
       { labelKey: "nav.missionControl",  href: "/mission-control",          icon: Zap, roleGuard: ["admin"] },
       { labelKey: "nav.selfImprovement", href: "/self-improvement",         icon: TrendingUp, roleGuard: ["admin"] },
     ],

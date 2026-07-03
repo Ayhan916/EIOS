@@ -1,10 +1,11 @@
-"""Evaluation Engine API — GAP-02 / FR-014.
+"""Evaluation Engine API — GAP-02 / FR-014 + GAP-03 Mission Control.
 
 Endpoints:
-  POST /evaluation/run            Trigger a manual evaluation run
-  GET  /evaluation/latest         Latest evaluation snapshot
-  GET  /evaluation/trends         Time series (last N runs)
-  GET  /evaluation/benchmarks     Benchmark results for a run
+  POST /evaluation/run              Trigger a manual evaluation run
+  GET  /evaluation/latest           Latest evaluation snapshot
+  GET  /evaluation/trends           Time series (last N runs)
+  GET  /evaluation/benchmarks/{id}  Benchmark results for a run
+  GET  /evaluation/system-status    Mission Control summary (health + agent counts)
 """
 
 from __future__ import annotations
@@ -210,3 +211,245 @@ async def get_benchmarks(
     repo = SQLBenchmarkResultRepository(db)
     results = await repo.list_by_run(run_id)
     return [_bm_to_response(b) for b in results]
+
+
+# ── Mission Control system-status ──────────────────────────────────────────────
+
+
+# ── Benchmark Comparison (GAP-21) ─────────────────────────────────────────────
+
+
+class BenchmarkTrendPoint(BaseModel):
+    run_id: str
+    computed_at: str | None
+    pass_rate: float
+    passed: int
+    total: int
+
+
+class ModuleComparisonEntry(BaseModel):
+    module: str
+    current_pass_rate: float
+    prev_pass_rate: float | None
+    delta: float | None
+    status: str              # "green" | "yellow" | "red" | "unknown"
+    baseline: float          # target pass rate (1.0 for deterministic benchmarks)
+    total_cases: int
+    passed_cases: int
+    trend: list[BenchmarkTrendPoint]
+    failing_cases: list[str]
+
+
+class BenchmarkComparisonResponse(BaseModel):
+    modules: list[ModuleComparisonEntry]
+    run_count: int
+    latest_run_id: str | None
+    latest_computed_at: str | None
+
+
+def _bm_status(pass_rate: float) -> str:
+    if pass_rate >= 0.90:
+        return "green"
+    elif pass_rate >= 0.70:
+        return "yellow"
+    else:
+        return "red"
+
+
+@router.get(
+    "/benchmarks/comparison",
+    response_model=BenchmarkComparisonResponse,
+    dependencies=[Depends(require_analyst)],
+    summary="Contextual benchmark comparison across modules and runs (GAP-21)",
+)
+async def get_benchmark_comparison(
+    limit_runs: int = Query(default=5, ge=2, le=20),
+    db: AsyncSession = Depends(get_db),
+    _: Any = Depends(get_current_user),
+) -> BenchmarkComparisonResponse:
+    """Deterministic module ranking with delta-to-previous and sparkline trend.
+
+    Returns all modules sorted by current_pass_rate ascending (worst first),
+    so the most critical modules appear at the top.
+    """
+    run_repo = SQLEvaluationRunRepository(db)
+    bm_repo = SQLBenchmarkResultRepository(db)
+
+    recent_runs = await run_repo.list_recent(limit=limit_runs)
+    if not recent_runs:
+        return BenchmarkComparisonResponse(
+            modules=[], run_count=0, latest_run_id=None, latest_computed_at=None
+        )
+
+    # chronological order (oldest first) for trend sparklines
+    runs_chron = list(reversed(recent_runs))
+    run_ids = [r.id for r in runs_chron]
+    run_map = {r.id: r for r in runs_chron}
+
+    all_bm = await bm_repo.list_by_run_ids(run_ids)
+
+    # Group: module → run_id → list[BenchmarkResult]
+    from collections import defaultdict
+    by_module_run: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
+    for bm in all_bm:
+        by_module_run[bm.module][bm.evaluation_run_id].append(bm)
+
+    latest_run = recent_runs[0]  # most recent
+    prev_run = recent_runs[1] if len(recent_runs) > 1 else None
+
+    entries: list[ModuleComparisonEntry] = []
+
+    for module, run_bm_map in by_module_run.items():
+        # Build trend (chronological)
+        trend: list[BenchmarkTrendPoint] = []
+        for rid in run_ids:
+            bms = run_bm_map.get(rid, [])
+            if not bms:
+                continue
+            passed = sum(1 for b in bms if b.passed)
+            total = len(bms)
+            run_obj = run_map[rid]
+            trend.append(BenchmarkTrendPoint(
+                run_id=rid,
+                computed_at=run_obj.computed_at.isoformat() if run_obj.computed_at else None,
+                pass_rate=round(passed / total, 4) if total else 0.0,
+                passed=passed,
+                total=total,
+            ))
+
+        # Current pass rate (from latest run)
+        latest_bms = run_bm_map.get(latest_run.id, [])
+        if not latest_bms:
+            continue
+        cur_passed = sum(1 for b in latest_bms if b.passed)
+        cur_total = len(latest_bms)
+        current_pass_rate = round(cur_passed / cur_total, 4) if cur_total else 0.0
+
+        # Previous pass rate
+        prev_pass_rate: float | None = None
+        delta: float | None = None
+        if prev_run:
+            prev_bms = run_bm_map.get(prev_run.id, [])
+            if prev_bms:
+                pp = sum(1 for b in prev_bms if b.passed)
+                pt = len(prev_bms)
+                prev_pass_rate = round(pp / pt, 4) if pt else 0.0
+                delta = round(current_pass_rate - prev_pass_rate, 4)
+
+        failing_cases = [b.benchmark_name for b in latest_bms if not b.passed]
+
+        entries.append(ModuleComparisonEntry(
+            module=module,
+            current_pass_rate=current_pass_rate,
+            prev_pass_rate=prev_pass_rate,
+            delta=delta,
+            status=_bm_status(current_pass_rate),
+            baseline=1.0,
+            total_cases=cur_total,
+            passed_cases=cur_passed,
+            trend=trend,
+            failing_cases=failing_cases,
+        ))
+
+    # Sort: worst first (ascending pass_rate)
+    entries.sort(key=lambda e: e.current_pass_rate)
+
+    return BenchmarkComparisonResponse(
+        modules=entries,
+        run_count=len(recent_runs),
+        latest_run_id=latest_run.id,
+        latest_computed_at=latest_run.computed_at.isoformat() if latest_run.computed_at else None,
+    )
+
+
+class AgentStatusSummary(BaseModel):
+    active: int
+    idle: int
+    error: int
+    disabled: int
+    total: int
+
+
+class SystemStatusResponse(BaseModel):
+    platform_health_score: float
+    benchmark_status: str
+    benchmark_passed: int
+    benchmark_total: int
+    accuracy_score: float
+    confidence_score: float
+    hallucination_rate: float
+    error_rate: float
+    cost_usd_last_7d: float
+    cost_usd_last_30d: float
+    agent_run_count: int
+    latest_run_id: str | None
+    computed_at: str | None
+    agents: AgentStatusSummary
+
+
+@router.get(
+    "/system-status",
+    response_model=SystemStatusResponse,
+    dependencies=[Depends(require_analyst)],
+    summary="Mission Control — platform health + agent summary in one call",
+)
+async def get_system_status(
+    db: AsyncSession = Depends(get_db),
+    _: Any = Depends(get_current_user),
+) -> SystemStatusResponse:
+    """Single-call endpoint for the Mission Control Dashboard header."""
+    from sqlalchemy import func as sqlfunc, select as sqselect
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
+
+    run_repo = SQLEvaluationRunRepository(db)
+    latest = await run_repo.get_latest()
+
+    # Agent status counts
+    stmt = sqselect(
+        MonitoringAgentModel.status, sqlfunc.count().label("n")
+    ).group_by(MonitoringAgentModel.status)
+    result = await db.execute(stmt)
+    counts: dict[str, int] = {row.status: row.n for row in result.all()}
+
+    agents = AgentStatusSummary(
+        active=counts.get("ACTIVE", 0),
+        idle=counts.get("IDLE", 0),
+        error=counts.get("ERROR", 0),
+        disabled=counts.get("DISABLED", 0),
+        total=sum(counts.values()),
+    )
+
+    if latest is None:
+        return SystemStatusResponse(
+            platform_health_score=0.0,
+            benchmark_status="unknown",
+            benchmark_passed=0,
+            benchmark_total=0,
+            accuracy_score=0.0,
+            confidence_score=0.0,
+            hallucination_rate=0.0,
+            error_rate=0.0,
+            cost_usd_last_7d=0.0,
+            cost_usd_last_30d=0.0,
+            agent_run_count=0,
+            latest_run_id=None,
+            computed_at=None,
+            agents=agents,
+        )
+
+    return SystemStatusResponse(
+        platform_health_score=latest.platform_health_score,
+        benchmark_status=latest.benchmark_status,
+        benchmark_passed=latest.benchmark_passed,
+        benchmark_total=latest.benchmark_total,
+        accuracy_score=latest.accuracy_score,
+        confidence_score=latest.confidence_score,
+        hallucination_rate=latest.hallucination_rate,
+        error_rate=latest.error_rate,
+        cost_usd_last_7d=latest.cost_usd_last_7d,
+        cost_usd_last_30d=latest.cost_usd_last_30d,
+        agent_run_count=latest.agent_run_count,
+        latest_run_id=latest.id,
+        computed_at=latest.computed_at.isoformat() if latest.computed_at else None,
+        agents=agents,
+    )

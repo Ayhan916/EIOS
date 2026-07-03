@@ -161,3 +161,14 @@ class SQLBenchmarkResultRepository(
         )
         result = await self._session.execute(stmt)
         return [self._to_domain(row) for row in result.scalars().all()]
+
+    async def list_by_run_ids(self, run_ids: list[str]) -> list[BenchmarkResult]:
+        if not run_ids:
+            return []
+        stmt = (
+            select(BenchmarkResultModel)
+            .where(BenchmarkResultModel.evaluation_run_id.in_(run_ids))
+            .order_by(BenchmarkResultModel.module, BenchmarkResultModel.evaluation_run_id)
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_domain(row) for row in result.scalars().all()]

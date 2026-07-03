@@ -102,6 +102,7 @@ const de = {
   "nav.prioritization": "Priorisierung",
   "reg.changesTab": "Rechtsänderungen",
   "nav.evaluation": "Evaluation Engine",
+  "nav.benchmarks": "Benchmarks",
   "nav.missionControl": "Mission Control",
   "nav.selfImprovement": "Selbstverbesserung",
   "nav.scope3Carbon": "Scope 3 Carbon",
