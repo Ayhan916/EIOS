@@ -78,3 +78,51 @@ export async function getActivityTimeline(
   );
   return data;
 }
+
+export interface ScoreDriver {
+  factor: string;
+  count: number;
+  impact: "high" | "medium" | "low";
+  description: string;
+  score_contribution: number;
+}
+
+export interface PillarScore {
+  pillar: "Environmental" | "Social" | "Governance";
+  score: number;
+  critical: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
+export interface ImprovementHint {
+  action: string;
+  expected_risk_reduction: number;
+  effort: "Low" | "Medium" | "High";
+}
+
+export interface ScoreBreakdown {
+  assessment_id: string;
+  risk_score: number;
+  risk_band: string;
+  esg_total: number;
+  esg_environmental: number;
+  esg_social: number;
+  esg_governance: number;
+  pillars: PillarScore[];
+  drivers: ScoreDriver[];
+  uncertainty: "Low" | "Medium" | "High";
+  uncertainty_reason: string;
+  data_completeness: number;
+  improvement_hints: ImprovementHint[];
+  assumptions: string[];
+  score_version: string;
+}
+
+export async function getScoreBreakdown(id: string): Promise<ScoreBreakdown> {
+  const { data } = await apiClient.get<ScoreBreakdown>(
+    `/assessments/${id}/score-breakdown`
+  );
+  return data;
+}

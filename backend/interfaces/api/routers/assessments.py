@@ -12,6 +12,13 @@ from application.compliance.verdict import compute_verdict
 from application.remediation.brief import compute_brief
 from application.remediation.matcher import compute_matches
 from application.remediation.planner import compute_remediation_plan
+from application.scoring.supplier_scorer import (
+    ScoreInputs,
+    build_drivers,
+    calculate_esg_scores,
+    calculate_risk_score,
+    SCORE_VERSION,
+)
 from domain.assessment import Assessment
 from domain.enums import (
     EntityStatus,
@@ -279,6 +286,254 @@ async def list_assessment_risks(
     _assert_org_access(assessment.organization_id, current_user.organization_id)
     risks = await repo.list_by_assessment(assessment_id)
     return [RiskResponse.model_validate(r) for r in risks]
+
+
+class ScoreDriver(BaseModel):
+    factor: str
+    count: int
+    impact: str
+    description: str
+    score_contribution: float
+
+
+class PillarScore(BaseModel):
+    pillar: str
+    score: float
+    critical: int
+    high: int
+    medium: int
+    low: int
+
+
+class ImprovementHint(BaseModel):
+    action: str
+    expected_risk_reduction: float
+    effort: str
+
+
+class ScoreBreakdown(BaseModel):
+    assessment_id: str
+    risk_score: float
+    risk_band: str
+    esg_total: float
+    esg_environmental: float
+    esg_social: float
+    esg_governance: float
+    pillars: list[PillarScore]
+    drivers: list[ScoreDriver]
+    uncertainty: str
+    uncertainty_reason: str
+    data_completeness: int
+    improvement_hints: list[ImprovementHint]
+    assumptions: list[str]
+    score_version: str
+
+
+@router.get("/{assessment_id}/score-breakdown", response_model=ScoreBreakdown)
+async def get_score_breakdown(
+    assessment_id: str,
+    current_user: User = Depends(get_current_user),
+    assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
+    finding_repo: SQLFindingRepository = Depends(get_finding_repo),
+    risk_repo: SQLRiskRepository = Depends(get_risk_repo),
+    rec_repo: SQLRecommendationRepository = Depends(get_recommendation_repo),
+) -> ScoreBreakdown:
+    from datetime import date as _date
+
+    assessment = await assessment_repo.get_by_id(assessment_id)
+    if assessment is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assessment not found")
+    _assert_org_access(assessment.organization_id, current_user.organization_id)
+
+    findings = await finding_repo.list_by_assessment(assessment_id)
+    risks = await risk_repo.list_by_assessment(assessment_id)
+    recs = await rec_repo.list_by_assessment(assessment_id)
+
+    today = _date.today()
+
+    def _count(items, **filters):
+        result = 0
+        for item in items:
+            if all(getattr(item, k, None) == v for k, v in filters.items()):
+                result += 1
+        return result
+
+    ESG_CATS = {"Environmental", "Environment", "E"}
+    SOC_CATS = {"Social", "S"}
+    GOV_CATS = {"Governance", "G"}
+
+    def _pillar(f):
+        cat = (f.category or "").strip()
+        if cat in ESG_CATS:
+            return "env"
+        if cat in SOC_CATS:
+            return "social"
+        if cat in GOV_CATS:
+            return "gov"
+        return "other"
+
+    inputs = ScoreInputs(
+        total_assessments=1,
+        approved_assessments=1 if assessment.status == "approved" else 0,
+        critical_findings=_count(findings, severity="Critical"),
+        high_findings=_count(findings, severity="High"),
+        medium_findings=_count(findings, severity="Medium"),
+        low_findings=_count(findings, severity="Low"),
+        critical_risks=_count(risks, risk_level="Critical"),
+        high_risks=_count(risks, risk_level="High"),
+        medium_risks=_count(risks, risk_level="Medium"),
+        low_risks=_count(risks, risk_level="Low"),
+        open_actions=sum(1 for r in recs if r.action_status.value in ("open", "in_progress")),
+        overdue_actions=sum(
+            1 for r in recs
+            if r.due_date is not None
+            and r.action_status.value not in ("resolved", "verified")
+            and (r.due_date.date() if hasattr(r.due_date, "date") else r.due_date) < today
+        ),
+        env_critical=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Critical"),
+        env_high=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "High"),
+        env_medium=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Medium"),
+        env_low=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Low"),
+        social_critical=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Critical"),
+        social_high=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "High"),
+        social_medium=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Medium"),
+        social_low=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Low"),
+        gov_critical=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Critical"),
+        gov_high=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "High"),
+        gov_medium=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Medium"),
+        gov_low=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Low"),
+    )
+
+    risk_score, risk_band = calculate_risk_score(inputs)
+    esg_total, esg_env, esg_soc, esg_gov = calculate_esg_scores(inputs)
+    raw_drivers = build_drivers(inputs)
+
+    CONTRIBUTION_MAP = {
+        "Critical Findings": 20.0,
+        "Overdue Actions": 8.0,
+        "Critical Risks": 15.0,
+        "High Findings": 10.0,
+        "High Risks": 7.0,
+        "Open Actions": 3.0,
+        "Medium Findings": 3.0,
+        "Medium Risks": 2.0,
+    }
+    drivers = [
+        ScoreDriver(
+            factor=d["factor"],
+            count=d["count"],
+            impact=d["impact"],
+            description=d["description"],
+            score_contribution=round(d["count"] * CONTRIBUTION_MAP.get(d["factor"], 1.0) / 5.0, 1),
+        )
+        for d in raw_drivers
+    ]
+
+    pillars = [
+        PillarScore(
+            pillar="Environmental",
+            score=esg_env,
+            critical=inputs.env_critical,
+            high=inputs.env_high,
+            medium=inputs.env_medium,
+            low=inputs.env_low,
+        ),
+        PillarScore(
+            pillar="Social",
+            score=esg_soc,
+            critical=inputs.social_critical,
+            high=inputs.social_high,
+            medium=inputs.social_medium,
+            low=inputs.social_low,
+        ),
+        PillarScore(
+            pillar="Governance",
+            score=esg_gov,
+            critical=inputs.gov_critical,
+            high=inputs.gov_high,
+            medium=inputs.gov_medium,
+            low=inputs.gov_low,
+        ),
+    ]
+
+    completeness = 0
+    if len(findings) > 0:
+        completeness += 30
+    if len(risks) > 0:
+        completeness += 25
+    if len(recs) > 0:
+        completeness += 20
+    if assessment.quality_score is not None:
+        completeness += 15
+    if assessment.methodology:
+        completeness += 10
+
+    if completeness >= 75:
+        uncertainty = "Low"
+        uncertainty_reason = "Solide Datenbasis: Findings, Risks und Empfehlungen vorhanden."
+    elif completeness >= 40:
+        uncertainty = "Medium"
+        uncertainty_reason = "Partielle Datenbasis — nicht alle Bewertungsdimensionen vollständig erfasst."
+    else:
+        uncertainty = "High"
+        uncertainty_reason = "Wenige Daten erfasst — Score basiert auf unvollständiger Evidenz."
+
+    hints: list[ImprovementHint] = []
+    if inputs.critical_findings > 0:
+        reduction = round(inputs.critical_findings * 20 / 5.0, 1)
+        hints.append(ImprovementHint(
+            action=f"{inputs.critical_findings} kritische(s) Finding(s) adressieren und schließen",
+            expected_risk_reduction=reduction,
+            effort="High",
+        ))
+    if inputs.overdue_actions > 0:
+        reduction = round(inputs.overdue_actions * 8 / 5.0, 1)
+        hints.append(ImprovementHint(
+            action=f"{inputs.overdue_actions} überfällige Maßnahme(n) abschließen",
+            expected_risk_reduction=reduction,
+            effort="Medium",
+        ))
+    if inputs.high_findings > 0:
+        reduction = round(inputs.high_findings * 10 / 5.0, 1)
+        hints.append(ImprovementHint(
+            action=f"{inputs.high_findings} High-Severity Finding(s) in Findings-Register bearbeiten",
+            expected_risk_reduction=reduction,
+            effort="Medium",
+        ))
+    if inputs.open_actions > 0:
+        reduction = round(inputs.open_actions * 3 / 5.0, 1)
+        hints.append(ImprovementHint(
+            action=f"{inputs.open_actions} offene Empfehlung(en) umsetzen",
+            expected_risk_reduction=reduction,
+            effort="Low",
+        ))
+    hints.sort(key=lambda h: h.expected_risk_reduction, reverse=True)
+
+    assumptions = [
+        "Fehlende Evidenz wird als 'nicht vorhanden' gewertet — nicht als 'unklar'.",
+        "ESG-Pillar-Scores basieren ausschließlich auf kategorisierten Findings (Environmental / Social / Governance).",
+        "Unkategorisierte Findings fließen in den Risk Score ein, aber nicht in Pillar-Scores.",
+        f"Score-Methodologie Version {SCORE_VERSION} — deterministisch und reproduzierbar.",
+        "Overdue wird berechnet relativ zum heutigen Datum (Recommendations mit vergangener Due Date und offenem Status).",
+    ]
+
+    return ScoreBreakdown(
+        assessment_id=assessment_id,
+        risk_score=risk_score,
+        risk_band=risk_band.value,
+        esg_total=esg_total,
+        esg_environmental=esg_env,
+        esg_social=esg_soc,
+        esg_governance=esg_gov,
+        pillars=pillars,
+        drivers=drivers,
+        uncertainty=uncertainty,
+        uncertainty_reason=uncertainty_reason,
+        data_completeness=completeness,
+        improvement_hints=hints,
+        assumptions=assumptions,
+        score_version=SCORE_VERSION,
+    )
 
 
 @router.patch(

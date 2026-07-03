@@ -45,6 +45,7 @@ import { createRecommendation, listRecommendations, updateRecommendation } from 
 import { getComplianceCoverage } from "@/lib/api/compliance";
 import { generateReport, listReports, downloadReportPdf } from "@/lib/api/reports";
 import { getAssessmentBenchmark } from "@/lib/api/sector_intelligence";
+import { ScoreBreakdownPanel } from "@/components/assessments/score-breakdown-panel";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
 import type { ActionStatus, CommentResponse } from "@/types/api";
@@ -705,6 +706,9 @@ export default function AssessmentDetailPage({
           )}
         </div>
       </div>
+
+      {/* ── Score Explainability Panel (GAP-01) ─────────────────────────────── */}
+      <ScoreBreakdownPanel assessmentId={id} />
 
       {/* ── Questionnaire Panel (Item 34 + 35) ─────────────────────────────── */}
       {assessment.supplier_id && (
