@@ -13,6 +13,8 @@ import {
   Download,
   FileText,
   GitPullRequest,
+  Globe,
+  Layers,
   Lightbulb,
   Loader2,
   MessageSquare,
@@ -883,6 +885,82 @@ export default function AssessmentDetailPage({
               </CardContent>
             </Card>
           </div>
+
+          {/* ── Sector Context (GAP-07) ── */}
+          {benchmark && benchmark.sector_nace_code && (
+            <Card className="mt-4">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Layers className="h-4 w-4 text-blue-500" />
+                  <CardTitle className="text-base">Sector Context</CardTitle>
+                  <span className="ml-auto font-mono text-xs bg-muted px-2 py-0.5 rounded">
+                    NACE {benchmark.sector_nace_code}
+                  </span>
+                </div>
+                <CardDescription className="mt-0.5">{benchmark.sector_name}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {/* E/S/G risk levels */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    { label: "Environmental", value: benchmark.environmental_risk },
+                    { label: "Social",        value: benchmark.social_risk },
+                    { label: "Governance",    value: benchmark.governance_risk },
+                    { label: "Overall",       value: benchmark.overall_sector_risk },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center gap-1.5 rounded-full border border-border px-2.5 py-0.5">
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                      <span className={`text-xs font-semibold ${
+                        value === "Critical" ? "text-red-600"
+                        : value === "High"   ? "text-orange-500"
+                        : value === "Medium" || value === "Moderate" ? "text-amber-500"
+                        : "text-emerald-600"
+                      }`}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Key risk themes */}
+                {benchmark.key_risk_themes.length > 0 && (
+                  <div>
+                    <p className="text-xs text-muted-foreground mb-1.5 font-medium">Key risk themes for this sector</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {benchmark.key_risk_themes.slice(0, 5).map((theme) => (
+                        <span key={theme} className="rounded-full bg-secondary text-secondary-foreground px-2 py-0.5 text-xs">
+                          {theme}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Applicable frameworks */}
+                {benchmark.applicable_frameworks.length > 0 && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Globe className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs text-muted-foreground">Frameworks:</span>
+                    {benchmark.applicable_frameworks.map((fw) => (
+                      <span key={fw} className="text-xs font-medium text-blue-600">{fw}</span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Regulatory exposure note */}
+                {benchmark.regulatory_exposure_notes && (
+                  <p className="text-xs text-muted-foreground border-l-2 border-border pl-3 italic">
+                    {benchmark.regulatory_exposure_notes}
+                  </p>
+                )}
+
+                <Link
+                  href={`/sector-risk/${benchmark.sector_nace_code}`}
+                  className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800"
+                >
+                  View full sector risk register →
+                </Link>
+              </CardContent>
+            </Card>
+          )}
 
           {compliance && (
             <Card className="mt-4">
