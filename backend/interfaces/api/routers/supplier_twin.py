@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.intelligence_engine.collector_orchestrator import run_collection_for_org
 from application.intelligence_engine.pipeline_service import process_signals_for_supplier
+from application.intelligence_engine.source_credibility import get_credibility
 from application.intelligence_engine.timeline_service import (
     list_org_intelligence_feed,
     list_timeline,
@@ -112,6 +113,7 @@ def _twin_to_response(twin) -> SupplierDigitalTwinResponse:
 
 
 def _event_to_response(e) -> IntelligenceTimelineEventResponse:
+    credibility = get_credibility(e.source_name)
     return IntelligenceTimelineEventResponse(
         id=e.id,
         supplier_id=e.supplier_id,
@@ -134,6 +136,8 @@ def _event_to_response(e) -> IntelligenceTimelineEventResponse:
         twin_dimension_affected=e.twin_dimension_affected,
         health_delta=e.health_delta,
         confidence=e.confidence,
+        credibility_level=credibility.level,
+        credibility_reason=credibility.reason,
         occurred_at=e.occurred_at,
         processed_at=e.processed_at,
         is_active=e.is_active,

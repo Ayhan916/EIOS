@@ -279,6 +279,11 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
     ENVIRONMENTAL: <Globe className="h-3.5 w-3.5" />,
     OPERATIONAL: <Network className="h-3.5 w-3.5" />,
   };
+  const credibilityStyles: Record<string, string> = {
+    High: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    Medium: "bg-amber-100 text-amber-800 border-amber-300",
+    Low: "bg-red-100 text-red-800 border-red-300",
+  };
 
   return (
     <div className={`rounded-xl border p-4 ${severityColors[event.severity] ?? "border-border bg-card"}`}>
@@ -300,7 +305,7 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
           </div>
           <p className="mt-1 font-semibold text-sm">{event.title}</p>
           {event.source_name && (
-            <div className="mt-1">
+            <div className="mt-1 flex items-center gap-2 flex-wrap">
               {event.source_url ? (
                 <a
                   href={toAbsoluteUrl(event.source_url)}
@@ -315,6 +320,14 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
                 <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                   <Globe className="h-3 w-3" />
                   {event.source_name}
+                </span>
+              )}
+              {event.credibility_level && (
+                <span
+                  className={`inline-flex items-center rounded border px-1.5 py-0.5 text-xs font-semibold ${credibilityStyles[event.credibility_level] ?? "bg-slate-100 text-slate-700 border-slate-300"}`}
+                  title={event.credibility_reason}
+                >
+                  {event.credibility_level === "High" ? "✓" : event.credibility_level === "Medium" ? "~" : "!"} {event.credibility_level}
                 </span>
               )}
             </div>
@@ -359,6 +372,17 @@ function TwinEventCard({ event }: { event: IntelligenceTimelineEvent }) {
                 <div>
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t("suppliers.recommendedAction")}</p>
                   <p className="text-xs whitespace-pre-line">{event.recommended_action}</p>
+                </div>
+              )}
+              {event.credibility_reason && (
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Source Credibility</p>
+                  <div className="flex items-start gap-2">
+                    <span className={`mt-0.5 inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 text-xs font-semibold ${credibilityStyles[event.credibility_level] ?? "bg-slate-100 text-slate-700 border-slate-300"}`}>
+                      {event.credibility_level}
+                    </span>
+                    <p className="text-xs text-muted-foreground">{event.credibility_reason}</p>
+                  </div>
                 </div>
               )}
               <div className="flex items-center gap-3 text-xs text-muted-foreground">

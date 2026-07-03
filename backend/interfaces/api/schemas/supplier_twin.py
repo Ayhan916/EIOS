@@ -78,6 +78,10 @@ class IntelligenceTimelineEventResponse(BaseModel):
     health_delta: float
     confidence: float
 
+    # FR-006 / FR-007 — Source Credibility (computed from source_name, no DB column)
+    credibility_level: str  # "High" | "Medium" | "Low"
+    credibility_reason: str
+
     occurred_at: datetime
     processed_at: datetime
     is_active: bool

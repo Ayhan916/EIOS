@@ -54,6 +54,8 @@ export interface IntelligenceTimelineEvent {
   twin_dimension_affected: string;
   health_delta: number;
   confidence: number;
+  credibility_level: "High" | "Medium" | "Low";
+  credibility_reason: string;
   occurred_at: string;
   processed_at: string;
   is_active: boolean;
