@@ -101,6 +101,7 @@ const en = {
   "nav.grievances": "Grievance Mechanism",
   "nav.prioritization": "Prioritisation",
   "reg.changesTab": "Reg. Changes",
+  "nav.evaluation": "Evaluation Engine",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Connectors",
   "nav.eventBus": "Event Bus",

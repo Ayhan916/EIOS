@@ -55,6 +55,7 @@ import {
   ScrollText,
   Megaphone,
   ListOrdered,
+  Activity,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -206,6 +207,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.aiModels",        href: "/ai-governance/models",     icon: Layers },
       { labelKey: "nav.aiMonitoring",    href: "/ai-governance/monitoring", icon: Radio },
       { labelKey: "nav.workflowMonitor", href: "/workflows",                icon: PlayCircle },
+      { labelKey: "nav.evaluation",      href: "/evaluation",               icon: Activity },
     ],
   },
   // ── 10. Executive ────────────────────────────────────────────────────────────

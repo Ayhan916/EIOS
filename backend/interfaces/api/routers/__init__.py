@@ -64,6 +64,7 @@ from .pipeline import router as pipeline_router
 from .grievance import router as grievance_router
 from .prioritization import router as prioritization_router
 from .regulatory_change import router as regulatory_change_router
+from .evaluation import router as evaluation_router
 
 __all__ = [
     "agents_router",
@@ -134,4 +135,5 @@ __all__ = [
     "grievance_router",
     "prioritization_router",
     "regulatory_change_router",
+    "evaluation_router",
 ]

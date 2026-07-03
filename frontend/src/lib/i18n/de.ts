@@ -101,6 +101,7 @@ const de = {
   "nav.grievances": "Beschwerdemechanismus",
   "nav.prioritization": "Priorisierung",
   "reg.changesTab": "Rechtsänderungen",
+  "nav.evaluation": "Evaluation Engine",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Konnektoren",
   "nav.eventBus": "Event Bus",
