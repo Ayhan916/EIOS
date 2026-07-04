@@ -68,6 +68,38 @@ export interface SystemStatus {
   agents: AgentStatusSummary;
 }
 
+export interface CalibrationPoint {
+  confidence_level: "high" | "medium" | "low";
+  total: number;
+  confirmed: number;
+  refuted: number;
+  unknown: number;
+  accuracy: number | null;
+}
+
+export interface CalibrationCurveResponse {
+  points: CalibrationPoint[];
+  total_events: number;
+}
+
+export interface RecordCalibrationRequest {
+  entity_type: "finding" | "risk" | "recommendation";
+  entity_id: string;
+  predicted_confidence: "high" | "medium" | "low";
+  actual_outcome: "confirmed" | "refuted" | "unknown";
+}
+
+export interface CalibrationEventResponse {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  predicted_confidence: string;
+  actual_outcome: string;
+  recorded_by: string | null;
+  recorded_at: string | null;
+  created_at: string;
+}
+
 export const evaluationApi = {
   triggerRun: async (windowDays = 30): Promise<TriggerResponse> => {
     const res = await apiClient.post(`/evaluation/run?window_days=${windowDays}`);
@@ -91,6 +123,18 @@ export const evaluationApi = {
 
   getSystemStatus: async (): Promise<SystemStatus> => {
     const res = await apiClient.get("/evaluation/system-status");
+    return res.data;
+  },
+
+  getCalibrationCurve: async (): Promise<CalibrationCurveResponse> => {
+    const res = await apiClient.get("/evaluation/calibration/curve");
+    return res.data;
+  },
+
+  recordCalibrationEvent: async (
+    body: RecordCalibrationRequest
+  ): Promise<CalibrationEventResponse> => {
+    const res = await apiClient.post("/evaluation/calibration/events", body);
     return res.data;
   },
 };

@@ -68,3 +68,21 @@ class BenchmarkResult(BaseEntity):
     actual_output: str = ""
     failure_reason: str = ""
     duration_ms: float = 0.0
+
+
+@dataclass(slots=True, kw_only=True)
+class CalibrationEvent(BaseEntity):
+    """Records whether a predicted confidence level was accurate after audit.
+
+    An analyst observes: entity X was predicted with confidence level Y,
+    and the real audit outcome was Z (confirmed / refuted / unknown).
+    Aggregated over time this produces a calibration curve per confidence band.
+    """
+
+    organization_id: str = ""
+    entity_type: str = ""        # "finding" | "risk" | "recommendation"
+    entity_id: str = ""
+    predicted_confidence: str = ""  # "high" | "medium" | "low"
+    actual_outcome: str = "unknown"  # "confirmed" | "refuted" | "unknown"
+    recorded_by: str | None = None
+    recorded_at: datetime | None = None

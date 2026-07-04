@@ -18,9 +18,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.evaluation.evaluation_service import run_evaluation
-from domain.evaluation import BenchmarkResult, EvaluationRun
+from domain.evaluation import BenchmarkResult, CalibrationEvent, EvaluationRun
 from infrastructure.persistence.repositories.evaluation import (
     SQLBenchmarkResultRepository,
+    SQLCalibrationEventRepository,
     SQLEvaluationRunRepository,
 )
 from interfaces.api.deps import get_current_user, get_db, require_analyst
@@ -453,3 +454,124 @@ async def get_system_status(
         computed_at=latest.computed_at.isoformat() if latest.computed_at else None,
         agents=agents,
     )
+
+
+# ── Confidence Calibration (GAP-27) ───────────────────────────────────────────
+
+_VALID_CONFIDENCE = {"high", "medium", "low"}
+_VALID_OUTCOME = {"confirmed", "refuted", "unknown"}
+_VALID_ENTITY_TYPE = {"finding", "risk", "recommendation"}
+
+
+class RecordCalibrationRequest(BaseModel):
+    entity_type: str        # "finding" | "risk" | "recommendation"
+    entity_id: str
+    predicted_confidence: str  # "high" | "medium" | "low"
+    actual_outcome: str     # "confirmed" | "refuted" | "unknown"
+
+
+class CalibrationEventResponse(BaseModel):
+    id: str
+    entity_type: str
+    entity_id: str
+    predicted_confidence: str
+    actual_outcome: str
+    recorded_by: str | None
+    recorded_at: datetime | None
+    created_at: datetime
+
+
+class CalibrationPoint(BaseModel):
+    confidence_level: str      # "high" | "medium" | "low"
+    total: int
+    confirmed: int
+    refuted: int
+    unknown: int
+    accuracy: float | None     # confirmed / (confirmed + refuted), None if no decisive events
+
+
+class CalibrationCurveResponse(BaseModel):
+    points: list[CalibrationPoint]
+    total_events: int
+
+
+@router.post(
+    "/calibration/events",
+    response_model=CalibrationEventResponse,
+    dependencies=[Depends(require_analyst)],
+    summary="Record a calibration event (analyst records actual outcome) — GAP-27",
+)
+async def record_calibration_event(
+    body: RecordCalibrationRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+) -> CalibrationEventResponse:
+    """Analyst records whether a confidence prediction was accurate.
+
+    This endpoint is for human analysts only — AI agents must not call it.
+    """
+    import uuid
+
+    if body.entity_type not in _VALID_ENTITY_TYPE:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=f"entity_type must be one of {_VALID_ENTITY_TYPE}")
+    if body.predicted_confidence not in _VALID_CONFIDENCE:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=f"predicted_confidence must be one of {_VALID_CONFIDENCE}")
+    if body.actual_outcome not in _VALID_OUTCOME:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=f"actual_outcome must be one of {_VALID_OUTCOME}")
+
+    now = datetime.now(__import__("datetime").timezone.utc)
+    event = CalibrationEvent(
+        id=str(uuid.uuid4()),
+        organization_id=str(current_user.organization_id),
+        entity_type=body.entity_type,
+        entity_id=body.entity_id,
+        predicted_confidence=body.predicted_confidence,
+        actual_outcome=body.actual_outcome,
+        recorded_by=str(current_user.id),
+        recorded_at=now,
+        created_by=str(current_user.id),
+        created_at=now,
+        updated_at=now,
+    )
+
+    repo = SQLCalibrationEventRepository(db)
+    saved = await repo.save(event)
+    await db.commit()
+
+    return CalibrationEventResponse(
+        id=saved.id,
+        entity_type=saved.entity_type,
+        entity_id=saved.entity_id,
+        predicted_confidence=saved.predicted_confidence,
+        actual_outcome=saved.actual_outcome,
+        recorded_by=saved.recorded_by,
+        recorded_at=saved.recorded_at,
+        created_at=saved.created_at,
+    )
+
+
+@router.get(
+    "/calibration/curve",
+    response_model=CalibrationCurveResponse,
+    dependencies=[Depends(require_analyst)],
+    summary="Confidence calibration curve — per-level accuracy stats — GAP-27",
+)
+async def get_calibration_curve(
+    db: AsyncSession = Depends(get_db),
+    current_user: Any = Depends(get_current_user),
+) -> CalibrationCurveResponse:
+    """Returns calibration accuracy grouped by predicted confidence level.
+
+    Accuracy = confirmed / (confirmed + refuted) per confidence band.
+    Deterministic computation — no LLM involved.
+    """
+    repo = SQLCalibrationEventRepository(db)
+    rows = await repo.compute_curve(str(current_user.organization_id))
+
+    points = [CalibrationPoint(**row) for row in rows]
+    total_events = sum(p.total for p in points)
+
+    return CalibrationCurveResponse(points=points, total_events=total_events)

@@ -3,6 +3,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
+  BarChart,
+  Bar,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
+import {
   Activity,
   CheckCircle2,
   XCircle,
@@ -12,8 +23,15 @@ import {
   DollarSign,
   Cpu,
   BarChart3,
+  Target,
 } from "lucide-react";
-import { evaluationApi, EvaluationRun, BenchmarkResult } from "@/lib/api/evaluation";
+import {
+  evaluationApi,
+  EvaluationRun,
+  BenchmarkResult,
+  CalibrationPoint,
+  RecordCalibrationRequest,
+} from "@/lib/api/evaluation";
 
 // ── Metric card ───────────────────────────────────────────────────────────────
 
@@ -129,6 +147,148 @@ function BenchmarkTable({ results }: { results: BenchmarkResult[] }) {
   );
 }
 
+// ── Calibration curve chart ───────────────────────────────────────────────────
+
+const CALIBRATION_COLORS: Record<string, string> = {
+  high: "#22c55e",
+  medium: "#f59e0b",
+  low: "#ef4444",
+};
+
+function CalibrationCurveChart({ points }: { points: CalibrationPoint[] }) {
+  const data = points.map((p) => ({
+    name: p.confidence_level.charAt(0).toUpperCase() + p.confidence_level.slice(1),
+    accuracy: p.accuracy !== null ? Math.round(p.accuracy * 100) : null,
+    total: p.total,
+    confirmed: p.confirmed,
+    refuted: p.refuted,
+    unknown: p.unknown,
+    fill: CALIBRATION_COLORS[p.confidence_level] ?? "#94a3b8",
+  }));
+
+  if (data.every((d) => d.total === 0)) {
+    return (
+      <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
+        Noch keine Calibration Events vorhanden. Zeichne einen Outcome auf um die Kurve zu sehen.
+      </div>
+    );
+  }
+
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+        <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+        <YAxis
+          domain={[0, 100]}
+          tickFormatter={(v) => `${v}%`}
+          tick={{ fontSize: 11 }}
+          width={40}
+        />
+        <Tooltip
+          formatter={(value: number, _name: string, props) => {
+            const item = props.payload;
+            if (value === null || value === undefined) return ["—", "Accuracy"];
+            return [
+              `${value}% (${item.confirmed} confirmed / ${item.refuted} refuted / ${item.unknown} unknown)`,
+              "Accuracy",
+            ];
+          }}
+          labelFormatter={(l) => `Confidence: ${l}`}
+        />
+        <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 2" label={{ value: "Perfect", fontSize: 10, fill: "#94a3b8" }} />
+        <Bar dataKey="accuracy" name="Accuracy (%)" radius={[4, 4, 0, 0]}>
+          {data.map((entry, i) => (
+            <Cell key={i} fill={entry.fill} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  );
+}
+
+function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
+  const [form, setForm] = useState<RecordCalibrationRequest>({
+    entity_type: "finding",
+    entity_id: "",
+    predicted_confidence: "high",
+    actual_outcome: "confirmed",
+  });
+
+  const mutation = useMutation({
+    mutationFn: () => evaluationApi.recordCalibrationEvent(form),
+    onSuccess: () => {
+      onSuccess();
+      setForm({ entity_type: "finding", entity_id: "", predicted_confidence: "high", actual_outcome: "confirmed" });
+    },
+  });
+
+  return (
+    <div className="rounded-xl border border-border bg-slate-50/60 p-4 space-y-3">
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Outcome aufzeichnen
+      </p>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground">Entity-Typ</label>
+          <select
+            className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
+            value={form.entity_type}
+            onChange={(e) => setForm((f) => ({ ...f, entity_type: e.target.value as RecordCalibrationRequest["entity_type"] }))}
+          >
+            <option value="finding">Finding</option>
+            <option value="risk">Risk</option>
+            <option value="recommendation">Recommendation</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground">Entity-ID</label>
+          <input
+            className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
+            placeholder="UUID"
+            value={form.entity_id}
+            onChange={(e) => setForm((f) => ({ ...f, entity_id: e.target.value }))}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground">Predicted Confidence</label>
+          <select
+            className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
+            value={form.predicted_confidence}
+            onChange={(e) => setForm((f) => ({ ...f, predicted_confidence: e.target.value as RecordCalibrationRequest["predicted_confidence"] }))}
+          >
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label className="text-[10px] font-medium text-muted-foreground">Actual Outcome</label>
+          <select
+            className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
+            value={form.actual_outcome}
+            onChange={(e) => setForm((f) => ({ ...f, actual_outcome: e.target.value as RecordCalibrationRequest["actual_outcome"] }))}
+          >
+            <option value="confirmed">Confirmed</option>
+            <option value="refuted">Refuted</option>
+            <option value="unknown">Unknown</option>
+          </select>
+        </div>
+      </div>
+      <button
+        onClick={() => mutation.mutate()}
+        disabled={mutation.isPending || !form.entity_id.trim()}
+        className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+      >
+        {mutation.isPending ? "Speichern…" : "Outcome speichern"}
+      </button>
+      {mutation.isError && (
+        <p className="text-xs text-red-500">Fehler beim Speichern. Bitte ID prüfen.</p>
+      )}
+    </div>
+  );
+}
+
 // ── Trend sparkline (simple bar chart) ───────────────────────────────────────
 
 function TrendBars({ runs }: { runs: EvaluationRun[] }) {
@@ -187,6 +347,11 @@ export default function EvaluationPage() {
       qc.invalidateQueries({ queryKey: ["evaluation-trends"] });
       setSelectedRunId(data.evaluation_run.id);
     },
+  });
+
+  const { data: calibrationData, refetch: refetchCalibration } = useQuery({
+    queryKey: ["calibration-curve"],
+    queryFn: () => evaluationApi.getCalibrationCurve(),
   });
 
   const run = latest;
@@ -320,6 +485,53 @@ export default function EvaluationPage() {
               <p className="text-xs text-gray-400">Each bar = one evaluation run. Green ≥80, Amber ≥60, Red &lt;60.</p>
             </div>
           )}
+
+          {/* Confidence Calibration Curve — GAP-27 */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 p-1.5">
+                <Target className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                  Confidence Calibration
+                </p>
+                <p className="text-xs text-gray-400">
+                  Bei "High Confidence" stimmt das System X% der Zeit — GAP-27
+                </p>
+              </div>
+              {calibrationData && (
+                <span className="ml-auto text-xs text-gray-400">
+                  {calibrationData.total_events} Events gesamt
+                </span>
+              )}
+            </div>
+
+            {calibrationData && (
+              <CalibrationCurveChart points={calibrationData.points} />
+            )}
+
+            <div className="grid grid-cols-3 gap-2 text-center text-xs">
+              {calibrationData?.points.map((p) => (
+                <div
+                  key={p.confidence_level}
+                  className="rounded-lg border border-border bg-slate-50/60 p-2 space-y-0.5"
+                >
+                  <p className="font-semibold capitalize text-gray-700 dark:text-gray-300">
+                    {p.confidence_level}
+                  </p>
+                  <p className="text-muted-foreground">
+                    {p.accuracy !== null ? `${(p.accuracy * 100).toFixed(0)}% korrekt` : "—"}
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">
+                    {p.confirmed}✓ {p.refuted}✗ {p.unknown}?
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <RecordCalibrationForm onSuccess={() => refetchCalibration()} />
+          </div>
 
           {/* Benchmarks */}
           <div className="space-y-3">

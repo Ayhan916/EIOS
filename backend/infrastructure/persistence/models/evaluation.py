@@ -1,4 +1,4 @@
-"""ORM models for evaluation_runs and benchmark_results (GAP-02)."""
+"""ORM models for evaluation_runs, benchmark_results, and calibration_events."""
 
 from __future__ import annotations
 
@@ -64,3 +64,21 @@ class BenchmarkResultModel(BaseModel):
     actual_output: Mapped[str] = mapped_column(Text, nullable=False, default="")
     failure_reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
     duration_ms: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+
+
+class CalibrationEventModel(BaseModel):
+    __tablename__ = "calibration_events"
+
+    __table_args__ = (
+        Index("ix_calev_org", "organization_id"),
+        Index("ix_calev_confidence", "predicted_confidence"),
+        Index("ix_calev_entity", "entity_type", "entity_id"),
+    )
+
+    organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(30), nullable=False)
+    entity_id: Mapped[str] = mapped_column(String(36), nullable=False)
+    predicted_confidence: Mapped[str] = mapped_column(String(10), nullable=False)
+    actual_outcome: Mapped[str] = mapped_column(String(20), nullable=False, default="unknown")
+    recorded_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    recorded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

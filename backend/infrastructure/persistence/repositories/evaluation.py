@@ -1,15 +1,17 @@
-"""Repositories for EvaluationRun and BenchmarkResult (GAP-02)."""
+"""Repositories for EvaluationRun, BenchmarkResult, and CalibrationEvent."""
 
 from __future__ import annotations
 
+from collections import defaultdict
 from datetime import UTC, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.evaluation import BenchmarkResult, EvaluationRun
+from domain.evaluation import BenchmarkResult, CalibrationEvent, EvaluationRun
 from infrastructure.persistence.models.evaluation import (
     BenchmarkResultModel,
+    CalibrationEventModel,
     EvaluationRunModel,
 )
 from infrastructure.persistence.repositories.base import BaseRepository
@@ -172,3 +174,91 @@ class SQLBenchmarkResultRepository(
         )
         result = await self._session.execute(stmt)
         return [self._to_domain(row) for row in result.scalars().all()]
+
+
+class SQLCalibrationEventRepository(
+    BaseRepository[CalibrationEvent, CalibrationEventModel]
+):
+    def __init__(self, session: AsyncSession) -> None:
+        super().__init__(session, CalibrationEventModel)
+
+    def _to_model(self, entity: CalibrationEvent) -> CalibrationEventModel:
+        return CalibrationEventModel(
+            id=entity.id,
+            organization_id=entity.organization_id,
+            entity_type=entity.entity_type,
+            entity_id=entity.entity_id,
+            predicted_confidence=entity.predicted_confidence,
+            actual_outcome=entity.actual_outcome,
+            recorded_by=entity.recorded_by,
+            recorded_at=entity.recorded_at,
+            status=entity.status,
+            version=entity.version,
+            owner=entity.owner,
+            created_by=entity.created_by,
+            updated_by=entity.updated_by,
+            created_at=entity.created_at or datetime.now(UTC),
+            updated_at=entity.updated_at or datetime.now(UTC),
+        )
+
+    def _to_domain(self, model: CalibrationEventModel) -> CalibrationEvent:
+        return CalibrationEvent(
+            id=model.id,
+            organization_id=model.organization_id,
+            entity_type=model.entity_type,
+            entity_id=model.entity_id,
+            predicted_confidence=model.predicted_confidence,
+            actual_outcome=model.actual_outcome,
+            recorded_by=model.recorded_by,
+            recorded_at=model.recorded_at,
+            status=model.status,
+            version=model.version,
+            owner=model.owner,
+            created_by=model.created_by,
+            updated_by=model.updated_by,
+            created_at=model.created_at,
+            updated_at=model.updated_at,
+        )
+
+    async def list_by_org(self, organization_id: str) -> list[CalibrationEvent]:
+        stmt = (
+            select(CalibrationEventModel)
+            .where(CalibrationEventModel.organization_id == organization_id)
+            .order_by(CalibrationEventModel.created_at.desc())
+        )
+        result = await self._session.execute(stmt)
+        return [self._to_domain(row) for row in result.scalars().all()]
+
+    async def compute_curve(self, organization_id: str) -> list[dict]:
+        """Return per-confidence-level accuracy stats (deterministic, no LLM)."""
+        events = await self.list_by_org(organization_id)
+
+        buckets: dict[str, dict[str, int]] = defaultdict(
+            lambda: {"confirmed": 0, "refuted": 0, "unknown": 0}
+        )
+        for ev in events:
+            level = ev.predicted_confidence.lower()
+            outcome = ev.actual_outcome.lower()
+            if outcome in ("confirmed", "refuted", "unknown"):
+                buckets[level][outcome] += 1
+
+        rows = []
+        for level in ("high", "medium", "low"):
+            b = buckets.get(level, {"confirmed": 0, "refuted": 0, "unknown": 0})
+            confirmed = b["confirmed"]
+            refuted = b["refuted"]
+            unknown = b["unknown"]
+            total = confirmed + refuted + unknown
+            decisive = confirmed + refuted
+            accuracy = round(confirmed / decisive, 4) if decisive > 0 else None
+            rows.append(
+                {
+                    "confidence_level": level,
+                    "total": total,
+                    "confirmed": confirmed,
+                    "refuted": refuted,
+                    "unknown": unknown,
+                    "accuracy": accuracy,
+                }
+            )
+        return rows
