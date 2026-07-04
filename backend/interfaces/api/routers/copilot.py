@@ -63,6 +63,7 @@ from infrastructure.persistence.repositories.copilot_audit import (
 from interfaces.api.deps import (
     get_current_user,
     get_db,
+    require_admin,
     require_executive,
     scope_gate,
 )
