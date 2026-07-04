@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
@@ -366,8 +367,18 @@ function SurvSignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, 
           </>
         )}
         {riskCreated ? (
-          <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium ml-auto">
-            <CheckCircle2 className="h-3 w-3" /> {t("surveillance.riskCreated")}
+          <span className="flex items-center gap-2 ml-auto">
+            <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
+              <CheckCircle2 className="h-3 w-3" /> {t("surveillance.riskCreated")}
+            </span>
+            {signal.supplier_id && (
+              <Link
+                href={`/suppliers/${signal.supplier_id}`}
+                className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
+              >
+                <ShieldAlert className="h-3 w-3" /> Supplier &amp; Reassess →
+              </Link>
+            )}
           </span>
         ) : (
           <button onClick={() => createRisk.mutate()} disabled={createRisk.isPending}

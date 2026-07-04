@@ -126,12 +126,18 @@ export default function CorrectiveActionPlansPage() {
         <div className="rounded-xl bg-emerald-100 dark:bg-emerald-900/30 p-2">
           <ClipboardCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">Corrective Action Plans</h1>
           <p className="text-xs text-gray-500">
             Track remediation commitments from finding to evidence verification
           </p>
         </div>
+        <Link
+          href="/reports"
+          className="flex items-center gap-2 rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+        >
+          <ExternalLink className="h-3.5 w-3.5" /> Berichte generieren →
+        </Link>
       </div>
 
       <KPICards />

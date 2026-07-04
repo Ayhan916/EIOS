@@ -1,14 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
   BarChart3,
   CheckCircle,
   Download,
+  FlaskConical,
   Leaf,
+  LineChart,
   Target,
   TrendingDown,
+  Wind,
   Zap,
 } from "lucide-react";
 import { getDashboard, listScorecards, type SustainabilityScorecard } from "@/lib/api/sustainability";
@@ -259,6 +263,34 @@ export default function SustainabilityDashboardPage() {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* ── Quick Navigation ─────────────────────────────────────────────── */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
+          Nächste Schritte
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {[
+            { href: "/sustainability/objectives",           icon: Target,       label: t("sustain.objectivesTitle") },
+            { href: "/sustainability/kpis",                 icon: BarChart3,    label: t("sustain.totalKpis") },
+            { href: "/sustainability/science-based-targets",icon: FlaskConical, label: t("sustain.sbtiTargets") },
+            { href: "/sustainability/ghg",                  icon: Wind,         label: t("sustain.carbonTitle") },
+            { href: "/sustainability/initiatives",          icon: TrendingDown, label: t("sustain.initiativesTitle") },
+            { href: "/scope3",                              icon: Leaf,         label: t("nav.scope3Carbon") },
+            { href: "/sustainability/kpis",                 icon: LineChart,    label: t("sustain.targetsTitle") },
+            { href: "/reports",                             icon: Zap,          label: t("nav.reports") },
+          ].map(({ href, icon: Icon, label }) => (
+            <Link
+              key={href + label}
+              href={href}
+              className="flex items-center gap-2 rounded-xl border border-border bg-white dark:bg-gray-900 px-3 py-2.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:border-emerald-400 hover:text-emerald-700 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors"
+            >
+              <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+              <span className="truncate">{label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

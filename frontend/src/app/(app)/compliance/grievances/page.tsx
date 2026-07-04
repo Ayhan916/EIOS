@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -119,7 +120,12 @@ function GrievanceRow({ report }: { report: GrievanceReportResponse }) {
             {report.linked_finding_id && (
               <div>
                 <span className="font-medium text-muted-foreground">Linked Finding: </span>
-                <span className="font-mono">{report.linked_finding_id.slice(0, 8)}…</span>
+                <Link
+                  href={`/findings/${report.linked_finding_id}`}
+                  className="font-mono text-blue-600 hover:underline"
+                >
+                  {report.linked_finding_id.slice(0, 8)}…
+                </Link>
               </div>
             )}
           </div>

@@ -275,7 +275,9 @@ function RiskList({ risks, assessmentId, onRecCreated }: {
           <CardContent className="pt-4 pb-4">
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0 flex-1">
-                <p className="font-semibold text-foreground">{r.title}</p>
+                <Link href={`/risks/${r.id}`} className="font-semibold text-foreground hover:text-blue-600 hover:underline transition-colors">
+                  {r.title}
+                </Link>
                 <p className="mt-1 text-sm text-muted-foreground">{r.description}</p>
                 {r.reasoning && (
                   <p className="mt-2 text-xs text-muted-foreground border-l-2 border-border pl-3 italic">{r.reasoning}</p>
@@ -1038,7 +1040,9 @@ export default function AssessmentDetailPage({
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="font-semibold text-foreground">{f.title}</p>
+                        <Link href={`/findings/${f.id}`} className="font-semibold text-foreground hover:text-blue-600 hover:underline transition-colors">
+                          {f.title}
+                        </Link>
                         <p className="mt-1 text-sm text-muted-foreground">{f.description}</p>
                         {f.reasoning && (
                           <p className="mt-2 text-xs text-muted-foreground border-l-2 border-border pl-3 italic">
