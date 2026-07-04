@@ -248,6 +248,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.enterpriseAudit",         href: "/enterprise/audit",          icon: CheckSquare },
       { labelKey: "nav.auditLog",                href: "/auditor",                   icon: ShieldCheck },
       { labelKey: "nav.integrations",            href: "/integrations",              icon: Puzzle },
+      { labelKey: "nav.developer",               href: "/developer",                 icon: FileCode, roleGuard: ["admin"] },
     ],
   },
 ];

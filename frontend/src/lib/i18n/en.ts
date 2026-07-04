@@ -108,6 +108,7 @@ const en = {
   "nav.benchmarks": "Benchmarks",
   "nav.missionControl": "Mission Control",
   "nav.selfImprovement": "Self-Improvement",
+  "nav.developer": "Developer Portal",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Connectors",
   "nav.eventBus": "Event Bus",

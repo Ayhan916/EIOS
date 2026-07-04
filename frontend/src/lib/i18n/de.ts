@@ -108,6 +108,7 @@ const de = {
   "nav.benchmarks": "Benchmarks",
   "nav.missionControl": "Mission Control",
   "nav.selfImprovement": "Selbstverbesserung",
+  "nav.developer": "Developer Portal",
   "nav.scope3Carbon": "Scope 3 Carbon",
   "nav.erp": "ERP Konnektoren",
   "nav.eventBus": "Event Bus",
