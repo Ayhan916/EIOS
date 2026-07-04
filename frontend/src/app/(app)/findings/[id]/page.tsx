@@ -29,6 +29,25 @@ import { formatDate } from "@/lib/utils";
 import { CopilotDrawer } from "@/components/copilot-drawer";
 import { AskKBButton } from "@/components/layout/knowledge-search";
 import { useLanguage } from "@/lib/i18n/context";
+import { CAPTab } from "@/components/cap-tab";
+
+// ── CAP section wrapper ───────────────────────────────────────────────────────
+
+function CAPSection({ findingId }: { findingId: string }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base flex items-center gap-2">
+          <FileText className="h-4 w-4 text-emerald-500" />
+          Corrective Action Plan
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <CAPTab findingId={findingId} />
+      </CardContent>
+    </Card>
+  );
+}
 
 // ── #145 Finding Audit: complete change history ───────────────────────────────
 
@@ -555,6 +574,11 @@ export default function FindingDetailPage() {
               )}
             </CardContent>
           </Card>
+        </div>
+
+        {/* ── Corrective Action Plan ──────────────────────────────────────── */}
+        <div className="md:col-span-2">
+          <CAPSection findingId={id} />
         </div>
 
         {/* ── Sidebar ─────────────────────────────────────────────────────── */}

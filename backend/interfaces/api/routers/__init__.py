@@ -66,6 +66,7 @@ from .prioritization import router as prioritization_router
 from .regulatory_change import router as regulatory_change_router
 from .evaluation import router as evaluation_router
 from .self_improvement import router as self_improvement_router
+from .corrective_action_plan import router as corrective_action_plan_router
 
 __all__ = [
     "agents_router",
@@ -138,4 +139,5 @@ __all__ = [
     "regulatory_change_router",
     "evaluation_router",
     "self_improvement_router",
+    "corrective_action_plan_router",
 ]

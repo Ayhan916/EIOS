@@ -98,6 +98,7 @@ from interfaces.api.routers import (
     regulatory_change_router,
     evaluation_router,
     self_improvement_router,
+    corrective_action_plan_router,
 )
 from shared.config import settings
 
@@ -482,3 +483,4 @@ app.include_router(prioritization_router, prefix=API_V1)
 app.include_router(regulatory_change_router, prefix=API_V1)
 app.include_router(evaluation_router, prefix=API_V1)
 app.include_router(self_improvement_router, prefix=API_V1)
+app.include_router(corrective_action_plan_router, prefix=API_V1)
