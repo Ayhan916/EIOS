@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Link from "next/link";
 import {
   ChevronDown,
   ChevronRight,
@@ -17,6 +18,7 @@ import {
   AlertTriangle,
   CheckCircle,
   Clock,
+  Search,
   Users,
   Shield,
   Leaf,
@@ -802,6 +804,121 @@ function ReportsTab() {
   );
 }
 
+// ── Assessment Findings cross-reference ───────────────────────────────────────
+
+interface OrgFinding {
+  id: string;
+  title: string;
+  severity: string;
+  category: string;
+  status: string;
+  assessment_id: string;
+  created_at: string | null;
+  supplier_name: string;
+  supplier_id: string;
+}
+
+const FINDING_SEVERITY_COLORS: Record<string, string> = {
+  Critical: "bg-red-100 text-red-700",
+  High:     "bg-orange-100 text-orange-700",
+  Medium:   "bg-amber-100 text-amber-700",
+  Low:      "bg-slate-100 text-slate-600",
+};
+
+function AssessmentFindingsTab() {
+  const [search, setSearch] = useState("");
+
+  const { data: findings = [], isLoading } = useQuery<OrgFinding[]>({
+    queryKey: ["executive-findings-xref"],
+    queryFn: async () => (await apiClient.get("/executive/findings")).data,
+    staleTime: 120_000,
+  });
+
+  const filtered = findings.filter(
+    (f) =>
+      !search ||
+      f.title.toLowerCase().includes(search.toLowerCase()) ||
+      f.supplier_name.toLowerCase().includes(search.toLowerCase()) ||
+      f.category.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  const grouped = filtered.reduce<Record<string, OrgFinding[]>>((acc, f) => {
+    const key = f.category || "Other";
+    (acc[key] ??= []).push(f);
+    return acc;
+  }, {});
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50/40 p-4">
+        <Search className="mt-0.5 h-4 w-4 shrink-0 text-blue-500" />
+        <div className="text-sm text-blue-700">
+          <p className="font-semibold">Assessment Findings – Querverweise</p>
+          <p className="text-xs mt-0.5">
+            Alle Audit-Findings aus dem Assessment-Pipeline. Zum Verknüpfen einer Beschwerde mit einem Finding
+            öffne das Finding und kopiere die ID in den entsprechenden Grievance-Datensatz.
+          </p>
+        </div>
+      </div>
+
+      <input
+        type="search"
+        placeholder="Suchen nach Titel, Lieferant, Kategorie…"
+        className="w-full max-w-sm rounded-lg border border-border bg-background px-3 py-1.5 text-sm"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {isLoading && <div className="flex h-40 items-center justify-center"><Spinner /></div>}
+
+      {!isLoading && findings.length === 0 && (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Shield className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+            <p className="font-medium text-slate-600">Keine Assessment-Findings vorhanden</p>
+            <p className="mt-1 text-sm text-slate-400">
+              Findings entstehen im Audit-Prozess. Starte ein Assessment, um Findings zu erfassen.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {Object.entries(grouped).map(([category, items]) => (
+        <div key={category}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-500">{category}</p>
+          <div className="space-y-2">
+            {items.map((f) => (
+              <div key={f.id} className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${FINDING_SEVERITY_COLORS[f.severity] ?? "bg-slate-100 text-slate-600"}`}>
+                  {f.severity}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/findings/${f.id}`} className="text-sm font-medium hover:text-blue-600 hover:underline truncate block">
+                    {f.title}
+                  </Link>
+                  <p className="text-xs text-muted-foreground">
+                    <Link href={`/suppliers/${f.supplier_id}`} className="hover:underline">{f.supplier_name}</Link>
+                    {" · "}
+                    <span className={f.status === "Open" ? "text-amber-600" : f.status === "Verified" ? "text-emerald-600" : ""}>
+                      {f.status}
+                    </span>
+                  </p>
+                </div>
+                <Link
+                  href={`/assessments/${f.assessment_id}`}
+                  className="shrink-0 flex items-center gap-1 text-xs text-indigo-500 hover:text-indigo-700"
+                >
+                  Assessment <ChevronRight className="h-3 w-3" />
+                </Link>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DueDiligencePage() {
@@ -822,6 +939,7 @@ export default function DueDiligencePage() {
           <TabsTrigger value="environmental">{t("dd.tabEnvironmental")}</TabsTrigger>
           <TabsTrigger value="actions">{t("dd.tabActions")}</TabsTrigger>
           <TabsTrigger value="reports">{t("dd.tabReports")}</TabsTrigger>
+          <TabsTrigger value="assessment-findings">Assessment Findings</TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="mt-6"><DashboardTab /></TabsContent>
         <TabsContent value="suppliers" className="mt-6"><SuppliersTab /></TabsContent>
@@ -829,6 +947,7 @@ export default function DueDiligencePage() {
         <TabsContent value="environmental" className="mt-6"><EnvironmentalTab /></TabsContent>
         <TabsContent value="actions" className="mt-6"><ActionsTab /></TabsContent>
         <TabsContent value="reports" className="mt-6"><ReportsTab /></TabsContent>
+        <TabsContent value="assessment-findings" className="mt-6"><AssessmentFindingsTab /></TabsContent>
       </Tabs>
     </div>
   );

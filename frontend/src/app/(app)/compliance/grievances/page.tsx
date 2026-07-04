@@ -354,6 +354,22 @@ export default function GrievancesPage() {
           <li>Retaliation against reporters is prohibited</li>
         </ul>
       </div>
+
+      {/* Cross-reference to assessment pipeline */}
+      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="text-sm">
+          <p className="font-medium text-slate-700">Beschwerde mit einem Audit-Finding verknüpfen?</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Assessment-Findings aus dem Audit-Prozess können als Querverweise genutzt werden.
+          </p>
+        </div>
+        <Link
+          href="/findings"
+          className="shrink-0 flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 transition-colors"
+        >
+          Assessment Findings durchsuchen →
+        </Link>
+      </div>
     </div>
   );
 }
