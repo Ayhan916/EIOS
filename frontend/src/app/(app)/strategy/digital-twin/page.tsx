@@ -45,7 +45,7 @@ function CreateTwinModal({
       onClose();
     },
     onError: (e: unknown) => {
-      setError(e instanceof Error ? e.message : "Fehler beim Erstellen");
+      setError(e instanceof Error ? e.message : t("strategy.twinCreateError"));
     },
   });
 
@@ -54,7 +54,7 @@ function CreateTwinModal({
     setError(null);
 
     if (!form.name.trim()) {
-      setError("Name ist erforderlich.");
+      setError(t("strategy.twinNameRequired"));
       return;
     }
 
@@ -128,7 +128,7 @@ function CreateTwinModal({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <Cpu className="h-5 w-5 text-violet-600" />
-            <h2 className="text-lg font-semibold">Neuer Digital Twin</h2>
+            <h2 className="text-lg font-semibold">{t("strategy.twinModalTitle")}</h2>
           </div>
           <button onClick={onClose} className="rounded-md p-1 hover:bg-slate-100">
             <X className="h-5 w-5 text-slate-500" />
@@ -141,7 +141,7 @@ function CreateTwinModal({
             {/* Basic info */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Basisdaten
+                {t("strategy.twinBasicData")}
               </h3>
               {field(t("common.name"), "name", { required: true, placeholder: "z. B. EIOS Enterprise Twin 2026" })}
               <div>
@@ -162,11 +162,11 @@ function CreateTwinModal({
             {/* Scale */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Unternehmensumfang
+                {t("strategy.twinScope")}
               </h3>
               <div className="grid grid-cols-3 gap-4">
                 {field(t("nav.suppliers"), "supplier_count", { type: "number", placeholder: "142" })}
-                {field("KPIs", "kpi_count", { type: "number", placeholder: "38" })}
+                {field(t("sustain.kpisTitle"), "kpi_count", { type: "number", placeholder: "38" })}
                 {field(t("nav.risks"), "risk_count", { type: "number", placeholder: "21" })}
               </div>
             </div>
@@ -174,9 +174,9 @@ function CreateTwinModal({
             {/* Emissions */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Klimadaten
+                {t("strategy.twinClimateData")}
               </h3>
-              {field("Emissionen Baseline (tCO₂e)", "emissions_baseline_tco2e", {
+              {field(t("strategy.twinEmissionsBaseline"), "emissions_baseline_tco2e", {
                 type: "number",
                 placeholder: "84500",
               })}
@@ -185,30 +185,30 @@ function CreateTwinModal({
             {/* Structure */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Organisationsstruktur
+                {t("strategy.twinOrgStructure")}
               </h3>
-              {field("Business Units", "business_units", {
+              {field(t("strategy.twinBusinessUnits"), "business_units", {
                 placeholder: "Supply Chain, Operations, Finance",
-                hint: "Kommagetrennt",
+                hint: t("strategy.twinCommaSeparated"),
               })}
-              {field("Legal Entities", "legal_entities", {
+              {field(t("strategy.twinLegalEntities"), "legal_entities", {
                 placeholder: "EIOS GmbH, EIOS UK Ltd",
-                hint: "Kommagetrennt",
+                hint: t("strategy.twinCommaSeparated"),
               })}
-              {field("Regionen", "regions", {
+              {field(t("strategy.twinRegions"), "regions", {
                 placeholder: "DACH, UK, APAC",
-                hint: "Kommagetrennt",
+                hint: t("strategy.twinCommaSeparated"),
               })}
             </div>
 
             {/* Assumptions */}
             <div className="space-y-4">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                Annahmen
+                {t("strategy.twinAssumptions")}
               </h3>
               <div className="grid grid-cols-2 gap-4">
-                {field("CO₂-Preis (EUR)", "carbon_price_eur", { type: "number", placeholder: "65" })}
-                {field("Wachstumsrate (%)", "growth_rate_pct", { type: "number", placeholder: "3.2" })}
+                {field(t("strategy.twinCo2Price"), "carbon_price_eur", { type: "number", placeholder: "65" })}
+                {field(t("strategy.twinGrowthRate"), "growth_rate_pct", { type: "number", placeholder: "3.2" })}
               </div>
             </div>
           </div>
@@ -233,10 +233,10 @@ function CreateTwinModal({
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">
-                <Spinner className="h-4 w-4" /> Erstelle…
+                <Spinner className="h-4 w-4" /> {t("strategy.twinCreating")}
               </span>
             ) : (
-              "Twin erstellen"
+              t("strategy.twinCreate")
             )}
           </Button>
         </div>
@@ -281,7 +281,7 @@ export default function DigitalTwinPage() {
           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700"
         >
           <Plus className="h-4 w-4" />
-          Neuer Twin
+          {t("strategy.newTwin")}
         </Button>
       </div>
 
@@ -290,16 +290,16 @@ export default function DigitalTwinPage() {
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
             <Cpu className="h-10 w-10 text-slate-300" />
-            <p className="text-sm font-medium text-slate-600">Noch kein Digital Twin vorhanden</p>
+            <p className="text-sm font-medium text-slate-600">{t("strategy.noTwins")}</p>
             <p className="text-xs text-slate-400">
-              Erstelle einen Twin um Szenarien zu modellieren.
+              {t("strategy.noTwinsDesc")}
             </p>
             <Button
               onClick={() => setShowCreate(true)}
               className="mt-2 bg-violet-600 hover:bg-violet-700"
             >
               <Plus className="mr-2 h-4 w-4" />
-              Ersten Twin erstellen
+              {t("strategy.createFirstTwin")}
             </Button>
           </CardContent>
         </Card>
@@ -349,7 +349,7 @@ export default function DigitalTwinPage() {
                       <BarChart3 className="h-3 w-3" />
                     </div>
                     <p className="text-lg font-bold">{twin.kpi_count}</p>
-                    <p className="text-xs text-muted-foreground">KPIs</p>
+                    <p className="text-xs text-muted-foreground">{t("sustain.kpisTitle")}</p>
                   </div>
                   <div>
                     <div className="flex items-center justify-center gap-1 text-slate-500">
@@ -365,7 +365,7 @@ export default function DigitalTwinPage() {
                   <div className="flex items-center gap-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2">
                     <Zap className="h-4 w-4 flex-shrink-0 text-emerald-600" />
                     <div>
-                      <p className="text-xs text-emerald-700">Emissionen Baseline</p>
+                      <p className="text-xs text-emerald-700">{t("strategy.twinEmissionsBaselineLabel")}</p>
                       <p className="text-sm font-semibold text-emerald-900">
                         {twin.emissions_baseline_tco2e.toLocaleString("de-DE")} tCO₂e
                       </p>
@@ -377,7 +377,7 @@ export default function DigitalTwinPage() {
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>v{twin.twin_version}</span>
                   <span>
-                    Snapshot: {new Date(twin.snapshot_date).toLocaleDateString("de-DE")}
+                    {t("strategy.twinSnapshot").replace("{date}", new Date(twin.snapshot_date).toLocaleDateString())}
                   </span>
                 </div>
               </CardContent>

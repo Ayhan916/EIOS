@@ -85,6 +85,7 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
         assessment_type: str | None = None,
         sector_id: str | None = None,
         search: str | None = None,
+        supplier_id: str | None = None,
     ) -> tuple[list[Assessment], int]:
         stmt = (
             select(AssessmentModel)
@@ -99,4 +100,6 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
             stmt = stmt.where(AssessmentModel.sector_id == sector_id)
         if search:
             stmt = stmt.where(AssessmentModel.title.ilike(f"%{search}%"))
+        if supplier_id:
+            stmt = stmt.where(AssessmentModel.supplier_id == supplier_id)
         return await self._execute_paged(stmt, page, page_size)

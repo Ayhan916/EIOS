@@ -173,6 +173,7 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
 const STATUS_COLORS: Record<string, string> = {
   Active:   "bg-blue-100 text-blue-700",
   Reviewed: "bg-violet-100 text-violet-700",
+  Verified: "bg-emerald-100 text-emerald-700",
   Archived: "bg-slate-100 text-slate-500",
 };
 

@@ -1015,6 +1015,8 @@ async def create_supplier(
         notes=body.notes,
         status=EntityStatus.ACTIVE,
         created_by=current_user.id,
+        chain_direction=body.chain_direction,
+        downstream_type=body.downstream_type,
     )
     try:
         saved = await supplier_repo.save(supplier)
@@ -1061,6 +1063,7 @@ async def list_suppliers(
     industry: str | None = Query(default=None),
     supplier_tier: str | None = Query(default=None),
     search: str | None = Query(default=None),
+    chain_direction: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     supplier_repo: SQLSupplierRepository = Depends(get_supplier_repo),
 ) -> Page[SupplierResponse]:
@@ -1075,6 +1078,7 @@ async def list_suppliers(
         industry=industry,
         supplier_tier=supplier_tier,
         search=search,
+        chain_direction=chain_direction,
     )
     return Page(
         items=[SupplierResponse.model_validate(s) for s in items],
@@ -1144,6 +1148,12 @@ async def update_supplier(
     if body.notes is not None:
         changes["notes"] = body.notes
         supplier.notes = body.notes
+    if body.chain_direction is not None:
+        changes["chain_direction"] = body.chain_direction
+        supplier.chain_direction = body.chain_direction
+    if body.downstream_type is not None:
+        changes["downstream_type"] = body.downstream_type
+        supplier.downstream_type = body.downstream_type
 
     supplier.updated_by = current_user.id
     supplier.updated_at = datetime.now(UTC)

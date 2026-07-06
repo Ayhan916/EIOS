@@ -9,7 +9,7 @@ in the EIOS data model (M27).
 from dataclasses import dataclass, field
 
 from .base_entity import BaseEntity
-from .enums import SupplierStatus, SupplierTier
+from .enums import ChainDirection, SupplierStatus, SupplierTier
 
 
 @dataclass(slots=True, kw_only=True)
@@ -24,3 +24,5 @@ class Supplier(BaseEntity):
     supplier_tier: SupplierTier = field(default=SupplierTier.TIER_1)
     supplier_status: SupplierStatus = field(default=SupplierStatus.ACTIVE)
     notes: str | None = None
+    chain_direction: str = ChainDirection.UPSTREAM.value
+    downstream_type: str | None = None

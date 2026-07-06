@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
@@ -391,21 +392,30 @@ export default function RecommendationsPage() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const qc = useQueryClient();
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const urlParams = useSearchParams();
+  const initStatus = urlParams.get("status") || "all";
+  const initSupplier = urlParams.get("supplier_id") || "";
+  const [statusFilter, setStatusFilter] = useState<string>(initStatus === "overdue" ? "all" : initStatus);
+  const [overdueOnly] = useState<boolean>(initStatus === "overdue");
+  const [supplierFilter] = useState<string>(initSupplier);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: recs, isLoading } = useQuery<OrgRecommendation[]>({
-    queryKey: ["org-recommendations", statusFilter],
+    queryKey: ["org-recommendations", statusFilter, supplierFilter],
     queryFn: async () => {
-      const params = statusFilter !== "all" ? `?action_status=${statusFilter}` : "";
-      const res = await apiClient.get(`/executive/recommendations${params}`);
+      const p = new URLSearchParams();
+      if (statusFilter !== "all") p.set("action_status", statusFilter);
+      if (supplierFilter) p.set("supplier_id", supplierFilter);
+      const qs = p.toString() ? `?${p.toString()}` : "";
+      const res = await apiClient.get(`/executive/recommendations${qs}`);
       return res.data;
     },
     staleTime: 20_000,
   });
 
-  const allRecs = recs ?? [];
-  const overdueCount = allRecs.filter((r) => r.is_overdue).length;
+  const baseRecs = recs ?? [];
+  const allRecs = overdueOnly ? baseRecs.filter((r) => r.is_overdue) : baseRecs;
+  const overdueCount = baseRecs.filter((r) => r.is_overdue).length;
 
   function invalidate() {
     qc.invalidateQueries({ queryKey: ["org-recommendations"] });

@@ -66,13 +66,13 @@ export default function ESGProgramsPage() {
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
           >
-            <option value="">All Statuses</option>
+            <option value="">{t("esgOs.allStatuses")}</option>
             {["ACTIVE", "DRAFT", "COMPLETED", "ON_HOLD", "CANCELLED"].map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
           <Button size="sm" onClick={() => setShowForm(!showForm)}>
-            <Plus className="h-4 w-4 mr-1.5" /> New Program
+            <Plus className="h-4 w-4 mr-1.5" /> {t("esgOs.newProgram")}
           </Button>
         </div>
       </div>
@@ -94,15 +94,15 @@ export default function ESGProgramsPage() {
       {showForm && (
         <Card>
           <CardContent className="pt-5 pb-5 space-y-3">
-            <p className="text-sm font-semibold">New ESG Program</p>
+            <p className="text-sm font-semibold">{t("esgOs.newProgramTitle")}</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Title *</Label>
+                <Label className="text-xs">{t("common.title")} *</Label>
                 <Input className="mt-1" value={title} onChange={(e) => setTitle(e.target.value)}
                   placeholder="e.g. Carbon Reduction Initiative 2026" />
               </div>
               <div>
-                <Label className="text-xs">Program Type</Label>
+                <Label className="text-xs">{t("esgOs.programType")}</Label>
                 <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={programType} onChange={(e) => setProgramType(e.target.value)}>
                   {PROGRAM_TYPES.map((v) => <option key={v} value={v}>{v.replace(/_/g, " ")}</option>)}
@@ -110,9 +110,9 @@ export default function ESGProgramsPage() {
               </div>
             </div>
             <div>
-              <Label className="text-xs">Description</Label>
+              <Label className="text-xs">{t("common.description")}</Label>
               <Input className="mt-1" value={description} onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the program goal…" />
+                placeholder={t("esgOs.programDescPlaceholder")} />
             </div>
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
@@ -123,7 +123,7 @@ export default function ESGProgramsPage() {
             </div>
             {create.isSuccess && (
               <p className="text-xs text-green-700 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Program created.
+                <CheckCircle2 className="h-3 w-3" /> {t("esgOs.programCreated")}
               </p>
             )}
           </CardContent>
@@ -142,6 +142,8 @@ export default function ESGProgramsPage() {
 }
 
 function ProgramRow({ program }: { program: ESGProgram }) {
+  const { t } = useLanguage();
+  const objCount = program.linked_objectives.length;
   return (
     <Card>
       <CardContent className="py-4 flex items-start justify-between gap-4">
@@ -151,11 +153,13 @@ function ProgramRow({ program }: { program: ESGProgram }) {
             <p className="text-sm text-muted-foreground line-clamp-2">{program.description}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            {program.program_type?.replace(/_/g, " ") ?? "General"} · Created {formatDate(program.created_at)}
+            {program.program_type?.replace(/_/g, " ") ?? t("esgOs.programGeneral")} · {t("esgOs.programCreatedOn").replace("{date}", formatDate(program.created_at))}
           </p>
-          {program.linked_objectives.length > 0 && (
+          {objCount > 0 && (
             <p className="text-xs text-muted-foreground">
-              {program.linked_objectives.length} linked objective{program.linked_objectives.length !== 1 ? "s" : ""}
+              {objCount === 1
+                ? t("esgOs.linkedObjectives").replace("{n}", String(objCount))
+                : t("esgOs.linkedObjectivesPlural").replace("{n}", String(objCount))}
             </p>
           )}
         </div>

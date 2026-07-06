@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import apiClient from "@/lib/api/client";
 import { listAssessments } from "@/lib/api/assessments";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -169,7 +170,7 @@ function Soc2Tab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">{controls.length} controls loaded</p>
+        <p className="text-sm text-muted-foreground">{t("auditor.controlsLoaded").replace("{n}", String(controls.length))}</p>
         <select
           className="h-8 rounded-md border border-input bg-background px-3 text-sm"
           value={categoryFilter}
@@ -186,7 +187,7 @@ function Soc2Tab() {
             <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
               {cat}
               <span className="ml-2 font-normal">
-                ({items.filter((i) => i.status === "Implemented" || i.status === "Tested").length}/{items.length} implemented)
+                {t("auditor.implementedOf").replace("{n}", String(items.filter((i) => i.status === "Implemented" || i.status === "Tested").length)).replace("{m}", String(items.length))}
               </span>
             </CardTitle>
           </CardHeader>
@@ -303,7 +304,7 @@ function PentestTab() {
           <CardContent className="p-4">
             <div className="flex items-center gap-3 mb-2">
               <ShieldCheck className="h-5 w-5 text-blue-500" />
-              <p className="font-semibold">{t("auditor.owasp")} Top 10 Coverage</p>
+              <p className="font-semibold">{t("auditor.owasp")} {t("auditor.top10Coverage")}</p>
               <span className={`ml-auto font-bold tabular-nums ${pctColor((owasp as { overall_pct?: number }).overall_pct ?? 0)}`}>
                 {Math.round((owasp as { overall_pct?: number }).overall_pct ?? 0)}%
               </span>
@@ -355,7 +356,7 @@ function PentestTab() {
                       </span>
                     </td>
                     <td className="px-4 py-2.5 hidden md:table-cell text-xs text-muted-foreground">
-                      {f.discovered_at ? new Date(f.discovered_at).toLocaleDateString() : "—"}
+                      {f.discovered_at ? formatDate(f.discovered_at) : "—"}
                     </td>
                   </tr>
                 ))}
@@ -413,7 +414,7 @@ function ChecklistTab() {
                 <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
                   {cat}
                 </CardTitle>
-                <span className="text-xs text-muted-foreground">{complete}/{catItems.length} done</span>
+                <span className="text-xs text-muted-foreground">{t("auditor.doneOf").replace("{n}", String(complete)).replace("{m}", String(catItems.length))}</span>
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -430,7 +431,7 @@ function ChecklistTab() {
                     <div className="flex items-center gap-1.5 shrink-0">
                       {item.status === "Complete" ? (
                         <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-                          <CheckCircle2 className="h-3.5 w-3.5" /> Done
+                          <CheckCircle2 className="h-3.5 w-3.5" /> {t("auditor.done")}
                         </span>
                       ) : item.status === "N/A" ? (
                         <span className="text-xs text-slate-400">N/A</span>
@@ -522,7 +523,7 @@ function EvidenceMapTab() {
           {categories.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
         <span className="text-xs text-muted-foreground">
-          {withEvidence}/{filtered.length} controls have evidence ({pct}%)
+          {t("auditor.withEvidence").replace("{n}", String(withEvidence)).replace("{m}", String(filtered.length)).replace("{pct}", String(pct))}
         </span>
         <div className="ml-auto h-2 w-32 rounded-full bg-muted overflow-hidden">
           <div className={`h-full rounded-full transition-all ${pct >= 80 ? "bg-emerald-500" : pct >= 50 ? "bg-amber-400" : "bg-red-400"}`} style={{ width: `${pct}%` }} />
@@ -579,7 +580,7 @@ function EvidenceMapTab() {
                         `/security/soc2/controls/${ctrl.control_id}/evidence-package`,
                         `evidence-${ctrl.control_id}.zip`
                       )}
-                      title="Download evidence package"
+                      title={t("auditor.downloadEvidencePkg")}
                       className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-[10px] font-medium hover:bg-muted transition-colors"
                     >
                       <Package className="h-3 w-3" /> ZIP
@@ -611,14 +612,22 @@ interface ApprovalRecord {
   entity_type?: string;
 }
 
-const APPROVAL_STYLES: Record<string, { badge: string; label: string }> = {
-  Approved:         { badge: "bg-emerald-100 text-emerald-700", label: "Approved" },
-  Rejected:         { badge: "bg-red-100 text-red-700",         label: "Rejected" },
-  ChangesRequested: { badge: "bg-amber-100 text-amber-700",     label: "Changes Req." },
+const APPROVAL_BADGE: Record<string, string> = {
+  Approved:         "bg-emerald-100 text-emerald-700",
+  Rejected:         "bg-red-100 text-red-700",
+  ChangesRequested: "bg-amber-100 text-amber-700",
 };
 
 function ApprovalsTab() {
   const { t } = useLanguage();
+
+  function approvalLabel(decision: string): string {
+    if (decision === "Approved") return t("exec.approved");
+    if (decision === "Rejected") return t("exec.rejected");
+    if (decision === "ChangesRequested") return t("auditor.changesRequested");
+    return decision;
+  }
+
   const { data, isLoading } = useQuery<ApprovalRecord[]>({
     queryKey: ["auditor-approvals"],
     queryFn: async () => {
@@ -649,7 +658,7 @@ function ApprovalsTab() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">{records.length} decision{records.length !== 1 ? "s" : ""} on record</p>
+        <p className="text-sm text-muted-foreground">{(records.length === 1 ? t("auditor.decisionsOnRecord") : t("auditor.decisionsOnRecordPlural")).replace("{n}", String(records.length))}</p>
         <Button variant="outline" size="sm" className="gap-2" onClick={exportCsv}>
           <Download className="h-3.5 w-3.5" /> {t("findings.exportCsv")}
         </Button>
@@ -675,11 +684,11 @@ function ApprovalsTab() {
               </thead>
               <tbody className="divide-y divide-border">
                 {records.map((r) => {
-                  const style = APPROVAL_STYLES[r.decision] ?? { badge: "bg-slate-100 text-slate-600", label: r.decision };
+                  const badgeClass = APPROVAL_BADGE[r.decision] ?? "bg-slate-100 text-slate-600";
                   return (
                     <tr key={r.id} className="hover:bg-muted/20">
                       <td className="px-4 py-2.5">
-                        <span className={`rounded-full px-2 py-0.5 font-semibold ${style.badge}`}>{style.label}</span>
+                        <span className={`rounded-full px-2 py-0.5 font-semibold ${badgeClass}`}>{approvalLabel(r.decision)}</span>
                       </td>
                       <td className="px-4 py-2.5 max-w-xs">
                         <p className="font-medium line-clamp-1">{r.title}</p>
@@ -687,7 +696,7 @@ function ApprovalsTab() {
                       </td>
                       <td className="px-4 py-2.5 hidden md:table-cell text-muted-foreground">{r.decided_by ?? "—"}</td>
                       <td className="px-4 py-2.5 hidden lg:table-cell text-muted-foreground whitespace-nowrap">
-                        {r.decided_at ? new Date(r.decided_at).toLocaleDateString() : "—"}
+                        {r.decided_at ? formatDate(r.decided_at) : "—"}
                       </td>
                       <td className="px-4 py-2.5 hidden lg:table-cell text-muted-foreground max-w-xs">
                         <p className="line-clamp-1 italic">{r.comment ?? "—"}</p>
@@ -753,14 +762,14 @@ function SamplingTab() {
       <Card>
         <CardContent className="pt-5 space-y-4">
           <div>
-            <p className="text-sm font-semibold mb-1">Random Sample Selection</p>
+            <p className="text-sm font-semibold mb-1">{t("auditor.randomSampleTitle")}</p>
             <p className="text-xs text-muted-foreground">
-              Randomly select N assessments from the full population ({isLoading ? "…" : total} total) for audit testing.
+              {t("auditor.randomSampleDesc").replace("{n}", isLoading ? "…" : String(total))}
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Sample size:</label>
+              <label className="text-sm font-medium">{t("auditor.sampleSize")}</label>
               <Input
                 type="number"
                 min={1}
@@ -781,7 +790,7 @@ function SamplingTab() {
           </div>
           {sampledAt && (
             <p className="text-xs text-muted-foreground">
-              Sample drawn at {new Date(sampledAt).toLocaleString()} · {sample.length} of {total} assessments selected
+              {t("auditor.sampleDrawnAt").replace("{time}", formatDateTime(sampledAt)).replace("{n}", String(sample.length)).replace("{total}", String(total))}
             </p>
           )}
         </CardContent>
@@ -790,7 +799,7 @@ function SamplingTab() {
       {sample.length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Selected Sample ({sample.length})</CardTitle>
+            <CardTitle className="text-sm">{t("auditor.selectedSample").replace("{n}", String(sample.length))}</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-xs">
@@ -904,11 +913,11 @@ function SignoffTab() {
         <CardContent className="pt-4 space-y-3">
           <div className="flex items-center gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-1 min-w-48">
-              <label className="text-sm font-medium whitespace-nowrap">Reviewer name:</label>
+              <label className="text-sm font-medium whitespace-nowrap">{t("auditor.reviewerName")}</label>
               <Input
                 value={reviewer}
                 onChange={(e) => setReviewer(e.target.value)}
-                placeholder="Your name"
+                placeholder={t("auditor.yourName")}
                 className="h-8 text-sm"
               />
             </div>
@@ -930,7 +939,7 @@ function SignoffTab() {
             </div>
           </div>
           <p className="text-xs text-muted-foreground">
-            {records.length} of {controls.length} controls signed off
+            {t("auditor.signedOff").replace("{n}", String(records.length)).replace("{m}", String(controls.length))}
           </p>
           {records.length > 0 && controls.length > 0 && (
             <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -958,13 +967,13 @@ function SignoffTab() {
                   {signed ? (
                     <p className="text-xs text-emerald-700 mt-0.5 flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" />
-                      Reviewed by {signed.reviewedBy} · {new Date(signed.reviewedAt).toLocaleString()}
+                      {t("auditor.reviewedBy").replace("{name}", signed.reviewedBy)} · {formatDateTime(signed.reviewedAt)}
                       {signed.notes && <> · <em>{signed.notes}</em></>}
                     </p>
                   ) : (
                     <div className="mt-1.5 flex items-center gap-2">
                       <Input
-                        placeholder="Notes (optional)"
+                        placeholder={t("auditor.notesOptional")}
                         value={noteFor[ctrl.control_id] ?? ""}
                         onChange={(e) => setNoteFor((prev) => ({ ...prev, [ctrl.control_id]: e.target.value }))}
                         className="h-7 text-xs flex-1"
@@ -984,7 +993,7 @@ function SignoffTab() {
                     }}
                     className="text-[10px] text-muted-foreground hover:text-foreground shrink-0"
                   >
-                    Undo
+                    {t("auditor.undo")}
                   </button>
                 )}
               </div>
@@ -1009,6 +1018,16 @@ export default function AuditorWorkspacePage() {
   const { t } = useLanguage();
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<Tab>("SOC 2 Controls");
+
+  const TAB_LABELS: Record<Tab, string> = {
+    "SOC 2 Controls": t("auditor.soc2Tab"),
+    "Evidence Map": t("auditor.evidenceMapTab"),
+    "Pentest": t("auditor.pentestTab"),
+    "Checklist": t("auditor.checklistTab"),
+    "Approvals": t("auditor.approvalsTab"),
+    "Sampling": t("auditor.samplingTab"),
+    "Sign-off": t("auditor.signOff"),
+  };
   const [csvFrom, setCsvFrom] = useState("");
   const [csvTo, setCsvTo] = useState("");
 
@@ -1140,7 +1159,7 @@ export default function AuditorWorkspacePage() {
               </p>
               <ProgressBar pct={summary.soc2.readiness_pct} />
               <p className="text-[10px] text-muted-foreground mt-1">
-                {summary.soc2.implemented}/{summary.soc2.total} implemented
+                {t("auditor.implementedCount").replace("{n}", String(summary.soc2.implemented)).replace("{m}", String(summary.soc2.total))}
               </p>
             </CardContent>
           </Card>
@@ -1157,7 +1176,7 @@ export default function AuditorWorkspacePage() {
               </p>
               <ProgressBar pct={summary.owasp.coverage_pct} />
               <p className="text-[10px] text-muted-foreground mt-1">
-                {summary.owasp.categories_covered}/{summary.owasp.total} categories covered
+                {t("auditor.categoriesCovered").replace("{n}", String(summary.owasp.categories_covered)).replace("{m}", String(summary.owasp.total))}
               </p>
             </CardContent>
           </Card>
@@ -1167,14 +1186,14 @@ export default function AuditorWorkspacePage() {
             <CardContent className="pt-4 pb-3">
               <div className="flex items-center gap-2 mb-1">
                 <FileText className="h-4 w-4 text-emerald-500" />
-                <p className="text-xs font-medium text-muted-foreground">Checklist</p>
+                <p className="text-xs font-medium text-muted-foreground">{t("auditor.checklistTab")}</p>
               </div>
               <p className={`text-2xl font-bold tabular-nums ${pctColor(summary.production_checklist.completion_pct)}`}>
                 {Math.round(summary.production_checklist.completion_pct)}%
               </p>
               <ProgressBar pct={summary.production_checklist.completion_pct} />
               <p className="text-[10px] text-muted-foreground mt-1">
-                {summary.production_checklist.complete}/{summary.production_checklist.total} complete
+                {t("auditor.completedCount").replace("{n}", String(summary.production_checklist.complete)).replace("{m}", String(summary.production_checklist.total))}
               </p>
             </CardContent>
           </Card>
@@ -1185,12 +1204,12 @@ export default function AuditorWorkspacePage() {
               <CardContent className="py-3 px-4 flex items-center gap-3">
                 <AlertTriangle className="h-4 w-4 text-red-500 shrink-0" />
                 <p className="text-sm">
-                  <span className="font-semibold text-red-700">{summary.pentest.open_findings} open pentest findings</span>
+                  <span className="font-semibold text-red-700">{t("auditor.openPentestFindings").replace("{n}", String(summary.pentest.open_findings))}</span>
                   {summary.pentest.critical_open > 0 && (
-                    <span className="ml-1 text-red-600">— {summary.pentest.critical_open} Critical</span>
+                    <span className="ml-1 text-red-600">{t("auditor.criticalCount").replace("{n}", String(summary.pentest.critical_open))}</span>
                   )}
                   {summary.pentest.high_open > 0 && (
-                    <span className="ml-1 text-orange-600">{summary.pentest.high_open} High</span>
+                    <span className="ml-1 text-orange-600">{t("auditor.highCount").replace("{n}", String(summary.pentest.high_open))}</span>
                   )}
                   <span className="ml-2 text-muted-foreground text-xs">{t("auditor.pentestTab")}</span>
                 </p>
@@ -1213,7 +1232,7 @@ export default function AuditorWorkspacePage() {
                   : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {tab}
+              {TAB_LABELS[tab]}
             </button>
           ))}
         </div>

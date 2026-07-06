@@ -193,15 +193,15 @@ function DashboardTab() {
       {/* Framework table */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">{t("disclosure.frameworkName")} Overview</CardTitle>
+          <CardTitle className="text-sm">{t("disclosure.frameworkOverview")}</CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
-                  <th className="px-4 py-2.5 text-left">Framework</th>
-                  <th className="px-4 py-2.5 text-right">Req.</th>
+                  <th className="px-4 py-2.5 text-left">{t("disclosure.frameworkName")}</th>
+                  <th className="px-4 py-2.5 text-right">{t("disclosure.reqHeader")}</th>
                   <th className="px-4 py-2.5 text-right min-w-[120px]">{t("disclosure.completionPct")}</th>
                   <th className="px-4 py-2.5 text-right">{t("disclosure.approved")}</th>
                   <th className="px-4 py-2.5 text-right">{t("disclosure.published")}</th>
@@ -284,7 +284,7 @@ function FrameworksTab() {
                 <div className="flex gap-4 text-xs text-muted-foreground">
                   <span>{t("disclosure.jurisdiction")}: {fw.jurisdiction}</span>
                   <span>{t("disclosure.version")}: {fw.fw_version}</span>
-                  {fw.effective_date && <span>Effective: {formatDate(fw.effective_date)}</span>}
+                  {fw.effective_date && <span>{t("disclosure.effective")}: {formatDate(fw.effective_date)}</span>}
                 </div>
               </div>
               <Badge className="shrink-0 font-mono bg-slate-100 text-slate-700">{fw.code}</Badge>
@@ -375,7 +375,7 @@ function ResponsesTab() {
           value={fwFilter}
           onChange={(e) => setFwFilter(e.target.value)}
         >
-          <option value="">All Frameworks</option>
+          <option value="">{t("disclosure.allFrameworks")}</option>
           {frameworks.map((fw) => (
             <option key={fw.id} value={fw.id}>{fw.name}</option>
           ))}
@@ -386,7 +386,7 @@ function ResponsesTab() {
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
-          <option value="">All Statuses</option>
+          <option value="">{t("osDash.allStatuses")}</option>
           {["Not Started", "Draft", "In Review", "Approved", "Published"].map((s) => (
             <option key={s} value={s}>{s}</option>
           ))}
@@ -413,7 +413,7 @@ function ResponsesTab() {
                     </Badge>
                   </div>
                   <p className="text-xs text-muted-foreground font-mono truncate">
-                    req: {resp.requirement_id.slice(0, 12)}… · updated {formatDate(resp.updated_at)}
+                    {t("disclosure.reqPrefix")}: {resp.requirement_id.slice(0, 12)}… · {t("disclosure.updated")} {formatDate(resp.updated_at)}
                   </p>
                 </div>
 
@@ -449,7 +449,7 @@ function ResponsesTab() {
                       setEditId(resp.id);
                       setEditText("");
                     }}>
-                    Edit Narrative
+                    {t("disclosure.editNarrative")}
                   </Button>
                 </div>
               </div>
@@ -471,7 +471,7 @@ function ResponsesTab() {
                     {reject.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : t("disclosure.confirmReject")}
                   </Button>
                   <Button size="sm" variant="ghost" className="h-8 text-xs"
-                    onClick={() => setRejectId(null)}>Cancel</Button>
+                    onClick={() => setRejectId(null)}>{t("common.cancel")}</Button>
                 </div>
               )}
 
@@ -482,7 +482,7 @@ function ResponsesTab() {
                   <textarea
                     rows={4}
                     className="w-full rounded border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-y"
-                    placeholder="Enter narrative text…"
+                    placeholder={t("disclosure.narrativePlaceholder")}
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
                   />
@@ -495,7 +495,7 @@ function ResponsesTab() {
                         : t("disclosure.updateNarrative")}
                     </Button>
                     <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => setEditId(null)}>
-                      Cancel
+                      {t("common.cancel")}
                     </Button>
                   </div>
                 </div>
@@ -556,7 +556,7 @@ function PackagesTab() {
     <div className="space-y-4">
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Cancel" : `+ ${t("disclosure.generatePackage")}`}
+          {showForm ? t("common.cancel") : `+ ${t("disclosure.generatePackage")}`}
         </Button>
       </div>
 
@@ -572,7 +572,7 @@ function PackagesTab() {
                   value={fwCode}
                   onChange={(e) => setFwCode(e.target.value)}
                 >
-                  <option value="">Select framework…</option>
+                  <option value="">{t("disclosure.selectFramework")}</option>
                   {frameworks.map((fw) => (
                     <option key={fw.id} value={fw.code}>{fw.name} ({fw.code})</option>
                   ))}
@@ -585,8 +585,8 @@ function PackagesTab() {
                   value={pkgType}
                   onChange={(e) => setPkgType(e.target.value)}
                 >
-                  {["CSRD", "GRI", "ESRS", "iXBRL", "FULL"].map((t) => (
-                    <option key={t} value={t}>{t}</option>
+                  {["CSRD", "GRI", "ESRS", "iXBRL", "FULL"].map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
               </div>
@@ -607,7 +607,7 @@ function PackagesTab() {
             <CardContent className="py-4 flex items-start justify-between gap-4">
               <div className="space-y-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="font-semibold">{pkg.package_type} Package</p>
+                  <p className="font-semibold">{t("disclosure.packageLabel").replace("{type}", pkg.package_type)}</p>
                   <Badge className="font-mono bg-slate-100 text-slate-700">{pkg.framework_code}</Badge>
                   <Badge className={STATUS_COL[pkg.status] ?? "bg-slate-100 text-slate-600"}>{pkg.status}</Badge>
                 </div>

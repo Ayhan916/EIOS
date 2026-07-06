@@ -67,7 +67,7 @@ export default function DecisionLogPage() {
           </p>
         </div>
         <Link href="/recommendations" className="rounded-lg border px-3 py-2 text-sm font-medium hover:bg-muted transition-colors">
-          Open Recommendations →
+          {t("exec.openRecommendations")} →
         </Link>
       </div>
 
@@ -84,7 +84,7 @@ export default function DecisionLogPage() {
               <div className="flex items-center gap-2 mb-1">
                 <Icon className="h-4 w-4" />
                 <span className="text-sm font-medium">
-                  {k === "Approved" ? t("exec.approve") : k === "Rejected" ? t("exec.reject") : t("dashboard.changesRequested")}
+                  {k === "Approved" ? t("exec.approved") : k === "Rejected" ? t("exec.rejected") : t("dashboard.changesRequested")}
                 </span>
               </div>
               <p className="text-3xl font-bold">{counts[k]}</p>
@@ -104,7 +104,7 @@ export default function DecisionLogPage() {
               filter === f ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
             }`}
           >
-            {f === "all" ? t("common.all") : f === "Approved" ? t("exec.approve") : f === "Rejected" ? t("exec.reject") : t("dashboard.changesRequested")}
+            {f === "all" ? t("common.all") : f === "Approved" ? t("exec.approved") : f === "Rejected" ? t("exec.rejected") : t("dashboard.changesRequested")}
           </button>
         ))}
       </div>
@@ -113,8 +113,8 @@ export default function DecisionLogPage() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">
-            {decisions.length} decision{decisions.length !== 1 ? "s" : ""}
-            {filter !== "all" && ` · ${filter === "Approved" ? t("exec.approve") : filter === "Rejected" ? t("exec.reject") : t("dashboard.changesRequested")}`}
+            {(decisions.length === 1 ? t("exec.decisionCount") : t("exec.decisionCountPlural")).replace("{n}", String(decisions.length))}
+            {filter !== "all" && ` · ${filter === "Approved" ? t("exec.approved") : filter === "Rejected" ? t("exec.rejected") : t("dashboard.changesRequested")}`}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -131,7 +131,7 @@ export default function DecisionLogPage() {
                   <div key={d.id} className="flex items-start gap-4 px-6 py-4">
                     <div className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold flex items-center gap-1 ${style.cls}`}>
                       <Icon className="h-3 w-3" />
-                      {d.decision === "Approved" ? t("exec.approve") : d.decision === "Rejected" ? t("exec.reject") : d.decision === "ChangesRequested" ? t("dashboard.changesRequested") : style.label}
+                      {d.decision === "Approved" ? t("exec.approved") : d.decision === "Rejected" ? t("exec.rejected") : d.decision === "ChangesRequested" ? t("dashboard.changesRequested") : style.label}
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium">{d.title}</p>
@@ -139,7 +139,7 @@ export default function DecisionLogPage() {
                         <span className={`font-medium ${PRIORITY_COLORS[d.priority] ?? ""}`}>{d.priority}</span>
                         <span>·</span>
                         <span>{d.entity_type?.replace(/_/g, " ")}</span>
-                        {d.decided_by && <><span>·</span><span>by {d.decided_by}</span></>}
+                        {d.decided_by && <><span>·</span><span>{t("exec.decidedBy").replace("{name}", d.decided_by)}</span></>}
                         {d.decided_at && <><span>·</span><span>{formatDate(d.decided_at)}</span></>}
                       </div>
                       {d.comment && (

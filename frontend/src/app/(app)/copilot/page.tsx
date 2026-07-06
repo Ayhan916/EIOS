@@ -89,7 +89,8 @@ type Tab = "chat" | "brief" | "advisor";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function ItemList({ items, labelKey = "title" }: { items: Record<string, unknown>[]; labelKey?: string }) {
-  if (!items || items.length === 0) return <p className="text-xs text-muted-foreground italic">None identified.</p>;
+  const { t } = useLanguage();
+  if (!items || items.length === 0) return <p className="text-xs text-muted-foreground italic">{t("copilot.noItems")}</p>;
   return (
     <ul className="space-y-1.5">
       {items.map((item, i) => (
@@ -204,7 +205,7 @@ function ChatTab() {
             className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${activeConvId === conv.id ? "bg-primary/10 border-primary/30" : "hover:bg-muted/50"}`}
           >
             <p className="font-medium line-clamp-1">{conv.title}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{conv.message_count} messages</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{t("copilot.messages").replace("{n}", String(conv.message_count))}</p>
           </button>
         ))}
         {conversations.length === 0 && !convsLoading && (
@@ -259,7 +260,7 @@ function ChatTab() {
           {ask.isPending && (
             <div className="flex justify-start">
               <div className="bg-muted/60 rounded-xl px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Thinking…
+                <Loader2 className="h-4 w-4 animate-spin" /> {t("copilot.thinking")}
               </div>
             </div>
           )}
@@ -301,9 +302,9 @@ function ExecutiveBriefTab() {
     } catch (e: unknown) {
       const err = e as { response?: { status?: number } };
       if (err?.response?.status === 403) {
-        setError("Executive permissions required to generate this brief.");
+        setError(t("copilot.errorExecutivePerms"));
       } else {
-        setError("Failed to generate brief. Please try again.");
+        setError(t("copilot.errorBriefFailed"));
       }
     } finally {
       setLoading(false);
@@ -394,7 +395,7 @@ function ActionAdvisorTab() {
       const r = await apiClient.get<ActionAdvisor>("/copilot/action-advisor");
       setAdvisor(r.data);
     } catch {
-      setError("Failed to load action advisor. Please try again.");
+      setError(t("copilot.errorAdvisorFailed"));
     } finally {
       setLoading(false);
     }

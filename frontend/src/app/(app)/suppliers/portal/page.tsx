@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   CheckCircle2,
@@ -525,6 +526,9 @@ export default function SupplierPortalPage() {
 
   return (
     <div className="p-6 space-y-6">
+      <Link href="/suppliers" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        ← {t("nav.suppliers")}
+      </Link>
       <div className="flex items-center gap-3">
         <Users className="h-7 w-7 text-primary" />
         <div>

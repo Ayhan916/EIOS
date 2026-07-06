@@ -131,7 +131,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
       setTimeout(() => { setShowForm(false); setSuccess(false); }, 1500);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setErr(msg ?? "Failed to record measurement");
+      setErr(msg ?? t("sustain.measureError"));
     } finally {
       setBusy(false);
     }
@@ -162,16 +162,16 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
       </div>
       <div className="flex gap-3 text-xs text-muted-foreground">
         <span>{kpi.category}</span>
-        {kpi.unit && <span>Unit: {kpi.unit}</span>}
+        {kpi.unit && <span>{t("sustain.kpiUnit")}: {kpi.unit}</span>}
         {kpi.frequency && <span>{kpi.frequency}</span>}
       </div>
       {(kpi.target_value != null || kpi.alert_threshold != null) && (
         <div className="flex gap-4 text-xs mt-1">
           {kpi.target_value != null && (
-            <span className="text-blue-600">Target: {kpi.target_value}</span>
+            <span className="text-blue-600">{t("sustain.kpiTarget")}: {kpi.target_value}</span>
           )}
           {kpi.alert_threshold != null && (
-            <span className="text-amber-600">Alert threshold: {kpi.alert_threshold}</span>
+            <span className="text-amber-600">{t("sustain.kpiAlertThreshold")}: {kpi.alert_threshold}</span>
           )}
         </div>
       )}
@@ -182,7 +182,7 @@ function KPICard({ kpi, onMeasured }: { kpi: ESGKPI; onMeasured: () => void }) {
           <div className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">{measurements[0].measured_value}</span>
             {kpi.unit ? ` ${kpi.unit}` : ""}
-            <span className="ml-1">latest</span>
+            <span className="ml-1">{t("sustain.latest")}</span>
           </div>
         </div>
       )}
@@ -320,7 +320,7 @@ export default function KPIsPage() {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-amber-600" />
-              {openAlerts.length} Open Alert{openAlerts.length > 1 ? "s" : ""}
+              {t("sustain.openAlerts").replace("{n}", String(openAlerts.length))}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -331,8 +331,8 @@ export default function KPIsPage() {
                     {a.alert_type}
                   </span>
                   <span className="text-muted-foreground">
-                    Value: {a.triggered_value}
-                    {a.threshold_value != null ? ` (threshold: ${a.threshold_value})` : ""}
+                    {t("sustain.alertValue").replace("{n}", String(a.triggered_value))}
+                    {a.threshold_value != null ? ` (${t("sustain.alertThresholdValue").replace("{n}", String(a.threshold_value))})` : ""}
                   </span>
                 </div>
               ))}
@@ -386,7 +386,7 @@ export default function KPIsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1">Alert Threshold</label>
+                <label className="block text-xs font-medium mb-1">{t("sustain.kpiAlertThreshold")}</label>
                 <input
                   type="number"
                   className="w-full rounded border px-3 py-1.5 text-sm"
@@ -410,13 +410,13 @@ export default function KPIsPage() {
       {kpiChartData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">{activeKpis[0].name} — Ziel: {activeKpis[0].target_value} {activeKpis[0].unit ?? ""}</CardTitle>
+            <CardTitle className="text-base">{activeKpis[0].name} — {t("sustain.targetChartLabel").replace("{value}", String(activeKpis[0].target_value ?? "")).replace("{unit}", activeKpis[0].unit ?? "")}</CardTitle>
           </CardHeader>
           <CardContent>
             <KpiLineChart
               data={kpiChartData}
               unit={activeKpis[0].unit ? ` ${activeKpis[0].unit}` : ""}
-              targetLabel="Ziel"
+              targetLabel={t("sustain.targetLabel")}
               height={240}
             />
           </CardContent>
@@ -427,7 +427,7 @@ export default function KPIsPage() {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            KPIs{kpis ? ` (${kpis.length})` : ""}
+            {t("sustain.kpisTitle")}{kpis ? ` (${kpis.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>

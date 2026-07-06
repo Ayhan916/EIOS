@@ -1,115 +1,94 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import { useAuth } from "@/lib/auth/context";
-import { useLanguage } from "@/lib/i18n/context";
 import { extractErrorMessage } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 
 export default function LoginPage() {
   const { login } = useAuth();
-  const router = useRouter();
-  const { t } = useLanguage();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const schema = z.object({
-    email: z.string().email(t("auth.invalidEmail")),
-    password: z.string().min(1, t("auth.passwordRequired")),
-  });
-  type FormData = z.infer<typeof schema>;
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) });
-
-  async function onSubmit(data: FormData) {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password) {
+      setError("Bitte E-Mail und Passwort eingeben.");
+      return;
+    }
     setError("");
+    setLoading(true);
     try {
-      await login(data);
-      router.push("/dashboard");
+      await login({ email, password });
+      window.location.href = "/dashboard";
     } catch (err) {
       setError(extractErrorMessage(err));
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <Card className="w-full max-w-sm shadow-lg">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-xl">{t("auth.signIn")}</CardTitle>
-        <CardDescription>{t("auth.subtitle")}</CardDescription>
-      </CardHeader>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          {error && (
-            <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
-              {error}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="email">{t("auth.email")}</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@company.com"
-              autoComplete="email"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">{t("auth.password")}</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive">
-                {errors.password.message}
-              </p>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? (
-              <Spinner size="sm" className="text-white" />
-            ) : (
-              t("auth.signInButton")
-            )}
-          </Button>
-          <p className="text-center text-sm text-muted-foreground">
-            {t("auth.noAccount")}{" "}
-            <Link
-              href="/register"
-              className="font-medium text-primary underline-offset-4 hover:underline"
-            >
-              {t("auth.signInLink")}
-            </Link>
-          </p>
-        </CardFooter>
+    <div className="w-full max-w-sm rounded-xl border border-border bg-white shadow-lg p-8 space-y-6">
+      <div className="text-center space-y-1">
+        <h2 className="text-xl font-semibold text-slate-900">Anmelden</h2>
+        <p className="text-sm text-slate-500">EIOS ESG Intelligence Platform</p>
+      </div>
+
+      {error && (
+        <div className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700 border border-red-200">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1">
+          <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+            E-Mail
+          </label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@company.com"
+            autoComplete="email"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+            Passwort
+          </label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+            className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          {loading ? <Spinner size="sm" className="text-white" /> : "Anmelden"}
+        </button>
       </form>
-    </Card>
+
+      <p className="text-center text-sm text-muted-foreground">
+        Kein Konto?{" "}
+        <Link href="/register" className="font-medium text-primary hover:underline">
+          Registrieren
+        </Link>
+      </p>
+    </div>
   );
 }

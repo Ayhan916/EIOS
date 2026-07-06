@@ -66,14 +66,14 @@ export default function TaxonomyPage() {
   // #68 Donut data from latest assessment
   const donutData = latest
     ? [
-        { name: "Aligned", value: parseFloat(latest.aligned_percent.toFixed(1)), color: "#22c55e" },
+        { name: t("taxonomy.aligned"), value: parseFloat(latest.aligned_percent.toFixed(1)), color: "#22c55e" },
         {
-          name: "Eligible (not aligned)",
+          name: t("taxonomy.eligibleNotAligned"),
           value: parseFloat(Math.max(0, latest.eligible_percent - latest.aligned_percent).toFixed(1)),
           color: "#60a5fa",
         },
         {
-          name: "Non-eligible",
+          name: t("taxonomy.nonEligible"),
           value: parseFloat(Math.max(0, 100 - latest.eligible_percent).toFixed(1)),
           color: "#e2e8f0",
         },
@@ -83,14 +83,14 @@ export default function TaxonomyPage() {
   return (
     <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Taxonomy Alignment</h1>
-        <p className="text-muted-foreground">EU Taxonomy and other frameworks</p>
+        <h1 className="text-2xl font-bold">{t("taxonomy.title")}</h1>
+        <p className="text-muted-foreground">{t("taxonomy.subtitle")}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Latest Aligned %</p>
+            <p className="text-sm text-muted-foreground">{t("taxonomy.latestAligned")}</p>
             <p className="mt-1 text-3xl font-bold text-green-600">
               {latest ? `${latest.aligned_percent.toFixed(1)}%` : "—"}
             </p>
@@ -101,7 +101,7 @@ export default function TaxonomyPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Latest Eligible %</p>
+            <p className="text-sm text-muted-foreground">{t("taxonomy.latestEligible")}</p>
             <p className="mt-1 text-3xl font-bold text-blue-600">
               {latest ? `${latest.eligible_percent.toFixed(1)}%` : "—"}
             </p>
@@ -109,7 +109,7 @@ export default function TaxonomyPage() {
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Avg Aligned % (all years)</p>
+            <p className="text-sm text-muted-foreground">{t("taxonomy.avgAligned")}</p>
             <p className="mt-1 text-3xl font-bold">
               {avgAligned !== null ? `${avgAligned.toFixed(1)}%` : "—"}
             </p>
@@ -121,7 +121,7 @@ export default function TaxonomyPage() {
       {waterfallData.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Taxonomy Alignment Waterfall — by Year</CardTitle>
+            <CardTitle className="text-base">{t("taxonomy.waterfallTitle")}</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={220}>
@@ -131,9 +131,9 @@ export default function TaxonomyPage() {
                 <YAxis tickFormatter={(v) => `${v}%`} domain={[0, 100]} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number, name: string) => [`${v}%`, name]} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
-                <Bar dataKey="aligned" stackId="a" fill="#22c55e" name="Aligned" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="eligibleOnly" stackId="a" fill="#60a5fa" name="Eligible (not aligned)" />
-                <Bar dataKey="nonEligible" stackId="a" fill="#e2e8f0" name="Non-eligible" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="aligned" stackId="a" fill="#22c55e" name={t("taxonomy.aligned")} radius={[0, 0, 0, 0]} />
+                <Bar dataKey="eligibleOnly" stackId="a" fill="#60a5fa" name={t("taxonomy.eligibleNotAligned")} />
+                <Bar dataKey="nonEligible" stackId="a" fill="#e2e8f0" name={t("taxonomy.nonEligible")} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -146,7 +146,7 @@ export default function TaxonomyPage() {
           <Card>
             <CardHeader>
               <CardTitle className="text-base">
-                Breakdown — {latest.assessment_year}
+                {t("taxonomy.breakdownTitle").replace("{year}", String(latest.assessment_year))}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -177,13 +177,13 @@ export default function TaxonomyPage() {
           {/* Latest assessment progress bars (existing) */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Latest Assessment — {latest.assessment_year}</CardTitle>
+              <CardTitle className="text-base">{t("taxonomy.latestAssessmentTitle").replace("{year}", String(latest.assessment_year))}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div>
                   <div className="flex justify-between text-sm">
-                    <span>Aligned</span>
+                    <span>{t("taxonomy.aligned")}</span>
                     <span className="font-medium">{latest.aligned_percent.toFixed(1)}%</span>
                   </div>
                   <div className="mt-1 h-3 rounded-full bg-muted">
@@ -195,7 +195,7 @@ export default function TaxonomyPage() {
                 </div>
                 <div>
                   <div className="flex justify-between text-sm">
-                    <span>Eligible</span>
+                    <span>{t("taxonomy.eligible")}</span>
                     <span className="font-medium">{latest.eligible_percent.toFixed(1)}%</span>
                   </div>
                   <div className="mt-1 h-3 rounded-full bg-muted">
@@ -216,20 +216,20 @@ export default function TaxonomyPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Assessments</CardTitle>
+          <CardTitle>{t("taxonomy.allAssessments")}</CardTitle>
         </CardHeader>
         <CardContent>
           {sorted.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No assessments yet</p>
+            <p className="text-sm text-muted-foreground">{t("taxonomy.noAssessments")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
-                    <th className="pb-2 pr-4">Year</th>
+                    <th className="pb-2 pr-4">{t("taxonomy.year")}</th>
                     <th className="pb-2 pr-4">{t("esgOs.framework")}</th>
-                    <th className="pb-2 pr-4">Aligned %</th>
-                    <th className="pb-2 pr-4">Eligible %</th>
+                    <th className="pb-2 pr-4">{t("taxonomy.alignedPct")}</th>
+                    <th className="pb-2 pr-4">{t("taxonomy.eligiblePct")}</th>
                     <th className="pb-2">{t("common.status")}</th>
                   </tr>
                 </thead>

@@ -458,7 +458,7 @@ function CalculatorTab() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b text-left text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                    <th className="px-2 py-2">Scope</th>
+                    <th className="px-2 py-2">{t("ghg.scope")}</th>
                     <th className="px-2 py-2">{t("ghg.category")}</th>
                     <th className="px-2 py-2">{t("ghg.subcategory")}</th>
                     <th className="px-2 py-2">{t("ghg.unit")}</th>
@@ -550,7 +550,7 @@ function FactorsTab() {
           <option value="">{t("ghg.filterRegion")}</option>
           {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
         </select>
-        <span className="self-center text-sm text-slate-400">{factors.length} factors</span>
+        <span className="self-center text-sm text-slate-400">{t("ghg.factorCount").replace("{n}", String(factors.length))}</span>
       </div>
 
       {isLoading ? (
@@ -564,7 +564,7 @@ function FactorsTab() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-slate-50 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                <th className="px-3 py-3">Scope</th>
+                <th className="px-3 py-3">{t("ghg.scope")}</th>
                 <th className="px-3 py-3">{t("ghg.category")}</th>
                 <th className="px-3 py-3">{t("ghg.subcategory")}</th>
                 <th className="px-3 py-3">{t("ghg.unit")}</th>
@@ -618,7 +618,7 @@ export default function GHGCalculatorPage() {
   const [tab, setTab] = useState<Tab>("calculator");
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       {/* Header */}
       <div className="flex items-start gap-3">
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600 flex-shrink-0">

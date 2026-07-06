@@ -89,7 +89,7 @@ function LinkToControlPanel({ evidenceId, onClose }: { evidenceId: string; onClo
         className="inline-flex items-center gap-1 rounded bg-violet-600 px-2 py-1 text-[10px] font-medium text-white hover:bg-violet-700 disabled:opacity-50"
       >
         {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Link2 className="h-3 w-3" />}
-        Link
+        {t("evidence.linkButton")}
       </button>
       <button onClick={onClose} className="text-[10px] text-muted-foreground hover:underline">{t("common.cancel")}</button>
     </div>
@@ -114,7 +114,8 @@ function EvidencePreview({ ev }: { ev: any }) {
   // Fetch the document with auth and create a blob URL
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
-    fetch(`/evidences/${ev.id}/download`, {
+    const apiBase = `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"}/api/v1`;
+    fetch(`${apiBase}/evidences/${ev.id}/download`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     })
       .then((r) => {
@@ -155,6 +156,7 @@ function EvidenceRow({
   ev: any;
   ingestionBadge: (status: string, chunks: number) => React.ReactNode;
 }) {
+  const { t } = useLanguage();
   const [showLink, setShowLink] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const hasFile = !!ev.file_name;
@@ -180,7 +182,7 @@ function EvidenceRow({
             <button
               onClick={() => setShowPreview((v) => !v)}
               className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
-              title="Preview document"
+              title={t("evidence.preview")}
             >
               {showPreview ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
             </button>
@@ -188,7 +190,7 @@ function EvidenceRow({
           <button
             onClick={() => setShowLink((v) => !v)}
             className="text-[10px] text-violet-600 hover:underline flex items-center gap-0.5"
-            title="Link to control"
+            title={t("evidence.linkControl")}
           >
             <Link2 className="h-3 w-3" />
           </button>
@@ -319,7 +321,7 @@ export default function EvidencePage() {
     !!selectedFile && !!title.trim() && uploadState.stage === "idle";
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <ReadinessBanner stepKey="assess" />
       <div>
         <h1 className="text-2xl font-bold">{t("evidence.title")}</h1>
@@ -334,8 +336,7 @@ export default function EvidencePage() {
           <CardHeader>
             <CardTitle className="text-base">{t("evidence.upload")}</CardTitle>
             <CardDescription>
-              PDF, DOCX, or XLSX — up to 50 MB. Documents are parsed and
-              embedded for semantic search.
+              {t("evidence.uploadDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -388,7 +389,7 @@ export default function EvidencePage() {
               <Label htmlFor="ev-title">{t("evidence.titleField")}</Label>
               <Input
                 id="ev-title"
-                placeholder="Annual Sustainability Report 2024"
+                placeholder={t("evidence.titlePlaceholder")}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
@@ -398,7 +399,7 @@ export default function EvidencePage() {
               <Label htmlFor="ev-desc">{t("evidence.descriptionField")} ({t("common.optional")})</Label>
               <Textarea
                 id="ev-desc"
-                placeholder="Brief description of the document content…"
+                placeholder={t("evidence.descriptionPlaceholder")}
                 rows={2}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -464,7 +465,7 @@ export default function EvidencePage() {
               uploadState.stage === "uploading" ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("common.loading")}
+                  {t("evidence.uploading")}
                 </>
               ) : (
                 <>
@@ -480,7 +481,9 @@ export default function EvidencePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {data ? `${data.total} ${t("evidence.document")}` : t("evidence.document")}
+              {data
+                ? t("evidence.totalDocuments").replace("{n}", String(data.total))
+                : t("evidence.document")}
             </CardTitle>
             <CardDescription>
               {t("evidence.documentsSubtitle")}

@@ -133,20 +133,6 @@ interface SupplierScore {
   ofac_status: string | null;
 }
 
-const TIER_OPTIONS: { value: SupplierTier | ""; label: string }[] = [
-  { value: "", label: "All Tiers" },
-  { value: "Tier 1", label: "Tier 1" },
-  { value: "Tier 2", label: "Tier 2" },
-  { value: "Tier 3", label: "Tier 3" },
-  { value: "Other", label: "Other" },
-];
-
-const STATUS_OPTIONS = [
-  { value: "", label: "All Status" },
-  { value: "Active", label: "Active" },
-  { value: "Inactive", label: "Inactive" },
-];
-
 const RISK_LEVEL_COLORS: Record<string, string> = {
   Critical: "bg-red-100 text-red-800",
   High:     "bg-orange-100 text-orange-800",
@@ -281,6 +267,7 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState(() => searchParams.get("country") || searchParams.get("industry") || "");
   const [tierFilter, setTierFilter] = useState(() => searchParams.get("tier") || "");
   const [statusFilter, setStatusFilter] = useState("");
+  const [riskFilter, setRiskFilter] = useState(() => searchParams.get("risk_level") || "");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [showCreate, setShowCreate] = useState(false);
   const [createTab, setCreateTab] = useState<"search" | "manual">("search");
@@ -324,9 +311,11 @@ export default function SuppliersPage() {
     const country = searchParams.get("country");
     const industry = searchParams.get("industry");
     const tier = searchParams.get("tier");
+    const risk = searchParams.get("risk_level");
     if (country) { setSearch(country); setSearchInput(country); }
     else if (industry) { setSearch(industry); setSearchInput(industry); }
     if (tier) setTierFilter(tier);
+    if (risk) setRiskFilter(risk);
   }, [searchParams]);
 
   const [form, setForm] = useState<SupplierCreate>({
@@ -502,7 +491,10 @@ export default function SuppliersPage() {
     setEnrichedData(null);
   }
 
-  const suppliers = data?.items ?? [];
+  const allSuppliers = data?.items ?? [];
+  const suppliers = riskFilter
+    ? allSuppliers.filter((s) => scoreMap.get(s.id)?.risk_level === riskFilter)
+    : allSuppliers;
 
   const isAllSelected = suppliers.length > 0 && suppliers.every((s) => selectedIds.has(s.id));
   const isPartialSelected = suppliers.some((s) => selectedIds.has(s.id)) && !isAllSelected;
@@ -555,6 +547,27 @@ export default function SuppliersPage() {
   return (
     <div className="space-y-6">
       <ReadinessBanner stepKey="onboard" />
+
+      {/* Sub-page navigation */}
+      <div className="flex flex-wrap gap-2">
+        {[
+          { href: "/suppliers/analytics",    label: "Analytics" },
+          { href: "/suppliers/geo-heatmap",  label: "Geo Heatmap" },
+          { href: "/suppliers/segmentation", label: "Segmentation" },
+          { href: "/suppliers/certificates", label: "Certificates" },
+          { href: "/suppliers/portal",       label: "Supplier Portal" },
+          { href: "/network/resilience",     label: "Network Resilience" },
+        ].map(({ href, label }) => (
+          <Link
+            key={href}
+            href={href}
+            className="rounded-full border border-border px-3 py-1 text-xs font-medium text-muted-foreground hover:border-blue-400 hover:text-blue-600 transition-colors"
+          >
+            {label}
+          </Link>
+        ))}
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -603,8 +616,19 @@ export default function SuppliersPage() {
           <option value="Active">{t("common.active")}</option>
           <option value="Inactive">{t("common.inactive")}</option>
         </select>
-        {(search || tierFilter || statusFilter) && (
-          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setSearchInput(""); setTierFilter(""); setStatusFilter(""); setPage(1); }} className="gap-1 text-muted-foreground">
+        <select
+          value={riskFilter}
+          onChange={(e) => { setRiskFilter(e.target.value); setPage(1); }}
+          className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        >
+          <option value="">All Risk Levels</option>
+          <option value="Critical">Critical</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+        {(search || tierFilter || statusFilter || riskFilter) && (
+          <Button variant="ghost" size="sm" onClick={() => { setSearch(""); setSearchInput(""); setTierFilter(""); setStatusFilter(""); setRiskFilter(""); setPage(1); }} className="gap-1 text-muted-foreground">
             <X className="h-3 w-3" /> {t("common.close")}
           </Button>
         )}
@@ -653,14 +677,15 @@ export default function SuppliersPage() {
           <CardContent className="p-0">
             <EmptyState
               icon={Briefcase}
-              title={search || tierFilter || statusFilter ? t("suppliers.noSuppliers") : t("suppliers.noSuppliers")}
-              description={search || tierFilter || statusFilter
-                ? t("suppliers.noSuppliersDesc")
+              title={search || tierFilter || statusFilter || riskFilter ? "Keine Treffer" : t("suppliers.noSuppliers")}
+              description={search || tierFilter || statusFilter || riskFilter
+                ? "Keine Lieferanten entsprechen den gewählten Filtern. Filter zurücksetzen und erneut versuchen."
                 : t("suppliers.noSuppliersDesc")}
-              actions={!search && !tierFilter && !statusFilter ? [
+              actions={!search && !tierFilter && !statusFilter && !riskFilter ? [
                 { label: t("suppliers.newSupplier"), onClick: () => setShowCreate(true), variant: "primary" },
-                { label: t("common.import"), href: "/suppliers", variant: "outline" },
-              ] : undefined}
+              ] : [
+                { label: "Filter zurücksetzen", onClick: () => { setSearch(""); setSearchInput(""); setTierFilter(""); setStatusFilter(""); setRiskFilter(""); setPage(1); }, variant: "outline" },
+              ]}
             />
           </CardContent>
         </Card>
@@ -781,14 +806,21 @@ export default function SuppliersPage() {
                         <td className="px-4 py-3 hidden xl:table-cell">
                           <OfacBadge status={sc?.ofac_status ?? null} />
                         </td>
-                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground tabular-nums">
-                          {sc ? sc.assessment_count : "—"}
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs tabular-nums">
+                          {sc ? (
+                            <Link href={`/assessments?supplier_id=${s.id}`} className="text-muted-foreground hover:text-blue-600 hover:underline">
+                              {sc.assessment_count}
+                            </Link>
+                          ) : "—"}
                         </td>
                         <td className="px-4 py-3 hidden lg:table-cell text-xs tabular-nums">
                           {sc ? (
-                            <span className={sc.finding_count > 0 ? "text-amber-700 font-medium" : "text-muted-foreground"}>
+                            <Link
+                              href={`/findings?supplier_id=${s.id}`}
+                              className={sc.finding_count > 0 ? "text-amber-700 font-medium hover:underline" : "text-muted-foreground hover:underline"}
+                            >
                               {sc.finding_count}
-                            </span>
+                            </Link>
                           ) : "—"}
                         </td>
                         <td className="px-4 py-3">{statusBadge(s.supplier_status)}</td>

@@ -278,7 +278,7 @@ function RegulationsTab() {
     <div className="space-y-4">
       <input
         className="h-9 w-full max-w-sm rounded-md border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-        placeholder="Search regulations…"
+        placeholder={t("reg.searchPlaceholder")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -298,7 +298,7 @@ function RegulationsTab() {
                 <div className="flex gap-3 text-xs text-muted-foreground">
                   <span>{t("reg.jurisdiction")}: {reg.jurisdiction}</span>
                   <span>{t("reg.version")}: {reg.reg_version}</span>
-                  <span>{reg.requirement_count} requirements</span>
+                  <span>{t("reg.requirementCount").replace("{n}", String(reg.requirement_count))}</span>
                 </div>
               </div>
               <Badge className="shrink-0 font-mono bg-slate-100 text-slate-700">{reg.code}</Badge>
@@ -399,7 +399,7 @@ function GapsTab() {
                 <p className="font-medium">{gap.requirement_title || gap.requirement_code}</p>
                 <p className="text-sm text-muted-foreground line-clamp-2">{gap.description}</p>
                 <p className="text-xs text-muted-foreground">
-                  {t("reg.gapType")}: {gap.gap_type} · Calculated {formatDate(gap.calculated_at)}
+                  {t("reg.gapType")}: {gap.gap_type} · {t("reg.calculatedAt").replace("{date}", formatDate(gap.calculated_at))}
                 </p>
               </div>
               <Button
@@ -448,7 +448,7 @@ function ReportsTab() {
       {/* Special report downloads */}
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm">Framework Reports</CardTitle>
+          <CardTitle className="text-sm">{t("reg.frameworkReports")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-3">
@@ -478,9 +478,9 @@ function ReportsTab() {
                   <Badge className="font-mono bg-slate-100 text-slate-700 text-[10px]">{r.framework_code}</Badge>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Generated {formatDate(r.generated_at)} · v{r.framework_version}
+                  {t("reg.generated").replace("{date}", formatDate(r.generated_at))} · v{r.framework_version}
                 </p>
-                <p className="text-[10px] font-mono text-muted-foreground">Hash: {r.report_hash.slice(0, 16)}…</p>
+                <p className="text-[10px] font-mono text-muted-foreground">{t("reg.hashLabel")}: {r.report_hash.slice(0, 16)}…</p>
               </div>
               <Button
                 size="sm"
@@ -488,7 +488,7 @@ function ReportsTab() {
                 className="h-8 text-xs shrink-0"
                 onClick={() => authenticatedDownload(`/regulatory/reports/${r.id}/download`, `report-${r.id}.json`)}
               >
-                <Download className="h-3.5 w-3.5 mr-1" /> Download
+                <Download className="h-3.5 w-3.5 mr-1" /> {t("common.download")}
               </Button>
             </CardContent>
           </Card>
@@ -594,7 +594,7 @@ function CalendarTab() {
           />
         </div>
         <Button size="sm" className="ml-auto" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Cancel" : `+ ${t("reg.addDeadline")}`}
+          {showForm ? t("common.cancel") : `+ ${t("reg.addDeadline")}`}
         </Button>
       </div>
 
@@ -603,11 +603,11 @@ function CalendarTab() {
         <Card>
           <CardContent className="py-4 grid grid-cols-1 md:grid-cols-2 gap-3">
             {[
-              { key: "framework_code", label: "Framework Code", placeholder: "CSRD" },
-              { key: "deadline_name",  label: "Deadline Name",  placeholder: "Annual Report Filing" },
-              { key: "jurisdiction",   label: "Jurisdiction",   placeholder: "EU" },
-              { key: "entity_size",    label: "Entity Size",    placeholder: "Large" },
-              { key: "reporting_year", label: "Reporting Year", placeholder: "2025" },
+              { key: "framework_code", label: t("reg.filterFramework"), placeholder: "CSRD" },
+              { key: "deadline_name",  label: t("reg.deadlineName"),    placeholder: "Annual Report Filing" },
+              { key: "jurisdiction",   label: t("reg.filterJurisdiction"), placeholder: "EU" },
+              { key: "entity_size",    label: t("reg.entitySize"),      placeholder: "Large" },
+              { key: "reporting_year", label: t("reg.reportingYear"),   placeholder: "2025" },
             ].map(({ key, label, placeholder }) => (
               <div key={key}>
                 <label className="text-xs text-muted-foreground">{label}</label>
@@ -629,7 +629,7 @@ function CalendarTab() {
               />
             </div>
             <div className="md:col-span-2">
-              <label className="text-xs text-muted-foreground">Description</label>
+              <label className="text-xs text-muted-foreground">{t("common.description")}</label>
               <input
                 className="mt-1 h-9 w-full rounded border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 value={form.description}
@@ -652,7 +652,7 @@ function CalendarTab() {
                 disabled={create.isPending || !form.framework_code || !form.deadline_name || !form.deadline_date}
                 onClick={() => create.mutate()}
               >
-                {create.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Saving…</> : <><Send className="h-3.5 w-3.5 mr-1" />Add Deadline</>}
+                {create.isPending ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />{t("reg.saving")}</> : <><Send className="h-3.5 w-3.5 mr-1" />{t("reg.addDeadline")}</>}
               </Button>
             </div>
           </CardContent>
@@ -680,7 +680,7 @@ function CalendarTab() {
                   <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                     <span>{dl.jurisdiction}</span>
                     <span>{t("reg.entitySize")}: {dl.entity_size}</span>
-                    {dl.reporting_year && <span>Year: {dl.reporting_year}</span>}
+                    {dl.reporting_year && <span>{t("reg.reportingYearLabel")}: {dl.reporting_year}</span>}
                   </div>
                 </div>
                 <div className="shrink-0 text-right space-y-1">
@@ -690,7 +690,7 @@ function CalendarTab() {
                   <p className={`text-xs ${isOverdue ? "text-red-500" : isClose ? "text-amber-500" : "text-muted-foreground"}`}>
                     {isOverdue
                       ? `${t("reg.overdue")} ${Math.abs(days)}d`
-                      : days === 0 ? "Today"
+                      : days === 0 ? t("reg.today")
                       : `${days} ${t("reg.daysLeft")}`}
                   </p>
                 </div>
@@ -788,13 +788,13 @@ function ExportsTab() {
         <CardHeader className="pb-2"><CardTitle className="text-sm">Audit Trail Export — CSV (G-013)</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap items-end gap-3">
           <div>
-            <label className="text-xs text-muted-foreground">From</label>
+            <label className="text-xs text-muted-foreground">{t("reg.fromLabel")}</label>
             <input type="date"
               className="mt-1 h-9 rounded border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={auditStart} onChange={(e) => setAuditStart(e.target.value)} />
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">To</label>
+            <label className="text-xs text-muted-foreground">{t("reg.toLabel")}</label>
             <input type="date"
               className="mt-1 h-9 rounded border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={auditEnd} onChange={(e) => setAuditEnd(e.target.value)} />
@@ -823,7 +823,7 @@ function ExportsTab() {
               value={selectedPkg}
               onChange={(e) => setSelectedPkg(e.target.value)}
             >
-              <option value="">Select…</option>
+              <option value="">{t("reg.selectOption")}</option>
               {packages.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.framework_code} · {p.package_type} · {formatDate(p.publication_date)}
@@ -832,7 +832,7 @@ function ExportsTab() {
             </select>
           </div>
           <div>
-            <label className="text-xs text-muted-foreground">Format</label>
+            <label className="text-xs text-muted-foreground">{t("reg.formatLabel")}</label>
             <select
               className="mt-1 h-9 rounded border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
               value={exportFormat}
@@ -848,7 +848,7 @@ function ExportsTab() {
               const ext = exportFormat === "xbrl" ? "html" : "json";
               download(`/disclosure/packages/${selectedPkg}/export`, `package-${selectedPkg.slice(0,8)}.${ext}`, { format: exportFormat });
             }}>
-            {loading === "pkg-export" ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />{t("reg.downloading")}</> : <><Download className="h-3.5 w-3.5 mr-1" />Export</>}
+            {loading === "pkg-export" ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />{t("reg.downloading")}</> : <><Download className="h-3.5 w-3.5 mr-1" />{t("reg.exportButton")}</>}
           </Button>
         </CardContent>
       </Card>
@@ -874,6 +874,7 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 function ChangesTab() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showAddForm, setShowAddForm] = useState(false);
   const [framework, setFramework] = useState("");
@@ -929,60 +930,60 @@ function ChangesTab() {
             className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             <RefreshCw className={`h-4 w-4 ${seedMutation.isPending ? "animate-spin" : ""}`} />
-            Load Curated Feed
+            {t("reg.loadCuratedFeed")}
           </button>
           <button
             onClick={() => setShowAddForm((v) => !v)}
             className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
           >
-            + Log Manual Change
+            + {t("reg.logManualChange")}
           </button>
         </div>
-        <span className="text-xs text-gray-400">{changes.length} change(s) tracked</span>
+        <span className="text-xs text-gray-400">{t("reg.changesTracked").replace("{n}", String(changes.length))}</span>
       </div>
 
       {/* Add form */}
       {showAddForm && (
         <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 space-y-3">
           <div className="flex justify-between items-center">
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Log Regulatory Change</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t("reg.logChangeTitle")}</span>
             <button onClick={() => setShowAddForm(false)}><X className="h-4 w-4 text-gray-400" /></button>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Framework</label>
+              <label className="block text-xs text-gray-500 mb-1">{t("reg.filterFramework")}</label>
               <input value={framework} onChange={(e) => setFramework(e.target.value)}
                 placeholder="LkSG / CSDDD / CSRD"
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Affected Article</label>
+              <label className="block text-xs text-gray-500 mb-1">{t("reg.affectedArticle")}</label>
               <input value={article} onChange={(e) => setArticle(e.target.value)}
                 placeholder="e.g. Art. 10 Abs. 2"
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Title</label>
+              <label className="block text-xs text-gray-500 mb-1">{t("reg.titleLabel")}</label>
               <input value={title} onChange={(e) => setTitle(e.target.value)}
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
             </div>
             <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Description</label>
+              <label className="block text-xs text-gray-500 mb-1">{t("common.description")}</label>
               <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)}
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm resize-none" />
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Severity</label>
+              <label className="block text-xs text-gray-500 mb-1">{t("reg.severity")}</label>
               <select value={severity} onChange={(e) => setSeverity(e.target.value)}
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm">
-                <option value="minor">Minor</option>
-                <option value="moderate">Moderate</option>
-                <option value="major">Major</option>
-                <option value="critical">Critical</option>
+                <option value="minor">{t("reg.minor")}</option>
+                <option value="moderate">{t("reg.moderate")}</option>
+                <option value="major">{t("reg.major")}</option>
+                <option value="critical">{t("findings.critical")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-500 mb-1">Source</label>
+              <label className="block text-xs text-gray-500 mb-1">{t("reg.sourceLabel")}</label>
               <input value={sourceName} onChange={(e) => setSourceName(e.target.value)}
                 className="w-full rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-sm" />
             </div>
@@ -991,7 +992,7 @@ function ChangesTab() {
             <button onClick={() => createMutation.mutate()}
               disabled={!framework || !title || createMutation.isPending}
               className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50">
-              {createMutation.isPending ? "Saving…" : "Save Change"}
+              {createMutation.isPending ? t("reg.saving") : t("reg.saveChange")}
             </button>
           </div>
         </div>
@@ -999,10 +1000,10 @@ function ChangesTab() {
 
       {/* Change list */}
       {isLoading ? (
-        <div className="py-10 text-center text-sm text-gray-400">Loading…</div>
+        <div className="py-10 text-center text-sm text-gray-400">{t("reg.loadingChanges")}</div>
       ) : changes.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center text-gray-400">
-          No regulatory changes tracked. Click "Load Curated Feed" to seed known EU/German changes.
+          {t("reg.noChanges")}
         </div>
       ) : (
         <div className="space-y-3">
@@ -1037,16 +1038,16 @@ function ChangesTab() {
                     </p>
                   )}
                   <div className="flex items-center gap-3 mt-1 text-xs text-gray-400">
-                    <span>Source: {c.source_name}</span>
-                    {c.effective_date && <span>Effective: {c.effective_date}</span>}
+                    <span>{t("reg.sourceLabel")}: {c.source_name}</span>
+                    {c.effective_date && <span>{t("reg.effective")}: {c.effective_date}</span>}
                     {c.impacted_assessment_count > 0 && (
                       <span className="text-orange-500">
-                        {c.impacted_assessment_count} assessment(s) flagged
+                        {t("reg.assessmentsFlagged").replace("{n}", String(c.impacted_assessment_count))}
                       </span>
                     )}
                     {c.impacted_gap_count > 0 && (
                       <span className="text-orange-500">
-                        {c.impacted_gap_count} gap(s) flagged
+                        {t("reg.gapsFlagged").replace("{n}", String(c.impacted_gap_count))}
                       </span>
                     )}
                   </div>
@@ -1058,7 +1059,7 @@ function ChangesTab() {
                   className="flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 shrink-0"
                 >
                   <ScanSearch className="h-3.5 w-3.5" />
-                  Scan Impact
+                  {t("reg.scanImpact")}
                 </button>
               </div>
             </div>
@@ -1072,6 +1073,7 @@ function ChangesTab() {
 // ── Regulatory Change Banner (shown when new unscanned changes exist) ──────────
 
 function RegulatoryChangeBanner() {
+  const { t } = useLanguage();
   const [dismissed, setDismissed] = useState(false);
   const { data: summary } = useQuery({
     queryKey: ["regulatory-changes-summary"],
@@ -1085,14 +1087,13 @@ function RegulatoryChangeBanner() {
     <div className="flex items-start gap-3 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
       <Radio className="h-4 w-4 mt-0.5 shrink-0 text-amber-600" />
       <div className="flex-1">
-        <span className="font-semibold">{summary.new_changes} new regulatory change(s)</span>{" "}
-        require impact assessment.
+        <span className="font-semibold">{t("reg.newChangesAlert").replace("{n}", String(summary.new_changes))}</span>
         {summary.pending_re_reviews > 0 && (
           <span className="ml-1">
-            {summary.pending_re_reviews} assessment(s) pending re-review.
+            {t("reg.pendingReReviews").replace("{n}", String(summary.pending_re_reviews))}
           </span>
         )}{" "}
-        Go to the <strong>Changes</strong> tab to run impact scans.
+        {t("reg.goToChangesTab")}
       </div>
       <button onClick={() => setDismissed(true)} className="text-amber-500 hover:text-amber-700">
         <X className="h-4 w-4" />

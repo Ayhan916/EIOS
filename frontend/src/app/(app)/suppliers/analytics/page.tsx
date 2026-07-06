@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowDownRight,
+  ArrowLeft,
   ArrowRight,
   ArrowUpRight,
   BarChart3,
@@ -253,7 +254,11 @@ function WatchlistTab() {
         <tbody>
           {data.map((entry) => (
             <tr key={entry.supplier_id} className="border-b border-slate-50 last:border-0 hover:bg-red-50/30">
-              <td className="px-4 py-3 font-medium text-slate-900">{entry.supplier_name}</td>
+              <td className="px-4 py-3 font-medium">
+                <Link href={`/suppliers/${entry.supplier_id}`} className="text-slate-900 hover:text-blue-600 hover:underline">
+                  {entry.supplier_name}
+                </Link>
+              </td>
               <td className="px-4 py-3 text-slate-500">{entry.country || "—"}</td>
               <td className="px-4 py-3 text-xs text-slate-500 capitalize">{entry.supplier_tier}</td>
               <td className="px-4 py-3">
@@ -402,7 +407,9 @@ function RankingsTab() {
                 <tr key={entry.supplier_id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50">
                   <td className="px-4 py-3 font-bold text-slate-400 text-center">#{entry.rank}</td>
                   <td className="px-4 py-3">
-                    <p className="font-medium text-slate-900">{entry.supplier_name}</p>
+                    <Link href={`/suppliers/${entry.supplier_id}`} className="font-medium text-slate-900 hover:text-blue-600 hover:underline">
+                      {entry.supplier_name}
+                    </Link>
                     <p className="text-[11px] text-slate-400">{entry.industry}</p>
                   </td>
                   <td className="px-4 py-3 text-slate-500">{entry.country || "—"}</td>
@@ -602,6 +609,9 @@ export default function SupplierAnalyticsPage() {
     <div className="mx-auto max-w-7xl space-y-6">
       {/* Header */}
       <div>
+        <Link href="/suppliers" className="mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-3.5 w-3.5" /> {t("nav.suppliers")}
+        </Link>
         <h1 className="text-xl font-bold text-slate-900">{t("analytics.title")}</h1>
         <p className="mt-1 text-sm text-slate-500">{t("analytics.subtitle")}</p>
       </div>

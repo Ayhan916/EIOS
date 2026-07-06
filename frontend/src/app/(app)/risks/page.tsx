@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ReadinessBanner } from "@/components/layout/readiness-banner";
@@ -609,17 +610,24 @@ function BulkRiskStatusPanel({ ids, onDone, onCancel }: { ids: string[]; onDone:
 
 export default function RisksPage() {
   const { t } = useLanguage();
-  const [levelFilter, setLevelFilter] = useState<string>("all");
+  const searchParams = useSearchParams();
+  const initLevel = searchParams.get("risk_level") || "all";
+  const initSupplier = searchParams.get("supplier_id") || "";
+  const [levelFilter, setLevelFilter] = useState<string>(initLevel);
+  const [supplierFilter] = useState<string>(initSupplier);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkOwner, setShowBulkOwner] = useState(false);
   const [showBulkStatus, setShowBulkStatus] = useState(false);
   const queryClient = useQueryClient();
 
   const { data: risks, isLoading } = useQuery<OrgRisk[]>({
-    queryKey: ["org-risks", levelFilter],
+    queryKey: ["org-risks", levelFilter, supplierFilter],
     queryFn: async () => {
-      const params = levelFilter !== "all" ? `?risk_level=${levelFilter}` : "";
-      const res = await apiClient.get(`/executive/risks${params}`);
+      const p = new URLSearchParams();
+      if (levelFilter !== "all") p.set("risk_level", levelFilter);
+      if (supplierFilter) p.set("supplier_id", supplierFilter);
+      const qs = p.toString() ? `?${p.toString()}` : "";
+      const res = await apiClient.get(`/executive/risks${qs}`);
       return res.data;
     },
     staleTime: 30_000,

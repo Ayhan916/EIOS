@@ -4,12 +4,13 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { listEnterprises, getEnterpriseAudit, globalSearch } from "@/lib/api/enterprise";
+import { formatDateTime } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useLanguage } from "@/lib/i18n/context";
 
 function fmt(ts: string) {
-  return new Date(ts).toLocaleString();
+  return formatDateTime(ts);
 }
 
 function actionBadge(action: string) {

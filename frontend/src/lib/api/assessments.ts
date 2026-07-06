@@ -12,6 +12,7 @@ export interface AssessmentListParams {
   status?: string;
   assessment_type?: string;
   search?: string;
+  supplier_id?: string;
 }
 
 export async function listAssessments(

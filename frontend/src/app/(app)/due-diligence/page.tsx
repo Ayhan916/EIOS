@@ -297,7 +297,13 @@ function SuppliersTab() {
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-semibold text-slate-900">{s.supplier_name}</span>
+                    <Link
+                      href={`/suppliers/${s.supplier_id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="font-semibold text-slate-900 hover:text-blue-600 hover:underline"
+                    >
+                      {s.supplier_name}
+                    </Link>
                     <RiskBadge band={s.risk_band} />
                     <span className="text-xs text-slate-400">{s.country} · {t("dd.tier")} {s.tier}</span>
                   </div>
@@ -939,7 +945,7 @@ export default function DueDiligencePage() {
           <TabsTrigger value="environmental">{t("dd.tabEnvironmental")}</TabsTrigger>
           <TabsTrigger value="actions">{t("dd.tabActions")}</TabsTrigger>
           <TabsTrigger value="reports">{t("dd.tabReports")}</TabsTrigger>
-          <TabsTrigger value="assessment-findings">Assessment Findings</TabsTrigger>
+          <TabsTrigger value="assessment-findings">{t("dd.tabAssessmentFindings")}</TabsTrigger>
         </TabsList>
         <TabsContent value="dashboard" className="mt-6"><DashboardTab /></TabsContent>
         <TabsContent value="suppliers" className="mt-6"><SuppliersTab /></TabsContent>

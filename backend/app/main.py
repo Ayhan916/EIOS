@@ -99,6 +99,26 @@ from interfaces.api.routers import (
     evaluation_router,
     self_improvement_router,
     corrective_action_plan_router,
+    stakeholders_router,
+    stakeholders_public_router,
+    dd_governance_router,
+    dd_governance_public_router,
+    remedy_cases_router,
+    remedy_grievance_router,
+    remedy_report_router,
+    effectiveness_router,
+    scoping_router,
+    activity_chain_router,
+    contractual_assurance_router,
+    sme_support_router,
+    readiness_router,
+    impact_assessment_router,
+    board_signoff_router,
+    supplier_assessment_router,
+    supplier_assessment_public_router,
+    esap_export_router,
+    threshold_monitor_router,
+    regulatory_radar_router,
 )
 from shared.config import settings
 
@@ -484,3 +504,23 @@ app.include_router(regulatory_change_router, prefix=API_V1)
 app.include_router(evaluation_router, prefix=API_V1)
 app.include_router(self_improvement_router, prefix=API_V1)
 app.include_router(corrective_action_plan_router, prefix=API_V1)
+app.include_router(stakeholders_router, prefix=API_V1)
+app.include_router(stakeholders_public_router, prefix=API_V1)
+app.include_router(dd_governance_router, prefix=API_V1)
+app.include_router(dd_governance_public_router, prefix=API_V1)
+app.include_router(remedy_cases_router, prefix=API_V1)
+app.include_router(remedy_grievance_router, prefix=API_V1)
+app.include_router(remedy_report_router, prefix=API_V1)
+app.include_router(effectiveness_router, prefix=API_V1)
+app.include_router(scoping_router, prefix=API_V1)
+app.include_router(activity_chain_router, prefix=API_V1)
+app.include_router(contractual_assurance_router, prefix=API_V1)
+app.include_router(sme_support_router, prefix=API_V1)
+app.include_router(readiness_router, prefix=API_V1)
+app.include_router(impact_assessment_router, prefix=API_V1)
+app.include_router(board_signoff_router, prefix=API_V1)
+app.include_router(supplier_assessment_router, prefix=API_V1)
+app.include_router(supplier_assessment_public_router, prefix=API_V1)
+app.include_router(esap_export_router, prefix=API_V1)
+app.include_router(threshold_monitor_router, prefix=API_V1)
+app.include_router(regulatory_radar_router, prefix=API_V1)

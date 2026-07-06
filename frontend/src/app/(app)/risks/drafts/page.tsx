@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   Bot,
   CheckCircle2,
   ChevronDown,
@@ -58,8 +60,8 @@ type TabKey = "pending" | "accepted" | "rejected";
 
 const tab_defs: { key: TabKey; labelKey: string }[] = [
   { key: "pending",  labelKey: "drafts.pendingTab" },
-  { key: "accepted", labelKey: "drafts.reviewedTab" },
-  { key: "rejected", labelKey: "drafts.allTab" },
+  { key: "accepted", labelKey: "drafts.statusAccepted" },
+  { key: "rejected", labelKey: "drafts.statusRejected" },
 ];
 
 // ── Draft Card ────────────────────────────────────────────────────────────────
@@ -134,8 +136,10 @@ function DraftCard({ draft, onMutated }: { draft: RiskDraft; onMutated: () => vo
           <div className="space-y-2 border-t pt-2">
             <p className="text-sm text-muted-foreground">{draft.draft_description}</p>
             <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-              {draft.supplier_id && <span>{t("drafts.supplier")}: <span className="font-mono">{draft.supplier_id.slice(0, 12)}…</span></span>}
-              {draft.signal_id   && <span>{t("drafts.signal")}:   <span className="font-mono">{draft.signal_id.slice(0, 12)}…</span></span>}
+              {draft.supplier_id && (
+                <span>{t("drafts.supplier")}: <Link href={`/suppliers/${draft.supplier_id}`} className="font-mono text-blue-600 hover:underline">{draft.supplier_id.slice(0, 12)}…</Link></span>
+              )}
+              {draft.signal_id && <span>{t("drafts.signal")}: <span className="font-mono">{draft.signal_id.slice(0, 12)}…</span></span>}
             </div>
             {draft.reviewed_by && (
               <p className="text-xs text-muted-foreground">
@@ -144,7 +148,7 @@ function DraftCard({ draft, onMutated }: { draft: RiskDraft; onMutated: () => vo
             )}
             {draft.promoted_risk_id && (
               <p className="text-xs text-emerald-600">
-                {t("drafts.promotedRisk")}: <span className="font-mono">{draft.promoted_risk_id.slice(0, 12)}…</span>
+                {t("drafts.promotedRisk")}: <Link href={`/risks/${draft.promoted_risk_id}`} className="font-mono hover:underline">{draft.promoted_risk_id.slice(0, 12)}…</Link>
               </p>
             )}
           </div>
@@ -250,14 +254,30 @@ export default function RiskDraftsPage() {
       }).then((r) => r.data),
   });
 
+  const { data: pendingDrafts = [] } = useQuery<RiskDraft[]>({
+    queryKey: ["risk-drafts", "pending"],
+    queryFn: () =>
+      apiClient.get("/risks/drafts", {
+        params: { review_status: "pending", limit: 100 },
+      }).then((r) => r.data),
+  });
+
   function invalidate() {
     qc.invalidateQueries({ queryKey: ["risk-drafts"] });
   }
 
-  const pendingCount = drafts.filter((d) => d.review_status === "pending").length;
+  const pendingCount = pendingDrafts.length;
 
   return (
     <div className="p-6 space-y-6">
+      {/* Back link */}
+      <Link
+        href="/risks"
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-3.5 w-3.5" /> {t("nav.risks")}
+      </Link>
+
       {/* Header */}
       <div className="flex items-start gap-3">
         <Bot className="h-7 w-7 text-primary mt-0.5" />

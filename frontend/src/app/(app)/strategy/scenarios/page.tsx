@@ -23,11 +23,11 @@ import { useLanguage } from "@/lib/i18n/context";
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const SCENARIO_TYPES = [
-  { value: "CLIMATE", label: "Klima" },
-  { value: "REGULATORY", label: "Regulierung" },
-  { value: "FINANCIAL", label: "Finanziell" },
-  { value: "SUPPLY_CHAIN", label: "Lieferkette" },
-  { value: "COMBINED", label: "Kombiniert" },
+  { value: "CLIMATE" },
+  { value: "REGULATORY" },
+  { value: "FINANCIAL" },
+  { value: "SUPPLY_CHAIN" },
+  { value: "COMBINED" },
 ];
 
 const TYPE_COLORS: Record<string, string> = {
@@ -77,20 +77,28 @@ function CreateScenarioModal({
       onClose();
     },
     onError: (e: unknown) => {
-      setError(e instanceof Error ? e.message : "Fehler beim Erstellen");
+      setError(e instanceof Error ? e.message : t("strategy.twinCreateError"));
     },
   });
+
+  const scenarioTypeLabels: Record<string, string> = {
+    CLIMATE: t("strategy.scenarioClimate"),
+    REGULATORY: t("strategy.scenarioRegulatory"),
+    FINANCIAL: t("strategy.scenarioFinancial"),
+    SUPPLY_CHAIN: t("strategy.scenarioSupplyChain"),
+    COMBINED: t("strategy.scenarioCombined"),
+  };
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!form.name.trim()) {
-      setError("Name ist erforderlich.");
+      setError(t("strategy.twinNameRequired"));
       return;
     }
     const horizon = parseInt(form.time_horizon_years, 10);
     if (isNaN(horizon) || horizon < 1) {
-      setError("Zeithorizont muss mindestens 1 Jahr sein.");
+      setError(t("strategy.scenarioHorizonError"));
       return;
     }
     mutation.mutate({
@@ -110,7 +118,7 @@ function CreateScenarioModal({
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <GitBranch className="h-5 w-5 text-violet-600" />
-            <h2 className="text-lg font-semibold">Neues Szenario</h2>
+            <h2 className="text-lg font-semibold">{t("strategy.newScenario")}</h2>
           </div>
           <button onClick={onClose} className="rounded-md p-1 hover:bg-slate-100">
             <X className="h-5 w-5 text-slate-500" />
@@ -122,7 +130,7 @@ function CreateScenarioModal({
           {/* Name */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Name <span className="text-red-500">*</span>
+              {t("common.name")} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -133,48 +141,48 @@ function CreateScenarioModal({
             />
           </div>
 
-          {/* Szenario-Typ */}
+          {/* Scenario Type */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Typ <span className="text-red-500">*</span>
+              {t("strategy.type")} <span className="text-red-500">*</span>
             </label>
             <div className="flex flex-wrap gap-2">
-              {SCENARIO_TYPES.map((t) => (
+              {SCENARIO_TYPES.map((stype) => (
                 <button
-                  key={t.value}
+                  key={stype.value}
                   type="button"
-                  onClick={() => setForm((f) => ({ ...f, scenario_type: t.value }))}
+                  onClick={() => setForm((f) => ({ ...f, scenario_type: stype.value }))}
                   className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                    form.scenario_type === t.value
-                      ? TYPE_COLORS[t.value] + " ring-2 ring-offset-1 ring-violet-400"
+                    form.scenario_type === stype.value
+                      ? TYPE_COLORS[stype.value] + " ring-2 ring-offset-1 ring-violet-400"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >
-                  {t.label}
+                  {scenarioTypeLabels[stype.value]}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Beschreibung */}
+          {/* Description */}
           <div>
             <label className="mb-1 block text-sm font-medium text-slate-700">
-              Beschreibung
+              {t("common.description")}
             </label>
             <textarea
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-              placeholder="Was wird in diesem Szenario modelliert?"
+              placeholder={t("strategy.descriptionPlaceholder")}
               rows={2}
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
             />
           </div>
 
-          {/* Zeithorizont & Baseline Twin */}
+          {/* Time Horizon & Baseline Twin */}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
-                Zeithorizont (Jahre)
+                {t("strategy.timeHorizonYears")}
               </label>
               <input
                 type="number"
@@ -189,7 +197,7 @@ function CreateScenarioModal({
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">
-                Baseline Digital Twin
+                {t("strategy.baselineTwin")}
               </label>
               <select
                 value={form.baseline_twin_id}
@@ -198,7 +206,7 @@ function CreateScenarioModal({
                 }
                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
               >
-                <option value="">— Keiner —</option>
+                <option value="">{t("strategy.noTwinSelected")}</option>
                 {(twins ?? []).map((twin) => (
                   <option key={twin.id} value={twin.id}>
                     {twin.name}
@@ -208,7 +216,7 @@ function CreateScenarioModal({
             </div>
           </div>
 
-          {/* Als Template */}
+          {/* Save as template */}
           <label className="flex cursor-pointer items-center gap-3">
             <input
               type="checkbox"
@@ -217,8 +225,8 @@ function CreateScenarioModal({
               className="h-4 w-4 rounded border-slate-300 text-violet-600 focus:ring-violet-500"
             />
             <span className="text-sm text-slate-700">
-              Als Vorlage speichern{" "}
-              <span className="text-xs text-slate-400">(wiederverwendbar für andere Szenarien)</span>
+              {t("strategy.saveAsTemplate")}{" "}
+              <span className="text-xs text-slate-400">{t("strategy.saveAsTemplateDesc")}</span>
             </span>
           </label>
 
@@ -239,7 +247,7 @@ function CreateScenarioModal({
           >
             {mutation.isPending ? (
               <span className="flex items-center gap-2">
-                <Spinner className="h-4 w-4" /> Erstelle…
+                <Spinner className="h-4 w-4" /> {t("strategy.twinCreating")}
               </span>
             ) : (
               t("strategy.addScenario")
@@ -254,11 +262,12 @@ function CreateScenarioModal({
 // ── KPI Impact Table ─────────────────────────────────────────────────────────
 
 function KpiImpactTable({ exec }: { exec: ScenarioExecution }) {
+  const { t } = useLanguage();
   const kpis = exec.projected_kpis as Record<string, { baseline?: number; projected?: number; change_pct?: number }> | null;
   if (!kpis || Object.keys(kpis).length === 0) {
     return (
       <p className="text-xs text-muted-foreground px-1 py-2">
-        No KPI impact data returned by this execution.
+        {t("strategy.noKpiImpact")}
       </p>
     );
   }
@@ -268,8 +277,8 @@ function KpiImpactTable({ exec }: { exec: ScenarioExecution }) {
       <thead>
         <tr className="border-b text-muted-foreground">
           <th className="py-1 pr-4 text-left font-medium">KPI</th>
-          <th className="py-1 pr-4 text-right font-medium">Baseline</th>
-          <th className="py-1 pr-4 text-right font-medium">Projected</th>
+          <th className="py-1 pr-4 text-right font-medium">{t("strategy.baseline")}</th>
+          <th className="py-1 pr-4 text-right font-medium">{t("strategy.projected")}</th>
           <th className="py-1 text-right font-medium">Δ</th>
         </tr>
       </thead>
@@ -308,6 +317,7 @@ function KpiImpactTable({ exec }: { exec: ScenarioExecution }) {
 // ── Run Scenario Panel ────────────────────────────────────────────────────────
 
 function RunScenarioPanel({ scenarioId, orgId }: { scenarioId: string; orgId: string }) {
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [result, setResult] = useState<ScenarioExecution | null>(null);
 
@@ -323,7 +333,9 @@ function RunScenarioPanel({ scenarioId, orgId }: { scenarioId: string; orgId: st
     return (
       <div className="mt-3 rounded-lg border border-border bg-muted/20 p-3 space-y-2">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-semibold">KPI Impact — Execution {result.id.slice(0, 8)}</p>
+          <p className="text-xs font-semibold">
+            {t("strategy.kpiImpactTitle").replace("{id}", result.id.slice(0, 8))}
+          </p>
           <span className={`text-[10px] rounded-full px-2 py-0.5 font-medium ${
             result.execution_status === "completed" ? "bg-green-100 text-green-700"
               : result.execution_status === "failed" ? "bg-red-100 text-red-700"
@@ -337,7 +349,7 @@ function RunScenarioPanel({ scenarioId, orgId }: { scenarioId: string; orgId: st
           onClick={() => setResult(null)}
           className="text-[10px] text-muted-foreground hover:text-foreground"
         >
-          Close
+          {t("strategy.closePanel")}
         </button>
       </div>
     );
@@ -354,7 +366,7 @@ function RunScenarioPanel({ scenarioId, orgId }: { scenarioId: string; orgId: st
       ) : (
         <Play className="h-3 w-3" />
       )}
-      {mutation.isPending ? "Running…" : "Run Scenario"}
+      {mutation.isPending ? t("strategy.runningScenario") : t("strategy.runScenario")}
     </button>
   );
 }
@@ -404,14 +416,22 @@ export default function ScenariosPage() {
 
   const activeCount = (scenarios ?? []).filter((s) => s.scenario_status === "Active").length;
 
+  const scenarioTypeLabels: Record<string, string> = {
+    CLIMATE: t("strategy.scenarioClimate"),
+    REGULATORY: t("strategy.scenarioRegulatory"),
+    FINANCIAL: t("strategy.scenarioFinancial"),
+    SUPPLY_CHAIN: t("strategy.scenarioSupplyChain"),
+    COMBINED: t("strategy.scenarioCombined"),
+  };
+
   const firstScenario = (scenarios ?? [])[0];
   const radarData: ScenarioKpiPoint[] = firstScenario
     ? [
-        { kpi: "Zeithorizont", baseline: 50, scenario: Math.min(100, (firstScenario.time_horizon_years / 30) * 100) },
-        { kpi: "Klimarisiko", baseline: 65, scenario: firstScenario.scenario_type === "CLIMATE" ? 88 : 55 },
-        { kpi: "Regulierung", baseline: 60, scenario: firstScenario.scenario_type === "REGULATORY" ? 92 : 58 },
-        { kpi: "Finanzen", baseline: 70, scenario: firstScenario.scenario_type === "FINANCIAL" ? 85 : 68 },
-        { kpi: "Lieferkette", baseline: 55, scenario: firstScenario.scenario_type === "SUPPLY_CHAIN" ? 80 : 52 },
+        { kpi: t("strategy.radarHorizon"), baseline: 50, scenario: Math.min(100, (firstScenario.time_horizon_years / 30) * 100) },
+        { kpi: t("strategy.radarClimateRisk"), baseline: 65, scenario: firstScenario.scenario_type === "CLIMATE" ? 88 : 55 },
+        { kpi: t("strategy.scenarioRegulatory"), baseline: 60, scenario: firstScenario.scenario_type === "REGULATORY" ? 92 : 58 },
+        { kpi: t("strategy.radarFinance"), baseline: 70, scenario: firstScenario.scenario_type === "FINANCIAL" ? 85 : 68 },
+        { kpi: t("strategy.radarSupplyChain"), baseline: 55, scenario: firstScenario.scenario_type === "SUPPLY_CHAIN" ? 80 : 52 },
       ]
     : [];
 
@@ -420,9 +440,9 @@ export default function ScenariosPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Scenario Framework</h1>
+          <h1 className="text-2xl font-bold">{t("strategy.scenariosTitle")}</h1>
           <p className="text-muted-foreground">
-            Klima-, Regulierungs-, Finanz- und kombinierte Szenarien
+            {t("strategy.scenariosSubtitle")}
           </p>
         </div>
         <Button
@@ -430,7 +450,7 @@ export default function ScenariosPage() {
           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700"
         >
           <Plus className="h-4 w-4" />
-          Neues Szenario
+          {t("strategy.newScenario")}
         </Button>
       </div>
 
@@ -438,13 +458,13 @@ export default function ScenariosPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Szenarien gesamt</p>
+            <p className="text-sm text-muted-foreground">{t("strategy.totalScenarios")}</p>
             <p className="mt-1 text-3xl font-bold">{(scenarios ?? []).length}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Ausführungen</p>
+            <p className="text-sm text-muted-foreground">{t("strategy.executions")}</p>
             <p className="mt-1 text-3xl font-bold">{(executions ?? []).length}</p>
           </CardContent>
         </Card>
@@ -458,11 +478,15 @@ export default function ScenariosPage() {
 
       {radarData.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Szenario-Risikoprofil — {firstScenario?.name}</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle>
+              {t("strategy.riskProfile").replace("{name}", firstScenario?.name ?? "")}
+            </CardTitle>
+          </CardHeader>
           <CardContent>
             <ScenarioRadarChart
               data={radarData}
-              scenarioLabel={firstScenario?.name ?? "Szenario"}
+              scenarioLabel={firstScenario?.name ?? t("strategy.scenarioDefault")}
               height={320}
             />
           </CardContent>
@@ -480,7 +504,7 @@ export default function ScenariosPage() {
               <GitBranch className="h-10 w-10 text-slate-300" />
               <p className="text-sm font-medium text-slate-600">{t("strategy.noScenarios")}</p>
               <p className="text-xs text-muted-foreground max-w-xs">
-                Erstelle dein erstes Szenario manuell oder lade Beispiel-Szenarien, um direkt loszulegen.
+                {t("strategy.noScenariosLong")}
               </p>
               <div className="flex gap-2 mt-1">
                 <Button
@@ -496,7 +520,7 @@ export default function ScenariosPage() {
                   disabled={examplesMut.isPending}
                 >
                   <Lightbulb className="mr-2 h-4 w-4" />
-                  {examplesMut.isPending ? "Wird geladen…" : "Beispiele laden"}
+                  {examplesMut.isPending ? t("strategy.loadingExamples") : t("strategy.loadExamples")}
                 </Button>
               </div>
             </div>
@@ -513,7 +537,7 @@ export default function ScenariosPage() {
                         <p className="font-medium">{s.name}</p>
                         {s.is_template && (
                           <span className="rounded bg-violet-100 px-1.5 py-0.5 text-xs font-medium text-violet-700">
-                            Vorlage
+                            {t("strategy.template")}
                           </span>
                         )}
                       </div>
@@ -528,8 +552,7 @@ export default function ScenariosPage() {
                             TYPE_COLORS[s.scenario_type] ?? "bg-muted text-muted-foreground"
                           }`}
                         >
-                          {SCENARIO_TYPES.find((t) => t.value === s.scenario_type)?.label ??
-                            s.scenario_type}
+                          {scenarioTypeLabels[s.scenario_type] ?? s.scenario_type}
                         </span>
                         <span
                           className={`rounded px-2 py-0.5 text-xs font-medium ${
@@ -542,9 +565,11 @@ export default function ScenariosPage() {
                       </div>
                     </div>
                     <div className="flex-shrink-0 text-right">
-                      <p className="text-sm font-semibold">{s.time_horizon_years} Jahre</p>
+                      <p className="text-sm font-semibold">
+                        {t("strategy.years").replace("{n}", String(s.time_horizon_years))}
+                      </p>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        {execByScenario[s.id] ?? 0} Ausführung(en)
+                        {t("strategy.executionCount").replace("{n}", String(execByScenario[s.id] ?? 0))}
                       </p>
                     </div>
                   </div>

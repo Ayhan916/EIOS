@@ -94,7 +94,7 @@ export default function SupplyChainCompliancePage() {
   ];
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">{t("scCompliance.title")}</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -105,17 +105,17 @@ export default function SupplyChainCompliancePage() {
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex gap-6">
-          {tabs.map((t) => (
+          {tabs.map((tab) => (
             <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={`pb-2 text-sm font-medium transition-colors ${
-                activeTab === t.key
+                activeTab === tab.key
                   ? "border-b-2 border-blue-600 text-blue-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </nav>
@@ -127,17 +127,17 @@ export default function SupplyChainCompliancePage() {
           {/* Material stats */}
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Material Twins
+              {t("scCompliance.materialTwins")}
             </h2>
             <div className="grid grid-cols-3 gap-4">
-              <StatCard label="Active Materials" value={summary.materials.total_active} />
+              <StatCard label={t("scCompliance.activeMaterials")} value={summary.materials.total_active} />
               <StatCard
                 label={t("scCompliance.nonCompliant")}
                 value={summary.materials.non_compliant}
                 accent={summary.materials.non_compliant > 0 ? "text-red-600" : undefined}
               />
               <StatCard
-                label="Substances of Concern in BOM"
+                label={t("scCompliance.substancesOfConcern")}
                 value={summary.materials.substances_of_concern_in_bom}
                 accent={summary.materials.substances_of_concern_in_bom > 0 ? "text-amber-600" : undefined}
               />
@@ -147,14 +147,14 @@ export default function SupplyChainCompliancePage() {
           {/* Product stats */}
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Product Twins
+              {t("scCompliance.productTwins")}
             </h2>
             <div className="grid grid-cols-3 gap-4">
-              <StatCard label="Active Products" value={summary.products.total_active} />
+              <StatCard label={t("scCompliance.activeProducts")} value={summary.products.total_active} />
               <StatCard
-                label="Scanned Products"
+                label={t("scCompliance.scannedProducts")}
                 value={summary.products.scanned}
-                sub={`of ${summary.products.total_active} active`}
+                sub={t("scCompliance.scannedOf").replace("{n}", String(summary.products.total_active))}
               />
               <StatCard
                 label={t("scCompliance.nonCompliant")}
@@ -167,16 +167,16 @@ export default function SupplyChainCompliancePage() {
           {/* DPP stats */}
           <div>
             <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Digital Product Passports
+              {t("scCompliance.dpp")}
             </h2>
             <div className="grid grid-cols-3 gap-4">
-              <StatCard label="Total DPPs" value={summary.digital_product_passports.total} />
+              <StatCard label={t("scCompliance.totalDpp")} value={summary.digital_product_passports.total} />
               <StatCard
                 label={t("dpp.disclosed")}
                 value={summary.digital_product_passports.disclosed}
               />
               <StatCard
-                label="DPPs with Non-Compliant Regulations"
+                label={t("scCompliance.dppNonCompliant")}
                 value={summary.digital_product_passports.non_compliant}
                 accent={summary.digital_product_passports.non_compliant > 0 ? "text-red-600" : undefined}
               />
@@ -187,7 +187,7 @@ export default function SupplyChainCompliancePage() {
           {summary.top_at_risk_regulations.length > 0 && (
             <div>
               <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-                Top At-Risk Regulations
+                {t("scCompliance.topAtRisk")}
               </h2>
               <div className="overflow-hidden rounded-lg border border-gray-200">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
@@ -222,7 +222,7 @@ export default function SupplyChainCompliancePage() {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Product ID</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scCompliance.productId")}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scCompliance.regulation")}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scCompliance.scanResult")}</th>
                 <th className="px-4 py-3 text-center font-medium text-gray-500">{t("common.total")}</th>
@@ -236,7 +236,7 @@ export default function SupplyChainCompliancePage() {
               {nonCompliant.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                    No non-compliant product scans found. Trigger a scan to detect issues.
+                    {t("scCompliance.noNonCompliant")}
                   </td>
                 </tr>
               ) : (
@@ -272,12 +272,10 @@ export default function SupplyChainCompliancePage() {
       {activeTab === "scan" && (
         <div className="max-w-lg space-y-4">
           <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">BOM Compliance Scan</h2>
-            <p className="text-sm text-gray-500">
-              Scan a product&apos;s bill of materials against a regulation to detect non-compliant materials.
-            </p>
+            <h2 className="text-base font-semibold text-gray-900">{t("scCompliance.bomScanTitle")}</h2>
+            <p className="text-sm text-gray-500">{t("scCompliance.bomScanDesc")}</p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Product ID</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("scCompliance.productId")}</label>
               <input
                 type="text"
                 value={scanProductId}
@@ -287,7 +285,7 @@ export default function SupplyChainCompliancePage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Regulation Code</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("scCompliance.regulationCode")}</label>
               <select
                 value={scanRegulation}
                 onChange={(e) => setScanRegulation(e.target.value)}
@@ -306,7 +304,7 @@ export default function SupplyChainCompliancePage() {
               disabled={scanning || !scanProductId.trim()}
               className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
             >
-              {scanning ? "Scanning BOM…" : "Run Compliance Scan"}
+              {scanning ? t("scCompliance.scanning_") : t("scCompliance.runScan")}
             </button>
           </div>
 
@@ -317,7 +315,7 @@ export default function SupplyChainCompliancePage() {
           {scanResult && (
             <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-3">
               <div className="flex items-center gap-3">
-                <h3 className="text-sm font-semibold text-gray-900">Scan Result</h3>
+                <h3 className="text-sm font-semibold text-gray-900">{t("scCompliance.scanResultTitle")}</h3>
                 <span
                   className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     SCAN_RESULT_COLORS[scanResult.scan_result]
@@ -328,33 +326,33 @@ export default function SupplyChainCompliancePage() {
               </div>
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <dt className="text-gray-500">Regulation</dt>
+                  <dt className="text-gray-500">{t("scCompliance.regulation")}</dt>
                   <dd className="font-medium text-gray-900">{scanResult.regulation_code}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Total Materials</dt>
+                  <dt className="text-gray-500">{t("scCompliance.totalMaterials")}</dt>
                   <dd className="font-medium text-gray-900">{scanResult.total_materials}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Compliant</dt>
+                  <dt className="text-gray-500">{t("scCompliance.compliant")}</dt>
                   <dd className="font-medium text-green-700">{scanResult.compliant_count}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Non-Compliant</dt>
+                  <dt className="text-gray-500">{t("scCompliance.nonCompliantStatus")}</dt>
                   <dd className="font-medium text-red-700">{scanResult.non_compliant_count}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Unknown</dt>
+                  <dt className="text-gray-500">{t("scCompliance.unknown")}</dt>
                   <dd className="font-medium text-gray-500">{scanResult.unknown_count}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Scanned</dt>
+                  <dt className="text-gray-500">{t("scCompliance.scanned")}</dt>
                   <dd className="text-gray-700">{new Date(scanResult.scanned_at).toLocaleString()}</dd>
                 </div>
               </dl>
               {scanResult.flagged_material_ids.length > 0 && (
                 <div>
-                  <p className="text-xs font-medium text-gray-500 mb-1">Flagged Material IDs</p>
+                  <p className="text-xs font-medium text-gray-500 mb-1">{t("scCompliance.flaggedMaterials")}</p>
                   <ul className="space-y-0.5">
                     {scanResult.flagged_material_ids.map((id) => (
                       <li key={id} className="font-mono text-xs text-red-700">{id}</li>

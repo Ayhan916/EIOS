@@ -189,7 +189,7 @@ export default function SustainabilityDashboardPage() {
           }
           icon={Zap}
           accent="text-orange-500"
-          sub={data.latest_inventory_year ? `${data.latest_inventory_year} (finalized)` : undefined}
+          sub={data.latest_inventory_year ? t("sustain.finalized").replace("{year}", String(data.latest_inventory_year)) : undefined}
         />
         <KpiCard
           label={t("sustain.initiativesTitle")}
@@ -268,7 +268,7 @@ export default function SustainabilityDashboardPage() {
       {/* ── Quick Navigation ─────────────────────────────────────────────── */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-          Nächste Schritte
+          {t("sustain.nextSteps")}
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[

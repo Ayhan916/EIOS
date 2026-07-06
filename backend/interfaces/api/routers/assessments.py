@@ -175,6 +175,7 @@ async def list_assessments(
     assessment_type: str | None = Query(default=None),
     sector_id: str | None = Query(default=None),
     search: str | None = Query(default=None),
+    supplier_id: str | None = Query(default=None),
     current_user: User = Depends(get_current_user),
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
 ) -> Page[AssessmentResponse]:
@@ -188,6 +189,7 @@ async def list_assessments(
         assessment_type=assessment_type,
         sector_id=sector_id,
         search=search,
+        supplier_id=supplier_id,
     )
     return Page(
         items=[AssessmentResponse.model_validate(a) for a in items],

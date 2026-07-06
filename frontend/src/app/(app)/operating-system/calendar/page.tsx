@@ -28,7 +28,6 @@ const EVENT_TYPE_COLORS: Record<string, string> = {
   REVIEW:              "bg-violet-100 text-violet-700 border-violet-200",
   TRAINING:            "bg-emerald-100 text-emerald-700 border-emerald-200",
   MEETING:             "bg-slate-100 text-slate-700 border-slate-200",
-  // short-form aliases used by the backend
   DEADLINE:            "bg-red-100 text-red-700 border-red-200",
   AUDIT:               "bg-orange-100 text-orange-700 border-orange-200",
 };
@@ -100,16 +99,16 @@ function CreateAssessmentForm({
       <div className="space-y-1 py-1">
         <div className="flex items-center gap-2 text-xs text-emerald-600">
           <CheckCircle2 className="h-3.5 w-3.5" />
-          Assessment created.{" "}
+          {t("esgOs.calAssessmentCreated")}{" "}
           <Link href={`/assessments/${createdId}`} className="underline font-medium">
-            Open →
+            {t("esgOs.calOpenLink")}
           </Link>
         </div>
         <div className="flex items-center gap-1.5 text-xs text-blue-600">
           <ClipboardList className="h-3.5 w-3.5" />
-          A notification has been sent.{" "}
+          {t("esgOs.calNotificationSent")}{" "}
           <Link href="/notifications" className="underline font-medium">
-            Check inbox →
+            {t("esgOs.calCheckInbox")}
           </Link>
         </div>
       </div>
@@ -118,7 +117,7 @@ function CreateAssessmentForm({
 
   return (
     <div className="mt-3 space-y-2 rounded-lg border border-blue-200 bg-blue-50/60 p-3">
-      <p className="text-xs font-semibold text-blue-700">Create Assessment from Deadline</p>
+      <p className="text-xs font-semibold text-blue-700">{t("esgOs.calCreateFromDeadline")}</p>
       <div>
         <label className="block text-xs text-muted-foreground mb-1">{t("common.title")}</label>
         <input
@@ -150,7 +149,7 @@ function CreateAssessmentForm({
         </Button>
       </div>
       {mutation.isError && (
-        <p className="text-xs text-red-600">Failed to create assessment.</p>
+        <p className="text-xs text-red-600">{t("esgOs.calCreateFailed")}</p>
       )}
     </div>
   );
@@ -204,10 +203,15 @@ function EventRow({ event }: { event: CalendarEvent }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const VIEW_LABELS: Record<ViewMode, string> = { month: "Month", week: "Week", day: "Day" };
-
 export default function GovernanceCalendarPage() {
+  const { t } = useLanguage();
   const [viewMode, setViewMode] = useState<ViewMode>("month");
+
+  const viewLabels: Record<ViewMode, string> = {
+    month: t("esgOs.calViewMonth"),
+    week: t("esgOs.calViewWeek"),
+    day: t("esgOs.calViewDay"),
+  };
 
   const { data: events, isLoading, error } = useQuery({
     queryKey: ["calendar-events"],
@@ -219,7 +223,7 @@ export default function GovernanceCalendarPage() {
   }
 
   if (error) {
-    return <div className="p-6 text-red-600">Failed to load calendar events.</div>;
+    return <div className="p-6 text-red-600">{t("esgOs.calLoadFailed")}</div>;
   }
 
   const { start, end } = getViewRange(viewMode);
@@ -238,7 +242,7 @@ export default function GovernanceCalendarPage() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-2">
           <CalendarIcon className="h-6 w-6 text-muted-foreground" />
-          <h1 className="text-2xl font-semibold">Governance Calendar</h1>
+          <h1 className="text-2xl font-semibold">{t("esgOs.calendarTitle")}</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg border overflow-hidden">
@@ -252,18 +256,20 @@ export default function GovernanceCalendarPage() {
                     : "bg-white text-slate-600 hover:bg-muted/50"
                 }`}
               >
-                {VIEW_LABELS[mode]}
+                {viewLabels[mode]}
               </button>
             ))}
           </div>
-          <span className="text-sm text-muted-foreground">{filtered.length} events</span>
+          <span className="text-sm text-muted-foreground">
+            {t("esgOs.calEventsCount").replace("{n}", String(filtered.length))}
+          </span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total Events</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("esgOs.calTotalEvents")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold">{events?.length ?? 0}</p>
@@ -271,7 +277,7 @@ export default function GovernanceCalendarPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Upcoming</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("esgOs.calUpcoming")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-blue-600">{upcoming.length}</p>
@@ -279,7 +285,7 @@ export default function GovernanceCalendarPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Deadlines</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("esgOs.calDeadlines")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className={`text-3xl font-bold ${deadlines.length > 0 ? "text-amber-600" : "text-emerald-600"}`}>
@@ -289,7 +295,7 @@ export default function GovernanceCalendarPage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Completed</CardTitle>
+            <CardTitle className="text-xs font-medium text-muted-foreground">{t("esgOs.calCompleted")}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-3xl font-bold text-green-600">
@@ -301,7 +307,7 @@ export default function GovernanceCalendarPage() {
 
       {upcoming.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Upcoming</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("esgOs.calUpcoming")}</h2>
           <div className="space-y-3">
             {upcoming.map((evt) => (
               <EventRow key={evt.id} event={evt} />
@@ -312,7 +318,7 @@ export default function GovernanceCalendarPage() {
 
       {past.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">Past Events</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("esgOs.calPastEvents")}</h2>
           <div className="space-y-3">
             {past.map((evt) => (
               <EventRow key={evt.id} event={evt} />
@@ -324,8 +330,8 @@ export default function GovernanceCalendarPage() {
       {filtered.length === 0 && (
         <div className="text-center py-12 text-muted-foreground">
           {events?.length === 0
-            ? "No calendar events yet."
-            : `No events in this ${viewMode}.`}
+            ? t("esgOs.calNoEvents")
+            : t("esgOs.calNoEventsInView").replace("{view}", viewLabels[viewMode])}
         </div>
       )}
     </div>

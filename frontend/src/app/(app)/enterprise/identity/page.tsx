@@ -77,7 +77,7 @@ function CreateIdPModal({
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Issuer / Entity ID</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.issuerEntityId")}</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={issuer}
@@ -86,7 +86,7 @@ function CreateIdPModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Metadata URL</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.metadataUrl")}</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={metadataUrl}
@@ -97,7 +97,7 @@ function CreateIdPModal({
           {providerType === "oidc" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-sm font-medium">Client ID</label>
+                <label className="mb-1 block text-sm font-medium">{t("ent.clientId")}</label>
                 <input
                   className="w-full rounded-lg border px-3 py-2 text-sm"
                   value={clientId}
@@ -105,7 +105,7 @@ function CreateIdPModal({
                 />
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">Client Secret</label>
+                <label className="mb-1 block text-sm font-medium">{t("ent.clientSecret")}</label>
                 <input
                   type="password"
                   className="w-full rounded-lg border px-3 py-2 text-sm"
@@ -160,17 +160,18 @@ function GroupMappingsSection({
     },
   });
 
+  const { t } = useLanguage();
   if (isLoading) return <Spinner />;
 
   return (
     <div className="mt-3 rounded-lg bg-slate-50 p-3">
       <div className="mb-2 flex items-center justify-between">
-        <p className="text-xs font-semibold text-muted-foreground">Group Mappings</p>
+        <p className="text-xs font-semibold text-muted-foreground">{t("ent.groupMappings")}</p>
         <button
           onClick={() => setShowAdd(!showAdd)}
           className="text-xs text-blue-600 hover:underline"
         >
-          + Add mapping
+          {t("ent.addMapping")}
         </button>
       </div>
 
@@ -200,13 +201,13 @@ function GroupMappingsSection({
             disabled={!idpGroup || isPending}
             className="rounded bg-slate-800 px-2 py-1 text-xs text-white disabled:opacity-50"
           >
-            Add
+            {t("common.create")}
           </button>
         </div>
       )}
 
       {!mappings || mappings.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No mappings yet.</p>
+        <p className="text-xs text-muted-foreground">{t("ent.noMappings")}</p>
       ) : (
         <div className="space-y-1">
           {mappings.map((m: GroupMapping) => (
@@ -314,7 +315,7 @@ export default function IdentityPage() {
                       )}
                       {idp.has_client_secret && (
                         <p className="mt-0.5 text-xs text-emerald-600">
-                          ● Client secret configured
+                          ● {t("ent.clientSecretConfigured")}
                         </p>
                       )}
                     </div>

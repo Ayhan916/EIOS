@@ -42,13 +42,13 @@ export default function CarbonEconomicsPage() {
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Total Carbon Cost", value: `$${totalCarbonCost.toLocaleString()}` },
-          { label: "Regulatory Exposure", value: `$${totalRegulatory.toLocaleString()}` },
-          { label: "Avoided Cost", value: `$${totalAvoided.toLocaleString()}` },
+          { labelKey: "finEsg.totalCarbonCost" as const, value: `$${totalCarbonCost.toLocaleString()}` },
+          { labelKey: "finEsg.regulatoryExposure" as const, value: `$${totalRegulatory.toLocaleString()}` },
+          { labelKey: "finEsg.avoidedCost" as const, value: `$${totalAvoided.toLocaleString()}` },
         ].map((s) => (
-          <Card key={s.label}>
+          <Card key={s.labelKey}>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">{s.label}</p>
+              <p className="text-sm text-muted-foreground">{t(s.labelKey)}</p>
               <p className="mt-1 text-2xl font-bold">{s.value}</p>
             </CardContent>
           </Card>
@@ -57,22 +57,22 @@ export default function CarbonEconomicsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Carbon Cost Models</CardTitle>
+          <CardTitle>{t("finEsg.carbonCostModels")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(carbonModels ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No carbon cost models yet</p>
+            <p className="text-sm text-muted-foreground">{t("finEsg.noCarbonModels")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="pb-2 pr-4">{t("common.name")}</th>
-                    <th className="pb-2 pr-4">Year</th>
-                    <th className="pb-2 pr-4">Emissions (tCO2e)</th>
-                    <th className="pb-2 pr-4">Internal Price</th>
-                    <th className="pb-2 pr-4">Total Cost</th>
-                    <th className="pb-2">Regulatory Exp.</th>
+                    <th className="pb-2 pr-4">{t("finEsg.year")}</th>
+                    <th className="pb-2 pr-4">{t("finEsg.emissionsTco2e")}</th>
+                    <th className="pb-2 pr-4">{t("finEsg.internalPrice")}</th>
+                    <th className="pb-2 pr-4">{t("finEsg.totalCost")}</th>
+                    <th className="pb-2">{t("finEsg.regulatoryExp")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -101,20 +101,20 @@ export default function CarbonEconomicsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Cost of Risk Assessments</CardTitle>
+          <CardTitle>{t("finEsg.riskAssessmentCost")}</CardTitle>
         </CardHeader>
         <CardContent>
           {(riskItems ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">No risk assessments yet</p>
+            <p className="text-sm text-muted-foreground">{t("finEsg.noRiskAssessments")}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="pb-2 pr-4">{t("common.name")}</th>
-                    <th className="pb-2 pr-4">Composite Score</th>
-                    <th className="pb-2 pr-4">Exposure Base</th>
-                    <th className="pb-2 pr-4">Expected Loss</th>
+                    <th className="pb-2 pr-4">{t("finEsg.compositeScore")}</th>
+                    <th className="pb-2 pr-4">{t("finEsg.exposureBase")}</th>
+                    <th className="pb-2 pr-4">{t("finEsg.expectedLoss")}</th>
                     <th className="pb-2">{t("common.date")}</th>
                   </tr>
                 </thead>

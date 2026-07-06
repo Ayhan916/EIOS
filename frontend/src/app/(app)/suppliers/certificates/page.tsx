@@ -187,6 +187,9 @@ export default function CertificatesPage() {
 
   return (
     <div className="space-y-6">
+      <Link href="/suppliers" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
+        ← Suppliers
+      </Link>
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">

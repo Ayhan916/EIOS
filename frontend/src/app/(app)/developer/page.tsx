@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
+import { formatDateTime } from "@/lib/utils";
 import {
   Key,
   Webhook,
@@ -42,6 +44,7 @@ import {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function CopyButton({ text }: { text: string }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -51,7 +54,7 @@ function CopyButton({ text }: { text: string }) {
         setTimeout(() => setCopied(false), 1500);
       }}
       className="rounded p-1 hover:bg-slate-100 transition-colors text-slate-500"
-      title="Kopieren"
+      title={t("common.copy")}
     >
       {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
     </button>
@@ -79,23 +82,25 @@ function SectionHeader({ icon: Icon, title, description }: {
 // ── API Keys ──────────────────────────────────────────────────────────────────
 
 function NewKeyBanner({ created }: { created: ApiKeyCreatedResponse; onDismiss: () => void }) {
+  const { t } = useLanguage();
   return (
     <div className="rounded-xl border-2 border-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 p-4 space-y-2">
       <p className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
-        API Key erstellt — nur einmal sichtbar!
+        {t("dev.apiKeyCreated")}
       </p>
       <div className="flex items-center gap-2 rounded-lg bg-white dark:bg-gray-900 border border-emerald-200 px-3 py-2 font-mono text-sm">
         <span className="flex-1 break-all">{created.raw_key}</span>
         <CopyButton text={created.raw_key} />
       </div>
       <p className="text-xs text-emerald-700 dark:text-emerald-400">
-        Speichere diesen Key sicher. Er wird nicht erneut angezeigt.
+        {t("dev.apiKeySaveHint")}
       </p>
     </div>
   );
 }
 
 function ApiKeysSection() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [newKey, setNewKey] = useState<ApiKeyCreatedResponse | null>(null);
@@ -138,8 +143,8 @@ function ApiKeysSection() {
     <div className="space-y-4">
       <SectionHeader
         icon={Key}
-        title="API Keys"
-        description="Schlüssel für Machine-to-Machine-Zugriff auf die EIOS REST API"
+        title={t("dev.apiKeysTitle")}
+        description={t("dev.apiKeysDesc")}
       />
 
       {newKey && (
@@ -147,21 +152,21 @@ function ApiKeysSection() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-gray-400">Lade…</p>
+        <p className="text-sm text-gray-400">{t("common.loading")}</p>
       ) : keys.length === 0 ? (
-        <p className="text-sm text-gray-400">Noch keine API Keys vorhanden.</p>
+        <p className="text-sm text-gray-400">{t("dev.noApiKeys")}</p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500">
               <tr>
-                <th className="px-4 py-3 text-left">Name</th>
-                <th className="px-4 py-3 text-left">Prefix</th>
-                <th className="px-4 py-3 text-left">Scopes</th>
-                <th className="px-4 py-3 text-center">Requests</th>
-                <th className="px-4 py-3 text-center">Limits</th>
-                <th className="px-4 py-3 text-center">Status</th>
-                <th className="px-4 py-3 text-center">Aktion</th>
+                <th className="px-4 py-3 text-left">{t("common.name")}</th>
+                <th className="px-4 py-3 text-left">{t("dev.colPrefix")}</th>
+                <th className="px-4 py-3 text-left">{t("dev.scopesLabel")}</th>
+                <th className="px-4 py-3 text-center">{t("dev.colRequests")}</th>
+                <th className="px-4 py-3 text-center">{t("dev.colLimits")}</th>
+                <th className="px-4 py-3 text-center">{t("common.status")}</th>
+                <th className="px-4 py-3 text-center">{t("common.actions")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -189,20 +194,20 @@ function ApiKeysSection() {
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${k.is_active ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}>
-                      {k.is_active ? "Aktiv" : "Widerrufen"}
+                      {k.is_active ? t("common.active") : t("dev.statusRevoked")}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-center">
                     {k.is_active && (
                       <button
                         onClick={() => {
-                          if (confirm(`API Key "${k.name}" wirklich widerrufen?`)) {
+                          if (confirm(t("dev.revokeApiKeyConfirm").replace("{name}", k.name))) {
                             revokeMutation.mutate(k.id);
                           }
                         }}
                         className="text-red-500 hover:text-red-700 text-xs font-medium"
                       >
-                        Widerrufen
+                        {t("dev.revoke")}
                       </button>
                     )}
                   </td>
@@ -215,22 +220,22 @@ function ApiKeysSection() {
 
       {showCreate ? (
         <div className="rounded-xl border border-border bg-slate-50/60 p-4 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Neuer API Key</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("dev.newApiKey")}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground">Name *</label>
+              <label className="text-[10px] font-medium text-muted-foreground">{t("common.name")} *</label>
               <input
                 className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
-                placeholder="z.B. SAP Ariba Integration"
+                placeholder={t("dev.namePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground">Beschreibung</label>
+              <label className="text-[10px] font-medium text-muted-foreground">{t("common.description")}</label>
               <input
                 className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
-                placeholder="Optional"
+                placeholder={t("common.optional")}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
@@ -238,7 +243,7 @@ function ApiKeysSection() {
           </div>
 
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground">Scopes</label>
+            <label className="text-[10px] font-medium text-muted-foreground">{t("dev.scopesLabel")}</label>
             <div className="flex flex-wrap gap-2">
               {API_SCOPES.map((scope) => (
                 <label key={scope} className="flex items-center gap-1.5 cursor-pointer">
@@ -256,7 +261,7 @@ function ApiKeysSection() {
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground">Rate Limit / Minute</label>
+              <label className="text-[10px] font-medium text-muted-foreground">{t("dev.rateLimitMin")}</label>
               <input
                 type="number"
                 className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
@@ -265,7 +270,7 @@ function ApiKeysSection() {
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground">Rate Limit / Stunde</label>
+              <label className="text-[10px] font-medium text-muted-foreground">{t("dev.rateLimitHour")}</label>
               <input
                 type="number"
                 className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
@@ -281,13 +286,13 @@ function ApiKeysSection() {
               disabled={createMutation.isPending || !form.name.trim() || form.scopes.length === 0}
               className="rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
             >
-              {createMutation.isPending ? "Erstelle…" : "Key erstellen"}
+              {createMutation.isPending ? t("dev.creating") : t("dev.createKey")}
             </button>
             <button
               onClick={() => setShowCreate(false)}
               className="rounded-lg border border-input px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100"
             >
-              Abbrechen
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -296,7 +301,7 @@ function ApiKeysSection() {
           onClick={() => { setShowCreate(true); setNewKey(null); }}
           className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-xs text-gray-500 hover:border-blue-400 hover:text-blue-600 transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" /> Neuen API Key erstellen
+          <Plus className="h-3.5 w-3.5" /> {t("dev.newApiKeyBtn")}
         </button>
       )}
     </div>
@@ -319,14 +324,15 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 function DeliveryLogs({ webhookId }: { webhookId: string }) {
+  const { t } = useLanguage();
   const { data: deliveries = [], isLoading } = useQuery({
     queryKey: ["webhook-deliveries", webhookId],
     queryFn: () => listWebhookDeliveries(webhookId, 30),
     staleTime: 30_000,
   });
 
-  if (isLoading) return <p className="text-xs text-gray-400 py-2">Lade Delivery Logs…</p>;
-  if (deliveries.length === 0) return <p className="text-xs text-gray-400 py-2">Noch keine Deliveries.</p>;
+  if (isLoading) return <p className="text-xs text-gray-400 py-2">{t("dev.loadingDeliveries")}</p>;
+  if (deliveries.length === 0) return <p className="text-xs text-gray-400 py-2">{t("dev.noDeliveries")}</p>;
 
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-100 dark:border-gray-700 mt-2">
@@ -338,7 +344,7 @@ function DeliveryLogs({ webhookId }: { webhookId: string }) {
             <th className="px-3 py-2 text-center">HTTP</th>
             <th className="px-3 py-2 text-center">ms</th>
             <th className="px-3 py-2 text-center">Retries</th>
-            <th className="px-3 py-2 text-left">Zeitpunkt</th>
+            <th className="px-3 py-2 text-left">{t("dev.colTimestamp")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
@@ -355,7 +361,7 @@ function DeliveryLogs({ webhookId }: { webhookId: string }) {
                 <td className="px-3 py-1.5 text-center text-[10px] text-gray-400">{d.duration_ms != null ? d.duration_ms.toFixed(0) : "—"}</td>
                 <td className="px-3 py-1.5 text-center text-[10px] text-gray-400">{d.retry_count}</td>
                 <td className="px-3 py-1.5 text-[10px] text-gray-400">
-                  {d.delivered_at ? new Date(d.delivered_at).toLocaleString() : new Date(d.created_at).toLocaleString()}
+                  {formatDateTime(d.delivered_at ?? d.created_at)}
                 </td>
               </tr>
             );
@@ -369,6 +375,7 @@ function DeliveryLogs({ webhookId }: { webhookId: string }) {
 // ── Webhooks ──────────────────────────────────────────────────────────────────
 
 function WebhooksSection() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -415,14 +422,14 @@ function WebhooksSection() {
     <div className="space-y-4">
       <SectionHeader
         icon={Webhook}
-        title="Webhooks"
-        description="Event-Benachrichtigungen an externe URLs — z.B. für ERP-Integration"
+        title={t("dev.webhooksTitle")}
+        description={t("dev.webhooksDesc")}
       />
 
       {isLoading ? (
-        <p className="text-sm text-gray-400">Lade…</p>
+        <p className="text-sm text-gray-400">{t("common.loading")}</p>
       ) : hooks.length === 0 ? (
-        <p className="text-sm text-gray-400">Noch keine Webhooks konfiguriert.</p>
+        <p className="text-sm text-gray-400">{t("dev.noWebhooks")}</p>
       ) : (
         <div className="space-y-2">
           {hooks.map((h: WebhookResponse) => (
@@ -453,24 +460,24 @@ function WebhooksSection() {
                 {h.failure_count > 0 && (
                   <span className="flex items-center gap-1 text-[10px] text-amber-600">
                     <AlertTriangle className="h-3 w-3" />
-                    {h.failure_count} Fehler
+                    {t("dev.failureCount").replace("{n}", String(h.failure_count))}
                   </span>
                 )}
                 <button
                   onClick={() => toggleMutation.mutate({ id: h.id, active: !h.is_active })}
                   className={h.is_active ? "text-emerald-500 hover:text-emerald-700" : "text-gray-400 hover:text-gray-600"}
-                  title={h.is_active ? "Deaktivieren" : "Aktivieren"}
+                  title={h.is_active ? t("common.deactivate") : t("common.activate")}
                 >
                   {h.is_active ? <ToggleRight className="h-5 w-5" /> : <ToggleLeft className="h-5 w-5" />}
                 </button>
                 <button
                   onClick={() => {
-                    if (confirm(`Webhook "${h.name}" wirklich löschen?`)) {
+                    if (confirm(t("dev.deleteWebhookConfirm").replace("{name}", h.name))) {
                       deleteMutation.mutate(h.id);
                     }
                   }}
                   className="text-red-400 hover:text-red-600"
-                  title="Löschen"
+                  title={t("common.delete")}
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -487,19 +494,19 @@ function WebhooksSection() {
 
       {showCreate ? (
         <div className="rounded-xl border border-border bg-slate-50/60 p-4 space-y-3">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Neuer Webhook</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("dev.newWebhook")}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground">Name *</label>
+              <label className="text-[10px] font-medium text-muted-foreground">{t("common.name")} *</label>
               <input
                 className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
-                placeholder="z.B. SAP Ariba Events"
+                placeholder={t("dev.webhookNamePlaceholder")}
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               />
             </div>
             <div className="space-y-1">
-              <label className="text-[10px] font-medium text-muted-foreground">Target URL *</label>
+              <label className="text-[10px] font-medium text-muted-foreground">{t("dev.targetUrl")}</label>
               <input
                 className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
                 placeholder="https://your-erp.example.com/eios-hook"
@@ -509,16 +516,16 @@ function WebhooksSection() {
             </div>
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground">Secret (HMAC-Signierung)</label>
+            <label className="text-[10px] font-medium text-muted-foreground">{t("dev.secret")}</label>
             <input
               className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs font-mono"
-              placeholder="Optionales Signing-Secret"
+              placeholder={t("dev.secretPlaceholder")}
               value={form.secret}
               onChange={(e) => setForm((f) => ({ ...f, secret: e.target.value }))}
             />
           </div>
           <div className="space-y-1">
-            <label className="text-[10px] font-medium text-muted-foreground">Events</label>
+            <label className="text-[10px] font-medium text-muted-foreground">{t("dev.eventsLabel")}</label>
             <div className="flex flex-wrap gap-2">
               {WEBHOOK_EVENT_TYPES.map((ev) => (
                 <label key={ev} className="flex items-center gap-1.5 cursor-pointer">
@@ -539,13 +546,13 @@ function WebhooksSection() {
               disabled={createMutation.isPending || !form.name.trim() || !form.target_url.trim() || form.events.length === 0}
               className="rounded-lg bg-purple-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
             >
-              {createMutation.isPending ? "Erstelle…" : "Webhook erstellen"}
+              {createMutation.isPending ? t("dev.creating") : t("dev.createWebhook")}
             </button>
             <button
               onClick={() => setShowCreate(false)}
               className="rounded-lg border border-input px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-100"
             >
-              Abbrechen
+              {t("common.cancel")}
             </button>
           </div>
         </div>
@@ -554,7 +561,7 @@ function WebhooksSection() {
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-xs text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-colors"
         >
-          <Plus className="h-3.5 w-3.5" /> Neuen Webhook erstellen
+          <Plus className="h-3.5 w-3.5" /> {t("dev.newWebhookBtn")}
         </button>
       )}
     </div>
@@ -626,6 +633,7 @@ console.log(await rec.json());`;
 type SnippetTab = "python" | "curl" | "javascript";
 
 function SdkSnippetsSection() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<SnippetTab>("python");
   const snippets: Record<SnippetTab, string> = {
     python: SNIPPET_PYTHON,
@@ -637,23 +645,23 @@ function SdkSnippetsSection() {
     <div className="space-y-4">
       <SectionHeader
         icon={Code2}
-        title="SDK Snippets"
-        description="Schnellstart-Beispiele für Python, cURL und JavaScript"
+        title={t("dev.sdkTitle")}
+        description={t("dev.sdkDesc")}
       />
 
       <div className="rounded-xl border border-border overflow-hidden">
         <div className="flex border-b border-border bg-slate-50 dark:bg-gray-800">
-          {(["python", "curl", "javascript"] as SnippetTab[]).map((t) => (
+          {(["python", "curl", "javascript"] as SnippetTab[]).map((sn) => (
             <button
-              key={t}
-              onClick={() => setTab(t)}
+              key={sn}
+              onClick={() => setTab(sn)}
               className={`px-4 py-2 text-xs font-semibold capitalize transition-colors ${
-                tab === t
+                tab === sn
                   ? "bg-white dark:bg-gray-900 border-b-2 border-blue-500 text-blue-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {t}
+              {sn}
             </button>
           ))}
           <div className="ml-auto flex items-center pr-3">
@@ -668,9 +676,9 @@ function SdkSnippetsSection() {
       <div className="rounded-xl border border-dashed border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/10 p-4 flex items-start gap-3">
         <ExternalLink className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
         <div>
-          <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">Vollständige API-Referenz</p>
+          <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">{t("dev.apiRefTitle")}</p>
           <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-            Die interaktive Swagger-Doku ist unter{" "}
+            {t("dev.apiRefBefore")}{" "}
             <a
               href="/api/docs"
               target="_blank"
@@ -679,7 +687,7 @@ function SdkSnippetsSection() {
             >
               /api/docs
             </a>{" "}
-            erreichbar (FastAPI OpenAPI 3.1).
+            {t("dev.apiRefAfter")}
           </p>
         </div>
       </div>
@@ -702,16 +710,17 @@ def verify_eios_signature(payload: bytes, secret: str, signature: str) -> bool:
 # valid = verify_eios_signature(request.body, YOUR_SECRET, sig)`;
 
 function SignatureSection() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-4">
       <SectionHeader
         icon={Key}
-        title="Webhook-Signierung"
-        description="HMAC-SHA256 — jede Delivery enthält den Header X-EIOS-Signature"
+        title={t("dev.signatureTitle")}
+        description={t("dev.signatureDesc")}
       />
       <div className="rounded-xl border border-border overflow-hidden">
         <div className="flex justify-between items-center border-b border-border bg-slate-50 dark:bg-gray-800 px-4 py-2">
-          <span className="text-xs font-semibold text-gray-500">Python — Signatur prüfen</span>
+          <span className="text-xs font-semibold text-gray-500">{t("dev.signatureLabel")}</span>
           <CopyButton text={SIGNATURE_SNIPPET} />
         </div>
         <pre className="overflow-x-auto p-4 text-xs bg-gray-950 text-gray-200 leading-relaxed">
@@ -725,6 +734,7 @@ function SignatureSection() {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function DeveloperPortalPage() {
+  const { t } = useLanguage();
   return (
     <div className="space-y-10">
       {/* Header */}
@@ -733,9 +743,9 @@ export default function DeveloperPortalPage() {
           <Code2 className="h-6 w-6 text-white" />
         </div>
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Developer Portal</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t("nav.developer")}</h1>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            API Keys · Webhooks · SDK Snippets · API-Referenz — GAP-28
+            {t("dev.subtitle")}
           </p>
         </div>
       </div>

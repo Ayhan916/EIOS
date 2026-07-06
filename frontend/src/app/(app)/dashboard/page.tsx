@@ -163,6 +163,7 @@ function KpiCard({
   icon: Icon,
   valueClass,
   accent,
+  href,
 }: {
   label: string;
   value: string | number;
@@ -170,29 +171,36 @@ function KpiCard({
   icon: React.ElementType;
   valueClass?: string;
   accent?: string;
+  href?: string;
 }) {
-  return (
-    <Card>
-      <CardContent className="pt-5 pb-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {label}
-            </p>
-            <p className={`mt-1 text-3xl font-bold ${valueClass ?? "text-foreground"}`}>
-              {value}
-            </p>
-            {sub && (
-              <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
-            )}
-          </div>
-          <div className={`rounded-full p-2.5 flex-shrink-0 ${accent ?? "bg-primary/10"}`}>
-            <Icon className={`h-5 w-5 ${accent ? "text-white" : "text-primary"}`} />
-          </div>
+  const inner = (
+    <CardContent className="pt-5 pb-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+            {label}
+          </p>
+          <p className={`mt-1 text-3xl font-bold ${valueClass ?? "text-foreground"}`}>
+            {value}
+          </p>
+          {sub && (
+            <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <div className={`rounded-full p-2.5 flex-shrink-0 ${accent ?? "bg-primary/10"}`}>
+          <Icon className={`h-5 w-5 ${accent ? "text-white" : "text-primary"}`} />
+        </div>
+      </div>
+    </CardContent>
   );
+  if (href) {
+    return (
+      <Card className="transition-colors hover:bg-muted/40 cursor-pointer">
+        <Link href={href}>{inner}</Link>
+      </Card>
+    );
+  }
+  return <Card>{inner}</Card>;
 }
 
 function HBar({
@@ -200,15 +208,17 @@ function HBar({
   count,
   max,
   colorClass,
+  href,
 }: {
   label: string;
   count: number;
   max: number;
   colorClass: string;
+  href?: string;
 }) {
   const pct = max > 0 ? Math.round((count / max) * 100) : 0;
-  return (
-    <div className="flex items-center gap-3">
+  const inner = (
+    <div className={`flex items-center gap-3 ${href ? "hover:opacity-80 transition-opacity cursor-pointer" : ""}`}>
       <span className="w-20 text-xs text-muted-foreground text-right flex-shrink-0">{label}</span>
       <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
         <div
@@ -219,6 +229,8 @@ function HBar({
       <span className="w-7 text-xs font-semibold text-right flex-shrink-0">{count}</span>
     </div>
   );
+  if (href) return <Link href={href}>{inner}</Link>;
+  return inner;
 }
 
 // ── Risk Heatmap Widget ───────────────────────────────────────────────────────
@@ -468,8 +480,9 @@ function PendingDecisionsCard({
         ) : (
           <div className="space-y-2">
             {decisions.map((d) => (
-              <div
+              <Link
                 key={d.id}
+                href={`/recommendations?highlight=${d.id}`}
                 className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-muted/40 transition-colors"
               >
                 <div className="min-w-0 flex-1">
@@ -486,7 +499,7 @@ function PendingDecisionsCard({
                 >
                   {d.priority}
                 </span>
-              </div>
+              </Link>
             ))}
           </div>
         )}
@@ -582,7 +595,7 @@ function DemoDataButton() {
     }
   }
 
-  if (done) return null;
+  if (done || process.env.NEXT_PUBLIC_DEMO_MODE !== "true") return null;
 
   return (
     <button
@@ -609,7 +622,7 @@ export default function DashboardPage() {
   const { data, isLoading, error } = useQuery({
     queryKey: ["dashboard"],
     queryFn: getDashboard,
-    staleTime: 0,
+    staleTime: 60_000,
   });
 
   const { data: cc } = useQuery({
@@ -635,6 +648,24 @@ export default function DashboardPage() {
     queryFn: async () => {
       const res = await apiClient.get("/external-intelligence/signals?limit=7");
       return (res.data as { signals: RiskSignal[]; total: number }).signals;
+    },
+    staleTime: 120_000,
+  });
+
+  const { data: capKpis } = useQuery({
+    queryKey: ["dashboard-cap-kpis"],
+    queryFn: async () => {
+      const res = await apiClient.get("/corrective-action-plans/kpis");
+      return res.data as { total: number; open: number; overdue: number; verified: number; closed: number; completion_rate: number };
+    },
+    staleTime: 120_000,
+  });
+
+  const { data: grievanceSummary } = useQuery({
+    queryKey: ["dashboard-grievance-summary"],
+    queryFn: async () => {
+      const res = await apiClient.get("/grievances/summary");
+      return res.data as { total: number; by_status: Record<string, number> };
     },
     staleTime: 120_000,
   });
@@ -701,6 +732,7 @@ export default function DashboardPage() {
           value={data.total_assessments}
           icon={FileText}
           sub={t("dashboard.inYourOrganisation")}
+          href="/assessments"
         />
         <KpiCard
           label={t("dashboard.avgQualityScore")}
@@ -708,12 +740,14 @@ export default function DashboardPage() {
           icon={TrendingUp}
           valueClass={qualityClass(data.avg_quality_score)}
           sub={t("dashboard.acrossAllAssessments")}
+          href="/assessments"
         />
         <KpiCard
           label={t("dashboard.openActionsKpi")}
           value={data.open_actions}
           icon={Clock}
           sub={`${data.closed_actions_pct}% ${t("findings.resolved").toLowerCase()}`}
+          href="/recommendations?status=open"
         />
         <KpiCard
           label={t("dashboard.overdue")}
@@ -722,6 +756,7 @@ export default function DashboardPage() {
           valueClass={data.overdue_actions > 0 ? "text-red-600" : "text-foreground"}
           accent={data.overdue_actions > 0 ? "bg-red-500" : undefined}
           sub={t("dashboard.pastDueDate")}
+          href="/recommendations?status=overdue"
         />
         <KpiCard
           label={t("dashboard.highRiskFindings")}
@@ -731,6 +766,7 @@ export default function DashboardPage() {
             data.critical_finding_count > 0 ? "text-red-600" : "text-foreground"
           }
           sub={`${data.critical_finding_count} ${t("findings.critical").toLowerCase()}`}
+          href="/findings?severity=Critical"
         />
         <KpiCard
           label={t("dashboard.esgHealth")}
@@ -744,6 +780,7 @@ export default function DashboardPage() {
             : "text-red-600"
           }
           sub={cc?.health_label ?? ""}
+          href="/executive/board-summary"
         />
         <KpiCard
           label={t("dashboard.carbonIntensity")}
@@ -755,8 +792,51 @@ export default function DashboardPage() {
           icon={Flame}
           valueClass={cc?.cso?.latest_emissions_tco2e != null ? "text-orange-600" : "text-muted-foreground"}
           sub={t("dashboard.tco2eLatestYear")}
+          href="/financial-esg/carbon-economics"
         />
       </div>
+
+      {/* ── CAP + Grievances quick-status ──────────────────────────────────── */}
+      {(capKpis || grievanceSummary) && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {capKpis && (
+            <Link href="/corrective-action-plans" className="block">
+              <Card className="transition-colors hover:bg-muted/40">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Corrective Action Plans</p>
+                      <p className="mt-1 text-2xl font-bold">{capKpis.total}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {capKpis.open} open · {capKpis.overdue > 0 ? <span className="text-red-600 font-medium">{capKpis.overdue} overdue</span> : "0 overdue"} · {Math.round(capKpis.completion_rate * 100)}% complete
+                      </p>
+                    </div>
+                    <ShieldCheck className="h-8 w-8 text-emerald-500 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+          {grievanceSummary && (
+            <Link href="/compliance/grievances" className="block">
+              <Card className="transition-colors hover:bg-muted/40">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Grievances</p>
+                      <p className="mt-1 text-2xl font-bold">{grievanceSummary.total}</p>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        {grievanceSummary.by_status["received"] ?? 0} new · {grievanceSummary.by_status["under_review"] ?? 0} under review · {grievanceSummary.by_status["resolved"] ?? 0} resolved
+                      </p>
+                    </div>
+                    <ShieldAlert className="h-8 w-8 text-rose-500 flex-shrink-0" />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* #108 Onboarding checklist */}
       <OnboardingChecklist />
@@ -774,7 +854,7 @@ export default function DashboardPage() {
         <FinancialEsgCard
           taxonomyPct={cc.cfo.taxonomy_alignment_pct}
           greenRevenuePct={cc.cfo.green_revenue_pct}
-          carbonCost={null}
+          carbonCost={cc.cso?.carbon_cost_eur ?? null}
         />
       )}
 
@@ -804,15 +884,16 @@ export default function DashboardPage() {
                 { key: "resolved",    label: t("findings.resolved"),   cls: "bg-amber-100 text-amber-700" },
                 { key: "verified",    label: t("findings.verified"),   cls: "bg-emerald-100 text-emerald-700" },
               ].map(({ key, label, cls }) => (
-                <div
+                <Link
                   key={key}
-                  className={`rounded-lg p-4 text-center ${cls}`}
+                  href={`/recommendations?status=${key}`}
+                  className={`rounded-lg p-4 text-center transition-opacity hover:opacity-80 ${cls}`}
                 >
                   <p className="text-2xl font-bold">
                     {data.action_status_breakdown[key] ?? 0}
                   </p>
                   <p className="text-xs font-medium mt-0.5">{label}</p>
-                </div>
+                </Link>
               ))}
             </div>
             {data.open_actions > 0 && (
@@ -846,10 +927,10 @@ export default function DashboardPage() {
                 {t("dashboard.bySeverity")}
               </p>
               <div className="space-y-2">
-                <HBar label={t("findings.critical")} count={data.findings_by_severity["Critical"] ?? 0} max={maxSeverity} colorClass="bg-red-500" />
-                <HBar label={t("findings.high")}     count={data.findings_by_severity["High"] ?? 0}     max={maxSeverity} colorClass="bg-orange-400" />
-                <HBar label={t("findings.medium")}   count={data.findings_by_severity["Medium"] ?? 0}   max={maxSeverity} colorClass="bg-amber-400" />
-                <HBar label={t("findings.low")}      count={data.findings_by_severity["Low"] ?? 0}      max={maxSeverity} colorClass="bg-slate-300" />
+                <HBar label={t("findings.critical")} count={data.findings_by_severity["Critical"] ?? 0} max={maxSeverity} colorClass="bg-red-500"    href="/findings?severity=Critical" />
+                <HBar label={t("findings.high")}     count={data.findings_by_severity["High"] ?? 0}     max={maxSeverity} colorClass="bg-orange-400" href="/findings?severity=High" />
+                <HBar label={t("findings.medium")}   count={data.findings_by_severity["Medium"] ?? 0}   max={maxSeverity} colorClass="bg-amber-400" href="/findings?severity=Medium" />
+                <HBar label={t("findings.low")}      count={data.findings_by_severity["Low"] ?? 0}      max={maxSeverity} colorClass="bg-slate-300" href="/findings?severity=Low" />
               </div>
             </div>
             <div>
@@ -857,11 +938,11 @@ export default function DashboardPage() {
                 {t("dashboard.byEsgCategory")}
               </p>
               <div className="space-y-2">
-                <HBar label={t("dashboard.environmental")} count={data.findings_by_category["E"] ?? 0}     max={maxCategory} colorClass="bg-emerald-500" />
-                <HBar label={t("dashboard.social")}        count={data.findings_by_category["S"] ?? 0}     max={maxCategory} colorClass="bg-blue-500" />
-                <HBar label={t("dashboard.governance")}    count={data.findings_by_category["G"] ?? 0}     max={maxCategory} colorClass="bg-purple-500" />
+                <HBar label={t("dashboard.environmental")} count={data.findings_by_category["E"] ?? 0}     max={maxCategory} colorClass="bg-emerald-500" href="/findings?category=E" />
+                <HBar label={t("dashboard.social")}        count={data.findings_by_category["S"] ?? 0}     max={maxCategory} colorClass="bg-blue-500"    href="/findings?category=S" />
+                <HBar label={t("dashboard.governance")}    count={data.findings_by_category["G"] ?? 0}     max={maxCategory} colorClass="bg-purple-500"  href="/findings?category=G" />
                 {(data.findings_by_category["Other"] ?? 0) > 0 && (
-                  <HBar label={t("materials.other")} count={data.findings_by_category["Other"]} max={maxCategory} colorClass="bg-slate-400" />
+                  <HBar label={t("materials.other")} count={data.findings_by_category["Other"]} max={maxCategory} colorClass="bg-slate-400" href="/findings?category=Other" />
                 )}
               </div>
             </div>

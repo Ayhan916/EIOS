@@ -14,7 +14,6 @@ import {
   Shield,
   Share2,
   TrendingDown,
-  Users,
   X,
   Zap,
 } from "lucide-react";
@@ -220,6 +219,7 @@ function NetworkGraphSection() {
           className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200"
         >
           <option value="">{t("network.allRisks")}</option>
+          <option value="CRITICAL">{t("findings.critical")}</option>
           <option value="HIGH">{t("suppliers.high")}</option>
           <option value="MEDIUM">{t("suppliers.medium")}</option>
           <option value="LOW">{t("suppliers.low")}</option>
@@ -579,13 +579,15 @@ function SuggestionsSection({ nameMap }: { nameMap: Map<string, string> }) {
   );
 }
 
-function ExposuresSection() {
+function ExposuresSection({ nameMap }: { nameMap: Map<string, string> }) {
   const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["network-exposures"],
     queryFn: getExposureSignals,
     refetchInterval: 60_000,
   });
+
+  const name = (id: string) => nameMap.get(id) ?? id.slice(0, 8) + "…";
 
   if (isLoading)
     return (
@@ -614,8 +616,15 @@ function ExposuresSection() {
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-400 truncate">{e.rationale}</p>
-          <p className="mt-0.5 text-xs text-slate-500">
-            {t("network.origin")}: {e.origin_supplier_id.slice(0, 8)}… → {t("network.impacted")}: {e.impacted_supplier_id.slice(0, 8)}…
+          <p className="mt-0.5 text-xs text-slate-500 flex items-center gap-1 flex-wrap">
+            {t("network.origin")}:{" "}
+            <Link href={`/suppliers/${e.origin_supplier_id}`} className="text-blue-400 hover:underline font-mono">
+              {name(e.origin_supplier_id)}
+            </Link>
+            {" → "}{t("network.impacted")}:{" "}
+            <Link href={`/suppliers/${e.impacted_supplier_id}`} className="text-blue-400 hover:underline font-mono">
+              {name(e.impacted_supplier_id)}
+            </Link>
           </p>
         </div>
       ))}
@@ -825,7 +834,7 @@ export default function NetworkPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ExposuresSection />
+            <ExposuresSection nameMap={nameMap} />
           </CardContent>
         </Card>
 

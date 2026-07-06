@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  ArrowLeft,
   CalendarDays,
   CalendarClock,
   Loader2,
@@ -113,7 +115,7 @@ export default function AssessmentSchedulesPage() {
       setFormError("");
     },
     onError: (err: Error) => {
-      setFormError(err.message === "validation" ? "Please select a supplier and enter a valid frequency (7–3650 days)." : "Failed to create schedule.");
+      setFormError(err.message === "validation" ? t("schedules.validationError") : t("schedules.createError"));
     },
   });
 
@@ -134,6 +136,11 @@ export default function AssessmentSchedulesPage() {
 
   return (
     <div className="p-6 space-y-6">
+      {/* Back link */}
+      <Link href="/assessments" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ArrowLeft className="h-3.5 w-3.5" />{t("nav.assessments")}
+      </Link>
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3">
@@ -197,7 +204,7 @@ export default function AssessmentSchedulesPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Assessment ID (optional)"
+                    placeholder={t("schedules.templatePlaceholder")}
                     className="h-9 w-full rounded border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring font-mono"
                     value={form.template_assessment_id}
                     onChange={(e) => setForm((f) => ({ ...f, template_assessment_id: e.target.value }))}
@@ -279,13 +286,15 @@ export default function AssessmentSchedulesPage() {
                   <tr key={s.id} className="hover:bg-muted/30 transition-colors">
                     {/* Supplier */}
                     <td className="px-4 py-3">
-                      <p className="font-medium">{supplierMap.get(s.supplier_id) ?? s.supplier_id.slice(0, 12) + "…"}</p>
+                      <Link href={`/suppliers/${s.supplier_id}`} className="font-medium hover:underline">
+                        {supplierMap.get(s.supplier_id) ?? s.supplier_id.slice(0, 12) + "…"}
+                      </Link>
                       <p className="text-[11px] font-mono text-muted-foreground">{s.supplier_id.slice(0, 8)}…</p>
                     </td>
 
                     {/* Frequency */}
                     <td className="px-4 py-3 text-muted-foreground">
-                      {s.frequency_days} days
+                      {t("schedules.every").replace("{n}", String(s.frequency_days))}
                     </td>
 
                     {/* Next due */}
@@ -293,10 +302,10 @@ export default function AssessmentSchedulesPage() {
                       <p>{formatDate(s.next_due_at)}</p>
                       <p className={`text-[11px] font-medium ${daysToGo < 0 ? "text-red-600" : daysToGo < 14 ? "text-amber-600" : "text-muted-foreground"}`}>
                         {daysToGo < 0
-                          ? `${Math.abs(daysToGo)} days overdue`
+                          ? t("schedules.daysOverdue").replace("{n}", String(Math.abs(daysToGo)))
                           : daysToGo === 0
-                          ? "Due today"
-                          : `in ${daysToGo} days`}
+                          ? t("schedules.dueToday")
+                          : t("schedules.dueIn").replace("{n}", String(daysToGo))}
                       </p>
                     </td>
 
@@ -304,12 +313,12 @@ export default function AssessmentSchedulesPage() {
                     <td className="px-4 py-3 text-muted-foreground text-sm">
                       {sinceLast === null
                         ? <span className="text-muted-foreground/60 italic">{t("schedules.never")}</span>
-                        : <><p>{formatDate(s.last_triggered_at!)}</p><p className="text-[11px]">{sinceLast}d ago</p></>}
+                        : <><p>{formatDate(s.last_triggered_at!)}</p><p className="text-[11px]">{t("schedules.daysAgo").replace("{n}", String(sinceLast))}</p></>}
                     </td>
 
                     {/* Status */}
                     <td className="px-4 py-3">
-                      <Badge className={cls}>{label}</Badge>
+                      <Badge className={cls}>{t(`schedules.${label}` as "schedules.active")}</Badge>
                     </td>
 
                     {/* Actions */}
@@ -334,10 +343,10 @@ export default function AssessmentSchedulesPage() {
       {/* Summary */}
       {schedules.length > 0 && (
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          <span>{schedules.length} schedule{schedules.length !== 1 ? "s" : ""}</span>
-          <span>{schedules.filter((s) => s.is_active).length} active</span>
+          <span>{t("schedules.totalCount").replace("{n}", String(schedules.length))}</span>
+          <span>{schedules.filter((s) => s.is_active).length} {t("schedules.active").toLowerCase()}</span>
           <span className={schedules.filter((s) => daysUntil(s.next_due_at) < 0 && s.is_active).length > 0 ? "text-red-600 font-medium" : ""}>
-            {schedules.filter((s) => daysUntil(s.next_due_at) < 0 && s.is_active).length} overdue
+            {schedules.filter((s) => daysUntil(s.next_due_at) < 0 && s.is_active).length} {t("schedules.overdue").toLowerCase()}
           </span>
         </div>
       )}

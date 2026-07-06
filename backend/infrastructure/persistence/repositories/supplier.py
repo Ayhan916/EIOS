@@ -33,6 +33,8 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
             supplier_tier=entity.supplier_tier.value,
             supplier_status=entity.supplier_status.value,
             notes=entity.notes,
+            chain_direction=entity.chain_direction,
+            downstream_type=entity.downstream_type,
         )
 
     def _to_domain(self, model: SupplierModel) -> Supplier:
@@ -55,6 +57,8 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
             supplier_tier=SupplierTier(model.supplier_tier),
             supplier_status=SupplierStatus(model.supplier_status),
             notes=model.notes,
+            chain_direction=getattr(model, "chain_direction", "upstream") or "upstream",
+            downstream_type=getattr(model, "downstream_type", None),
         )
 
     async def get_by_name_and_org(self, name: str, organization_id: str) -> Supplier | None:
@@ -98,6 +102,7 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
         industry: str | None = None,
         supplier_tier: str | None = None,
         search: str | None = None,
+        chain_direction: str | None = None,
     ) -> tuple[list[Supplier], int]:
         stmt = (
             select(SupplierModel)
@@ -113,6 +118,8 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
             stmt = stmt.where(SupplierModel.industry.ilike(f"%{industry}%"))
         if supplier_tier:
             stmt = stmt.where(SupplierModel.supplier_tier == supplier_tier)
+        if chain_direction:
+            stmt = stmt.where(SupplierModel.chain_direction == chain_direction)
         if search:
             stmt = stmt.where(
                 SupplierModel.name.ilike(f"%{search}%")

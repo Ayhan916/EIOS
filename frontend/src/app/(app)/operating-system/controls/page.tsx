@@ -32,6 +32,7 @@ const CONTROL_TYPES = ["PREVENTIVE", "DETECTIVE", "CORRECTIVE", "COMPENSATING", 
 const TEST_RESULTS = ["PASS", "FAIL", "PARTIAL", "NOT_APPLICABLE"];
 
 function ControlRow({ control }: { control: ESGControl }) {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [showTest, setShowTest] = useState(false);
   const [testResult, setTestResult] = useState("PASS");
@@ -68,6 +69,9 @@ function ControlRow({ control }: { control: ESGControl }) {
     },
   });
 
+  const testCount = tests.length;
+  const findingCount = linkedFindings.length;
+
   return (
     <Card>
       <CardContent className="py-4">
@@ -78,17 +82,17 @@ function ControlRow({ control }: { control: ESGControl }) {
               <p className="text-sm text-muted-foreground line-clamp-2">{control.description}</p>
             )}
             <p className="text-xs text-muted-foreground">
-              {control.control_type} · Created {formatDate(control.created_at)}
+              {control.control_type} · {t("esgOs.controlCreatedOn").replace("{date}", formatDate(control.created_at))}
             </p>
             <div className="flex items-center gap-2 flex-wrap mt-1">
               <span className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700">
                 <ClipboardList className="h-3 w-3" />
-                {tests.length} test{tests.length !== 1 ? "s" : ""}
+                {(testCount === 1 ? t("esgOs.controlTests") : t("esgOs.controlTestsPlural")).replace("{n}", String(testCount))}
               </span>
-              {linkedFindings.length > 0 && (
+              {findingCount > 0 && (
                 <span className="inline-flex items-center gap-1 rounded bg-orange-50 px-2 py-0.5 text-[10px] font-medium text-orange-700">
                   <FileSearch className="h-3 w-3" />
-                  {linkedFindings.length} finding{linkedFindings.length !== 1 ? "s" : ""}
+                  {(findingCount === 1 ? t("esgOs.controlFindings") : t("esgOs.controlFindingsPlural")).replace("{n}", String(findingCount))}
                 </span>
               )}
             </div>
@@ -104,38 +108,38 @@ function ControlRow({ control }: { control: ESGControl }) {
               onClick={() => setShowTest(!showTest)}
               className="text-xs text-primary hover:underline"
             >
-              + Run Test
+              {t("esgOs.runTest")}
             </button>
           </div>
         </div>
 
         {showTest && (
           <div className="mt-3 rounded-lg border border-border bg-muted/30 p-3 space-y-2">
-            <p className="text-xs font-semibold">Run Control Test</p>
+            <p className="text-xs font-semibold">{t("esgOs.runControlTest")}</p>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Result</Label>
+                <Label className="text-xs">{t("esgOs.testResult")}</Label>
                 <select className="mt-1 h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
                   value={testResult} onChange={(e) => setTestResult(e.target.value)}>
                   {TEST_RESULTS.map((v) => <option key={v} value={v}>{v.replace(/_/g, " ")}</option>)}
                 </select>
               </div>
               <div>
-                <Label className="text-xs">Findings (optional)</Label>
+                <Label className="text-xs">{t("esgOs.testFindingsOptional")}</Label>
                 <Input className="mt-1 h-8 text-xs" value={findings}
                   onChange={(e) => setFindings(e.target.value)} placeholder="Observations…" />
               </div>
             </div>
             <div className="flex gap-2 justify-end">
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowTest(false)}>Cancel</Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowTest(false)}>{t("common.cancel")}</Button>
               <Button size="sm" className="h-7 text-xs" disabled={runTest.isPending} onClick={() => runTest.mutate()}>
                 {runTest.isPending && <Loader2 className="h-3 w-3 animate-spin mr-1" />}
-                Submit
+                {t("esgOs.submitTest")}
               </Button>
             </div>
             {runTest.isSuccess && (
               <p className="text-xs text-green-700 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Test recorded.
+                <CheckCircle2 className="h-3 w-3" /> {t("esgOs.testRecorded")}
               </p>
             )}
           </div>
@@ -185,16 +189,16 @@ export default function ESGControlsPage() {
           <h1 className="text-2xl font-semibold">{t("esgOs.controlsTitle")}</h1>
         </div>
         <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          <Plus className="h-4 w-4 mr-1.5" /> New Control
+          <Plus className="h-4 w-4 mr-1.5" /> {t("esgOs.newControl")}
         </Button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: t("common.total"), value: controls.length, colour: "" },
-          { label: "Effective", value: effective, colour: "text-green-600" },
-          { label: "Failing", value: failing, colour: failing > 0 ? "text-red-600" : "" },
-          { label: "Not Tested", value: notTested, colour: notTested > 0 ? "text-amber-600" : "" },
+          { label: t("esgOs.effectiveLabel"), value: effective, colour: "text-green-600" },
+          { label: t("esgOs.failingLabel"), value: failing, colour: failing > 0 ? "text-red-600" : "" },
+          { label: t("esgOs.notTestedLabel"), value: notTested, colour: notTested > 0 ? "text-amber-600" : "" },
         ].map(({ label, value, colour }) => (
           <Card key={label}>
             <CardContent className="pt-5 pb-5">
@@ -208,15 +212,15 @@ export default function ESGControlsPage() {
       {showForm && (
         <Card>
           <CardContent className="pt-5 pb-5 space-y-3">
-            <p className="text-sm font-semibold">New ESG Control</p>
+            <p className="text-sm font-semibold">{t("esgOs.newControlTitle")}</p>
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Control Name *</Label>
+                <Label className="text-xs">{t("esgOs.controlName")} *</Label>
                 <Input className="mt-1" value={controlName} onChange={(e) => setControlName(e.target.value)}
                   placeholder="e.g. Supplier Audit Control" />
               </div>
               <div>
-                <Label className="text-xs">Control Type</Label>
+                <Label className="text-xs">{t("esgOs.controlType")}</Label>
                 <select className="mt-1 h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
                   value={controlType} onChange={(e) => setControlType(e.target.value)}>
                   {CONTROL_TYPES.map((v) => <option key={v} value={v}>{v.replace(/_/g, " ")}</option>)}
@@ -224,9 +228,9 @@ export default function ESGControlsPage() {
               </div>
             </div>
             <div>
-              <Label className="text-xs">Description</Label>
+              <Label className="text-xs">{t("common.description")}</Label>
               <Input className="mt-1" value={description} onChange={(e) => setDescription(e.target.value)}
-                placeholder="Describe the control objective…" />
+                placeholder={t("esgOs.controlDescPlaceholder")} />
             </div>
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
@@ -237,7 +241,7 @@ export default function ESGControlsPage() {
             </div>
             {create.isSuccess && (
               <p className="text-xs text-green-700 flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> Control created.
+                <CheckCircle2 className="h-3 w-3" /> {t("esgOs.controlCreated")}
               </p>
             )}
           </CardContent>

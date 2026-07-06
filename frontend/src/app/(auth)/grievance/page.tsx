@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { AlertTriangle, CheckCircle2, Search, Shield } from "lucide-react";
 import {
@@ -30,7 +30,7 @@ const STATUS_LABELS: Record<string, string> = {
   rejected: "Closed — this report was reviewed and closed without further action",
 };
 
-export default function GrievancePage() {
+function GrievanceForm() {
   const searchParams = useSearchParams();
   const orgId = searchParams.get("org_id") ?? "";
 
@@ -330,5 +330,13 @@ export default function GrievancePage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function GrievancePage() {
+  return (
+    <Suspense>
+      <GrievanceForm />
+    </Suspense>
   );
 }

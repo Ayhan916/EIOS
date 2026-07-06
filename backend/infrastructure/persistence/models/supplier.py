@@ -24,6 +24,8 @@ class SupplierModel(BaseModel):
     supplier_tier: Mapped[str] = mapped_column(String(20), nullable=False, default="Tier 1")
     supplier_status: Mapped[str] = mapped_column(String(20), nullable=False, default="Active")
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    chain_direction: Mapped[str] = mapped_column(String(20), nullable=False, default="upstream")
+    downstream_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     assessments: Mapped[list[AssessmentModel]] = relationship(back_populates="supplier")
     scores: Mapped[list[SupplierScoreModel]] = relationship(

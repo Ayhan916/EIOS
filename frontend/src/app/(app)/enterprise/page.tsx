@@ -87,7 +87,7 @@ function HealthScoreCard({ data }: { data: EnterpriseDashboard }) {
           <div className="text-center">
             <p className="text-5xl font-bold">{hs.score.toFixed(0)}</p>
             <span className={`mt-1 inline-block rounded px-3 py-1 text-sm font-semibold ${gradeColor(hs.grade)}`}>
-              Grade {hs.grade}
+              {t("ent.grade").replace("{grade}", hs.grade)}
             </span>
           </div>
           <div className="flex-1 space-y-2">

@@ -59,7 +59,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
       setResult(r.data);
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-      setError(msg ?? "Validation failed");
+      setError(msg ?? t("sustain.validationFailed"));
     } finally {
       setBusy(false);
     }
@@ -102,7 +102,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
           <p className="font-bold">{sbt.target_year}</p>
         </div>
         <div className="rounded bg-emerald-50 p-2">
-          <p className="text-muted-foreground">Reduction Goal</p>
+          <p className="text-muted-foreground">{t("sustain.reductionGoal")}</p>
           <p className="font-bold text-emerald-700">{sbt.target_reduction_percent}%</p>
         </div>
       </div>
@@ -122,7 +122,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               return (
                 <div key={year} className="space-y-0.5">
                   <div className="flex justify-between text-[10px] text-muted-foreground">
-                    <span>Progress toward {year}</span>
+                    <span>{t("sustain.progressToward").replace("{year}", String(year))}</span>
                     <span className="font-medium">{pct}%</span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
@@ -141,19 +141,19 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
 
       <div className="flex gap-4 text-xs text-muted-foreground">
         {sbt.commitment_date && (
-          <span>Committed {new Date(sbt.commitment_date).toLocaleDateString()}</span>
+          <span>{t("sustain.committedDate").replace("{date}", new Date(sbt.commitment_date).toLocaleDateString())}</span>
         )}
         {sbt.approval_date && (
-          <span>Approved {new Date(sbt.approval_date).toLocaleDateString()}</span>
+          <span>{t("sustain.approvedDate").replace("{date}", new Date(sbt.approval_date).toLocaleDateString())}</span>
         )}
       </div>
 
       {showValidate && (
         <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
-          <p className="text-xs font-medium">SBTi 1.5°C Validation — Emission Inputs (tCO₂e)</p>
+          <p className="text-xs font-medium">{t("sustain.validationInputTitle")}</p>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <div>
-              <label className="block text-muted-foreground mb-1">Scope 1 — Baseline</label>
+              <label className="block text-muted-foreground mb-1">{t("sustain.scope1Baseline")}</label>
               <input
                 type="number" min="0" step="0.01"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -163,7 +163,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               />
             </div>
             <div>
-              <label className="block text-muted-foreground mb-1">Scope 2 — Baseline</label>
+              <label className="block text-muted-foreground mb-1">{t("sustain.scope2Baseline")}</label>
               <input
                 type="number" min="0" step="0.01"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -173,7 +173,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               />
             </div>
             <div>
-              <label className="block text-muted-foreground mb-1">Scope 1 — Target</label>
+              <label className="block text-muted-foreground mb-1">{t("sustain.scope1Target")}</label>
               <input
                 type="number" min="0" step="0.01"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -183,7 +183,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               />
             </div>
             <div>
-              <label className="block text-muted-foreground mb-1">Scope 2 — Target</label>
+              <label className="block text-muted-foreground mb-1">{t("sustain.scope2Target")}</label>
               <input
                 type="number" min="0" step="0.01"
                 className="w-full rounded border px-2 py-1 text-sm bg-background"
@@ -201,7 +201,7 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               onClick={runValidation}
             >
               {busy ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
-              Run Validation
+              {t("sustain.runValidation")}
             </Button>
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setShowValidate(false)}>
               {t("common.cancel")}
@@ -216,14 +216,14 @@ function SBTCard({ sbt }: { sbt: ScienceBasedTarget }) {
               }
               <div className="space-y-1">
                 <p className={`font-medium ${result.compliant ? "text-emerald-800" : "text-red-800"}`}>
-                  {result.compliant ? "Compliant with SBTi 1.5°C" : "Not compliant with SBTi 1.5°C"}
+                  {result.compliant ? t("sustain.sbtCompliant") : t("sustain.sbtNotCompliant")}
                 </p>
                 <p className="text-xs text-muted-foreground">{result.message}</p>
                 <div className="flex gap-4 text-xs">
-                  <span>Required: <strong>{result.required_reduction_percent?.toFixed(1)}%</strong></span>
-                  <span>Achieved: <strong>{result.achieved_reduction_percent?.toFixed(1)}%</strong></span>
+                  <span>{t("common.required")}: <strong>{result.required_reduction_percent?.toFixed(1)}%</strong></span>
+                  <span>{t("sustain.achievedLabel")}: <strong>{result.achieved_reduction_percent?.toFixed(1)}%</strong></span>
                   {!result.compliant && (
-                    <span className="text-red-600">Gap: <strong>{result.gap_percent?.toFixed(1)}%</strong></span>
+                    <span className="text-red-600">{t("sustain.gapLabel")}: <strong>{result.gap_percent?.toFixed(1)}%</strong></span>
                   )}
                 </div>
               </div>
@@ -260,19 +260,19 @@ export default function ScienceBasedTargetsPage() {
       <div className="grid grid-cols-3 gap-4">
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Total SBTs</p>
+            <p className="text-sm text-muted-foreground">{t("sustain.totalSbts")}</p>
             <p className="text-2xl font-bold">{sbts?.length ?? 0}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Committed</p>
+            <p className="text-sm text-muted-foreground">{t("sustain.committed")}</p>
             <p className="text-2xl font-bold text-emerald-600">{committed}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-6">
-            <p className="text-sm text-muted-foreground">Validated</p>
+            <p className="text-sm text-muted-foreground">{t("sustain.validated")}</p>
             <p className="text-2xl font-bold text-blue-600">{validated}</p>
           </CardContent>
         </Card>

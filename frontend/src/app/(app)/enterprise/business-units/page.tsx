@@ -65,14 +65,14 @@ function BUTreeNode({
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-sm truncate">{bu.name}</p>
           {bu.region_scope && (
-            <p className="text-xs text-muted-foreground">Scope: {bu.region_scope}</p>
+            <p className="text-xs text-muted-foreground">{t("ent.buScope").replace("{scope}", bu.region_scope)}</p>
           )}
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           {health !== null && (
             <div className="text-right">
               <p className={`text-sm font-bold ${healthColor(health)}`}>{health.toFixed(0)}%</p>
-              <p className="text-[10px] text-muted-foreground">ESG Health</p>
+              <p className="text-[10px] text-muted-foreground">{t("dashboard.esgHealth")}</p>
             </div>
           )}
           {bu.is_active ? (
@@ -90,7 +90,7 @@ function BUTreeNode({
           {rollup && (
             <div className="space-y-2">
               <div className="flex justify-between text-xs text-muted-foreground mb-0.5">
-                <span>Compliance Readiness</span>
+                <span>{t("ent.complianceReadiness")}</span>
                 <span className={`font-semibold ${healthColor(rollup.compliance_readiness)}`}>
                   {rollup.compliance_readiness.toFixed(0)}%
                 </span>
@@ -135,7 +135,7 @@ function BUTreeNode({
           {/* Legal Entities scoped to this BU's region */}
           {legalEntities.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Legal Entities</p>
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("ent.legalEntities")}</p>
               {legalEntities.map((le) => (
                 <div key={le.id} className="flex items-center gap-2 rounded border bg-background px-3 py-2">
                   <Landmark className="h-3.5 w-3.5 text-violet-500 flex-shrink-0" />
@@ -203,7 +203,7 @@ function CreateBUModal({ enterpriseId, onClose }: { enterpriseId: string; onClos
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Region Scope</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.regionScope")}</label>
             <input
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={regionScope}
@@ -374,7 +374,7 @@ export default function BusinessUnitsPage() {
               </div>
               {healthScore.drivers.length > 0 && (
                 <div className="space-y-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Key Drivers</p>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("ent.keyDrivers")}</p>
                   {healthScore.drivers.slice(0, 3).map((d) => (
                     <p key={d} className="text-xs text-muted-foreground">· {d}</p>
                   ))}
@@ -416,7 +416,7 @@ export default function BusinessUnitsPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Landmark className="h-4 w-4 text-violet-500" />
-              Legal Entities
+              {t("ent.legalEntities")}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">

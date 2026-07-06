@@ -1,3 +1,5 @@
+from .stakeholders import router as stakeholders_router, public_router as stakeholders_public_router
+from .dd_governance import router as dd_governance_router, public_router as dd_governance_public_router
 from .agents import router as agents_router
 from .disclosure import router as disclosure_router
 from .due_diligence import router as due_diligence_router
@@ -67,6 +69,19 @@ from .regulatory_change import router as regulatory_change_router
 from .evaluation import router as evaluation_router
 from .self_improvement import router as self_improvement_router
 from .corrective_action_plan import router as corrective_action_plan_router
+from .remedy_cases import router as remedy_cases_router, grievance_router as remedy_grievance_router, report_router as remedy_report_router
+from .effectiveness import router as effectiveness_router
+from .scoping import router as scoping_router
+from .activity_chain import router as activity_chain_router
+from .contractual_assurance import router as contractual_assurance_router
+from .sme_support import router as sme_support_router
+from .readiness import router as readiness_router
+from .impact_assessment import router as impact_assessment_router
+from .board_signoff import router as board_signoff_router
+from .supplier_assessment import router as supplier_assessment_router, public_router as supplier_assessment_public_router
+from .esap_export import router as esap_export_router
+from .threshold_monitor import router as threshold_monitor_router
+from .regulatory_radar import router as regulatory_radar_router
 
 __all__ = [
     "agents_router",
@@ -140,4 +155,24 @@ __all__ = [
     "evaluation_router",
     "self_improvement_router",
     "corrective_action_plan_router",
+    "stakeholders_router",
+    "stakeholders_public_router",
+    "dd_governance_router",
+    "dd_governance_public_router",
+    "remedy_cases_router",
+    "remedy_grievance_router",
+    "remedy_report_router",
+    "effectiveness_router",
+    "scoping_router",
+    "activity_chain_router",
+    "contractual_assurance_router",
+    "sme_support_router",
+    "readiness_router",
+    "impact_assessment_router",
+    "board_signoff_router",
+    "supplier_assessment_router",
+    "supplier_assessment_public_router",
+    "esap_export_router",
+    "threshold_monitor_router",
+    "regulatory_radar_router",
 ]

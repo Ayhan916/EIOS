@@ -28,6 +28,8 @@ import {
 import { evaluationApi, BenchmarkResult, EvaluationRun } from "@/lib/api/evaluation";
 import apiClient from "@/lib/api/client";
 import { FounderChat } from "@/components/founder-chat";
+import { useLanguage } from "@/lib/i18n/context";
+import { formatDate } from "@/lib/utils";
 
 // ── Agent monitoring types ────────────────────────────────────────────────────
 
@@ -107,8 +109,9 @@ function StatCard({
 // ── Health gauge (large) ──────────────────────────────────────────────────────
 
 function HealthGauge({ score }: { score: number }) {
+  const { t } = useLanguage();
   const c = HEALTH_COLOR(score);
-  const label = score >= 80 ? "HEALTHY" : score >= 60 ? "FAIR" : "NEEDS ATTENTION";
+  const label = score >= 80 ? t("missionControl.healthy") : score >= 60 ? t("missionControl.fair") : t("missionControl.needsAttention");
   return (
     <div className="flex flex-col items-center justify-center gap-1 py-4">
       <span className={`text-6xl font-black tabular-nums ${c}`}>{score.toFixed(0)}</span>
@@ -127,7 +130,7 @@ function TrendChart({ runs, metrics }: {
   const data = [...runs]
     .reverse()
     .map((r, i) => ({
-      name: r.computed_at ? new Date(r.computed_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) : `Run ${i + 1}`,
+      name: r.computed_at ? formatDate(r.computed_at) : `Run ${i + 1}`,
       ...Object.fromEntries(metrics.map((m) => [m.key, Number(r[m.key] ?? 0)])),
     }));
 
@@ -188,8 +191,9 @@ function BenchmarkModuleSummary({ results }: { results: BenchmarkResult[] }) {
 // ── Agent status grid ─────────────────────────────────────────────────────────
 
 function AgentStatusGrid({ agents }: { agents: MonitoringAgent[] }) {
+  const { t } = useLanguage();
   if (agents.length === 0) return (
-    <p className="text-xs text-gray-400 text-center py-4">No agents configured.</p>
+    <p className="text-xs text-gray-400 text-center py-4">{t("missionControl.noAgents")}</p>
   );
   return (
     <div className="grid grid-cols-1 gap-2">
@@ -197,9 +201,9 @@ function AgentStatusGrid({ agents }: { agents: MonitoringAgent[] }) {
         <div key={a.id} className="flex items-center gap-3 rounded-lg border border-gray-100 dark:border-gray-800 px-3 py-2">
           <div className={`h-2 w-2 rounded-full shrink-0 ${AGENT_DOT[a.status] ?? "bg-gray-400"}`} />
           <span className="flex-1 text-xs font-medium text-gray-700 dark:text-gray-300 truncate">{a.name || a.agent_type}</span>
-          <span className="text-xs text-gray-400 tabular-nums">{a.run_count} runs</span>
+          <span className="text-xs text-gray-400 tabular-nums">{t("missionControl.agentRuns").replace("{n}", String(a.run_count))}</span>
           {a.failure_count > 0 && (
-            <span className="rounded-full bg-red-100 text-red-700 text-xs px-1.5 py-0.5">{a.failure_count} err</span>
+            <span className="rounded-full bg-red-100 text-red-700 text-xs px-1.5 py-0.5">{t("missionControl.agentErrors").replace("{n}", String(a.failure_count))}</span>
           )}
         </div>
       ))}
@@ -210,6 +214,7 @@ function AgentStatusGrid({ agents }: { agents: MonitoringAgent[] }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function MissionControlPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [windowDays, setWindowDays] = useState(30);
   const [activeChart, setActiveChart] = useState<"quality" | "cost">("quality");
@@ -247,7 +252,7 @@ export default function MissionControlPage() {
   const trendRuns = trends?.runs ?? [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -255,9 +260,9 @@ export default function MissionControlPage() {
             <Zap className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Mission Control</h1>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t("missionControl.title")}</h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Platform AI health · PRD Journey 1 · Founder view
+              {t("missionControl.subtitle")}
             </p>
           </div>
         </div>
@@ -267,9 +272,9 @@ export default function MissionControlPage() {
             onChange={(e) => setWindowDays(Number(e.target.value))}
             className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1.5 text-sm"
           >
-            <option value={7}>7 days</option>
-            <option value={30}>30 days</option>
-            <option value={90}>90 days</option>
+            <option value={7}>{t("evaluation.windowDays").replace("{n}", "7")}</option>
+            <option value={30}>{t("evaluation.windowDays").replace("{n}", "30")}</option>
+            <option value={90}>{t("evaluation.windowDays").replace("{n}", "90")}</option>
           </select>
           <button
             onClick={() => runMutation.mutate()}
@@ -277,16 +282,16 @@ export default function MissionControlPage() {
             className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${runMutation.isPending ? "animate-spin" : ""}`} />
-            {runMutation.isPending ? "Running…" : "Run Evaluation"}
+            {runMutation.isPending ? t("missionControl.running") : t("missionControl.runEval")}
           </button>
         </div>
       </div>
 
       {statusLoading ? (
-        <div className="py-10 text-center text-sm text-gray-400">Loading platform status…</div>
+        <div className="py-10 text-center text-sm text-gray-400">{t("missionControl.loading")}</div>
       ) : !status || status.platform_health_score === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center text-gray-400">
-          No evaluation data yet. Click "Run Evaluation" to initialise.
+          {t("missionControl.noData")}
         </div>
       ) : (
         <>
@@ -294,7 +299,7 @@ export default function MissionControlPage() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             {/* Health gauge */}
             <div className="md:col-span-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 flex flex-col items-center">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Platform Health</p>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">{t("missionControl.platformHealth")}</p>
               <HealthGauge score={status.platform_health_score} />
               <div className="flex items-center gap-2 mt-2">
                 <span className={`rounded-full border px-3 py-0.5 text-xs font-bold uppercase ${BM_BADGE[status.benchmark_status]}`}>
@@ -302,48 +307,48 @@ export default function MissionControlPage() {
                 </span>
               </div>
               <p className="text-xs text-gray-400 mt-1">
-                {status.benchmark_passed}/{status.benchmark_total} benchmarks
+                {t("missionControl.benchmarks").replace("{passed}", String(status.benchmark_passed)).replace("{total}", String(status.benchmark_total))}
               </p>
             </div>
 
             {/* Metric grid */}
             <div className="md:col-span-3 grid grid-cols-2 md:grid-cols-3 gap-3">
               <StatCard
-                label="Accuracy"
+                label={t("missionControl.accuracy")}
                 value={`${(status.accuracy_score * 100).toFixed(1)}%`}
-                sub="Benchmark pass rate"
+                sub={t("missionControl.accuracySub")}
                 icon={BarChart3}
                 color="blue"
               />
               <StatCard
-                label="Confidence"
+                label={t("missionControl.confidence")}
                 value={`${(status.confidence_score * 100).toFixed(1)}%`}
-                sub="Mean agent confidence"
+                sub={t("missionControl.confidenceSub")}
                 icon={TrendingUp}
                 color="green"
               />
               <StatCard
-                label="Hallucination"
+                label={t("missionControl.hallucination")}
                 value={`${(status.hallucination_rate * 100).toFixed(2)}%`}
-                sub="High-conf error proxy"
+                sub={t("missionControl.hallucinationSub")}
                 icon={AlertTriangle}
                 color={status.hallucination_rate > 0.05 ? "red" : "green"}
               />
               <StatCard
-                label="Error Rate"
+                label={t("missionControl.errorRate")}
                 value={`${(status.error_rate * 100).toFixed(2)}%`}
-                sub={`${status.agent_run_count} runs in window`}
+                sub={t("missionControl.errorRateSub").replace("{n}", String(status.agent_run_count))}
                 icon={Activity}
                 color={status.error_rate > 0.1 ? "red" : "slate"}
               />
               <StatCard
-                label="Cost / 7d"
+                label={t("missionControl.cost7d")}
                 value={`$${status.cost_usd_last_7d.toFixed(4)}`}
                 icon={DollarSign}
                 color="purple"
               />
               <StatCard
-                label="Cost / 30d"
+                label={t("missionControl.cost30d")}
                 value={`$${status.cost_usd_last_30d.toFixed(4)}`}
                 icon={DollarSign}
                 color="purple"
@@ -356,7 +361,7 @@ export default function MissionControlPage() {
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Trends ({trendRuns.length} evaluation runs)
+                  {t("missionControl.trends").replace("{n}", String(trendRuns.length))}
                 </p>
                 <div className="flex gap-1">
                   {(["quality", "cost"] as const).map((tab) => (
@@ -369,7 +374,7 @@ export default function MissionControlPage() {
                           : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
                       }`}
                     >
-                      {tab === "quality" ? "Quality Metrics" : "Cost"}
+                      {tab === "quality" ? t("missionControl.qualityMetrics") : t("missionControl.cost")}
                     </button>
                   ))}
                 </div>
@@ -379,17 +384,17 @@ export default function MissionControlPage() {
                 <TrendChart
                   runs={trendRuns}
                   metrics={[
-                    { key: "accuracy_score",      label: "Accuracy",      color: "#3b82f6", format: (v) => `${(v * 100).toFixed(1)}%` },
-                    { key: "confidence_score",    label: "Confidence",    color: "#10b981", format: (v) => `${(v * 100).toFixed(1)}%` },
-                    { key: "hallucination_rate",  label: "Hallucination", color: "#ef4444", format: (v) => `${(v * 100).toFixed(2)}%` },
+                    { key: "accuracy_score",      label: t("missionControl.trendAccuracy"),      color: "#3b82f6", format: (v) => `${(v * 100).toFixed(1)}%` },
+                    { key: "confidence_score",    label: t("missionControl.trendConfidence"),    color: "#10b981", format: (v) => `${(v * 100).toFixed(1)}%` },
+                    { key: "hallucination_rate",  label: t("missionControl.trendHallucination"), color: "#ef4444", format: (v) => `${(v * 100).toFixed(2)}%` },
                   ]}
                 />
               ) : (
                 <TrendChart
                   runs={trendRuns}
                   metrics={[
-                    { key: "cost_usd_last_7d",  label: "Cost 7d ($)",  color: "#a855f7", format: (v) => `$${v.toFixed(4)}` },
-                    { key: "cost_usd_last_30d", label: "Cost 30d ($)", color: "#6366f1", format: (v) => `$${v.toFixed(4)}` },
+                    { key: "cost_usd_last_7d",  label: t("missionControl.cost7dLabel"),  color: "#a855f7", format: (v) => `$${v.toFixed(4)}` },
+                    { key: "cost_usd_last_30d", label: t("missionControl.cost30dLabel"), color: "#6366f1", format: (v) => `$${v.toFixed(4)}` },
                   ]}
                 />
               )}
@@ -403,13 +408,13 @@ export default function MissionControlPage() {
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4 text-indigo-500" />
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Benchmark Suite
+                  {t("missionControl.benchmarkSuite")}
                 </p>
               </div>
               {benchmarks && benchmarks.length > 0 ? (
                 <BenchmarkModuleSummary results={benchmarks} />
               ) : (
-                <p className="text-xs text-gray-400">Run evaluation to see benchmark details.</p>
+                <p className="text-xs text-gray-400">{t("missionControl.runForBenchmarks")}</p>
               )}
             </div>
 
@@ -419,19 +424,19 @@ export default function MissionControlPage() {
                 <div className="flex items-center gap-2">
                   <Bot className="h-4 w-4 text-sky-500" />
                   <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                    Agent Status
+                    {t("missionControl.agentStatus")}
                   </p>
                 </div>
                 {status.agents.total > 0 && (
                   <div className="flex items-center gap-2 text-xs text-gray-400">
                     <span className="flex items-center gap-1">
                       <span className="h-2 w-2 rounded-full bg-emerald-400 inline-block" />
-                      {status.agents.active} active
+                      {t("missionControl.agentsActive").replace("{n}", String(status.agents.active))}
                     </span>
                     {status.agents.error > 0 && (
                       <span className="flex items-center gap-1 text-red-500 font-semibold">
                         <span className="h-2 w-2 rounded-full bg-red-500 inline-block" />
-                        {status.agents.error} error
+                        {t("missionControl.agentsError").replace("{n}", String(status.agents.error))}
                       </span>
                     )}
                   </div>
@@ -444,8 +449,8 @@ export default function MissionControlPage() {
           {/* Last updated */}
           {status.computed_at && (
             <p className="text-xs text-gray-400">
-              Last evaluation: {new Date(status.computed_at).toLocaleString()} ·{" "}
-              Auto-refreshes every 60s
+              {t("missionControl.lastEval")}: {formatDate(status.computed_at)} ·{" "}
+              {t("missionControl.autoRefresh")}
             </p>
           )}
         </>
@@ -454,7 +459,7 @@ export default function MissionControlPage() {
       {/* Founder Chat — always visible (no data prompts to run evaluation first) */}
       <div>
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200 mb-3">
-          Founder Intelligence Chat
+          {t("missionControl.founderChat")}
         </h2>
         <FounderChat />
       </div>

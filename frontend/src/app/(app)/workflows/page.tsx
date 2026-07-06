@@ -81,11 +81,11 @@ async function runWorkflow(payload: { workflow_type: string; query: string }): P
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const WORKFLOW_LABELS: Record<string, string> = {
-  due_diligence: "Due Diligence",
-  quick_scan: "Quick Scan",
-  evidence_analysis: "Evidence Analysis",
-  governance_review: "Governance Review",
+const WORKFLOW_LABEL_KEYS: Record<string, string> = {
+  due_diligence: "workflows.typeDueDiligence",
+  quick_scan: "workflows.typeQuickScan",
+  evidence_analysis: "workflows.typeEvidenceAnalysis",
+  governance_review: "workflows.typeGovernanceReview",
 };
 
 const WORKFLOW_ICONS: Record<string, string> = {
@@ -95,21 +95,29 @@ const WORKFLOW_ICONS: Record<string, string> = {
   governance_review: "🏛️",
 };
 
-const STATUS_CONFIG: Record<string, { icon: React.ElementType; className: string; label: string }> = {
-  pending: { icon: Clock, className: "text-amber-600 bg-amber-50 border-amber-200", label: "Pending" },
-  in_progress: { icon: Loader2, className: "text-blue-600 bg-blue-50 border-blue-200", label: "Running" },
-  completed: { icon: CheckCircle2, className: "text-green-600 bg-green-50 border-green-200", label: "Completed" },
-  failed: { icon: XCircle, className: "text-red-600 bg-red-50 border-red-200", label: "Failed" },
-  cancelled: { icon: XCircle, className: "text-slate-500 bg-slate-50 border-slate-200", label: "Cancelled" },
+const STATUS_CONFIG: Record<string, { icon: React.ElementType; className: string }> = {
+  pending: { icon: Clock, className: "text-amber-600 bg-amber-50 border-amber-200" },
+  in_progress: { icon: Loader2, className: "text-blue-600 bg-blue-50 border-blue-200" },
+  completed: { icon: CheckCircle2, className: "text-green-600 bg-green-50 border-green-200" },
+  failed: { icon: XCircle, className: "text-red-600 bg-red-50 border-red-200" },
+  cancelled: { icon: XCircle, className: "text-slate-500 bg-slate-50 border-slate-200" },
 };
 
 function JobStatusBadge({ status }: { status: string }) {
+  const { t } = useLanguage();
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.pending;
   const Icon = cfg.icon;
+  const labels: Record<string, string> = {
+    pending: t("workflows.pending"),
+    in_progress: t("workflows.inProgress"),
+    completed: t("workflows.completed"),
+    failed: t("workflows.failed"),
+    cancelled: t("workflows.cancelled"),
+  };
   return (
     <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${cfg.className}`}>
       <Icon className={`h-3 w-3 ${status === "in_progress" ? "animate-spin" : ""}`} />
-      {cfg.label}
+      {labels[status] ?? status}
     </span>
   );
 }
@@ -221,7 +229,7 @@ export default function WorkflowsPage() {
                   }`}
                 >
                   <div className="text-2xl mb-2">{WORKFLOW_ICONS[wt.workflow_type] ?? "🔄"}</div>
-                  <p className="font-semibold text-sm">{WORKFLOW_LABELS[wt.workflow_type] ?? wt.workflow_type}</p>
+                  <p className="font-semibold text-sm">{WORKFLOW_LABEL_KEYS[wt.workflow_type] ? t(WORKFLOW_LABEL_KEYS[wt.workflow_type] as Parameters<typeof t>[0]) : wt.workflow_type}</p>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{wt.description}</p>
                   <div className="mt-3 flex flex-wrap gap-1">
                     {wt.agent_sequence.map((agent, i) => (
@@ -243,7 +251,7 @@ export default function WorkflowsPage() {
             <CardContent className="space-y-4">
               {!selectedType && (
                 <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                  Bitte oben einen Workflow-Typ auswählen.
+                  {t("workflows.selectTypePrompt")}
                 </p>
               )}
               <div className="space-y-1.5">
@@ -279,7 +287,7 @@ export default function WorkflowsPage() {
                     className="underline hover:no-underline"
                     onClick={() => { setActiveTab("jobs"); setSubmittedJob(null); }}
                   >
-                    {t("workflows.jobsTab")} ansehen
+                    {t("workflows.viewJobsLink")}
                   </button>
                 </div>
               )}
@@ -293,7 +301,7 @@ export default function WorkflowsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => refetchJobs()} className="gap-1.5">
-              <RefreshCw className="h-4 w-4" /> Refresh
+              <RefreshCw className="h-4 w-4" /> {t("workflows.refresh")}
             </Button>
           </div>
           {jobsLoading ? (
@@ -319,7 +327,7 @@ export default function WorkflowsPage() {
                         <td className="px-4 py-3">
                           <span className="font-medium">
                             {WORKFLOW_ICONS[job.workflow_type] ?? "🔄"}{" "}
-                            {WORKFLOW_LABELS[job.workflow_type] ?? job.workflow_type}
+                            {WORKFLOW_LABEL_KEYS[job.workflow_type] ? t(WORKFLOW_LABEL_KEYS[job.workflow_type] as Parameters<typeof t>[0]) : job.workflow_type}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-muted-foreground max-w-xs">
@@ -359,7 +367,7 @@ export default function WorkflowsPage() {
         <div className="space-y-4">
           <div className="flex justify-end">
             <Button variant="outline" size="sm" onClick={() => refetchRuns()} className="gap-1.5">
-              <RefreshCw className="h-4 w-4" /> Refresh
+              <RefreshCw className="h-4 w-4" /> {t("workflows.refresh")}
             </Button>
           </div>
           {runsLoading ? (
@@ -392,7 +400,7 @@ function RunCard({ run }: { run: WorkflowRunSummary }) {
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-medium text-sm">
                 {WORKFLOW_ICONS[run.workflow_type] ?? "🔄"}{" "}
-                {WORKFLOW_LABELS[run.workflow_type] ?? run.workflow_type}
+                {WORKFLOW_LABEL_KEYS[run.workflow_type] ? t(WORKFLOW_LABEL_KEYS[run.workflow_type] as Parameters<typeof t>[0]) : run.workflow_type}
               </span>
               {run.verdict && (
                 <span className={`text-xs font-semibold ${verdictCls}`}>

@@ -376,7 +376,7 @@ function SurvSignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, 
                 href={`/suppliers/${signal.supplier_id}`}
                 className="inline-flex items-center gap-1 rounded bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700 hover:bg-blue-100 transition-colors"
               >
-                <ShieldAlert className="h-3 w-3" /> Supplier &amp; Reassess →
+                <ShieldAlert className="h-3 w-3" /> {t("surveillance.supplierReassess")}
               </Link>
             )}
           </span>
@@ -421,7 +421,7 @@ function SurvEpisodeRow({ episode, nameMap }: { episode: any; nameMap: Map<strin
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">{episode.title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {episode.signal_count} {episode.signal_count === 1 ? "Signal" : "Signals"}
+            {episode.signal_count} {episode.signal_count === 1 ? t("surveillance.signalSingular") : t("surveillance.signalPlural")}
             {supplierName ? ` · ${supplierName}` : ""}{" · "}{formatDateTime(episode.started_at)}
           </p>
         </div>
@@ -767,7 +767,7 @@ function SurveillanceTab({ nameMap }: { nameMap: Map<string, string> }) {
                     <Label className="text-xs">{t("surveillance.episodeSupplier")}</Label>
                     <select className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm"
                       value={epSupplierId} onChange={(e) => setEpSupplierId(e.target.value)}>
-                      <option value="">— none —</option>
+                      <option value="">— {t("common.none")} —</option>
                       {supplierOptions.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
                     </select>
                   </div>
@@ -806,7 +806,7 @@ function SurveillanceTab({ nameMap }: { nameMap: Map<string, string> }) {
                   <Label className="text-xs">{t("surveillance.supplierLabel")} *</Label>
                   <select className="mt-1 h-9 w-full rounded-md border border-slate-200 bg-white px-2 text-sm"
                     value={wlSupplierId} onChange={(e) => setWlSupplierId(e.target.value)}>
-                    <option value="">— select —</option>
+                    <option value="">— {t("common.none")} —</option>
                     {supplierOptions.map(([id, n]) => <option key={id} value={id}>{n}</option>)}
                   </select>
                 </div>
@@ -1298,20 +1298,21 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
 
 // Sub-tabs inside "Supplier Intelligence"
 const INTEL_SUB_TABS = [
-  { key: "feed",  label: "Intelligence Feed" },
-  { key: "twin",  label: "Supplier Twin" },
+  { key: "feed",  labelKey: "twin.tabFeed" as const },
+  { key: "twin",  labelKey: "twin.tabTwin" as const },
 ] as const;
 type IntelSubTab = (typeof INTEL_SUB_TABS)[number]["key"];
 
 function IntelligenceTab({ nameMap, orgId }: { nameMap: Map<string, string>; orgId: string }) {
+  const { t } = useLanguage();
   const [sub, setSub] = useState<IntelSubTab>("feed");
   return (
     <div className="space-y-4">
       <div className="flex gap-2">
-        {INTEL_SUB_TABS.map((t) => (
-          <button key={t.key} onClick={() => setSub(t.key)}
-            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${sub === t.key ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-            {t.label}
+        {INTEL_SUB_TABS.map((tab) => (
+          <button key={tab.key} onClick={() => setSub(tab.key)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-colors ${sub === tab.key ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -1640,23 +1641,24 @@ function ExtDatasetsSection({ orgId }: { orgId: string }) {
 
 // Sub-tabs inside "Externe Daten"
 const EXT_SUB_TABS = [
-  { key: "signals",   label: "Signale",        icon: Zap },
-  { key: "countries", label: "Länder",          icon: Globe },
-  { key: "sectors",   label: "Sektoren",        icon: Layers },
-  { key: "high-risk", label: "Hochrisiko",      icon: AlertTriangle },
-  { key: "datasets",  label: "Datensätze",      icon: Database },
+  { key: "signals",   labelKey: "extint.tabSignals" as const,   icon: Zap },
+  { key: "countries", labelKey: "extint.tabCountries" as const, icon: Globe },
+  { key: "sectors",   labelKey: "extint.tabSectors" as const,   icon: Layers },
+  { key: "high-risk", labelKey: "extint.tabHighRisk" as const,  icon: AlertTriangle },
+  { key: "datasets",  labelKey: "extint.tabDatasets" as const,  icon: Database },
 ] as const;
 type ExtSubTab = (typeof EXT_SUB_TABS)[number]["key"];
 
 function ExternalDataTab({ orgId }: { orgId: string }) {
+  const { t } = useLanguage();
   const [sub, setSub] = useState<ExtSubTab>("signals");
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2">
-        {EXT_SUB_TABS.map((t) => (
-          <button key={t.key} onClick={() => setSub(t.key)}
-            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${sub === t.key ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
-            <t.icon className="h-3.5 w-3.5" /> {t.label}
+        {EXT_SUB_TABS.map((tab) => (
+          <button key={tab.key} onClick={() => setSub(tab.key)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${sub === tab.key ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}>
+            <tab.icon className="h-3.5 w-3.5" /> {t(tab.labelKey)}
           </button>
         ))}
       </div>
@@ -1674,9 +1676,9 @@ function ExternalDataTab({ orgId }: { orgId: string }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const tab_defs = [
-  { key: "signals",      label: "Signale & Episoden" },
-  { key: "intelligence", label: "Supplier Intelligence" },
-  { key: "external",     label: "Externe Daten" },
+  { key: "signals",      labelKey: "surveillance.tabSignals" as const },
+  { key: "intelligence", labelKey: "surveillance.tabIntelligence" as const },
+  { key: "external",     labelKey: "surveillance.tabExternal" as const },
 ] as const;
 type TabKey = (typeof tab_defs)[number]["key"];
 
@@ -1689,7 +1691,7 @@ export default function IntelligenceHubPage() {
   const nameMap = useSupplierNameMap();
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -1711,7 +1713,7 @@ export default function IntelligenceHubPage() {
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </nav>

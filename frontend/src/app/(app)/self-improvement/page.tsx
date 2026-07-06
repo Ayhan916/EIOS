@@ -16,56 +16,58 @@ import {
   Zap,
 } from "lucide-react";
 import { selfImprovementApi, ImprovementProposal } from "@/lib/api/self-improvement";
+import { useLanguage } from "@/lib/i18n/context";
+import { formatDate } from "@/lib/utils";
 
-// ── Status config ─────────────────────────────────────────────────────────────
+// ── Status config (no labels — computed inside components) ────────────────────
 
 const STATUS_CONFIG: Record<
   string,
-  { label: string; color: string; icon: React.ElementType }
+  { color: string; icon: React.ElementType }
 > = {
-  DRAFT:       { label: "Draft",       color: "bg-gray-100 text-gray-700 border border-gray-200",       icon: AlertTriangle },
-  APPROVED:    { label: "Approved",    color: "bg-blue-100 text-blue-700 border border-blue-200",       icon: ThumbsUp },
-  IN_PROGRESS: { label: "In Progress", color: "bg-amber-100 text-amber-700 border border-amber-200",    icon: RefreshCw },
-  VERIFIED:    { label: "Verified ✓",  color: "bg-emerald-100 text-emerald-700 border border-emerald-200", icon: CheckCircle2 },
-  REJECTED:    { label: "Rejected",    color: "bg-red-100 text-red-700 border border-red-200",          icon: XCircle },
+  DRAFT:       { color: "bg-gray-100 text-gray-700 border border-gray-200",       icon: AlertTriangle },
+  APPROVED:    { color: "bg-blue-100 text-blue-700 border border-blue-200",       icon: ThumbsUp },
+  IN_PROGRESS: { color: "bg-amber-100 text-amber-700 border border-amber-200",    icon: RefreshCw },
+  VERIFIED:    { color: "bg-emerald-100 text-emerald-700 border border-emerald-200", icon: CheckCircle2 },
+  REJECTED:    { color: "bg-red-100 text-red-700 border border-red-200",          icon: XCircle },
 };
 
-const WEAKNESS_LABELS: Record<string, string> = {
-  LOW_BENCHMARK_ACCURACY:  "Benchmark Accuracy",
-  DECLINING_ACCURACY_TREND:"Accuracy Trend",
-  HIGH_HALLUCINATION_RATE: "Hallucination Rate",
-  HIGH_ERROR_RATE:         "Error Rate",
-  LOW_CONFIDENCE:          "Confidence",
-  LOW_PLATFORM_HEALTH:     "Platform Health",
-  COST_ANOMALY:            "Cost Anomaly",
-};
+const STATUS_TABS = [
+  { key: undefined,      labelKey: "selfImprovement.tabAll" },
+  { key: "DRAFT",        labelKey: "selfImprovement.statusDraft" },
+  { key: "APPROVED",     labelKey: "selfImprovement.statusApproved" },
+  { key: "IN_PROGRESS",  labelKey: "selfImprovement.statusInProgress" },
+  { key: "VERIFIED",     labelKey: "selfImprovement.statusVerified" },
+  { key: "REJECTED",     labelKey: "selfImprovement.statusRejected" },
+] as const;
 
 // ── Reject modal ──────────────────────────────────────────────────────────────
 
 function RejectModal({ onConfirm, onCancel }: { onConfirm: (reason: string) => void; onCancel: () => void }) {
+  const { t } = useLanguage();
   const [reason, setReason] = useState("");
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="rounded-xl bg-white dark:bg-gray-900 shadow-xl border border-gray-200 dark:border-gray-700 w-full max-w-md p-6 space-y-4">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Reject Proposal</h3>
-        <p className="text-xs text-gray-500">Provide a reason (min. 10 characters). This is stored in the audit trail.</p>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{t("selfImprovement.rejectTitle")}</h3>
+        <p className="text-xs text-gray-500">{t("selfImprovement.rejectHint")}</p>
         <textarea
           rows={4}
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Reason for rejection…"
+          placeholder={t("selfImprovement.rejectPlaceholder")}
           className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-red-400"
         />
         <div className="flex gap-2 justify-end">
           <button onClick={onCancel} className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => reason.length >= 10 && onConfirm(reason)}
             disabled={reason.length < 10}
             className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
           >
-            Reject
+            {t("selfImprovement.rejectBtn")}
           </button>
         </div>
       </div>
@@ -84,10 +86,30 @@ function ProposalCard({
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
 }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const cfg = STATUS_CONFIG[proposal.approval_status] ?? STATUS_CONFIG.DRAFT;
   const StatusIcon = cfg.icon;
-  const weaknessLabel = WEAKNESS_LABELS[proposal.weakness_type] ?? proposal.weakness_type;
+
+  const weaknessLabels: Record<string, string> = {
+    LOW_BENCHMARK_ACCURACY:   t("selfImprovement.wkBenchmarkAcc"),
+    DECLINING_ACCURACY_TREND: t("selfImprovement.wkAccuracyTrend"),
+    HIGH_HALLUCINATION_RATE:  t("selfImprovement.wkHallucinationRate"),
+    HIGH_ERROR_RATE:          t("selfImprovement.wkErrorRate"),
+    LOW_CONFIDENCE:           t("selfImprovement.wkConfidence"),
+    LOW_PLATFORM_HEALTH:      t("selfImprovement.wkPlatformHealth"),
+    COST_ANOMALY:             t("selfImprovement.wkCostAnomaly"),
+  };
+
+  const statusLabels: Record<string, string> = {
+    DRAFT:       t("selfImprovement.statusDraft"),
+    APPROVED:    t("selfImprovement.statusApproved"),
+    IN_PROGRESS: t("selfImprovement.statusInProgress"),
+    VERIFIED:    t("selfImprovement.statusVerified"),
+    REJECTED:    t("selfImprovement.statusRejected"),
+  };
+
+  const weaknessLabel = weaknessLabels[proposal.weakness_type] ?? proposal.weakness_type;
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
@@ -116,18 +138,19 @@ function ProposalCard({
             </span>
             <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cfg.color}`}>
               <StatusIcon className="inline h-3 w-3 mr-0.5" />
-              {cfg.label}
+              {statusLabels[proposal.approval_status] ?? proposal.approval_status}
             </span>
           </div>
           <p className="mt-1.5 text-sm font-semibold text-gray-900 dark:text-white leading-snug">
             {proposal.title}
           </p>
           <p className="mt-0.5 text-xs text-gray-500">
-            Impact: +{(proposal.expected_impact * 100).toFixed(1)} pp ·
-            Current: {(proposal.current_value * 100).toFixed(1)}% →
-            Target: {(proposal.target_value * 100).toFixed(1)}%
+            {t("selfImprovement.impact")
+              .replace("{n}", (proposal.expected_impact * 100).toFixed(1))
+              .replace("{cur}", (proposal.current_value * 100).toFixed(1))
+              .replace("{tgt}", (proposal.target_value * 100).toFixed(1))}
             {proposal.weakness_type === "COST_ANOMALY" && (
-              <> (values in USD, not %)</>
+              <> {t("selfImprovement.impactUsd")}</>
             )}
           </p>
         </div>
@@ -144,11 +167,11 @@ function ProposalCard({
       {expanded && (
         <div className="border-t border-gray-100 dark:border-gray-800 px-4 pb-4 pt-3 space-y-3">
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Description</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t("selfImprovement.descLabel")}</p>
             <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">{proposal.description}</p>
           </div>
           <div>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Suggested Action</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">{t("selfImprovement.actionLabel")}</p>
             <pre className="text-xs text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800 rounded-lg p-3 whitespace-pre-wrap font-mono leading-relaxed">
               {proposal.suggested_action}
             </pre>
@@ -157,12 +180,11 @@ function ProposalCard({
           {proposal.verified_improvement !== null && (
             <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-3 py-2">
               <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                Verified improvement: {proposal.verified_improvement > 0 ? "+" : ""}
-                {proposal.verified_improvement.toFixed(1)} health score points
+                {t("selfImprovement.verifiedImprovement").replace("{delta}", `${proposal.verified_improvement > 0 ? "+" : ""}${proposal.verified_improvement.toFixed(1)}`)}
               </p>
               {proposal.verified_at && (
                 <p className="text-xs text-emerald-600 dark:text-emerald-500 mt-0.5">
-                  Verified: {new Date(proposal.verified_at).toLocaleString()}
+                  {t("selfImprovement.verifiedAt").replace("{date}", formatDate(proposal.verified_at))}
                 </p>
               )}
             </div>
@@ -170,7 +192,7 @@ function ProposalCard({
 
           {proposal.reject_reason && (
             <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 px-3 py-2">
-              <p className="text-xs font-semibold text-red-700">Rejection reason</p>
+              <p className="text-xs font-semibold text-red-700">{t("selfImprovement.rejectionReason")}</p>
               <p className="text-xs text-red-600 mt-0.5">{proposal.reject_reason}</p>
             </div>
           )}
@@ -183,14 +205,14 @@ function ProposalCard({
                 className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700"
               >
                 <ThumbsUp className="h-3 w-3" />
-                Approve
+                {t("selfImprovement.approveBtn")}
               </button>
               <button
                 onClick={() => onReject(proposal.id)}
                 className="flex items-center gap-1.5 rounded-lg border border-red-300 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
               >
                 <ThumbsDown className="h-3 w-3" />
-                Reject
+                {t("selfImprovement.rejectBtn")}
               </button>
             </div>
           )}
@@ -202,16 +224,8 @@ function ProposalCard({
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
-const STATUS_TABS = [
-  { key: undefined,      label: "All" },
-  { key: "DRAFT",        label: "Draft" },
-  { key: "APPROVED",     label: "Approved" },
-  { key: "IN_PROGRESS",  label: "In Progress" },
-  { key: "VERIFIED",     label: "Verified" },
-  { key: "REJECTED",     label: "Rejected" },
-] as const;
-
 export default function SelfImprovementPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
@@ -247,8 +261,24 @@ export default function SelfImprovementPage() {
     onSuccess: () => { invalidate(); setRejectTarget(null); },
   });
 
+  const summaryCards = summary ? [
+    { labelKey: "selfImprovement.statusDraft", value: summary.open_draft,  color: "text-gray-600" },
+    { labelKey: "selfImprovement.statusApproved", value: summary.approved, color: "text-blue-600" },
+    { labelKey: "selfImprovement.statusVerified", value: summary.verified, color: "text-emerald-600" },
+    { labelKey: "selfImprovement.statusRejected", value: summary.rejected, color: "text-red-500" },
+    {
+      labelKey: "selfImprovement.healthScore",
+      value: summary.latest_health_score !== null ? `${summary.latest_health_score.toFixed(0)}/100` : "—",
+      color: summary.latest_health_score !== null && summary.latest_health_score >= 80
+        ? "text-emerald-600"
+        : summary.latest_health_score !== null && summary.latest_health_score >= 60
+        ? "text-amber-600"
+        : "text-red-600",
+    },
+  ] : [];
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {rejectTarget && (
         <RejectModal
           onConfirm={(reason) => rejectMutation.mutate({ id: rejectTarget, reason })}
@@ -263,8 +293,8 @@ export default function SelfImprovementPage() {
             <TrendingUp className="h-6 w-6 text-violet-600 dark:text-violet-400" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900 dark:text-white">Self-Improvement Loop</h1>
-            <p className="text-xs text-gray-500">Automated weakness detection · Human approval required</p>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white">{t("selfImprovement.title")}</h1>
+            <p className="text-xs text-gray-500">{t("selfImprovement.subtitle")}</p>
           </div>
         </div>
         <button
@@ -273,7 +303,7 @@ export default function SelfImprovementPage() {
           className="flex items-center gap-2 rounded-lg bg-violet-600 px-4 py-2 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
         >
           <Zap className={`h-4 w-4 ${detectMutation.isPending ? "animate-pulse" : ""}`} />
-          {detectMutation.isPending ? "Detecting…" : "Detect Weaknesses"}
+          {detectMutation.isPending ? t("selfImprovement.detecting") : t("selfImprovement.detectBtn")}
         </button>
       </div>
 
@@ -291,27 +321,13 @@ export default function SelfImprovementPage() {
       {/* Summary cards */}
       {summary && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-          {[
-            { label: "Draft",       value: summary.open_draft,  color: "text-gray-600" },
-            { label: "Approved",    value: summary.approved,    color: "text-blue-600" },
-            { label: "Verified",    value: summary.verified,    color: "text-emerald-600" },
-            { label: "Rejected",    value: summary.rejected,    color: "text-red-500" },
-            {
-              label: "Health Score",
-              value: summary.latest_health_score !== null ? `${summary.latest_health_score.toFixed(0)}/100` : "—",
-              color: summary.latest_health_score !== null && summary.latest_health_score >= 80
-                ? "text-emerald-600"
-                : summary.latest_health_score !== null && summary.latest_health_score >= 60
-                ? "text-amber-600"
-                : "text-red-600",
-            },
-          ].map((s) => (
+          {summaryCards.map((s) => (
             <div
-              key={s.label}
+              key={s.labelKey}
               className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 text-center"
             >
               <p className={`text-2xl font-bold tabular-nums ${s.color}`}>{s.value}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{s.label}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{t(s.labelKey as Parameters<typeof t>[0])}</p>
             </div>
           ))}
         </div>
@@ -329,7 +345,7 @@ export default function SelfImprovementPage() {
                 : "text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
             }`}
           >
-            {tab.label}
+            {t(tab.labelKey as Parameters<typeof t>[0])}
             {tab.key === "DRAFT" && summary && summary.open_draft > 0 && (
               <span className="ml-1 rounded-full bg-amber-500 text-white text-xs px-1">
                 {summary.open_draft}
@@ -341,14 +357,14 @@ export default function SelfImprovementPage() {
 
       {/* Proposals list */}
       {isLoading ? (
-        <div className="py-10 text-center text-sm text-gray-400">Loading proposals…</div>
+        <div className="py-10 text-center text-sm text-gray-400">{t("selfImprovement.loading")}</div>
       ) : proposals.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center">
           <ShieldCheck className="mx-auto h-8 w-8 text-gray-300 mb-3" />
           <p className="text-sm text-gray-400">
             {activeTab
-              ? `No ${activeTab.toLowerCase()} proposals.`
-              : "No proposals yet — click 'Detect Weaknesses' to analyse the latest evaluation run."}
+              ? t("selfImprovement.noProposals").replace("{status}", activeTab.toLowerCase())
+              : t("selfImprovement.noProposalsAll")}
           </p>
         </div>
       ) : (
@@ -365,7 +381,7 @@ export default function SelfImprovementPage() {
       )}
 
       <p className="text-xs text-gray-400">
-        AI agents cannot approve, reject, or verify proposals — all decisions require human action.
+        {t("selfImprovement.humanNote")}
       </p>
     </div>
   );

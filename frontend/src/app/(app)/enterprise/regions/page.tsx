@@ -10,6 +10,7 @@ import {
   type EnterpriseRegion,
 } from "@/lib/api/enterprise";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatDate } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useLanguage } from "@/lib/i18n/context";
@@ -62,7 +63,7 @@ function CreateRegionModal({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">Data Residency</label>
+            <label className="mb-1 block text-sm font-medium">{t("ent.dataResidency")}</label>
             <select
               className="w-full rounded-lg border px-3 py-2 text-sm"
               value={residency}
@@ -83,7 +84,7 @@ function CreateRegionModal({
             disabled={!name || !code || isPending}
             className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white disabled:opacity-50"
           >
-            {isPending ? "Saving…" : t("common.create")}
+            {isPending ? t("common.saving") : t("common.create")}
           </button>
         </div>
       </div>
@@ -181,7 +182,7 @@ export default function RegionsPage() {
               </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p className="text-xs font-mono text-muted-foreground">
-                  Code: {region.code}
+                  {t("ent.regionCode").replace("{code}", region.code)}
                 </p>
                 <Badge
                   variant="outline"
@@ -190,7 +191,7 @@ export default function RegionsPage() {
                   {region.is_active ? t("common.active") : t("common.inactive")}
                 </Badge>
                 <p className="text-xs text-muted-foreground">
-                  Created {new Date(region.created_at).toLocaleDateString()}
+                  {t("common.createdAt")}: {formatDate(region.created_at)}
                 </p>
               </CardContent>
             </Card>

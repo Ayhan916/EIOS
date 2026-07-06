@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLanguage } from "@/lib/i18n/context";
 import { useAuth } from "@/lib/auth/context";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import {
   AlertCircle,
   ArrowRight,
@@ -826,10 +827,10 @@ function DisclosureTab() {
                             {hasIXBRL && (
                               <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${ixbrlValid ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>
                                 {ixbrlValid ? <CheckCircle2 className="h-3 w-3" /> : <XCircle className="h-3 w-3" />}
-                                iXBRL {ixbrlValid ? "Valid" : "Pending"}
+                                iXBRL {ixbrlValid ? t("reports.ixbrlValid") : t("reports.ixbrlPending")}
                               </span>
                             )}
-                            <span className="text-xs text-muted-foreground">{new Date(pkg.publication_date).toLocaleDateString()}</span>
+                            <span className="text-xs text-muted-foreground">{formatDate(pkg.publication_date)}</span>
                           </div>
                           {hasGRI && griPct != null && (
                             <div className="mt-2 space-y-1">
@@ -877,14 +878,14 @@ function DisclosureTab() {
 // ── TAB 2: Executive / Board Reports ─────────────────────────────────────────
 
 const BOARD_SLIDES = [
-  { key: "executive_summary",  label: "Executive Summary" },
-  { key: "esg_health",         label: "ESG Health Score" },
-  { key: "risk_heatmap",       label: "Risk Heatmap" },
-  { key: "supplier_portfolio", label: "Supplier Portfolio" },
-  { key: "compliance_status",  label: "Compliance Status" },
-  { key: "sustainability",     label: "Sustainability KPIs" },
-  { key: "financial_esg",      label: "Financial ESG" },
-  { key: "pending_decisions",  label: "Pending Decisions" },
+  { key: "executive_summary",  labelKey: "reports.slideExecutiveSummary" as const },
+  { key: "esg_health",         labelKey: "reports.slideEsgHealth" as const },
+  { key: "risk_heatmap",       labelKey: "reports.slideRiskHeatmap" as const },
+  { key: "supplier_portfolio", labelKey: "reports.slideSupplierPortfolio" as const },
+  { key: "compliance_status",  labelKey: "reports.slideComplianceStatus" as const },
+  { key: "sustainability",     labelKey: "reports.slideSustainability" as const },
+  { key: "financial_esg",      labelKey: "reports.slideFinancialEsg" as const },
+  { key: "pending_decisions",  labelKey: "reports.slidePendingDecisions" as const },
 ];
 
 function BoardReportForm({ onSuccess }: { onSuccess: () => void }) {
@@ -931,26 +932,26 @@ function BoardReportForm({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label htmlFor="br-start">Period Start</Label>
+              <Label htmlFor="br-start">{t("reports.periodStart")}</Label>
               <Input id="br-start" type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} required />
             </div>
             <div>
-              <Label htmlFor="br-end">Period End</Label>
+              <Label htmlFor="br-end">{t("reports.periodEnd")}</Label>
               <Input id="br-end" type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} required />
             </div>
           </div>
           <div>
-            <Label>KPI Trend Window</Label>
+            <Label>{t("reports.kpiTrendWindow")}</Label>
             <div className="mt-1 flex gap-2">
               {([30, 90, 365] as const).map((d) => (
                 <button key={d} type="button" onClick={() => setKpiDays(d)} className={`rounded px-3 py-1.5 text-sm font-medium transition-colors ${kpiDays === d ? "bg-slate-800 text-white" : "bg-slate-100 text-slate-700 hover:bg-slate-200"}`}>
-                  {d === 365 ? "1 Year" : `${d} Days`}
+                  {d === 365 ? t("reports.kpiYear") : t("reports.kpiDays").replace("{n}", String(d))}
                 </button>
               ))}
             </div>
           </div>
           <div>
-            <p className="text-sm font-medium mb-2">Slides to include</p>
+            <p className="text-sm font-medium mb-2">{t("reports.slidesToInclude")}</p>
             <div className="grid grid-cols-2 gap-1.5">
               {BOARD_SLIDES.map((s) => {
                 const checked = selectedSlides.has(s.key);
@@ -959,12 +960,12 @@ function BoardReportForm({ onSuccess }: { onSuccess: () => void }) {
                     <span className={`flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded border ${checked ? "border-primary bg-primary" : "border-slate-300"}`}>
                       {checked && <span className="block h-1.5 w-1.5 rounded-sm bg-white" />}
                     </span>
-                    {s.label}
+                    {t(s.labelKey)}
                   </button>
                 );
               })}
             </div>
-            <p className="mt-1 text-[10px] text-muted-foreground">{selectedSlides.size} of {BOARD_SLIDES.length} slides selected</p>
+            <p className="mt-1 text-[10px] text-muted-foreground">{t("reports.slidesSelected").replace("{n}", String(selectedSlides.size)).replace("{m}", String(BOARD_SLIDES.length))}</p>
           </div>
           {error && (
             <div className="flex items-center gap-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -1068,7 +1069,7 @@ function ExecutiveReportsTab() {
                   <div>
                     <p className="font-medium">{r.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {r.period_start} → {r.period_end} · v{r.report_version} · Generated {new Date(r.generated_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                      {r.period_start} → {r.period_end} · v{r.report_version} · {t("reports.generatedOn").replace("{date}", formatDate(r.generated_at))}
                     </p>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.executive_summary}</p>
                   </div>
@@ -1263,7 +1264,7 @@ function ComplianceReportsTab() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 text-slate-600">
-                        <Clock className="h-3.5 w-3.5 text-slate-400" />{new Date(r.generated_at).toLocaleString()}
+                        <Clock className="h-3.5 w-3.5 text-slate-400" />{formatDateTime(r.generated_at)}
                       </div>
                     </td>
                     <td className="px-4 py-3">
@@ -1307,14 +1308,14 @@ function SustainReportCard({ report }: { report: SustainabilityReport }) {
         <div>
           <p className="font-semibold">{report.title}</p>
           <p className="text-xs text-muted-foreground">
-            {new Date(report.period_start).toLocaleDateString()} – {new Date(report.period_end).toLocaleDateString()} · {report.report_type}
+            {formatDate(report.period_start)} – {formatDate(report.period_end)} · {report.report_type}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`rounded px-2 py-0.5 text-xs font-medium ${ragColor(report.overall_status)}`}>{report.overall_status}</span>
           {report.is_final && (
             <span className="flex items-center gap-1 text-xs text-emerald-600 font-medium">
-              <Lock className="h-3 w-3" /> Finalized
+              <Lock className="h-3 w-3" /> {t("reports.finalized")}
             </span>
           )}
         </div>
@@ -1334,7 +1335,7 @@ function SustainReportCard({ report }: { report: SustainabilityReport }) {
         )}
         {(objStatus.completion_rate_pct as number) != null && (
           <div className="rounded bg-muted p-2">
-            <p className="text-muted-foreground">Obj. Completion</p>
+            <p className="text-muted-foreground">{t("reports.objCompletion")}</p>
             <p className="font-bold">{Number(objStatus.completion_rate_pct).toFixed(1)}%</p>
           </div>
         )}
@@ -1342,11 +1343,11 @@ function SustainReportCard({ report }: { report: SustainabilityReport }) {
       {!report.is_final && (
         <Button size="sm" variant="outline" onClick={() => finalize.mutate()} disabled={finalize.isPending}>
           <Lock className="mr-1 h-3 w-3" />
-          {finalize.isPending ? "Finalizing…" : "Finalize (Immutable)"}
+          {finalize.isPending ? t("reports.finalizing") : t("reports.finalizeBtn")}
         </Button>
       )}
       {report.is_final && report.finalized_at && (
-        <p className="text-xs text-muted-foreground">Finalized {new Date(report.finalized_at).toLocaleDateString()} · Read-only</p>
+        <p className="text-xs text-muted-foreground">{t("reports.finalizedReadOnly").replace("{date}", formatDate(report.finalized_at))}</p>
       )}
     </div>
   );
@@ -1391,13 +1392,13 @@ function SustainabilityReportsTab() {
         <p className="text-sm text-muted-foreground">{t("sustain.reportsSubtitle")}</p>
         <Button variant="outline" size="sm" className="gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50" onClick={sendQuarterlyNow} disabled={sendingNow}>
           <Send className="h-3.5 w-3.5" />
-          {sentNow ? "Sent!" : sendingNow ? "Sending…" : t("reports.generate")}
+          {sentNow ? t("reports.sentNow") : sendingNow ? t("reports.sendingNow") : t("reports.generate")}
         </Button>
       </div>
       <div className="grid grid-cols-3 gap-4">
         <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("reports.title")}</p><p className="text-2xl font-bold">{reports?.length ?? 0}</p></CardContent></Card>
         <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("dpp.draft")}</p><p className="text-2xl font-bold text-amber-600">{draft}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Finalized</p><p className="text-2xl font-bold text-emerald-600">{finalized}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("reports.finalized")}</p><p className="text-2xl font-bold text-emerald-600">{finalized}</p></CardContent></Card>
       </div>
       <Card>
         <CardHeader>
@@ -1432,7 +1433,7 @@ function FinancialEsgReportsTab() {
 
   return (
     <div className="space-y-6">
-      <p className="text-sm text-muted-foreground">Reports, scenario analyses, and ESG–financial correlations</p>
+      <p className="text-sm text-muted-foreground">{t("reports.finEsgSubtitle")}</p>
       <Card>
         <CardHeader><CardTitle>{t("reports.title")}</CardTitle></CardHeader>
         <CardContent>
@@ -1445,12 +1446,12 @@ function FinancialEsgReportsTab() {
                   <div>
                     <p className="font-medium">{r.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(r.report_period_start).toLocaleDateString()} – {new Date(r.report_period_end).toLocaleDateString()}
+                      {formatDate(r.report_period_start)} – {formatDate(r.report_period_end)}
                     </p>
                   </div>
                   <div className="text-right">
                     <span className={`rounded px-2 py-0.5 text-xs font-medium ${r.is_final ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600"}`}>{r.overall_status}</span>
-                    <p className="mt-1 text-xs text-muted-foreground">{new Date(r.created_at).toLocaleDateString()}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{formatDate(r.created_at)}</p>
                   </div>
                 </div>
               ))}
@@ -1460,7 +1461,7 @@ function FinancialEsgReportsTab() {
       </Card>
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="text-base">Scenario Analyses</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("reports.scenarioAnalyses")}</CardTitle></CardHeader>
           <CardContent>
             {(scenarios ?? []).length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("strategy.noScenarios")}</p>
@@ -1484,10 +1485,10 @@ function FinancialEsgReportsTab() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader><CardTitle className="text-base">ESG Financial Correlations</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="text-base">{t("reports.finEsgCorrelations")}</CardTitle></CardHeader>
           <CardContent>
             {(correlations ?? []).length === 0 ? (
-              <p className="text-sm text-muted-foreground">No correlations</p>
+              <p className="text-sm text-muted-foreground">{t("reports.noCorrelations")}</p>
             ) : (
               <div className="space-y-2">
                 {(correlations ?? []).map((c) => (
@@ -1527,7 +1528,7 @@ function CreateStrategyReportModal({ orgId, onClose }: { orgId: string; onClose:
   const mut = useMutation({
     mutationFn: (p: CreateReportPayload) => createReport(orgId, p),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["strategy", "reports", orgId] }); onClose(); },
-    onError: (e: unknown) => setError(e instanceof Error ? e.message : "Fehler"),
+    onError: (e: unknown) => setError(e instanceof Error ? e.message : t("reports.stratError")),
   });
 
   function toggleScenario(id: string) {
@@ -1541,7 +1542,7 @@ function CreateStrategyReportModal({ orgId, onClose }: { orgId: string; onClose:
 
   function submit(e: React.FormEvent) {
     e.preventDefault(); setError(null);
-    if (!form.report_title.trim()) { setError("Titel erforderlich"); return; }
+    if (!form.report_title.trim()) { setError(t("reports.stratTitleRequired")); return; }
     mut.mutate({
       report_title: form.report_title.trim(),
       report_period: form.report_period.trim(),
@@ -1556,7 +1557,7 @@ function CreateStrategyReportModal({ orgId, onClose }: { orgId: string; onClose:
         <div className="flex items-center justify-between border-b px-6 py-4">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-violet-600" />
-            <h2 className="text-lg font-semibold">Neuer Strategiebericht</h2>
+            <h2 className="text-lg font-semibold">{t("reports.stratNewReport")}</h2>
           </div>
           <button onClick={onClose} className="rounded-md p-1 hover:bg-slate-100"><X className="h-5 w-5 text-slate-500" /></button>
         </div>
@@ -1566,12 +1567,12 @@ function CreateStrategyReportModal({ orgId, onClose }: { orgId: string; onClose:
             <input value={form.report_title} onChange={(e) => setForm((f) => ({ ...f, report_title: e.target.value }))} placeholder="z. B. Strategie-Review Q4 2026" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Berichtszeitraum <span className="text-red-500">*</span></label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("reports.stratReportPeriod")} <span className="text-red-500">*</span></label>
             <input value={form.report_period} onChange={(e) => setForm((f) => ({ ...f, report_period: e.target.value }))} placeholder="z. B. 2026 oder Q4-2026" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           {(scenarios ?? []).length > 0 && (
             <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Szenarien einschließen</label>
+              <label className="mb-2 block text-sm font-medium text-slate-700">{t("reports.stratIncludeScenarios")}</label>
               <div className="max-h-36 space-y-1.5 overflow-y-auto rounded-lg border p-2">
                 {(scenarios ?? []).map((s) => (
                   <label key={s.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 hover:bg-slate-50">
@@ -1581,23 +1582,23 @@ function CreateStrategyReportModal({ orgId, onClose }: { orgId: string; onClose:
                 ))}
               </div>
               {form.selected_scenario_ids.length > 0 && (
-                <p className="mt-1 text-xs text-violet-600">{form.selected_scenario_ids.length} Szenario(s) ausgewählt</p>
+                <p className="mt-1 text-xs text-violet-600">{t("reports.stratScenariosSelected").replace("{n}", String(form.selected_scenario_ids.length))}</p>
               )}
             </div>
           )}
           <div>
-            <label className="mb-1 block text-sm font-medium text-slate-700">Methodik (optional)</label>
+            <label className="mb-1 block text-sm font-medium text-slate-700">{t("reports.stratMethodology")}</label>
             <input value={form.report_methodology} onChange={(e) => setForm((f) => ({ ...f, report_methodology: e.target.value }))} placeholder="z. B. SBTi, TCFD, GRI" className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500" />
           </div>
           <div className="rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            Der Bericht wird als Draft erstellt. Zum Finalisieren muss er separat abgeschlossen werden.
+            {t("reports.stratDraftNote")}
           </div>
           {error && <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         </form>
         <div className="flex justify-end gap-3 border-t px-6 py-4">
           <Button variant="outline" onClick={onClose}>{t("common.cancel")}</Button>
           <Button onClick={submit} disabled={mut.isPending} className="bg-violet-600 hover:bg-violet-700">
-            {mut.isPending ? <Spinner className="h-4 w-4" /> : "Bericht erstellen"}
+            {mut.isPending ? <Spinner className="h-4 w-4" /> : t("reports.stratCreateReport")}
           </Button>
         </div>
       </div>
@@ -1621,15 +1622,15 @@ function StrategyReportsTab() {
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
-        <p className="text-sm text-muted-foreground">Unveränderliche Szenario-Reports für Audit und Board</p>
+        <p className="text-sm text-muted-foreground">{t("reports.stratSubtitle")}</p>
         <Button onClick={() => setShowCreate(true)} className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700">
           <Plus className="h-4 w-4" />{t("reports.newReport")}
         </Button>
       </div>
       <div className="grid grid-cols-3 gap-4">
         <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("common.total")}</p><p className="mt-1 text-3xl font-bold">{(reports ?? []).length}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Finalisiert</p><p className="mt-1 text-3xl font-bold text-blue-600">{finalized.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">Entwurf</p><p className="mt-1 text-3xl font-bold text-slate-500">{drafts.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("reports.finalized")}</p><p className="mt-1 text-3xl font-bold text-blue-600">{finalized.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-6"><p className="text-sm text-muted-foreground">{t("reports.draft")}</p><p className="mt-1 text-3xl font-bold text-slate-500">{drafts.length}</p></CardContent></Card>
       </div>
       <Card>
         <CardHeader><CardTitle>{t("reports.title")}</CardTitle></CardHeader>
@@ -1637,9 +1638,9 @@ function StrategyReportsTab() {
           {(reports ?? []).length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center">
               <FileText className="h-10 w-10 text-slate-300" />
-              <p className="text-sm text-slate-600">Noch kein Strategiebericht erstellt</p>
+              <p className="text-sm text-slate-600">{t("reports.stratNoReports")}</p>
               <Button onClick={() => setShowCreate(true)} className="mt-1 bg-violet-600 hover:bg-violet-700">
-                <Plus className="mr-2 h-4 w-4" />Ersten Bericht erstellen
+                <Plus className="mr-2 h-4 w-4" />{t("reports.stratCreateFirst")}
               </Button>
             </div>
           ) : (
@@ -1652,15 +1653,15 @@ function StrategyReportsTab() {
                       {r.is_final ? (
                         <span className="flex items-center gap-1 rounded bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700"><Lock className="h-2.5 w-2.5" />FINAL</span>
                       ) : (
-                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Entwurf</span>
+                        <span className="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-600">{t("reports.draft")}</span>
                       )}
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">Zeitraum: {r.report_period}</p>
-                    {r.report_methodology && <p className="mt-0.5 text-xs text-muted-foreground">Methodik: {r.report_methodology}</p>}
+                    <p className="mt-0.5 text-xs text-muted-foreground">{t("reports.stratPeriod").replace("{period}", r.report_period)}</p>
+                    {r.report_methodology && <p className="mt-0.5 text-xs text-muted-foreground">{t("reports.stratMethodLabel").replace("{method}", r.report_methodology)}</p>}
                   </div>
                   <div className="ml-4 flex-shrink-0 text-right text-xs text-muted-foreground">
-                    <p>{new Date(r.created_at).toLocaleDateString("de-DE")}</p>
-                    {r.finalized_at && <p className="text-blue-600">Finalisiert {new Date(r.finalized_at).toLocaleDateString("de-DE")}</p>}
+                    <p>{formatDate(r.created_at)}</p>
+                    {r.finalized_at && <p className="text-blue-600">{t("reports.stratFinalizedOn").replace("{date}", formatDate(r.finalized_at))}</p>}
                   </div>
                 </div>
               ))}
@@ -1723,17 +1724,17 @@ function AiGovernanceReportsTab() {
                 <input className="w-full rounded border border-input px-3 py-2 text-sm" placeholder="Q2 2026 AI Assurance" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Period Start</label>
+                <label className="text-xs font-medium text-muted-foreground">{t("reports.periodStart")}</label>
                 <input type="date" className="w-full rounded border border-input px-3 py-2 text-sm" value={form.period_start} onChange={(e) => setForm((f) => ({ ...f, period_start: e.target.value }))} />
               </div>
               <div className="space-y-1">
-                <label className="text-xs font-medium text-muted-foreground">Period End</label>
+                <label className="text-xs font-medium text-muted-foreground">{t("reports.periodEnd")}</label>
                 <input type="date" className="w-full rounded border border-input px-3 py-2 text-sm" value={form.period_end} onChange={(e) => setForm((f) => ({ ...f, period_end: e.target.value }))} />
               </div>
             </div>
             <div className="mt-3 flex gap-2">
               <Button size="sm" onClick={() => generate.mutate()} disabled={!form.title || !form.period_start || !form.period_end || generate.isPending}>
-                {generate.isPending ? "Generating…" : t("reports.generate")}
+                {generate.isPending ? t("reports.generating") : t("reports.generate")}
               </Button>
               <Button size="sm" variant="outline" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
             </div>
@@ -1757,13 +1758,13 @@ function AiGovernanceReportsTab() {
                       <Badge className={aiStatusColor(r.overall_status)}>{r.overall_status.replace("_", " ")}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(r.report_period_start).toLocaleDateString()} – {new Date(r.report_period_end).toLocaleDateString()}
+                      {formatDate(r.report_period_start)} – {formatDate(r.report_period_end)}
                     </p>
                     <div className="flex gap-4 text-xs text-muted-foreground pt-1">
-                      <span>{r.model_count} models</span>
-                      <span>{r.use_case_count} use cases</span>
-                      <span>{r.control_count} controls</span>
-                      <span>{r.incident_count} incidents</span>
+                      <span>{t("reports.aiModels").replace("{n}", String(r.model_count))}</span>
+                      <span>{t("reports.aiUseCases").replace("{n}", String(r.use_case_count))}</span>
+                      <span>{t("reports.aiControls").replace("{n}", String(r.control_count))}</span>
+                      <span>{t("reports.aiIncidents").replace("{n}", String(r.incident_count))}</span>
                     </div>
                   </div>
                 </div>
@@ -1779,13 +1780,13 @@ function AiGovernanceReportsTab() {
 // ── Tab nav ───────────────────────────────────────────────────────────────────
 
 const tab_defs = [
-  { key: "disclosure",    label: "Disclosure & Packages" },
-  { key: "executive",     label: "Executive / Board" },
-  { key: "compliance",    label: "Compliance (CSRD/ESRS)" },
-  { key: "sustainability",label: "Sustainability" },
-  { key: "financial",     label: "Financial ESG" },
-  { key: "strategy",      label: "Strategy" },
-  { key: "ai",            label: "AI Governance" },
+  { key: "disclosure" },
+  { key: "executive" },
+  { key: "compliance" },
+  { key: "sustainability" },
+  { key: "financial" },
+  { key: "strategy" },
+  { key: "ai" },
 ] as const;
 
 type TabKey = (typeof tab_defs)[number]["key"];
@@ -1796,8 +1797,18 @@ export default function ReportsCenterPage() {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<TabKey>("disclosure");
 
+  const tabLabels: Record<TabKey, string> = {
+    disclosure:     t("reports.tabDisclosure"),
+    executive:      t("reports.tabExecutive"),
+    compliance:     t("reports.tabCompliance"),
+    sustainability: t("reports.tabSustainability"),
+    financial:      t("reports.tabFinancial"),
+    strategy:       t("reports.tabStrategy"),
+    ai:             t("reports.tabAI"),
+  };
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -1820,7 +1831,7 @@ export default function ReportsCenterPage() {
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`}
             >
-              {tab.label}
+              {tabLabels[tab.key]}
             </button>
           ))}
         </nav>

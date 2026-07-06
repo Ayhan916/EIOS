@@ -1268,11 +1268,12 @@ async def list_org_findings(
 @router.get("/risks")
 async def list_org_risks(
     risk_level: str | None = Query(default=None),
+    supplier_id: str | None = Query(default=None),
     limit: int = Query(default=100, le=500),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Org-scoped risks list with optional risk_level filter."""
+    """Org-scoped risks list with optional risk_level / supplier filter."""
     from infrastructure.persistence.models.risk import RiskModel
 
     org_id = _assert_org(current_user)
@@ -1302,6 +1303,8 @@ async def list_org_risks(
     )
     if risk_level:
         stmt = stmt.where(RiskModel.risk_level == risk_level)
+    if supplier_id:
+        stmt = stmt.where(SupplierModel.id == supplier_id)
     stmt = stmt.order_by(
         case(
             (RiskModel.risk_level == "Critical", 0),
@@ -1336,6 +1339,7 @@ async def list_org_risks(
 @router.get("/recommendations")
 async def list_org_recommendations(
     action_status: str | None = Query(default=None),
+    supplier_id: str | None = Query(default=None),
     limit: int = Query(default=100, le=500),
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -1370,6 +1374,8 @@ async def list_org_recommendations(
     )
     if action_status:
         stmt = stmt.where(RecommendationModel.action_status == action_status)
+    if supplier_id:
+        stmt = stmt.where(SupplierModel.id == supplier_id)
     stmt = stmt.order_by(RecommendationModel.created_at.desc()).limit(limit)
     rows = (await session.execute(stmt)).all()
     return [

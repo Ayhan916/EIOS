@@ -34,9 +34,9 @@ function ObjectiveCard({
   kpis: ESGKPI[];
 }) {
   const { t } = useLanguage();
-  const myTargets = targets.filter((t) => t.objective_id === obj.id);
+  const myTargets = targets.filter((tgt) => tgt.objective_id === obj.id);
   const avgProgress = myTargets.length > 0
-    ? myTargets.reduce((s, t) => s + t.progress_percent, 0) / myTargets.length
+    ? myTargets.reduce((s, tgt) => s + tgt.progress_percent, 0) / myTargets.length
     : null;
 
   const linkedKpis = kpis.filter((k) => k.category === obj.category);
@@ -53,7 +53,7 @@ function ObjectiveCard({
             <span className="rounded bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">{obj.category}</span>
             {obj.target_date && (
               <span className="text-[10px] text-muted-foreground">
-                Due {new Date(obj.target_date).toLocaleDateString()}
+                {t("esgOs.dueDate").replace("{date}", new Date(obj.target_date).toLocaleDateString())}
               </span>
             )}
           </div>
@@ -79,7 +79,7 @@ function ObjectiveCard({
         </div>
       ) : (
         <div className="space-y-1">
-          <p className="text-xs text-muted-foreground">No targets linked yet</p>
+          <p className="text-xs text-muted-foreground">{t("esgOs.noTargetsLinked")}</p>
           <div className="h-2 w-full rounded-full bg-muted" />
         </div>
       )}
@@ -88,20 +88,20 @@ function ObjectiveCard({
       {myTargets.length > 0 && (
         <div className="space-y-2 pt-1">
           <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("esgOs.keyResult")}</p>
-          {myTargets.map((t) => (
-            <div key={t.id} className="space-y-0.5">
+          {myTargets.map((tgt) => (
+            <div key={tgt.id} className="space-y-0.5">
               <div className="flex justify-between text-xs">
-                <span className="text-muted-foreground truncate max-w-xs">{t.metric_name}</span>
+                <span className="text-muted-foreground truncate max-w-xs">{tgt.metric_name}</span>
                 <span className="font-medium ml-2">
-                  {t.current_value != null ? t.current_value : "—"}
-                  {t.target_unit ? ` ${t.target_unit}` : ""}
-                  <span className="text-muted-foreground"> / {t.target_value}</span>
+                  {tgt.current_value != null ? tgt.current_value : "—"}
+                  {tgt.target_unit ? ` ${tgt.target_unit}` : ""}
+                  <span className="text-muted-foreground"> / {tgt.target_value}</span>
                 </span>
               </div>
               <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <div
-                  className={`h-full rounded-full ${progressColor(t.progress_percent)}`}
-                  style={{ width: `${Math.min(t.progress_percent, 100)}%` }}
+                  className={`h-full rounded-full ${progressColor(tgt.progress_percent)}`}
+                  style={{ width: `${Math.min(tgt.progress_percent, 100)}%` }}
                 />
               </div>
             </div>
@@ -112,14 +112,14 @@ function ObjectiveCard({
       {/* Linked KPIs by category */}
       {linkedKpis.length > 0 && (
         <div className="flex flex-wrap gap-1 pt-1">
-          <p className="w-full text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Related KPIs</p>
+          <p className="w-full text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("esgOs.relatedKPIs")}</p>
           {linkedKpis.slice(0, 3).map((k) => (
             <span key={k.id} className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] text-blue-700">
               <TrendingUp className="h-3 w-3" />{k.name}
             </span>
           ))}
           {linkedKpis.length > 3 && (
-            <span className="text-[10px] text-muted-foreground">+{linkedKpis.length - 3} more</span>
+            <span className="text-[10px] text-muted-foreground">{t("esgOs.moreCount").replace("{n}", String(linkedKpis.length - 3))}</span>
           )}
         </div>
       )}

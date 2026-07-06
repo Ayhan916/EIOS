@@ -169,7 +169,7 @@ function StepRow({ step, runId }: { step: AgentStep; runId: string }) {
         <div className="px-4 pb-4">
           {outputLoading ? (
             <div className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Lade Ausgabe…
+              <Loader2 className="h-4 w-4 animate-spin" /> {t("workflows.loadingOutput")}
             </div>
           ) : output ? (
             <div className="rounded-lg bg-slate-50 border border-slate-200 p-4 space-y-3">
@@ -245,7 +245,7 @@ export default function WorkflowRunPage({ params }: { params: Promise<{ run_id: 
         </Link>
         <div className="mt-8 text-center text-muted-foreground">
           <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-          <p>Run not found.</p>
+          <p>{t("workflows.runNotFound")}</p>
         </div>
       </div>
     );
@@ -319,7 +319,7 @@ export default function WorkflowRunPage({ params }: { params: Promise<{ run_id: 
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
               <Zap className="h-4 w-4" />
-              {t("workflows.verdict")} Reasoning
+              {t("workflows.verdictReasoning")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -331,7 +331,7 @@ export default function WorkflowRunPage({ params }: { params: Promise<{ run_id: 
       {/* Error */}
       {run.error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <p className="font-semibold mb-1">Error</p>
+          <p className="font-semibold mb-1">{t("common.error")}</p>
           <p className="font-mono text-xs">{run.error}</p>
         </div>
       )}

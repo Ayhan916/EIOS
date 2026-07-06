@@ -413,7 +413,7 @@ async def list_webhook_deliveries(
 ) -> list[WebhookDeliveryResponse]:
     org_id = _org(current_user)
     sub = await sub_repo.get_by_id(webhook_id)
-    if sub is None or sub.organization_id != org_id:
+    if sub is None or sub.organization_id != org_id or sub.status == EntityStatus.DELETED:
         raise HTTPException(status_code=404, detail="Webhook not found")
     deliveries = await delivery_repo.list_for_subscription(webhook_id, limit=limit)
     return [_delivery_response(d) for d in deliveries]

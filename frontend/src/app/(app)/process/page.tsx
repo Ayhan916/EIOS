@@ -165,7 +165,7 @@ function StepCard({ step, index, count, isLoading, readiness }: {
           </div>
           {isActive && !hasMissing && (
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 flex items-center gap-0.5">
-              <CheckCircle2 className="h-2.5 w-2.5" /> Aktiv
+              <CheckCircle2 className="h-2.5 w-2.5" /> {t("common.active")}
             </span>
           )}
         </div>
@@ -233,7 +233,7 @@ function RowConnector({ label }: { label: string }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const PHASE_LABELS = ["Eingang & Analyse", "Bewertung & Steuerung", "Aktion & Abschluss"];
+const PHASE_LABEL_KEYS = ["process.phaseIncoming", "process.phaseAssessment", "process.phaseAction"] as const;
 
 export default function ProcessPage() {
   const { t } = useLanguage();
@@ -271,7 +271,7 @@ export default function ProcessPage() {
   const row3 = STEPS.slice(6, 9);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("process.title")}</h1>
@@ -282,13 +282,13 @@ export default function ProcessPage() {
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
           <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground">Aktive Phasen</p>
+            <p className="text-xs text-muted-foreground">{t("process.activePhases")}</p>
             <p className="text-2xl font-bold text-primary mt-0.5">{activeCount}<span className="text-base font-normal text-muted-foreground ml-1">/ {STEPS.length}</span></p>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="pt-4 pb-3">
-            <p className="text-xs text-muted-foreground">Offene Items gesamt</p>
+            <p className="text-xs text-muted-foreground">{t("process.openItemsTotal")}</p>
             <p className={`text-2xl font-bold mt-0.5 ${totalOpen > 0 ? "text-foreground" : "text-slate-400"}`}>
               {isAnyLoading ? <Spinner className="h-5 w-5" /> : totalOpen}
             </p>
@@ -297,7 +297,7 @@ export default function ProcessPage() {
         <Card className="sm:col-span-2">
           <CardContent className="pt-4 pb-3">
             <div className="flex justify-between items-center mb-1.5">
-              <p className="text-xs text-muted-foreground">Pipeline-Auslastung</p>
+              <p className="text-xs text-muted-foreground">{t("process.pipelineLoad")}</p>
               <div className="flex items-center gap-3">
                 {readinessData && (
                   <span className={`text-[10px] font-semibold ${
@@ -335,7 +335,7 @@ export default function ProcessPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         {/* Phase label 1 */}
         <div className="sm:col-span-3">
-          <PhaseDivider label={PHASE_LABELS[0]} icon={<FileText className="h-3.5 w-3.5" />} />
+          <PhaseDivider label={t(PHASE_LABEL_KEYS[0])} icon={<FileText className="h-3.5 w-3.5" />} />
         </div>
 
         {/* Row 1 */}
@@ -351,9 +351,9 @@ export default function ProcessPage() {
         ))}
 
         {/* Phase label 2 */}
-        <RowConnector label="→ Weiter zur Bewertung" />
+        <RowConnector label={t("process.connectorToAssessment")} />
         <div className="sm:col-span-3">
-          <PhaseDivider label={PHASE_LABELS[1]} icon={<Shield className="h-3.5 w-3.5" />} />
+          <PhaseDivider label={t(PHASE_LABEL_KEYS[1])} icon={<Shield className="h-3.5 w-3.5" />} />
         </div>
 
         {/* Row 2 */}
@@ -372,9 +372,9 @@ export default function ProcessPage() {
         })}
 
         {/* Phase label 3 */}
-        <RowConnector label="→ Weiter zur Umsetzung" />
+        <RowConnector label={t("process.connectorToAction")} />
         <div className="sm:col-span-3">
-          <PhaseDivider label={PHASE_LABELS[2]} icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
+          <PhaseDivider label={t(PHASE_LABEL_KEYS[2])} icon={<CheckCircle2 className="h-3.5 w-3.5" />} />
         </div>
 
         {/* Row 3 */}
@@ -399,7 +399,7 @@ export default function ProcessPage() {
             <Link href="/disclosure"
               className="flex items-center gap-2 rounded-xl border-2 border-emerald-400 bg-emerald-50 px-5 py-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-100 transition-colors">
               <FileText className="h-4 w-4" />
-              Disclosure & Regulatorische Meldungen
+              {t("process.disclosureLink")}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Link>
             <div className="h-px flex-1 bg-gradient-to-l from-transparent to-emerald-300" />
@@ -409,16 +409,16 @@ export default function ProcessPage() {
 
       {/* Process legend */}
       <div className="rounded-xl border border-border bg-muted/30 px-5 py-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Legende</p>
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">{t("process.legend")}</p>
         <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full bg-blue-500" /> Phase aktiv (Items vorhanden)
+            <span className="inline-block h-2 w-2 rounded-full bg-blue-500" /> {t("process.legendActive")}
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="inline-block h-2 w-2 rounded-full bg-slate-200" /> Phase leer / noch nicht begonnen
+            <span className="inline-block h-2 w-2 rounded-full bg-slate-200" /> {t("process.legendEmpty")}
           </div>
           <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="h-3 w-3 text-emerald-600" /> Aktiv-Badge
+            <CheckCircle2 className="h-3 w-3 text-emerald-600" /> {t("process.legendActiveBadge")}
           </div>
         </div>
       </div>

@@ -155,29 +155,29 @@ function SustainInitiativeCard({ init, orgId, kpis }: {
           <button onClick={() => setOpen((v) => !v)}
             className="text-xs text-blue-600 hover:underline flex items-center gap-0.5">
             {open ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-            Log Progress
+            {t("init.logProgress")}
           </button>
         </div>
       </div>
 
       <div className="space-y-1">
         <div className="flex justify-between text-xs text-muted-foreground">
-          <span>Expected reduction: {init.expected_reduction.toLocaleString()} tCO₂e</span>
-          {init.actual_reduction != null && <span>Actual: {init.actual_reduction.toLocaleString()} tCO₂e</span>}
+          <span>{t("init.expectedReduction").replace("{n}", String(init.expected_reduction.toLocaleString()))}</span>
+          {init.actual_reduction != null && <span>{t("init.actualReductionValue").replace("{n}", String(init.actual_reduction.toLocaleString()))}</span>}
         </div>
         <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
           <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${pct}%` }} />
         </div>
-        <p className="text-xs text-right text-muted-foreground">{pct.toFixed(0)}% achieved</p>
+        <p className="text-xs text-right text-muted-foreground">{t("init.achieved").replace("{pct}", pct.toFixed(0))}</p>
       </div>
 
       {showKpiLink && (
         <div className="mt-3 rounded-md border border-violet-100 bg-violet-50 p-3 space-y-2">
-          <p className="text-xs font-semibold text-violet-800">Link to KPI</p>
+          <p className="text-xs font-semibold text-violet-800">{t("init.linkToKpi")}</p>
           <div className="flex gap-2">
             <select className="flex-1 h-8 rounded border border-input bg-background px-2 text-xs"
               value={linkedKpiId} onChange={(e) => setLinkedKpiId(e.target.value)}>
-              <option value="">Select a KPI…</option>
+              <option value="">{t("init.selectKpi")}</option>
               {kpis.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
             </select>
             <Button size="sm" className="h-8 text-xs bg-violet-600 hover:bg-violet-700" disabled={!linkedKpiId}
@@ -186,7 +186,7 @@ function SustainInitiativeCard({ init, orgId, kpis }: {
                 qc.invalidateQueries({ queryKey: ["sustain-initiatives", orgId] });
                 setShowKpiLink(false);
               }}>
-              Link
+              {t("init.link")}
             </Button>
             <button onClick={() => setShowKpiLink(false)} className="text-xs text-muted-foreground hover:underline">{t("common.cancel")}</button>
           </div>
@@ -195,10 +195,10 @@ function SustainInitiativeCard({ init, orgId, kpis }: {
 
       {open && (
         <div className="mt-3 rounded-md border border-blue-100 bg-blue-50 p-3 space-y-3">
-          <p className="text-xs font-semibold text-blue-800">Log Progress Update</p>
+          <p className="text-xs font-semibold text-blue-800">{t("init.logProgressUpdate")}</p>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs text-muted-foreground">Actual Reduction (tCO₂e)</label>
+              <label className="text-xs text-muted-foreground">{t("init.actualReductionLabel")}</label>
               <input type="number" min="0" step="0.01" value={actualReduction}
                 onChange={(e) => setActualReduction(e.target.value)}
                 placeholder={`Max ${init.expected_reduction}`}
@@ -216,7 +216,7 @@ function SustainInitiativeCard({ init, orgId, kpis }: {
             <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-3 text-xs"
               onClick={() => mutation.mutate()} disabled={mutation.isPending || !actualReduction}>
               {mutation.isPending && <Loader2 className="mr-1 h-3 w-3 animate-spin" />}
-              Save Progress
+              {t("init.saveProgress")}
             </Button>
             <button onClick={() => setOpen(false)} className="text-xs text-muted-foreground hover:underline">{t("common.cancel")}</button>
             {mutation.isError && <span className="text-xs text-red-600">{(mutation.error as Error).message}</span>}
@@ -228,6 +228,7 @@ function SustainInitiativeCard({ init, orgId, kpis }: {
 }
 
 function GanttTimeline({ initiatives }: { initiatives: DecarbonizationInitiative[] }) {
+  const { t } = useLanguage();
   const withDates = initiatives.filter((i) => i.start_date && i.end_date);
   if (withDates.length === 0) return null;
 
@@ -242,7 +243,7 @@ function GanttTimeline({ initiatives }: { initiatives: DecarbonizationInitiative
 
   return (
     <Card>
-      <CardHeader><CardTitle className="text-base">Initiative Timeline</CardTitle></CardHeader>
+      <CardHeader><CardTitle className="text-base">{t("sustain.initiativeTimeline")}</CardTitle></CardHeader>
       <CardContent>
         <div className="space-y-2">
           {withDates.map((init) => {
@@ -299,13 +300,13 @@ function KlimaschutzTab({ orgId }: { orgId: string }) {
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: "Planned",     count: byStatus.PLANNED.length,     color: "text-slate-600" },
-          { label: "In Progress", count: byStatus.IN_PROGRESS.length,  color: "text-blue-600" },
-          { label: "Completed",   count: byStatus.COMPLETED.length,    color: "text-emerald-600" },
-        ].map(({ label, count, color }) => (
-          <Card key={label}>
+          { labelKey: "init.planned" as const,    count: byStatus.PLANNED.length,     color: "text-slate-600" },
+          { labelKey: "init.inProgress" as const, count: byStatus.IN_PROGRESS.length,  color: "text-blue-600" },
+          { labelKey: "init.completed" as const,  count: byStatus.COMPLETED.length,    color: "text-emerald-600" },
+        ].map(({ labelKey, count, color }) => (
+          <Card key={labelKey}>
             <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">{label}</p>
+              <p className="text-sm text-muted-foreground">{t(labelKey)}</p>
               <p className={`text-2xl font-bold ${color}`}>{count}</p>
             </CardContent>
           </Card>
@@ -316,7 +317,7 @@ function KlimaschutzTab({ orgId }: { orgId: string }) {
         <Card>
           <CardContent className="pt-4">
             <div className="flex justify-between text-sm mb-1">
-              <span className="text-muted-foreground">Total Emission Reductions</span>
+              <span className="text-muted-foreground">{t("sustain.totalEmissionReductions")}</span>
               <span className="font-medium">{totalActual.toLocaleString()} / {totalExpected.toLocaleString()} tCO₂e</span>
             </div>
             <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
@@ -333,7 +334,7 @@ function KlimaschutzTab({ orgId }: { orgId: string }) {
         <CardHeader>
           <CardTitle className="text-base flex items-center gap-2">
             <TrendingDown className="h-4 w-4 text-emerald-600" />
-            All Initiatives{initiatives ? ` (${initiatives.length})` : ""}
+            {t("sustain.allInitiatives")}{initiatives ? ` (${initiatives.length})` : ""}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -414,7 +415,7 @@ function OsInitiativeCard({ init, onUpdated }: { init: ESGInitiative; onUpdated:
         <button onClick={() => setExpanded((v) => !v)}
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
           {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          {expanded ? "Hide details" : "Show details"}
+          {expanded ? t("init.hideDetails") : t("init.showDetails")}
         </button>
 
         {expanded && (
@@ -467,7 +468,7 @@ function EsgInitiativesTab() {
       setForm({ title: "", description: "", due_date: "" });
       setFormError("");
     },
-    onError: (e: Error) => setFormError(e.message === "validation" ? "Title is required." : "Failed to create."),
+    onError: (e: Error) => setFormError(e.message === "validation" ? t("init.titleRequired") : t("init.createError")),
   });
 
   return (
@@ -544,6 +545,7 @@ function EsgInitiativesTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 function PlaybookCard({ pb }: { pb: ESGPlaybook }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   return (
     <Card>
@@ -559,7 +561,7 @@ function PlaybookCard({ pb }: { pb: ESGPlaybook }) {
               <Badge className="bg-slate-100 text-slate-600">
                 <Shield className="h-3 w-3 mr-1 inline" />{pb.playbook_status}
               </Badge>
-              {pb.steps.length > 0 && <span className="text-xs text-muted-foreground">{pb.steps.length} steps</span>}
+              {pb.steps.length > 0 && <span className="text-xs text-muted-foreground">{pb.steps.length} {t("init.steps")}</span>}
             </div>
           </div>
           <p className="text-xs text-muted-foreground shrink-0">{formatDate(pb.created_at)}</p>
@@ -572,7 +574,7 @@ function PlaybookCard({ pb }: { pb: ESGPlaybook }) {
             <button onClick={() => setExpanded((v) => !v)}
               className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
               {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              {expanded ? "Hide steps" : `Show ${pb.steps.length} steps`}
+              {expanded ? t("init.hideSteps") : t("init.showSteps").replace("{n}", String(pb.steps.length))}
             </button>
             {expanded && (
               <ol className="border-t pt-2 space-y-1.5 pl-1">
@@ -589,7 +591,7 @@ function PlaybookCard({ pb }: { pb: ESGPlaybook }) {
 
         {pb.evidence_required.length > 0 && (
           <div className="text-xs text-muted-foreground border-t pt-2">
-            Evidence required: {pb.evidence_required.join(", ")}
+            {t("init.evidenceRequired")}: {pb.evidence_required.join(", ")}
           </div>
         )}
       </CardContent>
@@ -674,7 +676,7 @@ function WorkflowCard({ wf, onUpdated }: { wf: WorkflowExecution; onUpdated: () 
 
         {wf.linked_entity_type && (
           <p className="text-xs text-muted-foreground">
-            Linked: {wf.linked_entity_type} <span className="font-mono">{wf.linked_entity_id?.slice(0, 8)}…</span>
+            {t("init.linkedEntity").replace("{type}", wf.linked_entity_type!)} <span className="font-mono">{wf.linked_entity_id?.slice(0, 8)}…</span>
           </p>
         )}
 
@@ -763,10 +765,10 @@ function WorkflowsTab() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const tab_defs = [
-  { key: "klimaschutz", label: "Klimaschutz" },
-  { key: "esg",         label: "ESG-Initiativen" },
-  { key: "playbooks",   label: "Playbooks" },
-  { key: "workflows",   label: "Workflows" },
+  { key: "klimaschutz", labelKey: "init.klimaschutzTab" as const },
+  { key: "esg",         labelKey: "init.esgTab" as const },
+  { key: "playbooks",   labelKey: "init.playbooksTab" as const },
+  { key: "workflows",   labelKey: "init.workflowsTab" as const },
 ] as const;
 type TabKey = (typeof tab_defs)[number]["key"];
 
@@ -788,7 +790,7 @@ export default function InitiativesHubPage() {
   ).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight">{t("sustain.initiativesTitle")}</h1>
@@ -805,7 +807,7 @@ export default function InitiativesHubPage() {
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`}>
-              {tab.label}
+              {t(tab.labelKey)}
               {tab.key === "workflows" && pendingCount > 0 && (
                 <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-amber-500 text-white text-[10px] font-bold px-1.5 py-0.5 leading-none">
                   {pendingCount}

@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 
 # Route-prefix → (max_requests, window_seconds)
 _LIMITS: dict[str, tuple[int, int]] = {
-    "/api/v1/auth/login":   (10, 60),   # 10 login attempts per minute per IP
-    "/api/v1/auth/":        (60, 60),   # 60 auth requests per minute
-    "/api/v1/":             (300, 60),  # 300 API calls per minute
+    "/api/v1/auth/login":                           (10, 60),    # 10 login attempts per minute per IP
+    "/api/v1/auth/":                                (60, 60),    # 60 auth requests per minute
+    "/api/v1/supplier-portal/assessment/":          (10, 3600),  # 10 submissions per IP per hour (CSDDD-015)
+    "/api/v1/":                                     (300, 60),   # 300 API calls per minute
 }
 # Paths exempt from rate limiting (health, metrics)
 _EXEMPT_PREFIXES = ("/health", "/metrics")

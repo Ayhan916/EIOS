@@ -137,7 +137,7 @@ export default function SectorRiskPage() {
         </div>
       )}
       {error && (
-        <EmptyState icon={AlertTriangle} title="Fehler beim Laden" description="Sector Risk Register konnte nicht geladen werden." />
+        <EmptyState icon={AlertTriangle} title={t("sectorRisk.loadError")} description={t("sectorRisk.loadErrorDesc")} />
       )}
       {!isLoading && !error && sectors.length === 0 && (
         <EmptyState icon={BarChart3} title={t("sectorRisk.noSectorsFound")} description={t("sectorRisk.adjustFilter")} />
@@ -149,11 +149,11 @@ export default function SectorRiskPage() {
               <thead>
                 <tr className="border-b border-border text-left">
                   <th className="px-4 py-3 font-medium text-muted-foreground w-20">NACE</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground">Sektor</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-center w-24">Höchstes Risiko</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground text-center w-24">Recht ≥ 7</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground w-40">Ø Wahrsch.</th>
-                  <th className="px-4 py-3 font-medium text-muted-foreground w-28">Status</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground">{t("sectorRisk.colSector")}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground text-center w-24">{t("sectorRisk.colHighestRisk")}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground text-center w-24">{t("sectorRisk.colRightsAbove7")}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground w-40">{t("sectorRisk.colAvgProbability")}</th>
+                  <th className="px-4 py-3 font-medium text-muted-foreground w-28">{t("common.status")}</th>
                   <th className="px-4 py-3 w-10" />
                 </tr>
               </thead>

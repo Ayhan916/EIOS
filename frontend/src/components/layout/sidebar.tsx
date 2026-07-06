@@ -56,6 +56,7 @@ import {
   Megaphone,
   ListOrdered,
   Activity,
+  Scale,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
@@ -98,6 +99,7 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.geoHeatmap",            href: "/suppliers/geo-heatmap",   icon: Globe },
       { labelKey: "nav.certificates",          href: "/suppliers/certificates",  icon: CheckSquare },
       { labelKey: "nav.supplierNetwork",  href: "/network",           icon: Network },
+      { labelKey: "nav.activityChain",    href: "/activity-chain",    icon: Link2 },
       { labelKey: "nav.supplierPortal",   href: "/suppliers/portal", icon: Users },
       { labelKey: "nav.dueDiligence",     href: "/due-diligence",    icon: Shield },
       { labelKey: "nav.dpp",              href: "/dpp",               icon: ClipboardCheck },
@@ -142,7 +144,21 @@ const NAV_SECTIONS: NavSection[] = [
       { labelKey: "nav.taxonomy",         href: "/financial-esg/taxonomy",   icon: BookOpen },
       { labelKey: "nav.scCompliance",     href: "/compliance/supply-chain",  icon: ShieldCheck },
       { labelKey: "nav.grievances",       href: "/compliance/grievances",    icon: Megaphone },
-      { labelKey: "nav.prioritization",   href: "/compliance/prioritization", icon: ListOrdered },
+      { labelKey: "nav.stakeholders",     href: "/stakeholders",             icon: Users },
+      { labelKey: "nav.ddGovernance",     href: "/governance",               icon: ScrollText },
+      { labelKey: "nav.remedyCases",             href: "/remedy-cases",             icon: Scale },
+      { labelKey: "nav.effectiveness",          href: "/effectiveness",             icon: Activity },
+      { labelKey: "nav.scoping",                href: "/scoping",                   icon: Target },
+      { labelKey: "nav.contractualAssurance",   href: "/contractual-assurance",     icon: FileText },
+      { labelKey: "nav.smeSupport",             href: "/sme-support",               icon: Building2 },
+      { labelKey: "nav.readiness",              href: "/readiness",                 icon: ShieldCheck },
+      { labelKey: "nav.impactAssessment",       href: "/impact-assessment",          icon: Zap },
+      { labelKey: "nav.boardSignoff",            href: "/board-signoff",              icon: ClipboardCheck },
+      { labelKey: "nav.supplierAssessments",     href: "/supplier-assessments",       icon: ClipboardList },
+      { labelKey: "nav.esapExport",              href: "/esap-export",                icon: ScrollText },
+      { labelKey: "nav.thresholdMonitor",        href: "/threshold-monitor",          icon: BarChart3 },
+      { labelKey: "nav.regulatoryRadar",         href: "/regulatory-radar",           icon: Radio },
+      { labelKey: "nav.prioritization",         href: "/compliance/prioritization", icon: ListOrdered },
     ],
   },
   // ── 5. Nachhaltigkeit ────────────────────────────────────────────────────────

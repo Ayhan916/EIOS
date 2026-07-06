@@ -5,6 +5,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
 import apiClient from "@/lib/api/client";
+import { formatDate, formatDateTime } from "@/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -418,7 +419,7 @@ function BoardPortalTab() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-slate-900">{report.title}</h3>
                     <p className="text-xs text-slate-400">
-                      v{report.report_version} · {new Date(report.period_start).toLocaleDateString()} – {new Date(report.period_end).toLocaleDateString()}
+                      v{report.report_version} · {formatDate(report.period_start)} – {formatDate(report.period_end)}
                     </p>
                     {report.executive_summary && (
                       <p className="text-xs text-slate-500 mt-1 line-clamp-2">{report.executive_summary}</p>
@@ -526,7 +527,7 @@ function BoardPortalTab() {
                         </Button>
                       </div>
                       <p className="text-xs text-slate-500">
-                        {t("comm.expiresAt")}: {new Date(link.expires_at).toLocaleString()}
+                        {t("comm.expiresAt")}: {formatDateTime(link.expires_at)}
                       </p>
                     </div>
                   )}

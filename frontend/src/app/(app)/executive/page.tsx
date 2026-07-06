@@ -131,7 +131,7 @@ function PriorityActionsPanel({ actions }: { actions: PriorityAction[] }) {
   if (!actions.length) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-        <CheckCircle2 className="h-4 w-4" /> No urgent actions required
+        <CheckCircle2 className="h-4 w-4" /> {t("exec.noUrgentActions")}
       </div>
     );
   }
@@ -170,7 +170,7 @@ function PendingDecisionsPanel({ decisions }: { decisions: PendingDecision[] }) 
   if (!decisions.length) {
     return (
       <div className="flex items-center gap-2 rounded-lg bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-        <CheckCircle2 className="h-4 w-4" /> No decisions awaiting approval
+        <CheckCircle2 className="h-4 w-4" /> {t("exec.noDecisionsAwaitingApproval")}
       </div>
     );
   }
@@ -194,7 +194,7 @@ function PendingDecisionsPanel({ decisions }: { decisions: PendingDecision[] }) 
         </Link>
       ))}
       <Link href="/recommendations" className="block text-center text-xs text-blue-600 hover:underline pt-1">
-        View all recommendations →
+        {t("exec.viewAllRecs")} →
       </Link>
     </div>
   );
@@ -203,6 +203,7 @@ function PendingDecisionsPanel({ decisions }: { decisions: PendingDecision[] }) 
 // ── Upcoming Deadlines Panel ──────────────────────────────────────────────────
 
 function UpcomingDeadlinesPanel() {
+  const { t } = useLanguage();
   const { data } = useQuery({
     queryKey: ["upcoming-deadlines"],
     queryFn: async () => {
@@ -219,7 +220,7 @@ function UpcomingDeadlinesPanel() {
   );
 
   if (!deadlines.length) {
-    return <p className="text-sm text-muted-foreground py-2">No upcoming deadlines.</p>;
+    return <p className="text-sm text-muted-foreground py-2">{t("exec.noUpcomingDeadlines")}</p>;
   }
 
   const daysUntil = (date: string) => {
@@ -246,13 +247,13 @@ function UpcomingDeadlinesPanel() {
               : days <= 30 ? "bg-amber-100 text-amber-700"
               : "bg-slate-100 text-slate-600"
             }`}>
-              {days <= 0 ? "Today" : `${days}d`}
+              {days <= 0 ? t("exec.today") : `${days}d`}
             </span>
           </Link>
         );
       })}
       <Link href="/operating-system/calendar" className="block text-center text-xs text-blue-600 hover:underline pt-1">
-        View calendar →
+        {t("exec.viewCalendar")} →
       </Link>
     </div>
   );
@@ -261,6 +262,7 @@ function UpcomingDeadlinesPanel() {
 // ── #140 Executive alert banner ───────────────────────────────────────────────
 
 function ExecutiveAlertBanner({ actions }: { actions: PriorityAction[] }) {
+  const { t } = useLanguage();
   const criticals = actions.filter((a) => a.severity === "critical");
   if (criticals.length === 0) return null;
   return (
@@ -268,7 +270,7 @@ function ExecutiveAlertBanner({ actions }: { actions: PriorityAction[] }) {
       <AlertCircle className="h-4 w-4 flex-shrink-0 text-red-600 mt-0.5" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-red-800">
-          {criticals.length} critical item{criticals.length > 1 ? "s" : ""} require immediate attention
+          {(criticals.length === 1 ? t("exec.criticalItemsAlert") : t("exec.criticalItemsAlertPlural")).replace("{n}", String(criticals.length))}
         </p>
         <div className="mt-1 flex flex-wrap gap-2">
           {criticals.map((a, i) => (
@@ -299,8 +301,9 @@ function KpiCard({
   delta?: number | null;
   icon: React.ElementType;
   accent?: string;
-  href?: string;  // #131 drill-down
+  href?: string;
 }) {
+  const { t } = useLanguage();
   const inner = (
     <CardContent className="pt-6">
       <div className="flex items-start justify-between">
@@ -310,7 +313,7 @@ function KpiCard({
           {sub && <p className="mt-1 text-xs text-muted-foreground">{sub}</p>}
           {delta != null && (
             <p className={`mt-1 text-xs font-medium ${delta >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-              {delta >= 0 ? "+" : ""}{delta.toFixed(1)} vs. prior year
+              {t("exec.vsPriorYear").replace("{delta}", `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}`)}
             </p>
           )}
         </div>
@@ -320,7 +323,7 @@ function KpiCard({
       </div>
       {href && (
         <p className="mt-2 flex items-center gap-0.5 text-[10px] text-muted-foreground">
-          View details <ArrowRight className="h-2.5 w-2.5" />
+          {t("exec.viewDetails")} <ArrowRight className="h-2.5 w-2.5" />
         </p>
       )}
     </CardContent>
@@ -345,7 +348,7 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
       {/* #121 6 KPI cards with drill-down (#131) */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <KpiCard
-          label="Avg ESG Score"
+          label={t("exec.avgEsgScore")}
           value={fmt(cc.yoy.current_avg_esg, 0)}
           delta={cc.yoy.avg_esg_delta}
           icon={TrendingUp}
@@ -353,29 +356,29 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
           accent={(cc.yoy.current_avg_esg ?? 0) >= 70 ? "text-emerald-600" : "text-red-600"}
         />
         <KpiCard
-          label="Scored Suppliers"
+          label={t("exec.scoredSuppliers")}
           value={cc.ceo.total_scored_suppliers}
-          sub="with ESG score"
+          sub={t("exec.withEsgScore")}
           icon={Globe}
           href="/suppliers"
         />
         <KpiCard
-          label="Critical Risk"
+          label={t("exec.criticalRisk")}
           value={cc.ceo.critical_risk_suppliers}
           icon={ShieldAlert}
           href="/risks?risk_level=Critical"
           accent={cc.ceo.critical_risk_suppliers > 0 ? "text-red-600" : ""}
         />
         <KpiCard
-          label="Total Emissions"
+          label={t("exec.totalEmissions")}
           value={cc.cso.latest_emissions_tco2e != null ? `${(cc.cso.latest_emissions_tco2e / 1000).toFixed(1)}k` : "—"}
-          sub="tCO₂e latest year"
+          sub={t("exec.tco2eLatest")}
           icon={Leaf}
           href="/sustainability/carbon"
           accent={cc.cso.latest_emissions_tco2e != null && cc.cso.latest_emissions_tco2e > 100_000 ? "text-red-600" : "text-emerald-600"}
         />
         <KpiCard
-          label="Overdue Actions"
+          label={t("exec.overdueActions")}
           value={cc.ceo.overdue_actions}
           icon={Clock}
           href="/recommendations"
@@ -392,7 +395,7 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
       {ps && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">Risk Distribution</CardTitle>
+            <CardTitle className="text-base">{t("exec.riskDistribution")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex gap-4">
@@ -444,7 +447,7 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Clock className="h-4 w-4 text-blue-500" />
-              Upcoming Deadlines
+              {t("exec.upcomingDeadlines")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -457,6 +460,7 @@ function CEOPanel({ cc, dashboard }: { cc: CommandCenterData; dashboard: any }) 
 }
 
 function CFOPanel({ cc }: { cc: CommandCenterData }) {
+  const { t } = useLanguage();
   const { taxonomy_alignment_pct, green_revenue_pct } = cc.cfo;
   const bondEligible = taxonomy_alignment_pct != null && taxonomy_alignment_pct >= 30;
   return (
@@ -464,49 +468,52 @@ function CFOPanel({ cc }: { cc: CommandCenterData }) {
       {/* #122 4-metric CFO view */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard
-          label="EU Taxonomy Alignment"
+          label={t("exec.euTaxonomyAlignment")}
           value={taxonomy_alignment_pct != null ? `${taxonomy_alignment_pct.toFixed(1)}%` : "—"}
-          sub="of revenue aligned"
+          sub={t("exec.ofRevenueAligned")}
           icon={BarChart3}
           href="/financial-esg/taxonomy"
           accent={taxonomy_alignment_pct != null && taxonomy_alignment_pct >= 30 ? "text-emerald-600" : "text-amber-600"}
         />
         <KpiCard
-          label="Green Revenue"
+          label={t("exec.greenRevenue")}
           value={green_revenue_pct != null ? `${green_revenue_pct.toFixed(1)}%` : "—"}
-          sub="share of total revenue"
+          sub={t("exec.shareOfRevenue")}
           icon={Leaf}
           href="/financial-esg/green-revenue"
           accent={green_revenue_pct != null && green_revenue_pct >= 20 ? "text-emerald-600" : "text-slate-600"}
         />
         <KpiCard
-          label="Carbon Cost Exposure"
+          label={t("exec.carbonCostExposure")}
           value={cc.cso.latest_emissions_tco2e != null ? `€${((cc.cso.latest_emissions_tco2e * 0.065) / 1000).toFixed(0)}k` : "—"}
-          sub="@ €65/tCO₂e (ETS)"
+          sub={t("exec.etsRate")}
           icon={Zap}
           href="/financial-esg/carbon-economics"
           accent="text-orange-600"
         />
         <Card className={`${bondEligible ? "border-emerald-200 bg-emerald-50/40" : "border-amber-200 bg-amber-50/40"}`}>
           <CardContent className="pt-5">
-            <p className="text-xs text-muted-foreground">ESG Bond Eligibility</p>
+            <p className="text-xs text-muted-foreground">{t("exec.esgBondEligibility")}</p>
             <p className={`mt-1 text-2xl font-bold ${bondEligible ? "text-emerald-600" : "text-amber-600"}`}>
-              {bondEligible ? "Eligible" : "Not Yet"}
+              {bondEligible ? t("exec.eligible") : t("exec.notYet")}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {bondEligible ? "≥30% taxonomy aligned" : `Need ${30 - (taxonomy_alignment_pct ?? 0)}% more`}
+              {bondEligible
+                ? t("exec.taxonomyAlignedThreshold")
+                : t("exec.needMoreAlignment").replace("{n}", String(Math.ceil(30 - (taxonomy_alignment_pct ?? 0))))}
             </p>
             <Link href="/financial-esg/taxonomy" className="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              View details <ArrowRight className="h-2.5 w-2.5" />
+              {t("exec.viewDetails")} <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </CardContent>
         </Card>
       </div>
       <Card>
         <CardContent className="py-4 text-sm text-muted-foreground">
-          For detailed carbon economics and ESG disclosure packages, visit{" "}
-          <Link href="/financial-esg" className="text-blue-600 hover:underline">Financial ESG</Link>{" "}
-          and <Link href="/reports" className="text-blue-600 hover:underline">Reports Center</Link>.
+          {t("exec.cfoHintPrefix")}{" "}
+          <Link href="/financial-esg" className="text-blue-600 hover:underline">{t("exec.financialEsg")}</Link>
+          {" "}{t("exec.cfoHintConnector")}{" "}
+          <Link href="/reports" className="text-blue-600 hover:underline">{t("exec.reportsCenter")}</Link>.
         </CardContent>
       </Card>
     </div>
@@ -514,6 +521,7 @@ function CFOPanel({ cc }: { cc: CommandCenterData }) {
 }
 
 function CSOPanel({ cc }: { cc: CommandCenterData }) {
+  const { t } = useLanguage();
   const { latest_emissions_tco2e, kpi_on_track, kpi_at_risk, kpi_missed } = cc.cso;
   const total = kpi_on_track + kpi_at_risk + kpi_missed;
 
@@ -532,35 +540,35 @@ function CSOPanel({ cc }: { cc: CommandCenterData }) {
       {/* #123 CSO: emissions + SBTi + KPIs + reporting */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <KpiCard
-          label="Total Emissions"
+          label={t("exec.totalEmissions")}
           value={latest_emissions_tco2e != null ? `${(latest_emissions_tco2e / 1000).toFixed(1)}k` : "—"}
-          sub="tCO₂e (latest year)"
+          sub={t("exec.tco2eLatestYear")}
           icon={Leaf}
           href="/sustainability/carbon"
         />
         <KpiCard
-          label="SBTi Alignment"
+          label={t("exec.sbtiAlignment")}
           value={sbtAlignment != null ? `${sbtAlignment}%` : sustDash?.active_sbts != null ? `${sustDash.active_sbts} active` : "—"}
-          sub="science-based targets"
+          sub={t("exec.scienceBasedTargets")}
           icon={CheckCircle2}
           href="/sustainability/science-based-targets"
           accent={sbtAlignment != null && sbtAlignment >= 75 ? "text-emerald-600" : "text-amber-600"}
         />
         <KpiCard
-          label="KPIs On Track"
+          label={t("exec.kpisOnTrack")}
           value={kpi_on_track}
-          sub={total > 0 ? `${Math.round(kpi_on_track / total * 100)}% on track` : "—"}
+          sub={total > 0 ? t("exec.onTrackPct").replace("{n}", String(Math.round(kpi_on_track / total * 100))) : "—"}
           icon={TrendingUp}
           href="/sustainability/kpis"
           accent={kpi_on_track > 0 ? "text-emerald-600" : ""}
         />
         <Card className="border-blue-100 bg-blue-50/30">
           <CardContent className="pt-5">
-            <p className="text-xs text-muted-foreground">Reporting Status</p>
-            <p className="mt-1 text-xl font-bold text-blue-700">Active</p>
+            <p className="text-xs text-muted-foreground">{t("exec.reportingStatus")}</p>
+            <p className="mt-1 text-xl font-bold text-blue-700">{t("exec.reportingActive")}</p>
             <p className="mt-1 text-xs text-muted-foreground">TCFD · GRI · CDP</p>
             <Link href="/reports" className="mt-1 flex items-center gap-0.5 text-[10px] text-muted-foreground">
-              Generate reports <ArrowRight className="h-2.5 w-2.5" />
+              {t("exec.generateReports")} <ArrowRight className="h-2.5 w-2.5" />
             </Link>
           </CardContent>
         </Card>
@@ -568,12 +576,12 @@ function CSOPanel({ cc }: { cc: CommandCenterData }) {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Card>
           <CardContent className="py-4 text-sm">
-            <Link href="/sustainability/carbon" className="text-blue-600 hover:underline">View Carbon Inventory →</Link>
+            <Link href="/sustainability/carbon" className="text-blue-600 hover:underline">{t("exec.viewCarbonInventory")}</Link>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="py-4 text-sm">
-            <Link href="/strategy/pathways" className="text-blue-600 hover:underline">View Transition Pathways →</Link>
+            <Link href="/strategy/pathways" className="text-blue-600 hover:underline">{t("exec.viewTransitionPathways")}</Link>
           </CardContent>
         </Card>
       </div>
@@ -597,7 +605,7 @@ function CCOPanel({ cc }: { cc: CommandCenterData }) {
         {/* Audit readiness ring */}
         <Card className="flex items-center justify-center p-6">
           <div className="flex flex-col items-center gap-2 text-center">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Audit Readiness</p>
+            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t("exec.auditReadiness")}</p>
             <div className="relative flex h-28 w-28 items-center justify-center">
               <svg viewBox="0 0 100 100" className="h-28 w-28 -rotate-90">
                 <circle cx="50" cy="50" r={r} fill="none" strokeWidth="9" className="stroke-muted" />
@@ -611,26 +619,26 @@ function CCOPanel({ cc }: { cc: CommandCenterData }) {
                 <p className="text-[10px] text-muted-foreground">%</p>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">{soc2_implemented}/{soc2_total} controls</p>
-            <Link href="/compliance/center" className="text-xs text-blue-600 hover:underline">View details →</Link>
+            <p className="text-xs text-muted-foreground">{t("exec.controls").replace("{n}", String(soc2_implemented)).replace("{total}", String(soc2_total))}</p>
+            <Link href="/compliance/center" className="text-xs text-blue-600 hover:underline">{t("exec.viewDetails")} →</Link>
           </div>
         </Card>
         <KpiCard
           label={t("dashboard.criticalFindings")}
           value={open_critical_findings}
-          sub="require immediate action"
+          sub={t("exec.requireImmediateAction")}
           icon={AlertTriangle}
           href="/findings?severity=Critical"
           accent={open_critical_findings > 0 ? "text-red-600" : ""}
         />
         <Card>
           <CardContent className="pt-6 text-sm">
-            <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">Quick Links</p>
+            <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">{t("exec.quickLinks")}</p>
             <div className="space-y-1">
-              <Link href="/findings" className="block text-blue-600 hover:underline text-xs">Open Findings →</Link>
-              <Link href="/reports" className="block text-blue-600 hover:underline text-xs">Regulatory Reports →</Link>
-              <Link href="/enterprise/audit" className="block text-blue-600 hover:underline text-xs">Audit Trail →</Link>
-              <Link href="/compliance/center" className="block text-blue-600 hover:underline text-xs">Compliance Center →</Link>
+              <Link href="/findings" className="block text-blue-600 hover:underline text-xs">{t("exec.openFindings")} →</Link>
+              <Link href="/reports" className="block text-blue-600 hover:underline text-xs">{t("exec.regulatoryReports")} →</Link>
+              <Link href="/enterprise/audit" className="block text-blue-600 hover:underline text-xs">{t("exec.auditTrail")} →</Link>
+              <Link href="/compliance/center" className="block text-blue-600 hover:underline text-xs">{t("exec.complianceCenter")} →</Link>
             </div>
           </CardContent>
         </Card>
@@ -639,7 +647,7 @@ function CCOPanel({ cc }: { cc: CommandCenterData }) {
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
             <Clock className="h-4 w-4 text-blue-500" />
-            Upcoming Regulatory Deadlines
+            {t("exec.upcomingRegDeadlines")}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -655,6 +663,7 @@ function CCOPanel({ cc }: { cc: CommandCenterData }) {
 type Period = 30 | 90 | 365;
 
 function KPITrendSection() {
+  const { t } = useLanguage();
   const [period, setPeriod] = useState<Period>(90);
   const { data, isLoading } = useQuery({
     queryKey: ["executive-kpi-trends", period],
@@ -664,7 +673,7 @@ function KPITrendSection() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base">Portfolio KPI Trends</CardTitle>
+        <CardTitle className="text-base">{t("exec.portfolioKpiTrends")}</CardTitle>
         <div className="flex gap-1">
           {([30, 90, 365] as Period[]).map((p) => (
             <button
@@ -685,17 +694,17 @@ function KPITrendSection() {
         {isLoading ? (
           <div className="flex justify-center py-8"><Spinner /></div>
         ) : !data || data.data_points.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No trend data yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("exec.noTrendData")}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
-                  <th className="pb-2 text-left">Month</th>
-                  <th className="pb-2 text-right">Suppliers</th>
-                  <th className="pb-2 text-right">Avg ESG</th>
-                  <th className="pb-2 text-right">Avg Risk</th>
-                  <th className="pb-2 text-right">High+Critical</th>
+                  <th className="pb-2 text-left">{t("exec.thMonth")}</th>
+                  <th className="pb-2 text-right">{t("exec.thSuppliers")}</th>
+                  <th className="pb-2 text-right">{t("exec.thAvgEsg")}</th>
+                  <th className="pb-2 text-right">{t("exec.thAvgRisk")}</th>
+                  <th className="pb-2 text-right">{t("exec.thHighCritical")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -720,6 +729,7 @@ function KPITrendSection() {
 // ── #137 Risk Trend Chart ─────────────────────────────────────────────────────
 
 function RiskTrendChart() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["executive-kpi-trends-risk", 365],
     queryFn: () => getKPITrends(365),
@@ -737,14 +747,14 @@ function RiskTrendChart() {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <ShieldAlert className="h-4 w-4 text-orange-500" />
-          Risk Trend (12 months)
+          {t("exec.riskTrend12m")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-8"><Spinner /></div>
         ) : chartData.length < 2 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">Not enough trend data yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("exec.notEnoughTrendData")}</p>
         ) : (
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
@@ -766,6 +776,7 @@ function RiskTrendChart() {
 // ── #138 Emissions Trend Chart ────────────────────────────────────────────────
 
 function EmissionsTrendChart() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["executive-emissions-trend"],
     queryFn: async () => {
@@ -789,14 +800,14 @@ function EmissionsTrendChart() {
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
           <Leaf className="h-4 w-4 text-emerald-500" />
-          Emissions Trend
+          {t("exec.emissionsTrend")}
         </CardTitle>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-8"><Spinner /></div>
         ) : chartData.length < 2 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No multi-year inventory data yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("exec.noMultiYearData")}</p>
         ) : (
           <ResponsiveContainer width="100%" height={200}>
             <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
@@ -816,6 +827,7 @@ function EmissionsTrendChart() {
 // ── Risk Register preview (shared) ───────────────────────────────────────────
 
 function RiskRegisterPreview() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["executive-risk-register-preview"],
     queryFn: () => getRiskRegister({ limit: 8, sort_by: "risk_score" }),
@@ -824,14 +836,14 @@ function RiskRegisterPreview() {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-base">Top Risk Suppliers</CardTitle>
-        <Link href="/suppliers" className="text-xs text-blue-600 hover:underline">View all →</Link>
+        <CardTitle className="text-base">{t("exec.topRiskSuppliers")}</CardTitle>
+        <Link href="/suppliers" className="text-xs text-blue-600 hover:underline">{t("exec.viewAll")} →</Link>
       </CardHeader>
       <CardContent>
         {isLoading ? (
           <div className="flex justify-center py-6"><Spinner /></div>
         ) : !data || data.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No scored suppliers yet.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("exec.noScoredSuppliers")}</p>
         ) : (
           <div className="space-y-2">
             {data.map((e) => (
@@ -895,7 +907,7 @@ function HeatmapPreview() {
         {isLoading ? (
           <div className="flex justify-center py-6"><Spinner /></div>
         ) : !data || data.buckets.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">No data available.</p>
+          <p className="py-6 text-center text-sm text-muted-foreground">{t("exec.noData")}</p>
         ) : (
           <div className="space-y-2">
             {data.buckets.slice(0, 8).map((b) => {
@@ -917,7 +929,7 @@ function HeatmapPreview() {
                     </div>
                   </div>
                   <span className="w-10 text-right text-xs font-mono text-muted-foreground">{b.avg_risk_score.toFixed(0)}</span>
-                  <span className="w-16 text-right text-xs text-muted-foreground">{b.supplier_count} supplier{b.supplier_count !== 1 ? "s" : ""}</span>
+                  <span className="w-16 text-right text-xs text-muted-foreground">{(b.supplier_count === 1 ? t("exec.supplierCount") : t("exec.supplierCountPlural")).replace("{n}", String(b.supplier_count))}</span>
                 </Link>
               );
             })}
@@ -938,23 +950,23 @@ function ActionGovernanceSection() {
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Action Effectiveness (30d)</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t("exec.actionEffectiveness")}</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Open actions</span><span className="font-medium">{ae?.total_open ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.openActions")}</span><span className="font-medium">{ae?.total_open ?? "—"}</span></div>
           <div className="flex justify-between"><span className="text-muted-foreground">{t("dashboard.overdue")}</span><span className={`font-medium ${(ae?.total_overdue ?? 0) > 0 ? "text-red-600" : ""}`}>{ae?.total_overdue ?? "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Closed this period</span><span className="font-medium">{ae?.closed_this_period ?? "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Resolution rate</span><span className="font-medium">{ae?.resolution_rate != null ? `${(ae.resolution_rate * 100).toFixed(0)}%` : "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Avg resolution</span><span className="font-medium">{ae?.avg_resolution_days != null ? `${ae.avg_resolution_days}d` : "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.closedThisPeriod")}</span><span className="font-medium">{ae?.closed_this_period ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.resolutionRate")}</span><span className="font-medium">{ae?.resolution_rate != null ? `${(ae.resolution_rate * 100).toFixed(0)}%` : "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.avgResolution")}</span><span className="font-medium">{ae?.avg_resolution_days != null ? `${ae.avg_resolution_days}d` : "—"}</span></div>
         </CardContent>
       </Card>
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-base">Governance Metrics (30d)</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-base">{t("exec.governanceMetrics")}</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
-          <div className="flex justify-between"><span className="text-muted-foreground">Total decisions</span><span className="font-medium">{gov?.total_review_decisions ?? "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Approved</span><span className="font-medium text-emerald-600">{gov?.approved ?? "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Rejected</span><span className="font-medium text-red-600">{gov?.rejected ?? "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Approval rate</span><span className="font-medium">{gov?.approval_rate != null ? `${(gov.approval_rate * 100).toFixed(0)}%` : "—"}</span></div>
-          <div className="flex justify-between"><span className="text-muted-foreground">Avg review time</span><span className="font-medium">{gov?.avg_review_days != null ? `${gov.avg_review_days}d` : "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.totalDecisions")}</span><span className="font-medium">{gov?.total_review_decisions ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.approved")}</span><span className="font-medium text-emerald-600">{gov?.approved ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.rejected")}</span><span className="font-medium text-red-600">{gov?.rejected ?? "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.approvalRate")}</span><span className="font-medium">{gov?.approval_rate != null ? `${(gov.approval_rate * 100).toFixed(0)}%` : "—"}</span></div>
+          <div className="flex justify-between"><span className="text-muted-foreground">{t("exec.avgReviewTime")}</span><span className="font-medium">{gov?.avg_review_days != null ? `${gov.avg_review_days}d` : "—"}</span></div>
         </CardContent>
       </Card>
     </div>
@@ -994,7 +1006,7 @@ export default function ExecutiveDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold">{t("exec.commandCenter")}</h1>
           <p className="text-sm text-muted-foreground">
-            Board-level ESG portfolio intelligence
+            {t("exec.boardIntelligence")}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1002,13 +1014,13 @@ export default function ExecutiveDashboardPage() {
             href="/reports"
             className="rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium hover:bg-muted transition-colors"
           >
-            Reports Center →
+            {t("exec.reportsCenter")} →
           </Link>
           <Link
             href="/executive/reports"
             className="rounded-lg bg-slate-800 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
           >
-            Board Reports →
+            {t("exec.boardReports")} →
           </Link>
           {/* #116 Generate Board Pack */}
           <Link
@@ -1016,7 +1028,7 @@ export default function ExecutiveDashboardPage() {
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 transition-colors shadow-sm"
           >
             <BookOpen className="h-4 w-4" />
-            Generate Board Pack
+            {t("exec.generateBoardPack")}
           </Link>
         </div>
       </div>
@@ -1038,7 +1050,7 @@ export default function ExecutiveDashboardPage() {
                   <HealthScoreRing score={cc.esg_health_score} label={cc.health_label} />
                   {cc.yoy.avg_esg_delta != null && (
                     <p className={`text-xs font-medium ${cc.yoy.avg_esg_delta >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                      {cc.yoy.avg_esg_delta >= 0 ? "+" : ""}{cc.yoy.avg_esg_delta.toFixed(1)} avg ESG vs. prior year
+                      {t("exec.avgEsgVsPriorYear").replace("{delta}", `${cc.yoy.avg_esg_delta >= 0 ? "+" : ""}${cc.yoy.avg_esg_delta.toFixed(1)}`)}
                     </p>
                   )}
                 </div>
@@ -1077,10 +1089,7 @@ export default function ExecutiveDashboardPage() {
             ))}
             <div className="flex-1" />
             <span className="self-center text-xs text-muted-foreground">
-              {persona === "CEO" ? `${t("exec.ceo")} view`
-               : persona === "CFO" ? `${t("exec.cfo")} view`
-               : persona === "CSO" ? `${t("exec.cso")} view`
-               : `${t("exec.cco")} view`}
+              {t("exec.personaView").replace("{persona}", persona)}
             </span>
           </div>
 

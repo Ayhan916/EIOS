@@ -97,6 +97,7 @@ export async function listDPPs(params?: {
   dpp_status?: DPPStatus;
   format?: DPPFormat;
   product_id?: string;
+  is_public?: boolean;
   limit?: number;
   offset?: number;
 }): Promise<DPPListResponse> {

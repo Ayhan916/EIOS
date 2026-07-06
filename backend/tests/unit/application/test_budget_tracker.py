@@ -96,16 +96,19 @@ class TestBudgetTrackerEnforced:
         from datetime import datetime
 
         tracker = LLMBudgetTracker()
+        jan = datetime(2026, 1, 1, tzinfo=UTC)
+        feb = datetime(2026, 2, 1, tzinfo=UTC)
+
         with patch("application.budget.tracker.settings") as mock_settings:
             mock_settings.llm_monthly_token_budget = 1000
-            tracker.check_and_record("org-1", 900)
+            with patch("application.budget.tracker.datetime") as mock_dt:
+                mock_dt.now.return_value = jan
+                tracker.check_and_record("org-1", 900)
             assert tracker._usage["org-1"].tokens_used == 900
 
             # Simulate time advancing to next month
-            next_month = datetime(2026, 7, 1, tzinfo=UTC)
             with patch("application.budget.tracker.datetime") as mock_dt:
-                mock_dt.now.return_value = next_month
-                # _get_usage should reset the counter
+                mock_dt.now.return_value = feb
                 usage = tracker._get_usage("org-1")
                 assert usage.tokens_used == 0
 

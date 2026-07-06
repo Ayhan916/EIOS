@@ -73,8 +73,8 @@ function CreatePolicyModal({
               value={policyType}
               onChange={(e) => setPolicyType(e.target.value)}
             >
-              {POLICY_TYPES.map((t) => (
-                <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+              {POLICY_TYPES.map((pt) => (
+                <option key={pt} value={pt}>{pt.replace(/_/g, " ")}</option>
               ))}
             </select>
           </div>
@@ -93,7 +93,7 @@ function CreatePolicyModal({
               checked={cascade}
               onChange={(e) => setCascade(e.target.checked)}
             />
-            Cascade to child organizations
+            {t("ent.cascadeToChildren")}
           </label>
         </div>
         <div className="mt-5 flex justify-end gap-2">
@@ -198,7 +198,7 @@ export default function PoliciesPage() {
                 : "border-transparent text-muted-foreground hover:text-slate-700"
             }`}
           >
-            {tabKey === "retention" ? "Retention Rules" : t("ent.policiesTitle")}
+            {tabKey === "retention" ? t("ent.retentionRules") : t("ent.policiesTitle")}
           </button>
         ))}
       </div>
@@ -229,7 +229,7 @@ export default function PoliciesPage() {
                           {p.policy_type.replace(/_/g, " ")}
                         </span>
                         {p.cascade_to_children && (
-                          <span className="text-xs text-muted-foreground">cascades to children</span>
+                          <span className="text-xs text-muted-foreground">{t("ent.cascades")}</span>
                         )}
                         <span className="text-xs text-muted-foreground">
                           {p.scope}
@@ -265,9 +265,9 @@ export default function PoliciesPage() {
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
                   <th className="pb-2 text-left">{t("common.type")}</th>
-                  <th className="pb-2 text-right">Retention Days</th>
-                  <th className="pb-2 text-center">Legal Hold</th>
-                  <th className="pb-2 text-center">Cascades</th>
+                  <th className="pb-2 text-right">{t("ent.retentionDays")}</th>
+                  <th className="pb-2 text-center">{t("ent.legalHold")}</th>
+                  <th className="pb-2 text-center">{t("ent.cascades")}</th>
                   <th className="pb-2 text-center">{t("common.status")}</th>
                 </tr>
               </thead>
@@ -281,7 +281,7 @@ export default function PoliciesPage() {
                     <td className="py-3 text-center">
                       {r.legal_hold ? (
                         <span className="rounded bg-red-100 px-2 py-0.5 text-xs text-red-800">
-                          Legal Hold
+                          {t("ent.legalHold")}
                         </span>
                       ) : "—"}
                     </td>

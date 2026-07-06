@@ -32,6 +32,8 @@ import {
   CalibrationPoint,
   RecordCalibrationRequest,
 } from "@/lib/api/evaluation";
+import { useLanguage } from "@/lib/i18n/context";
+import { formatDate } from "@/lib/utils";
 
 // ── Metric card ───────────────────────────────────────────────────────────────
 
@@ -72,9 +74,10 @@ function MetricCard({
 // ── Health gauge ──────────────────────────────────────────────────────────────
 
 function HealthGauge({ score }: { score: number }) {
+  const { t } = useLanguage();
   const color =
     score >= 80 ? "text-emerald-500" : score >= 60 ? "text-amber-500" : "text-red-500";
-  const label = score >= 80 ? "Healthy" : score >= 60 ? "Fair" : "Needs Attention";
+  const label = score >= 80 ? t("evaluation.healthy") : score >= 60 ? t("evaluation.fair") : t("evaluation.needsAttention");
   return (
     <div className="flex flex-col items-center gap-1">
       <span className={`text-5xl font-black ${color}`}>{score.toFixed(0)}</span>
@@ -104,18 +107,19 @@ function BmBadge({ status }: { status: string }) {
 // ── Benchmark results table ───────────────────────────────────────────────────
 
 function BenchmarkTable({ results }: { results: BenchmarkResult[] }) {
+  const { t } = useLanguage();
   if (results.length === 0) return null;
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
       <table className="w-full text-sm">
         <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400">
           <tr>
-            <th className="px-4 py-3 text-left">Test</th>
-            <th className="px-4 py-3 text-left">Module</th>
-            <th className="px-4 py-3 text-center">Result</th>
-            <th className="px-4 py-3 text-center">Score</th>
-            <th className="px-4 py-3 text-center">ms</th>
-            <th className="px-4 py-3 text-left">Note</th>
+            <th className="px-4 py-3 text-left">{t("evaluation.bmTest")}</th>
+            <th className="px-4 py-3 text-left">{t("evaluation.bmModule")}</th>
+            <th className="px-4 py-3 text-center">{t("evaluation.bmResult")}</th>
+            <th className="px-4 py-3 text-center">{t("evaluation.bmScore")}</th>
+            <th className="px-4 py-3 text-center">{t("evaluation.bmMs")}</th>
+            <th className="px-4 py-3 text-left">{t("evaluation.bmNote")}</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -156,6 +160,7 @@ const CALIBRATION_COLORS: Record<string, string> = {
 };
 
 function CalibrationCurveChart({ points }: { points: CalibrationPoint[] }) {
+  const { t } = useLanguage();
   const data = points.map((p) => ({
     name: p.confidence_level.charAt(0).toUpperCase() + p.confidence_level.slice(1),
     accuracy: p.accuracy !== null ? Math.round(p.accuracy * 100) : null,
@@ -169,7 +174,7 @@ function CalibrationCurveChart({ points }: { points: CalibrationPoint[] }) {
   if (data.every((d) => d.total === 0)) {
     return (
       <div className="flex items-center justify-center h-40 text-sm text-muted-foreground">
-        Noch keine Calibration Events vorhanden. Zeichne einen Outcome auf um die Kurve zu sehen.
+        {t("evaluation.calibNoData")}
       </div>
     );
   }
@@ -188,16 +193,16 @@ function CalibrationCurveChart({ points }: { points: CalibrationPoint[] }) {
         <Tooltip
           formatter={(value: number, _name: string, props) => {
             const item = props.payload;
-            if (value === null || value === undefined) return ["—", "Accuracy"];
+            if (value === null || value === undefined) return ["—", t("evaluation.calibTooltipAccuracy")];
             return [
               `${value}% (${item.confirmed} confirmed / ${item.refuted} refuted / ${item.unknown} unknown)`,
-              "Accuracy",
+              t("evaluation.calibTooltipAccuracy"),
             ];
           }}
-          labelFormatter={(l) => `Confidence: ${l}`}
+          labelFormatter={(l) => `${t("evaluation.calibTooltipConfidence")}: ${l}`}
         />
-        <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 2" label={{ value: "Perfect", fontSize: 10, fill: "#94a3b8" }} />
-        <Bar dataKey="accuracy" name="Accuracy (%)" radius={[4, 4, 0, 0]}>
+        <ReferenceLine y={100} stroke="#94a3b8" strokeDasharray="4 2" label={{ value: t("evaluation.calibPerfect"), fontSize: 10, fill: "#94a3b8" }} />
+        <Bar dataKey="accuracy" name={t("evaluation.calibTooltipAccuracy")} radius={[4, 4, 0, 0]}>
           {data.map((entry, i) => (
             <Cell key={i} fill={entry.fill} />
           ))}
@@ -208,6 +213,7 @@ function CalibrationCurveChart({ points }: { points: CalibrationPoint[] }) {
 }
 
 function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
+  const { t } = useLanguage();
   const [form, setForm] = useState<RecordCalibrationRequest>({
     entity_type: "finding",
     entity_id: "",
@@ -226,11 +232,11 @@ function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <div className="rounded-xl border border-border bg-slate-50/60 p-4 space-y-3">
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        Outcome aufzeichnen
+        {t("evaluation.recordOutcome")}
       </p>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground">Entity-Typ</label>
+          <label className="text-[10px] font-medium text-muted-foreground">{t("evaluation.entityType")}</label>
           <select
             className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
             value={form.entity_type}
@@ -242,7 +248,7 @@ function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground">Entity-ID</label>
+          <label className="text-[10px] font-medium text-muted-foreground">{t("evaluation.entityId")}</label>
           <input
             className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
             placeholder="UUID"
@@ -251,7 +257,7 @@ function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
           />
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground">Predicted Confidence</label>
+          <label className="text-[10px] font-medium text-muted-foreground">{t("evaluation.predictedConf")}</label>
           <select
             className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
             value={form.predicted_confidence}
@@ -263,7 +269,7 @@ function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
           </select>
         </div>
         <div className="space-y-1">
-          <label className="text-[10px] font-medium text-muted-foreground">Actual Outcome</label>
+          <label className="text-[10px] font-medium text-muted-foreground">{t("evaluation.actualOutcome")}</label>
           <select
             className="h-8 w-full rounded-md border border-input bg-white px-2 text-xs"
             value={form.actual_outcome}
@@ -280,10 +286,10 @@ function RecordCalibrationForm({ onSuccess }: { onSuccess: () => void }) {
         disabled={mutation.isPending || !form.entity_id.trim()}
         className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
       >
-        {mutation.isPending ? "Speichern…" : "Outcome speichern"}
+        {mutation.isPending ? t("evaluation.saving") : t("evaluation.saveOutcome")}
       </button>
       {mutation.isError && (
-        <p className="text-xs text-red-500">Fehler beim Speichern. Bitte ID prüfen.</p>
+        <p className="text-xs text-red-500">{t("evaluation.saveError")}</p>
       )}
     </div>
   );
@@ -307,7 +313,7 @@ function TrendBars({ runs }: { runs: EvaluationRun[] }) {
         return (
           <div
             key={r.id}
-            title={`${r.platform_health_score.toFixed(0)} — ${r.computed_at ? new Date(r.computed_at).toLocaleDateString() : ""}`}
+            title={`${r.platform_health_score.toFixed(0)} — ${r.computed_at ? formatDate(r.computed_at) : ""}`}
             className={`flex-1 rounded-t ${color} transition-all`}
             style={{ height: `${pct}%`, minHeight: "4px" }}
           />
@@ -320,6 +326,7 @@ function TrendBars({ runs }: { runs: EvaluationRun[] }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function EvaluationPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [windowDays, setWindowDays] = useState(30);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -357,7 +364,7 @@ export default function EvaluationPage() {
   const run = latest;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -366,25 +373,25 @@ export default function EvaluationPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Evaluation Engine
+              {t("evaluation.title")}
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              FR-014 — Platform AI quality metrics: accuracy, confidence, hallucination rate, cost
+              {t("evaluation.subtitle")}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-            Window:
+            {t("evaluation.window")}:
             <select
               value={windowDays}
               onChange={(e) => setWindowDays(Number(e.target.value))}
               className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2 py-1 text-sm"
             >
-              <option value={7}>7 days</option>
-              <option value={30}>30 days</option>
-              <option value={90}>90 days</option>
+              <option value={7}>{t("evaluation.windowDays").replace("{n}", "7")}</option>
+              <option value={30}>{t("evaluation.windowDays").replace("{n}", "30")}</option>
+              <option value={90}>{t("evaluation.windowDays").replace("{n}", "90")}</option>
             </select>
           </label>
           <button
@@ -393,59 +400,59 @@ export default function EvaluationPage() {
             className="flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white hover:bg-purple-700 disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${runMutation.isPending ? "animate-spin" : ""}`} />
-            {runMutation.isPending ? "Running…" : "Run Evaluation"}
+            {runMutation.isPending ? t("evaluation.running") : t("evaluation.runEval")}
           </button>
         </div>
       </div>
 
       {latestLoading ? (
-        <div className="py-10 text-center text-sm text-gray-400">Loading…</div>
+        <div className="py-10 text-center text-sm text-gray-400">{t("evaluation.loading")}</div>
       ) : !run ? (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center text-gray-400">
-          No evaluation run yet. Click "Run Evaluation" to get started.
+          {t("evaluation.noRun")}
         </div>
       ) : (
         <>
           {/* Health + benchmark status */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-1 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 flex flex-col items-center justify-center gap-2">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform Health</span>
+              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">{t("evaluation.platformHealth")}</span>
               <HealthGauge score={run.platform_health_score} />
               <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs text-gray-400">Benchmark:</span>
+                <span className="text-xs text-gray-400">{t("evaluation.benchmark")}:</span>
                 <BmBadge status={run.benchmark_status} />
               </div>
               <p className="text-xs text-gray-400 text-center">
-                {run.benchmark_passed}/{run.benchmark_total} tests passed
+                {t("evaluation.testsPassed").replace("{passed}", String(run.benchmark_passed)).replace("{total}", String(run.benchmark_total))}
               </p>
             </div>
 
             <div className="md:col-span-2 grid grid-cols-2 gap-3">
               <MetricCard
-                label="Accuracy"
+                label={t("evaluation.accuracy")}
                 value={`${(run.accuracy_score * 100).toFixed(1)}%`}
-                sub="Benchmark pass rate"
+                sub={t("evaluation.accuracySub")}
                 icon={BarChart3}
                 color="blue"
               />
               <MetricCard
-                label="Confidence"
+                label={t("evaluation.confidence")}
                 value={`${(run.confidence_score * 100).toFixed(1)}%`}
-                sub="Mean agent confidence"
+                sub={t("evaluation.confidenceSub")}
                 icon={TrendingUp}
                 color="green"
               />
               <MetricCard
-                label="Hallucination Rate"
+                label={t("evaluation.hallucinationRate")}
                 value={`${(run.hallucination_rate * 100).toFixed(2)}%`}
-                sub="High-conf errors / total"
+                sub={t("evaluation.hallucinationSub")}
                 icon={AlertTriangle}
                 color={run.hallucination_rate > 0.05 ? "red" : "green"}
               />
               <MetricCard
-                label="Error Rate"
+                label={t("evaluation.errorRate")}
                 value={`${(run.error_rate * 100).toFixed(2)}%`}
-                sub={`${run.agent_run_count} runs in ${run.window_days}d window`}
+                sub={t("evaluation.errorRateSub").replace("{n}", String(run.agent_run_count)).replace("{d}", String(run.window_days))}
                 icon={Cpu}
                 color={run.error_rate > 0.1 ? "red" : "green"}
               />
@@ -455,20 +462,20 @@ export default function EvaluationPage() {
           {/* Cost */}
           <div className="grid grid-cols-3 gap-4">
             <MetricCard
-              label="Cost (total)"
+              label={t("evaluation.costTotal")}
               value={`$${run.cost_usd_total.toFixed(4)}`}
-              sub={`${run.window_days}-day window`}
+              sub={t("evaluation.dayWindow").replace("{n}", String(run.window_days))}
               icon={DollarSign}
               color="purple"
             />
             <MetricCard
-              label="Cost (last 7d)"
+              label={t("evaluation.cost7d")}
               value={`$${run.cost_usd_last_7d.toFixed(4)}`}
               icon={DollarSign}
               color="purple"
             />
             <MetricCard
-              label="Cost (last 30d)"
+              label={t("evaluation.cost30d")}
               value={`$${run.cost_usd_last_30d.toFixed(4)}`}
               icon={DollarSign}
               color="purple"
@@ -479,10 +486,10 @@ export default function EvaluationPage() {
           {trends && trends.runs.length > 1 && (
             <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 space-y-2">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                Health Score Trend (last {trends.runs.length} runs)
+                {t("evaluation.trendTitle").replace("{n}", String(trends.runs.length))}
               </p>
               <TrendBars runs={trends.runs} />
-              <p className="text-xs text-gray-400">Each bar = one evaluation run. Green ≥80, Amber ≥60, Red &lt;60.</p>
+              <p className="text-xs text-gray-400">{t("evaluation.trendLegend")}</p>
             </div>
           )}
 
@@ -494,15 +501,15 @@ export default function EvaluationPage() {
               </div>
               <div>
                 <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                  Confidence Calibration
+                  {t("evaluation.calibTitle")}
                 </p>
                 <p className="text-xs text-gray-400">
-                  Bei "High Confidence" stimmt das System X% der Zeit — GAP-27
+                  {t("evaluation.calibSubtitle")}
                 </p>
               </div>
               {calibrationData && (
                 <span className="ml-auto text-xs text-gray-400">
-                  {calibrationData.total_events} Events gesamt
+                  {t("evaluation.calibEvents").replace("{n}", String(calibrationData.total_events))}
                 </span>
               )}
             </div>
@@ -521,7 +528,7 @@ export default function EvaluationPage() {
                     {p.confidence_level}
                   </p>
                   <p className="text-muted-foreground">
-                    {p.accuracy !== null ? `${(p.accuracy * 100).toFixed(0)}% korrekt` : "—"}
+                    {p.accuracy !== null ? t("evaluation.calibCorrect").replace("{n}", (p.accuracy * 100).toFixed(0)) : "—"}
                   </p>
                   <p className="text-[10px] text-muted-foreground">
                     {p.confirmed}✓ {p.refuted}✗ {p.unknown}?
@@ -537,27 +544,27 @@ export default function EvaluationPage() {
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                Benchmark Results
+                {t("evaluation.benchmarkResults")}
               </p>
               <button
                 onClick={() => setSelectedRunId(run.id)}
                 className="text-xs text-blue-500 hover:underline"
               >
-                Load for this run
+                {t("evaluation.loadForRun")}
               </button>
             </div>
             {benchmarks ? (
               <BenchmarkTable results={benchmarks} />
             ) : (
-              <p className="text-xs text-gray-400">Click "Load for this run" to show benchmark details.</p>
+              <p className="text-xs text-gray-400">{t("evaluation.loadForRunHint")}</p>
             )}
           </div>
 
           {/* Last evaluated */}
           <p className="text-xs text-gray-400">
-            Last evaluated:{" "}
-            {run.computed_at ? new Date(run.computed_at).toLocaleString() : "—"} ·{" "}
-            Run type: {run.run_type}
+            {t("evaluation.lastEvaluated")}:{" "}
+            {run.computed_at ? formatDate(run.computed_at) : "—"} ·{" "}
+            {t("evaluation.runType")}: {run.run_type}
           </p>
         </>
       )}

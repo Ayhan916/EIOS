@@ -20,6 +20,7 @@ import {
   ChevronDown,
   ChevronRight,
 } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 import {
   listEnterprises,
   listIdentityProviders,
@@ -42,7 +43,7 @@ import {
 
 function fmt(iso: string | null | undefined): string {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString();
+  return formatDateTime(iso);
 }
 
 function ScopeBadge({ scope }: { scope: string }) {
@@ -262,7 +263,7 @@ function TokensTab({
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-1.5">
                       <p className="font-semibold text-slate-800 text-sm">
-                        {tok.label ?? <span className="italic text-slate-400">unlabeled</span>}
+                        {tok.label ?? <span className="italic text-slate-400">{t("sso.unlabeled")}</span>}
                       </p>
                       <ScopeBadge scope={tok.scope} />
                       <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${tok.is_active ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-500"}`}>
@@ -304,7 +305,7 @@ function TokensTab({
                         className="h-7 gap-1 text-xs text-red-600 border-red-200 hover:bg-red-50"
                         disabled={revoke.isPending}
                         onClick={() => {
-                          if (confirm(`Revoke token "${tok.label ?? tok.id}"?`)) {
+                          if (confirm(t("sso.revokeConfirm").replace("{label}", tok.label ?? tok.id))) {
                             revoke.mutate(tok.id);
                           }
                         }}

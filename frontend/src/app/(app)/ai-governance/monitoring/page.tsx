@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useLanguage } from "@/lib/i18n/context";
+import { formatDateTime } from "@/lib/utils";
 
 const ORG_ID = "default";
 
@@ -21,6 +22,7 @@ function severityColor(s: string) {
 }
 
 function ModelDriftSection({ modelId, modelName }: { modelId: string; modelName: string }) {
+  const { t } = useLanguage();
   const { data: alerts = [], isLoading } = useQuery({
     queryKey: ["drift-alerts", ORG_ID, modelId],
     queryFn: () => listDriftAlerts(ORG_ID, modelId, false),
@@ -38,7 +40,7 @@ function ModelDriftSection({ modelId, modelName }: { modelId: string; modelName:
         <p className="text-sm font-semibold text-slate-700">{modelName}</p>
         {openCount > 0 && (
           <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-semibold text-orange-700">
-            {openCount} open
+            {t("aiGov.openAlerts").replace("{n}", String(openCount))}
           </span>
         )}
       </div>
@@ -50,13 +52,13 @@ function ModelDriftSection({ modelId, modelName }: { modelId: string; modelName:
               <p className="text-xs font-medium">{alert.alert_type.replace(/_/g, " ")}</p>
               <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{alert.description}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                Detected {new Date(alert.detected_at).toLocaleString()}
-                {alert.resolved_at && ` · Resolved ${new Date(alert.resolved_at).toLocaleString()}`}
+                {t("aiGov.detectedAt").replace("{date}", formatDateTime(alert.detected_at))}
+                {alert.resolved_at && ` ${t("aiGov.resolvedAt").replace("{date}", formatDateTime(alert.resolved_at))}`}
               </p>
             </div>
             {alert.is_resolved ? (
               <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium flex-shrink-0 mt-0.5">
-                <CheckCircle2 className="h-3 w-3" /> Resolved
+                <CheckCircle2 className="h-3 w-3" /> {t("aiGov.resolved")}
               </span>
             ) : (
               <span className="h-2 w-2 rounded-full bg-orange-500 mt-1.5 flex-shrink-0" title="Open" />
@@ -100,7 +102,7 @@ export default function AIMonitoringPage() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-orange-500" />
-              Drift Alerts by Model
+              {t("aiGov.driftAlertsTitle")}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -113,7 +115,7 @@ export default function AIMonitoringPage() {
             </div>
             {models.length > 0 && (
               <p className="mt-4 text-xs text-muted-foreground text-center">
-                Showing alerts for {models.length} model{models.length !== 1 ? "s" : ""}. Models with no alerts are hidden.
+                {(models.length === 1 ? t("aiGov.showingModels") : t("aiGov.showingModelsPlural")).replace("{n}", String(models.length))}
               </p>
             )}
           </CardContent>

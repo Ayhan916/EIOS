@@ -107,6 +107,12 @@ function coverageColor(pct: number) {
 
 function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
   const { t } = useLanguage();
+  const ctrlStatusLabel: Record<string, string> = {
+    "Implemented":   t("compliance.controlStatusImplemented"),
+    "In Progress":   t("compliance.controlStatusInProgress"),
+    "Not Started":   t("compliance.controlStatusNotStarted"),
+    "Exempt":        t("compliance.controlStatusExempt"),
+  };
   const types = Array.from(new Set(controls.map((c) => c.control_type))).sort();
 
   if (!types.length) {
@@ -131,7 +137,7 @@ function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
           <tr>
             <th className="text-left py-2 pr-4 font-semibold text-muted-foreground uppercase tracking-wide">{t("compliance.controlType")}</th>
             {CONTROL_STATUSES.map((s) => (
-              <th key={s} className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{s}</th>
+              <th key={s} className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{ctrlStatusLabel[s] ?? s}</th>
             ))}
             <th className="text-center py-2 px-2 font-semibold text-muted-foreground uppercase tracking-wide">{t("common.total")}</th>
           </tr>
@@ -170,7 +176,7 @@ function ControlHeatmap({ controls }: { controls: ESGControl[] }) {
         {CONTROL_STATUSES.map((s) => (
           <div key={s} className="flex items-center gap-1.5">
             <span className={`inline-block h-2.5 w-2.5 rounded-sm ${CTRL_COLORS[s]}`} />
-            <span className="text-xs text-muted-foreground">{s}</span>
+            <span className="text-xs text-muted-foreground">{ctrlStatusLabel[s] ?? s}</span>
           </div>
         ))}
       </div>
@@ -395,7 +401,7 @@ function AssignControlPanel({ op, controls, onDone }: { op: ComplianceOperation;
         assigned_to_user_id: controlId,
       }),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["compliance-operations"] }); onDone(); },
-    onError: () => setError("Failed to assign control"),
+    onError: () => setError(t("compliance.assignError")),
   });
 
   const selectedControl = controls.find((c) => c.id === controlId);
@@ -409,7 +415,7 @@ function AssignControlPanel({ op, controls, onDone }: { op: ComplianceOperation;
       <div>
         <label className="block text-xs text-muted-foreground mb-1">{t("esgOs.controlsTitle")}</label>
         <select className="w-full rounded border border-input bg-background px-2 py-1.5 text-xs" value={controlId} onChange={(e) => setControlId(e.target.value)}>
-          <option value="">— Choose a control —</option>
+          <option value="">{t("compliance.chooseControl")}</option>
           {controls.map((c) => (
             <option key={c.id} value={c.id}>[{c.control_type}] {c.control_name}</option>
           ))}
@@ -418,7 +424,7 @@ function AssignControlPanel({ op, controls, onDone }: { op: ComplianceOperation;
       {selectedControl && (
         <p className="text-xs text-muted-foreground">
           {t("common.status")}: <span className="font-medium">{selectedControl.control_status}</span>
-          {" · "}Effectiveness: <span className="font-medium">{selectedControl.effectiveness_status}</span>
+          {" · "}{t("compliance.controlStatusEffectiveness")}: <span className="font-medium">{selectedControl.effectiveness_status}</span>
         </p>
       )}
       {error && <p className="text-xs text-red-600">{error}</p>}
@@ -447,8 +453,8 @@ function FrameworkGapRow({ op, controls }: { op: ComplianceOperation; controls: 
             <p className="font-semibold truncate">{op.framework_name}</p>
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            {op.gap_count} open gap{op.gap_count !== 1 ? "s" : ""}{" · "}
-            {op.last_synced_at ? `Last synced ${new Date(op.last_synced_at).toLocaleDateString()}` : "Never synced"}
+            {t("compliance.openGaps").replace("{n}", String(op.gap_count))}{" · "}
+            {op.last_synced_at ? t("compliance.lastSynced").replace("{date}", new Date(op.last_synced_at).toLocaleDateString()) : t("compliance.neverSynced")}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -565,7 +571,7 @@ function GapsTab() {
 function RemediationForm({ gap, onClose }: { gap: ComplianceGap; onClose: () => void }) {
   const { t } = useLanguage();
   const qc = useQueryClient();
-  const [title, setTitle] = useState(`Remediate gap: ${gap.description.slice(0, 60)}`);
+  const [title, setTitle] = useState(t("compliance.remediateGapPrefix") + gap.description.slice(0, 60));
   const [done, setDone] = useState(false);
 
   const mut = useMutation({
@@ -587,23 +593,23 @@ function RemediationForm({ gap, onClose }: { gap: ComplianceGap; onClose: () => 
   if (done) {
     return (
       <div className="flex items-center gap-1.5 text-xs text-emerald-600 py-1">
-        <CheckCircle2 className="h-3.5 w-3.5" /> Action created
+        <CheckCircle2 className="h-3.5 w-3.5" /> {t("compliance.actionCreated")}
       </div>
     );
   }
 
   return (
     <div className="mt-2 space-y-2 rounded-lg border border-blue-200 bg-blue-50/60 p-3">
-      <p className="text-xs font-semibold text-blue-700">Create Remediation Action</p>
+      <p className="text-xs font-semibold text-blue-700">{t("compliance.remediationTitle")}</p>
       <input
         className="w-full rounded border border-input bg-background px-2 py-1 text-xs"
         value={title}
         onChange={(e) => setTitle(e.target.value)}
-        placeholder="Action title"
+        placeholder={t("compliance.actionTitle")}
       />
       <div className="flex gap-2">
         <Button size="sm" className="h-7 text-xs px-3" disabled={!title.trim() || mut.isPending} onClick={() => mut.mutate()}>
-          {mut.isPending ? "Creating…" : "Create Action"}
+          {mut.isPending ? t("compliance.creating") : t("compliance.createAction")}
         </Button>
         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onClose}>{t("common.cancel")}</Button>
       </div>
@@ -612,6 +618,7 @@ function RemediationForm({ gap, onClose }: { gap: ComplianceGap; onClose: () => 
 }
 
 function DetailGapRow({ gap }: { gap: ComplianceGap }) {
+  const { t } = useLanguage();
   const [showForm, setShowForm] = useState(false);
 
   return (
@@ -629,7 +636,7 @@ function DetailGapRow({ gap }: { gap: ComplianceGap }) {
           {showForm && <RemediationForm gap={gap} onClose={() => setShowForm(false)} />}
         </div>
         <button onClick={() => setShowForm((v) => !v)} className="flex-shrink-0 inline-flex items-center gap-1 rounded-md bg-violet-50 px-2 py-1 text-xs font-medium text-violet-700 hover:bg-violet-100 transition-colors">
-          <Zap className="h-3 w-3" /> Assign Control
+          <Zap className="h-3 w-3" /> {t("compliance.assignControl")}
         </button>
       </div>
     </div>
@@ -637,6 +644,7 @@ function DetailGapRow({ gap }: { gap: ComplianceGap }) {
 }
 
 function ComplianceOpRow({ op, allGaps }: { op: ComplianceOperation; allGaps: ComplianceGap[] }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const opGaps = allGaps.slice(0, op.gap_count ?? 0);
 
@@ -647,8 +655,8 @@ function ComplianceOpRow({ op, allGaps }: { op: ComplianceOperation; allGaps: Co
           <div className="space-y-1 min-w-0">
             <p className="font-medium">{op.framework_name}</p>
             <p className="text-xs text-muted-foreground">
-              {op.gap_count} gap{op.gap_count !== 1 ? "s" : ""}{" · "}
-              {op.last_synced_at ? ` Last synced ${formatDate(op.last_synced_at)}` : " Never synced"}
+              {t("compliance.openGaps").replace("{n}", String(op.gap_count))}{" · "}
+              {op.last_synced_at ? t("compliance.lastSynced").replace("{date}", formatDate(op.last_synced_at)) : t("compliance.neverSynced")}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-shrink-0">
@@ -658,14 +666,14 @@ function ComplianceOpRow({ op, allGaps }: { op: ComplianceOperation; allGaps: Co
             {(op.gap_count ?? 0) > 0 && (
               <button onClick={() => setExpanded((v) => !v)} className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                 {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                {expanded ? "Hide" : "View"} gaps
+                {expanded ? t("compliance.hideGaps") : t("compliance.viewGaps")}
               </button>
             )}
           </div>
         </div>
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Coverage</span>
+            <span>{t("compliance.coverage")}</span>
             <span>{op.coverage_percent.toFixed(1)}%</span>
           </div>
           <Progress value={op.coverage_percent} className="h-2" />
@@ -673,7 +681,7 @@ function ComplianceOpRow({ op, allGaps }: { op: ComplianceOperation; allGaps: Co
         {expanded && (
           <div className="mt-3 rounded-lg border border-border bg-muted/20">
             {opGaps.length === 0 ? (
-              <p className="px-4 py-3 text-xs text-muted-foreground">No gap details available.</p>
+              <p className="px-4 py-3 text-xs text-muted-foreground">{t("compliance.noGapDetails")}</p>
             ) : (
               opGaps.map((g) => <DetailGapRow key={g.id} gap={g} />)
             )}
@@ -702,7 +710,7 @@ function OperationsTab() {
   });
 
   if (isLoading) return <div className="flex items-center justify-center h-64"><Spinner /></div>;
-  if (error) return <div className="text-red-600 py-4">Failed to load compliance operations.</div>;
+  if (error) return <div className="text-red-600 py-4">{t("compliance.loadError")}</div>;
 
   const avgCoverage = ops && ops.length > 0
     ? ops.reduce((sum, o) => sum + (o.coverage_percent ?? 0), 0) / ops.length : 0;
@@ -713,11 +721,11 @@ function OperationsTab() {
     <div className="space-y-6">
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Frameworks</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">{t("compliance.frameworks")}</CardTitle></CardHeader>
           <CardContent><p className="text-3xl font-bold">{ops?.length ?? 0}</p></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Avg Coverage</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">{t("compliance.avgCoverage")}</CardTitle></CardHeader>
           <CardContent>
             <p className={`text-3xl font-bold ${avgCoverage >= 80 ? "text-emerald-600" : avgCoverage >= 50 ? "text-amber-600" : "text-red-600"}`}>
               {avgCoverage.toFixed(1)}%
@@ -725,7 +733,7 @@ function OperationsTab() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">Open Gaps</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">{t("compliance.openGapsCount")}</CardTitle></CardHeader>
           <CardContent><p className="text-3xl font-bold text-red-600">{openGaps.length}</p></CardContent>
         </Card>
         <Card>
@@ -744,7 +752,7 @@ function OperationsTab() {
         {ops?.map((op) => <ComplianceOpRow key={op.id} op={op} allGaps={openGaps} />)}
         {(ops?.length ?? 0) === 0 && (
           <div className="text-center py-12 text-muted-foreground">
-            No compliance operations yet. Gaps are synced automatically from M31.
+            {t("compliance.noOperationsYet")}
           </div>
         )}
       </div>
@@ -755,9 +763,9 @@ function OperationsTab() {
 // ── Tab nav ───────────────────────────────────────────────────────────────────
 
 const tab_defs = [
-  { key: "overview",    label: "Übersicht" },
-  { key: "gaps",        label: "Framework-Gaps" },
-  { key: "operations",  label: "Operationen" },
+  { key: "overview",    labelKey: "compliance.tabOverview" as const },
+  { key: "gaps",        labelKey: "compliance.tabGaps" as const },
+  { key: "operations",  labelKey: "compliance.tabOperations" as const },
 ] as const;
 
 type TabKey = (typeof tab_defs)[number]["key"];
@@ -783,7 +791,7 @@ export default function ComplianceCenterPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -813,7 +821,7 @@ export default function ComplianceCenterPage() {
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
               }`}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </nav>

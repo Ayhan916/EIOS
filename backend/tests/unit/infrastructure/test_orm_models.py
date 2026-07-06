@@ -192,6 +192,27 @@ from infrastructure.persistence.models.financial_esg import (  # noqa: F401
     FinancialESGReportModel,
 )
 
+# CSDDD (M90–M98): ensure all CSDDD compliance models are registered
+from infrastructure.persistence.models.board_signoff import BoardSignoffRequestModel, BoardDecisionModel  # noqa: F401
+from infrastructure.persistence.models.threshold_monitor import CompanyProfileModel  # noqa: F401
+from infrastructure.persistence.models.regulatory_radar import RegulatorySourceModel, RegulatoryChangeModel as CSDDDRegulatoryChangeModel, RegulatoryFeedEntryModel  # noqa: F401
+from infrastructure.persistence.models.supplier_assessment import AssessmentTemplateModel, AssessmentQuestionModel, SupplierAssessmentModel, AssessmentResponseModel  # noqa: F401
+from infrastructure.persistence.models.esap import ESAPSubmissionModel  # noqa: F401
+from infrastructure.persistence.models.effectiveness import EffectivenessIndicatorModel, EffectivenessReviewModel, ReviewLineModel  # noqa: F401
+from infrastructure.persistence.models.scoping import ScopingConfigModel, ScopingConfigAuditLogModel, ScopingStudyModel  # noqa: F401
+from infrastructure.persistence.models.remedy_case import RemedyCaseModel, RemedyBeneficiaryModel, RemedyActionModel, RemedyAuditLogModel  # noqa: F401
+from infrastructure.persistence.models.corrective_action_plan import CorrectiveActionPlanModel  # noqa: F401
+from infrastructure.persistence.models.dd_policy import DDPolicyModel, CodeOfConductModel, CoCAcceptanceModel  # noqa: F401
+from infrastructure.persistence.models.contractual_assurance import ContractClauseModel, ContractAssuranceModel, ClauseAuditLogModel  # noqa: F401
+from infrastructure.persistence.models.readiness import ReadinessSnapshotModel  # noqa: F401
+from infrastructure.persistence.models.impact_assessment import ImpactAssessmentModel  # noqa: F401
+from infrastructure.persistence.models.stakeholder import StakeholderModel, StakeholderConsultationModel, StakeholderFeedbackModel  # noqa: F401
+from infrastructure.persistence.models.regulatory_change import RegulatoryChangeModel as LegacyRegulatoryChangeModel, RegulatoryChangeImpactModel  # noqa: F401
+from infrastructure.persistence.models.evaluation import EvaluationRunModel, BenchmarkResultModel, CalibrationEventModel  # noqa: F401
+from infrastructure.persistence.models.improvement import ImprovementProposalModel  # noqa: F401
+from infrastructure.persistence.models.prioritization import PrioritizationDecisionModel  # noqa: F401
+from infrastructure.persistence.models.sme_support import SMEProfileModel, SupportProgramModel, SupportMeasureModel  # noqa: F401
+
 # M44: ensure Strategy models are registered
 from infrastructure.persistence.models.strategy import (  # noqa: F401
     EnterpriseDigitalTwinModel,
@@ -465,6 +486,82 @@ EXPECTED_ENTITY_TABLES = {
     "soc2_controls",
     "pentest_findings",
     "production_checklist_items",
+    # Pre-existing tables imported via __init__.py (supplier extensions, materials, products, etc.)
+    "supplier_esg_metrics",
+    "supplier_external_esg_ratings",
+    "supplier_locations",
+    "supplier_contacts",
+    "supplier_certifications",
+    "supplier_ownerships",
+    "supplier_digital_twins",
+    "intelligence_timeline_events",
+    "materials",
+    "material_compositions",
+    "material_sourcing",
+    "material_compliance_flags",
+    "material_sustainability_metrics",
+    "products",
+    "product_bom_items",
+    "product_compliance_scans",
+    "digital_product_passports",
+    "scope3_inventories",
+    "product_carbon_footprints",
+    "event_outbox",
+    "event_log",
+    "erp_connectors",
+    "erp_sync_jobs",
+    "erp_field_mappings",
+    "news_articles",
+    "news_supplier_assignments",
+    "calibration_suggestions",
+    "scenario_suggestions",
+    "sector_right_scores",
+    "grievance_reports",
+    # CSDDD (M90–M98) tables
+    "board_signoff_requests",
+    "board_decisions",
+    "company_profiles",
+    "regulatory_sources",
+    "csddd_regulatory_changes",
+    "regulatory_feed_entries",
+    "assessment_templates",
+    "assessment_questions",
+    "supplier_assessments",
+    "assessment_responses",
+    "esap_submissions",
+    # CSDDD due-diligence domain tables
+    "effectiveness_indicators",
+    "effectiveness_reviews",
+    "review_lines",
+    "scoping_configs",
+    "scoping_config_audit_logs",
+    "scoping_studies",
+    "remedy_cases",
+    "remedy_beneficiaries",
+    "remedy_actions",
+    "remedy_audit_logs",
+    "corrective_action_plans",
+    "dd_policies",
+    "codes_of_conduct",
+    "coc_acceptances",
+    "contract_clauses",
+    "contract_assurances",
+    "clause_audit_logs",
+    "readiness_snapshots",
+    "impact_assessments",
+    "stakeholders",
+    "stakeholder_consultations",
+    "stakeholder_feedback",
+    "regulatory_changes",
+    "regulatory_change_impacts",
+    "evaluation_runs",
+    "benchmark_results",
+    "calibration_events",
+    "improvement_proposals",
+    "prioritization_decisions",
+    "sme_profiles",
+    "sme_support_programs",
+    "sme_support_measures",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -503,7 +600,7 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 231  # +10 M40, +2 M40.1, +17 M41, +1 M41.1, +19 M42, +20 M43, +21 M44, +5 M44.1, +1 M45, +3 M46.2, +4 M46.3, +3 M47, +3 M48.2, +3 M49
+        assert len(Base.metadata.tables) == 304  # 231 baseline +30 supply-chain/material/product +11 CSDDD Phase4 +32 CSDDD due-diligence domain
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

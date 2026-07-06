@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useLanguage } from "@/lib/i18n/context";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
@@ -1871,8 +1871,17 @@ export default function SupplierDetailPage() {
     "ESG Ratings": t("suppliers.tab.esgRatings"),
   };
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const [tab, setTab] = useState<Tab>("Overview");
+  const rawTab = searchParams.get("tab") as Tab;
+  const [tab, setTab] = useState<Tab>(TABS.includes(rawTab) ? rawTab : "Overview");
+
+  function handleSetTab(newTab: Tab) {
+    setTab(newTab);
+    const p = new URLSearchParams(window.location.search);
+    p.set("tab", newTab);
+    router.replace(`?${p.toString()}`, { scroll: false });
+  }
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState<SupplierUpdate>({});
   const [editError, setEditError] = useState<string | null>(null);
@@ -2270,7 +2279,7 @@ export default function SupplierDetailPage() {
           {TABS.map((tabKey) => (
             <button
               key={tabKey}
-              onClick={() => setTab(tabKey)}
+              onClick={() => handleSetTab(tabKey)}
               className={`pb-3 text-sm font-medium transition-colors ${
                 tab === tabKey
                   ? "border-b-2 border-blue-600 text-blue-600"
@@ -2341,7 +2350,7 @@ export default function SupplierDetailPage() {
                       {t("suppliers.peerBenchmark")}
                     </span>
                     <button
-                      onClick={() => { setTab("Intelligence"); setIntelligenceSubTab("benchmark"); }}
+                      onClick={() => { handleSetTab("Intelligence"); setIntelligenceSubTab("benchmark"); }}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {t("suppliers.fullView")}
@@ -2523,7 +2532,7 @@ export default function SupplierDetailPage() {
                 Intelligence: t("suppliers.viewIntelligence"),
               };
               return (
-                <Card key={navTab} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setTab(navTab)}>
+                <Card key={navTab} className="cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => handleSetTab(navTab)}>
                   <CardContent className="flex items-center gap-4 p-4">
                     {icons[navTab]}
                     <div>
@@ -2641,8 +2650,8 @@ export default function SupplierDetailPage() {
                       value={assessType}
                       onChange={(e) => setAssessType(e.target.value)}
                     >
-                      {["ESG", "Environmental", "Social", "Governance", "Compliance", "Financial"].map((t) => (
-                        <option key={t}>{t}</option>
+                      {["ESG", "Environmental", "Social", "Governance", "Compliance", "Financial"].map((opt) => (
+                        <option key={opt}>{opt}</option>
                       ))}
                     </select>
                   </div>
@@ -2759,7 +2768,7 @@ export default function SupplierDetailPage() {
                       return (
                         <tr key={f.id} className="hover:bg-muted/20 transition-colors">
                           <td className="px-4 py-3">
-                            <p className="font-medium line-clamp-1 max-w-sm">{f.title}</p>
+                            <Link href={`/findings/${f.id}`} className="font-medium hover:text-blue-600 hover:underline line-clamp-1 max-w-sm block">{f.title}</Link>
                             {f.description && (
                               <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1 max-w-sm">{f.description}</p>
                             )}
@@ -2805,23 +2814,25 @@ export default function SupplierDetailPage() {
             <div className="space-y-6">
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
-                  { label: t("suppliers.totalAssessments"), value: profile.total_assessments, icon: FileText, sub: t("suppliers.approvedCount").replace("{n}", String(profile.approved_assessments)), color: "text-blue-600" },
-                  { label: t("suppliers.totalFindings"), value: profile.total_findings, icon: AlertTriangle, sub: t("suppliers.criticalCount").replace("{n}", String(profile.findings_by_severity["Critical"] ?? 0)), color: profile.findings_by_severity["Critical"] ? "text-red-600" : "text-amber-500" },
-                  { label: t("suppliers.totalRisks"), value: profile.total_risks, icon: ShieldAlert, sub: t("suppliers.criticalCount").replace("{n}", String(profile.risks_by_severity["Critical"] ?? 0)), color: profile.risks_by_severity["Critical"] ? "text-red-600" : "text-orange-500" },
-                  { label: t("suppliers.openActions"), value: profile.open_actions, icon: Clock, sub: profile.overdue_actions > 0 ? t("suppliers.overdueCount").replace("{n}", String(profile.overdue_actions)) : t("suppliers.noneOverdue"), color: profile.overdue_actions > 0 ? "text-red-600" : "text-muted-foreground" },
-                ].map(({ label, value, icon: Icon, sub, color }) => (
-                  <Card key={label}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="text-xs text-muted-foreground">{label}</p>
-                          <p className={`text-3xl font-bold ${color}`}>{value}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+                  { label: t("suppliers.totalAssessments"), value: profile.total_assessments, icon: FileText, sub: t("suppliers.approvedCount").replace("{n}", String(profile.approved_assessments)), color: "text-blue-600", href: `/assessments?supplier_id=${id}` },
+                  { label: t("suppliers.totalFindings"), value: profile.total_findings, icon: AlertTriangle, sub: t("suppliers.criticalCount").replace("{n}", String(profile.findings_by_severity["Critical"] ?? 0)), color: profile.findings_by_severity["Critical"] ? "text-red-600" : "text-amber-500", href: `/findings?supplier_id=${id}` },
+                  { label: t("suppliers.totalRisks"), value: profile.total_risks, icon: ShieldAlert, sub: t("suppliers.criticalCount").replace("{n}", String(profile.risks_by_severity["Critical"] ?? 0)), color: profile.risks_by_severity["Critical"] ? "text-red-600" : "text-orange-500", href: `/risks?supplier_id=${id}` },
+                  { label: t("suppliers.openActions"), value: profile.open_actions, icon: Clock, sub: profile.overdue_actions > 0 ? t("suppliers.overdueCount").replace("{n}", String(profile.overdue_actions)) : t("suppliers.noneOverdue"), color: profile.overdue_actions > 0 ? "text-red-600" : "text-muted-foreground", href: `/recommendations?supplier_id=${id}&status=open` },
+                ].map(({ label, value, icon: Icon, sub, color, href }) => (
+                  <Link key={label} href={href}>
+                    <Card className="transition-colors hover:bg-muted/40 cursor-pointer">
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="text-xs text-muted-foreground">{label}</p>
+                            <p className={`text-3xl font-bold ${color}`}>{value}</p>
+                            <p className="mt-1 text-xs text-muted-foreground">{sub}</p>
+                          </div>
+                          <Icon className={`h-5 w-5 ${color} opacity-60`} />
                         </div>
-                        <Icon className={`h-5 w-5 ${color} opacity-60`} />
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </Link>
                 ))}
               </div>
 
@@ -2863,20 +2874,20 @@ export default function SupplierDetailPage() {
                 <CardHeader><CardTitle className="text-base">{t("dashboard.actionStatus")}</CardTitle></CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-6 text-center">
-                    <div>
+                    <Link href={`/recommendations?supplier_id=${id}`} className="hover:opacity-80 transition-opacity">
                       <p className="text-3xl font-bold text-foreground">{profile.open_recommendations}</p>
                       <p className="text-xs text-muted-foreground mt-1">{t("recommendations.title")}</p>
-                    </div>
-                    <div>
+                    </Link>
+                    <Link href={`/recommendations?supplier_id=${id}&status=open`} className="hover:opacity-80 transition-opacity">
                       <p className="text-3xl font-bold text-amber-600">{profile.open_actions}</p>
                       <p className="text-xs text-muted-foreground mt-1">{t("dashboard.openActionsKpi")}</p>
-                    </div>
-                    <div>
+                    </Link>
+                    <Link href={`/recommendations?supplier_id=${id}&status=overdue`} className="hover:opacity-80 transition-opacity">
                       <p className={`text-3xl font-bold ${profile.overdue_actions > 0 ? "text-red-600" : "text-emerald-600"}`}>
                         {profile.overdue_actions}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">{t("dashboard.overdue")}</p>
-                    </div>
+                    </Link>
                   </div>
                 </CardContent>
               </Card>
@@ -2893,7 +2904,7 @@ export default function SupplierDetailPage() {
               <Shield className="h-8 w-8 text-muted-foreground mx-auto" />
               <p className="font-medium">{t("suppliers.noNaceCode")}</p>
               <p className="text-sm text-muted-foreground">{t("suppliers.noNaceCodeDesc")}</p>
-              <button onClick={() => setTab("Overview")} className="text-sm text-blue-600 hover:underline">
+              <button onClick={() => handleSetTab("Overview")} className="text-sm text-blue-600 hover:underline">
                 {t("suppliers.toProfile")}
               </button>
             </div>
@@ -3199,8 +3210,7 @@ export default function SupplierDetailPage() {
                   {/* Score drivers */}
                   <Card>
                     <CardHeader>
-                      <CardTitle className="text-base">{t("suppliers.riskLevel")}</CardTitle>
-                      <p className="text-xs text-muted-foreground">{t("suppliers.whyScore")}</p>
+                      <CardTitle className="text-base">{t("suppliers.whyScore")}</CardTitle>
                     </CardHeader>
                     <CardContent>
                       {intelligence.drivers.length === 0 ? (

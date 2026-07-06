@@ -606,3 +606,350 @@ class RegulatoryChangeStatus(str, Enum):
     IMPACTS_IDENTIFIED = "impacts_identified"
     NOTIFIED = "notified"
     ACKNOWLEDGED = "acknowledged"
+
+
+# ── CSDDD-001 Stakeholder Engagement (Art. 13) ────────────────────────────────
+
+# ── CSDDD-003 Effectiveness Monitoring (Art. 15) ─────────────────────────────
+
+class IndicatorType(str, Enum):
+    QUANTITATIVE = "quantitative"
+    QUALITATIVE = "qualitative"
+
+
+class IndicatorDataSource(str, Enum):
+    AUTOMATIC = "automatic"
+    MANUAL = "manual"
+
+
+class EffectivenessReviewStatus(str, Enum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+    CLOSED = "closed"
+
+
+# ── CSDDD-004 Remedy Case Manager (Art. 12) ──────────────────────────────────
+
+class RemedyCaseStatus(str, Enum):
+    """Lifecycle of a Remedy Case — Art. 12 CSDDD."""
+    OPEN = "open"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    VERIFIED = "verified"
+
+
+class RemedyType(str, Enum):
+    """Types of remedy per Art. 12 CSDDD."""
+    COMPENSATION = "compensation"
+    RESTORATION = "restoration"
+    REHABILITATION = "rehabilitation"
+    RESTITUTION = "restitution"
+    SOCIETAL_COMPENSATION = "societal_compensation"
+    NON_REPETITION = "non_repetition"
+
+
+class AffectedPartyType(str, Enum):
+    WORKER = "worker"
+    COMMUNITY = "community"
+    ENVIRONMENT = "environment"
+    OTHER = "other"
+
+
+class ImpactCausation(str, Enum):
+    """Own impact vs. jointly caused with third parties — Art. 12 Abs. 5 CSDDD."""
+    OWN = "own"
+    JOINT_WITH_THIRD_PARTY = "joint_with_third_party"
+
+
+class RemedyActionStatus(str, Enum):
+    TODO = "todo"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+
+
+# ── CSDDD-002 DD-Governance (Art. 7) ─────────────────────────────────────────
+
+class DDPolicyStatus(str, Enum):
+    """Lifecycle of a DD-Policy document — Art. 7 CSDDD."""
+    DRAFT = "draft"
+    ACTIVE = "active"
+    ARCHIVED = "archived"
+
+
+class GovernanceEventType(str, Enum):
+    """Types of governance deadline tracked in the calendar."""
+    POLICY_REVIEW = "policy_review"
+    COC_ACCEPTANCE = "coc_acceptance"
+    ANNUAL_REPORT = "annual_report"
+    BOARD_REVIEW = "board_review"
+
+
+# ── CSDDD-005 Downstream Activity Chain (Art. 2/3) ───────────────────���───────
+
+class ChainDirection(str, Enum):
+    UPSTREAM = "upstream"
+    DOWNSTREAM = "downstream"
+    BOTH = "both"
+
+
+class DownstreamPartnerType(str, Enum):
+    DISTRIBUTOR = "distributor"
+    LOGISTICS = "logistics"
+    LICENSEE = "licensee"
+    DISPOSAL = "disposal"
+    RETAILER = "retailer"
+    OTHER = "other"
+
+
+# ── CSDDD-008 Scoping Study (Art. 8 Abs. 3) ──────────────────────────────────
+
+class ScopingPriority(str, Enum):
+    PRIORITY_1 = "priority_1"  # Immediate DD required
+    PRIORITY_2 = "priority_2"  # Scheduled DD
+    PRIORITY_3 = "priority_3"  # Simplified DD
+
+
+class ScopingStudyStatus(str, Enum):
+    DRAFT = "draft"
+    SUBMITTED = "submitted"
+    APPROVED = "approved"
+
+
+# ── CSDDD-001 Stakeholder Engagement (Art. 13) ────────────────────────────────
+
+class StakeholderType(str, Enum):
+    """Category of an affected stakeholder per CSDDD Art. 13 Abs. 1."""
+    WORKER = "worker"
+    TRADE_UNION = "trade_union"
+    NGO = "ngo"
+    SUPPLIER_COMMUNITY = "supplier_community"
+    AUTHORITY = "authority"
+    OTHER = "other"
+
+
+class ConsultationFormat(str, Enum):
+    """Format of a stakeholder consultation."""
+    MEETING = "meeting"
+    WORKSHOP = "workshop"
+    QUESTIONNAIRE = "questionnaire"
+    AUDIT = "audit"
+    OTHER = "other"
+
+
+class ConsultationBarrier(str, Enum):
+    """Barriers to participation — Art. 13 Abs. 1 explicit documentation requirement."""
+    NONE = "none"
+    LANGUAGE = "language"
+    ACCESS = "access"
+    RESOURCES = "resources"
+    FEAR_OF_REPRISALS = "fear_of_reprisals"
+    OTHER = "other"
+
+
+# ── CSDDD-006 Contractual Assurance (Art. 10) ─────────────────────────────────
+
+
+class ClauseCategory(str, Enum):
+    """Subject-matter categories for contractual DD clauses (Art. 10 Abs. 2)."""
+    LABOR_RIGHTS = "labor_rights"
+    HUMAN_RIGHTS = "human_rights"
+    ENVIRONMENT = "environment"
+    ANTI_CORRUPTION = "anti_corruption"
+    HEALTH_SAFETY = "health_safety"
+    DATA_PROTECTION = "data_protection"
+    OTHER = "other"
+
+
+class AssuranceStatus(str, Enum):
+    """Lifecycle state of a supplier's acceptance of a contractual clause."""
+    PENDING = "pending"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    EXPIRED = "expired"
+    WAIVED = "waived"
+
+
+# ── CSDDD-007 SME Support Tracker (Art. 10 Abs. 2 lit. b) ────────────────────
+
+
+class SMEClassification(str, Enum):
+    """EU SME definition (2003/361/EC): headcount + revenue/balance sheet ceiling."""
+    MICRO = "micro"        # <10 employees, ≤€2M revenue
+    SMALL = "small"        # <50 employees, ≤€10M revenue
+    MEDIUM = "medium"      # <250 employees, ≤€50M revenue
+    LARGE = "large"        # ≥250 employees or >€50M revenue (not an SME)
+
+
+class SupportType(str, Enum):
+    """Category of support measure offered to an SME supplier."""
+    TRAINING = "training"
+    FINANCIAL_AID = "financial_aid"
+    TOOLS_RESOURCES = "tools_resources"
+    CAPACITY_BUILDING = "capacity_building"
+    CO_INVESTMENT = "co_investment"
+    MENTORING = "mentoring"
+    AUDIT_SUPPORT = "audit_support"
+    OTHER = "other"
+
+
+class SupportProgramStatus(str, Enum):
+    DRAFT = "draft"
+    ACTIVE = "active"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+class SupportMeasureStatus(str, Enum):
+    PLANNED = "planned"
+    IN_PROGRESS = "in_progress"
+    COMPLETED = "completed"
+    CANCELLED = "cancelled"
+
+
+# ── CSDDD-011 Readiness Score ─────────────────────────────────────────────────
+
+
+class ReadinessLevel(str, Enum):
+    NOT_READY = "not_ready"       # <40%
+    PARTIAL = "partial"           # 40–79%
+    READY = "ready"               # 80–99%
+    FULLY_READY = "fully_ready"   # 100%
+
+
+# ── CSDDD-012 Impact Severity Calculator (Art. 3/6) ───────────────────────────
+
+
+class ImpactType(str, Enum):
+    """Subject-matter category of the adverse impact (CSDDD Annex I reference)."""
+    HUMAN_RIGHTS = "human_rights"
+    LABOR_RIGHTS = "labor_rights"
+    ENVIRONMENT = "environment"
+    HEALTH_SAFETY = "health_safety"
+    ANTI_CORRUPTION = "anti_corruption"
+    OTHER = "other"
+
+
+class SeverityLevel(str, Enum):
+    """OECD RBC / CSDDD severity classification."""
+    CRITICAL = "critical"   # severity ≥ 8.0
+    HIGH = "high"           # severity ≥ 6.0
+    MEDIUM = "medium"       # severity ≥ 3.0
+    LOW = "low"             # severity < 3.0
+
+
+class ImpactEntityType(str, Enum):
+    """The EIOS entity this assessment is linked to."""
+    FINDING = "finding"
+    RISK = "risk"
+    SUPPLIER = "supplier"
+    ASSESSMENT = "assessment"
+    STANDALONE = "standalone"
+
+
+# ── CSDDD-013 Board Sign-off Trail (Art. 22) ──────────────────────────────────
+
+
+class BoardSignoffType(str, Enum):
+    """What category of document/decision requires board sign-off."""
+    DD_POLICY = "dd_policy"
+    DD_STRATEGY = "dd_strategy"
+    ANNUAL_REPORT = "annual_report"
+    SCOPING_STUDY = "scoping_study"
+    CAP_PLAN = "cap_plan"
+    REMEDY_SETTLEMENT = "remedy_settlement"
+    OTHER = "other"
+
+
+class BoardSignoffStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    WITHDRAWN = "withdrawn"
+
+
+class BoardMemberRole(str, Enum):
+    CEO = "ceo"
+    CFO = "cfo"
+    CSO = "cso"            # Chief Sustainability Officer
+    BOARD_MEMBER = "board_member"
+    SUPERVISORY_BOARD = "supervisory_board"
+    COMPLIANCE_OFFICER = "compliance_officer"
+    OTHER = "other"
+
+
+# ── CSDDD-015 — Supplier Self-Assessment ──────────────────────────────────────
+
+class QuestionType(str, Enum):
+    YES_NO = "yes_no"
+    MULTIPLE_CHOICE = "multiple_choice"
+    TEXT = "text"
+    FILE_UPLOAD = "file_upload"
+    SCALE_1_5 = "scale_1_5"
+
+
+class AssessmentSection(str, Enum):
+    COMPANY_STRUCTURE = "company_structure"    # A — Art. 7
+    HR_POLICIES = "hr_policies"                # B — Art. 10 + Annex I
+    ENVIRONMENT = "environment"                # C — Art. 10 + Annex II
+    GRIEVANCE = "grievance"                    # D — Art. 14
+    SUB_SUPPLIERS = "sub_suppliers"            # E — Art. 10 Abs. 2 lit. b
+
+
+class AssessmentStatus(str, Enum):
+    DRAFT = "draft"
+    SENT = "sent"
+    IN_PROGRESS = "in_progress"
+    SUBMITTED = "submitted"
+    EXPIRED = "expired"
+    ARCHIVED = "archived"
+
+
+class GapSeverity(str, Enum):
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+    CRITICAL = "critical"
+
+
+class TrafficLight(str, Enum):
+    GREEN = "green"
+    YELLOW = "yellow"
+    RED = "red"
+
+
+# ── CSDDD-009 — ESAP Export ───────────────────────────────────────────────────
+
+class ESAPSubmissionStatus(str, Enum):
+    DRAFT = "draft"
+    READY = "ready"
+    SUBMITTED = "submitted"
+    ARCHIVED = "archived"
+
+
+class ESAPExportFormat(str, Enum):
+    JSON = "json"
+    XML = "xml"
+
+
+# ── CSDDD-010 — Threshold Monitor ────────────────────────────────────────────
+
+class CSDDDThresholdLevel(str, Enum):
+    NOT_APPLICABLE = "not_applicable"    # below both thresholds
+    BORDERLINE = "borderline"            # < 20% below a threshold
+    TIER_2 = "tier_2"                    # ≥1000 MA + ≥450M€ (from 2028)
+    TIER_1 = "tier_1"                    # ≥5000 MA + ≥1500M€ (from 2027)
+
+
+# ── CSDDD-014 — Regulatory Change Radar ──────────────────────────────────────
+
+class RegulatoryChangeStatus(str, Enum):
+    NEW = "new"
+    ANALYSED = "analysed"
+    IMPLEMENTED = "implemented"
+    NOT_RELEVANT = "not_relevant"
+
+class RegulatoryChangeActionRequired(str, Enum):
+    YES = "yes"
+    NO = "no"
+    PENDING = "pending"

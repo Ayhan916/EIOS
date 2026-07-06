@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CheckCircle2, Download, ExternalLink, Filter, GitBranch, Layers, Loader2, Plus, ShieldAlert, UserCheck, X } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/context";
@@ -82,7 +83,7 @@ function SeverityBadge({ severity }: { severity: string }) {
 
 // ── Severity counts ───────────────────────────────────────────────────────────
 
-function SeveritySummary({ findings }: { findings: OrgFinding[] }) {
+function SeveritySummary({ findings, onFilter }: { findings: OrgFinding[]; onFilter: (sev: string) => void }) {
   const counts: Record<string, number> = {};
   for (const f of findings) {
     counts[f.severity] = (counts[f.severity] ?? 0) + 1;
@@ -91,7 +92,7 @@ function SeveritySummary({ findings }: { findings: OrgFinding[] }) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
       {(["Critical", "High", "Medium", "Low"] as const).map((sev) => (
-        <Card key={sev} className={`border ${SEVERITY_STYLES[sev] ?? ""}`}>
+        <Card key={sev} className={`border cursor-pointer transition-colors hover:opacity-80 ${SEVERITY_STYLES[sev] ?? ""}`} onClick={() => onFilter(sev)}>
           <CardContent className="pt-4 pb-3 text-center">
             <p className="text-2xl font-bold tabular-nums">{counts[sev] ?? 0}</p>
             <p className="text-xs font-medium mt-0.5">{sev}</p>
@@ -658,17 +659,24 @@ function BulkEscalatePanel({
 
 export default function FindingsPage() {
   const { t } = useLanguage();
-  const [severityFilter, setSeverityFilter] = useState<string>("all");
+  const searchParams = useSearchParams();
+  const initSeverity = searchParams.get("severity") || "all";
+  const initSupplier = searchParams.get("supplier_id") || "";
+  const [severityFilter, setSeverityFilter] = useState<string>(initSeverity);
+  const [supplierFilter] = useState<string>(initSupplier);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [showBulkEscalate, setShowBulkEscalate] = useState(false);
   const [showBulkStatus, setShowBulkStatus] = useState(false);
   const [showBulkLink, setShowBulkLink] = useState(false);
 
   const { data: findings, isLoading } = useQuery<OrgFinding[]>({
-    queryKey: ["org-findings", severityFilter],
+    queryKey: ["org-findings", severityFilter, supplierFilter],
     queryFn: async () => {
-      const params = severityFilter !== "all" ? `?severity=${severityFilter}` : "";
-      const res = await apiClient.get(`/executive/findings${params}`);
+      const p = new URLSearchParams();
+      if (severityFilter !== "all") p.set("severity", severityFilter);
+      if (supplierFilter) p.set("supplier_id", supplierFilter);
+      const qs = p.toString() ? `?${p.toString()}` : "";
+      const res = await apiClient.get(`/executive/findings${qs}`);
       return res.data;
     },
     staleTime: 30_000,
@@ -808,7 +816,7 @@ export default function FindingsPage() {
       ) : (
         <>
           {/* Severity summary */}
-          {severityFilter === "all" && <SeveritySummary findings={allFindings} />}
+          {severityFilter === "all" && <SeveritySummary findings={allFindings} onFilter={(sev) => { setSeverityFilter(sev); setSelected(new Set()); }} />}
 
           {/* Findings table */}
           {allFindings.length === 0 ? (

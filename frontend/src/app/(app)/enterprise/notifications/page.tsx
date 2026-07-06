@@ -52,7 +52,7 @@ export default function EnterpriseNotificationsPage() {
       ) : !policies || policies.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center text-muted-foreground">
-            No notification policies configured yet.
+            {t("ent.noNotificationPolicies")}
           </CardContent>
         </Card>
       ) : (
@@ -78,7 +78,7 @@ export default function EnterpriseNotificationsPage() {
                 {Array.isArray(policy.escalation_routes) && policy.escalation_routes.length > 0 && (
                   <div>
                     <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Escalation Routes
+                      {t("ent.escalationRoutes")}
                     </p>
                     <div className="space-y-1">
                       {(policy.escalation_routes as Record<string, unknown>[]).map((r, i) => (
@@ -90,7 +90,7 @@ export default function EnterpriseNotificationsPage() {
                           <span className="font-medium">{String(r.route_to_role ?? "—")}</span>
                           {r.delay_hours !== undefined && (
                             <span className="text-xs text-muted-foreground">
-                              after {String(r.delay_hours)}h
+                              {t("ent.afterHours").replace("{n}", String(r.delay_hours))}
                             </span>
                           )}
                         </div>
@@ -103,7 +103,7 @@ export default function EnterpriseNotificationsPage() {
                 {policy.regional_routes && Object.keys(policy.regional_routes).length > 0 && (
                   <div>
                     <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Regional Routes
+                      {t("ent.regionalRoutes")}
                     </p>
                     <div className="space-y-1">
                       {Object.entries(policy.regional_routes).map(([region, route]) => (
@@ -123,7 +123,7 @@ export default function EnterpriseNotificationsPage() {
                 {Array.isArray(policy.executive_routes) && policy.executive_routes.length > 0 && (
                   <div>
                     <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      Executive Routes
+                      {t("ent.executiveRoutes")}
                     </p>
                     <div className="space-y-1">
                       {(policy.executive_routes as Record<string, unknown>[]).map((r, i) => (
@@ -142,7 +142,7 @@ export default function EnterpriseNotificationsPage() {
                 {!policy.escalation_routes.length &&
                  !Object.keys(policy.regional_routes).length &&
                  !policy.executive_routes.length && (
-                  <p className="text-sm text-muted-foreground">No routing rules configured.</p>
+                  <p className="text-sm text-muted-foreground">{t("ent.noRoutingRules")}</p>
                 )}
               </CardContent>
             </Card>

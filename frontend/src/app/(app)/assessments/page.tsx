@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 import { CalendarClock, FileText, Plus, Search } from "lucide-react";
 import { useLanguage } from "@/lib/i18n/context";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -20,19 +21,23 @@ const STATUS_OPTIONS = ["", "pending", "reviewed", "active", "archived"];
 
 export default function AssessmentsPage() {
   const { t } = useLanguage();
+  const searchParams = useSearchParams();
+  const initSupplier = searchParams.get("supplier_id") || "";
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [status, setStatus] = useState("");
+  const [supplierFilter] = useState(initSupplier);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["assessments", { page, page_size: 10, search, status }],
+    queryKey: ["assessments", { page, page_size: 10, search, status, supplier_id: supplierFilter }],
     queryFn: () =>
       listAssessments({
         page,
         page_size: 10,
         search: search || undefined,
         status: status || undefined,
+        ...(supplierFilter ? { supplier_id: supplierFilter } : {}),
       }),
   });
 
@@ -184,6 +189,9 @@ export default function AssessmentsPage() {
                       <th className="pb-3 text-left font-medium text-muted-foreground">
                         {t("common.title")}
                       </th>
+                      <th className="pb-3 text-left font-medium text-muted-foreground hidden sm:table-cell">
+                        {t("nav.suppliers")}
+                      </th>
                       <th className="pb-3 text-left font-medium text-muted-foreground">
                         {t("assessments.type")}
                       </th>
@@ -219,6 +227,13 @@ export default function AssessmentsPage() {
                               {a.methodology}
                             </p>
                           )}
+                        </td>
+                        <td className="py-3 pr-4 hidden sm:table-cell">
+                          {a.supplier_id ? (
+                            <Link href={`/suppliers/${a.supplier_id}`} className="text-xs text-blue-600 hover:underline">
+                              {t("nav.suppliers").slice(0, -1)} ↗
+                            </Link>
+                          ) : <span className="text-muted-foreground/50">—</span>}
                         </td>
                         <td className="py-3 pr-4 text-muted-foreground capitalize">
                           {a.assessment_type || "—"}

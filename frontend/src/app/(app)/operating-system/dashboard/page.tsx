@@ -350,18 +350,18 @@ export default function OSDashboardPage() {
             <KpiCard
               label={t("osDash.objectivesAtRisk")}
               value={dash.objectives_at_risk}
-              sub={`of ${dash.objectives_total} total`}
+              sub={t("osDash.ofTotal").replace("{n}", String(dash.objectives_total))}
               accent={dash.objectives_at_risk > 0 ? "text-red-600" : ""}
             />
             <KpiCard
               label={t("osDash.initiativesActive")}
               value={dash.initiatives_active}
-              sub={`of ${dash.initiatives_total} total`}
+              sub={t("osDash.ofTotal").replace("{n}", String(dash.initiatives_total))}
             />
             <KpiCard
               label={t("osDash.actionsOverdue")}
               value={dash.actions_overdue}
-              sub={`${dash.actions_open} open total`}
+              sub={t("osDash.openTotal").replace("{n}", String(dash.actions_open))}
               accent={dash.actions_overdue > 0 ? "text-red-600" : ""}
             />
             <KpiCard
@@ -379,7 +379,7 @@ export default function OSDashboardPage() {
           {Object.keys(dash.objectives_by_status).length > 0 && (
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Objectives by Status</CardTitle>
+                <CardTitle className="text-sm font-medium text-muted-foreground">{t("osDash.objectivesByStatus")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-3">
@@ -425,7 +425,7 @@ export default function OSDashboardPage() {
           {/* Recent strategic risks from dashboard */}
           {dash.recent_strategic_risks.length > 0 && (
             <div className="space-y-3">
-              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Recent Strategic Risks</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{t("osDash.recentStrategicRisks")}</h2>
               {dash.recent_strategic_risks.map((risk) => (
                 <Card key={risk.id} className={risk.risk_level === "CRITICAL" ? "border-red-200" : ""}>
                   <CardContent className="py-3 px-4 flex items-start justify-between gap-4">
@@ -487,7 +487,7 @@ export default function OSDashboardPage() {
                       className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground"
                     >
                       {expandedRisk === risk.id ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                      {expandedRisk === risk.id ? "Hide" : "Details"}
+                      {expandedRisk === risk.id ? t("osDash.hide") : t("osDash.details")}
                     </button>
 
                     {expandedRisk === risk.id && (
@@ -499,7 +499,7 @@ export default function OSDashboardPage() {
                         </div>
                         {risk.linked_suppliers.length > 0 && (
                           <p className="text-xs text-muted-foreground">
-                            Linked suppliers: {risk.linked_suppliers.length}
+                            {t("osDash.linkedSuppliers").replace("{n}", String(risk.linked_suppliers.length))}
                           </p>
                         )}
                         <p className="text-xs text-muted-foreground">{formatDate(risk.created_at)}</p>
@@ -542,10 +542,10 @@ export default function OSDashboardPage() {
               <table className="w-full text-sm">
                 <thead className="bg-muted/50 border-b">
                   <tr>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Action</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("osDash.actionHeader")}</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("osDash.priority")}</th>
                     <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("osDash.dueDate")}</th>
-                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">Status</th>
+                    <th className="text-left px-4 py-3 font-medium text-muted-foreground">{t("osDash.statusHeader")}</th>
                     <th className="px-4 py-3" />
                   </tr>
                 </thead>
@@ -586,7 +586,7 @@ export default function OSDashboardPage() {
                             disabled={updateActionStatus.isPending}
                             onClick={() => updateActionStatus.mutate({ id: action.id, status: "IN_PROGRESS" })}
                           >
-                            Start
+                            {t("osDash.startAction")}
                           </Button>
                         )}
                         {action.action_status === "IN_PROGRESS" && (
@@ -596,7 +596,7 @@ export default function OSDashboardPage() {
                             disabled={updateActionStatus.isPending}
                             onClick={() => updateActionStatus.mutate({ id: action.id, status: "COMPLETED" })}
                           >
-                            Complete
+                            {t("osDash.completeAction")}
                           </Button>
                         )}
                       </td>

@@ -23,21 +23,23 @@ import {
   benchmarkApi,
   ModuleComparisonEntry,
 } from "@/lib/api/benchmark-comparison";
+import { useLanguage } from "@/lib/i18n/context";
+import { formatDate } from "@/lib/utils";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  green:   { label: "Passing",  color: "text-emerald-600", bg: "bg-emerald-100", icon: CheckCircle2 },
-  yellow:  { label: "Warning",  color: "text-amber-600",   bg: "bg-amber-100",   icon: AlertTriangle },
-  red:     { label: "Failing",  color: "text-red-600",     bg: "bg-red-100",     icon: XCircle },
-  unknown: { label: "Unknown",  color: "text-gray-400",    bg: "bg-gray-100",    icon: Activity },
+  green:   { color: "text-emerald-600", bg: "bg-emerald-100", icon: CheckCircle2 },
+  yellow:  { color: "text-amber-600",   bg: "bg-amber-100",   icon: AlertTriangle },
+  red:     { color: "text-red-600",     bg: "bg-red-100",     icon: XCircle },
+  unknown: { color: "text-gray-400",    bg: "bg-gray-100",    icon: Activity },
 };
 
-const MODULE_LABELS: Record<string, string> = {
-  source_credibility: "Source Credibility",
-  prioritization:     "Prioritization Engine",
-  lksg_statement:     "LkSG Statement",
-  regulatory_changes: "Regulatory Changes",
+const MODULE_LABEL_KEYS: Record<string, string> = {
+  source_credibility: "benchmarks.moduleSourceCredibility",
+  prioritization:     "benchmarks.modulePrioritization",
+  lksg_statement:     "benchmarks.moduleLksgStatement",
+  regulatory_changes: "benchmarks.moduleRegulatoryChanges",
 };
 
 function pct(v: number) {
@@ -94,9 +96,16 @@ function Sparkline({ data, status }: { data: { pass_rate: number }[]; status: st
 // ── Module row ────────────────────────────────────────────────────────────────
 
 function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
+  const { t } = useLanguage();
   const [expanded, setExpanded] = useState(false);
   const cfg = STATUS_CONFIG[entry.status] ?? STATUS_CONFIG.unknown;
   const Icon = cfg.icon;
+  const statusLabels: Record<string, string> = {
+    green: t("benchmarks.passing"),
+    yellow: t("benchmarks.warning"),
+    red: t("benchmarks.failing"),
+    unknown: t("benchmarks.unknown"),
+  };
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
@@ -115,12 +124,12 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
           className={`shrink-0 flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.bg} ${cfg.color}`}
         >
           <Icon className="h-3 w-3" />
-          {cfg.label}
+          {statusLabels[entry.status] ?? entry.status}
         </span>
 
         {/* Module name */}
         <span className="flex-1 text-sm font-medium text-gray-900 dark:text-white">
-          {MODULE_LABELS[entry.module] ?? entry.module}
+          {MODULE_LABEL_KEYS[entry.module] ? t(MODULE_LABEL_KEYS[entry.module] as Parameters<typeof t>[0]) : entry.module}
         </span>
 
         {/* Pass rate */}
@@ -140,8 +149,8 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
           }`}
         >
           {entry.current_pass_rate < entry.baseline
-            ? `-${pct(entry.baseline - entry.current_pass_rate)} vs baseline`
-            : "At baseline"}
+            ? `-${pct(entry.baseline - entry.current_pass_rate)} ${t("benchmarks.vsBaseline")}`
+            : t("benchmarks.atBaseline")}
         </span>
 
         {/* Sparkline */}
@@ -151,7 +160,7 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
 
         {/* Case count */}
         <span className="text-xs text-gray-400 shrink-0 w-16 text-right">
-          {entry.passed_cases}/{entry.total_cases} cases
+          {t("benchmarks.cases").replace("{passed}", String(entry.passed_cases)).replace("{total}", String(entry.total_cases))}
         </span>
       </div>
 
@@ -161,32 +170,32 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
           {/* Trend table */}
           <div>
             <p className="text-xs font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">
-              Run history
+              {t("benchmarks.runHistory")}
             </p>
             <div className="flex gap-2 flex-wrap">
-              {entry.trend.map((t, i) => (
+              {entry.trend.map((tr, i) => (
                 <div
-                  key={t.run_id}
+                  key={tr.run_id}
                   className="text-center rounded border border-gray-200 dark:border-gray-700 px-2 py-1"
                 >
                   <p className="text-xs text-gray-400">
-                    {t.computed_at
-                      ? new Date(t.computed_at).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })
+                    {tr.computed_at
+                      ? formatDate(tr.computed_at)
                       : `Run ${i + 1}`}
                   </p>
                   <p
                     className={`text-sm font-bold tabular-nums ${
-                      t.pass_rate >= 0.9
+                      tr.pass_rate >= 0.9
                         ? "text-emerald-600"
-                        : t.pass_rate >= 0.7
+                        : tr.pass_rate >= 0.7
                         ? "text-amber-500"
                         : "text-red-500"
                     }`}
                   >
-                    {pct(t.pass_rate)}
+                    {pct(tr.pass_rate)}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {t.passed}/{t.total}
+                    {tr.passed}/{tr.total}
                   </p>
                 </div>
               ))}
@@ -197,7 +206,7 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
           {entry.failing_cases.length > 0 && (
             <div>
               <p className="text-xs font-semibold text-red-500 mb-1.5 uppercase tracking-wide">
-                Failing in latest run
+                {t("benchmarks.failingLatest")}
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {entry.failing_cases.map((fc) => (
@@ -213,7 +222,7 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
           )}
 
           {entry.failing_cases.length === 0 && (
-            <p className="text-xs text-emerald-600">All cases passing in latest run.</p>
+            <p className="text-xs text-emerald-600">{t("benchmarks.allPassing")}</p>
           )}
         </div>
       )}
@@ -224,6 +233,7 @@ function ModuleRow({ entry }: { entry: ModuleComparisonEntry }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BenchmarksPage() {
+  const { t } = useLanguage();
   const [limitRuns, setLimitRuns] = useState(5);
 
   const { data, isLoading } = useQuery({
@@ -236,7 +246,7 @@ export default function BenchmarksPage() {
   const greenCount  = data?.modules.filter((m) => m.status === "green").length ?? 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
@@ -245,17 +255,17 @@ export default function BenchmarksPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Contextual Benchmarking
+              {t("benchmarks.title")}
             </h1>
             <p className="text-xs text-gray-500">
-              Module-level pass rates vs. baseline · delta from previous run · trend over time
+              {t("benchmarks.subtitle")}
             </p>
           </div>
         </div>
 
         {/* Run window selector */}
         <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400">Runs:</span>
+          <span className="text-xs text-gray-400">{t("benchmarks.runs")}:</span>
           {[3, 5, 10].map((n) => (
             <button
               key={n}
@@ -276,20 +286,18 @@ export default function BenchmarksPage() {
       {data && (
         <div className="flex items-center gap-3 flex-wrap">
           <span className="text-xs text-gray-400">
-            Latest: {data.latest_computed_at
-              ? new Date(data.latest_computed_at).toLocaleString("en-GB")
-              : "—"}{" "}
-            · {data.run_count} runs analysed
+            {t("benchmarks.latest")}: {data.latest_computed_at ? formatDate(data.latest_computed_at) : "—"}{" "}
+            · {t("benchmarks.runsAnalysed").replace("{n}", String(data.run_count))}
           </span>
           <div className="flex gap-2 ml-auto">
             <span className="rounded-full bg-red-100 text-red-600 text-xs font-semibold px-2.5 py-0.5">
-              {redCount} Failing
+              {redCount} {t("benchmarks.failing")}
             </span>
             <span className="rounded-full bg-amber-100 text-amber-600 text-xs font-semibold px-2.5 py-0.5">
-              {yellowCount} Warning
+              {yellowCount} {t("benchmarks.warning")}
             </span>
             <span className="rounded-full bg-emerald-100 text-emerald-600 text-xs font-semibold px-2.5 py-0.5">
-              {greenCount} Passing
+              {greenCount} {t("benchmarks.passing")}
             </span>
           </div>
         </div>
@@ -297,12 +305,12 @@ export default function BenchmarksPage() {
 
       {/* Module list */}
       {isLoading ? (
-        <div className="py-12 text-center text-sm text-gray-400">Loading benchmarks…</div>
+        <div className="py-12 text-center text-sm text-gray-400">{t("benchmarks.loading")}</div>
       ) : !data || data.modules.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center">
           <Activity className="mx-auto h-8 w-8 text-gray-300 mb-3" />
           <p className="text-sm text-gray-400">
-            No benchmark data yet. Trigger an evaluation run from Mission Control.
+            {t("benchmarks.noData")}
           </p>
         </div>
       ) : (

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, HttpUrl
 
-from domain.enums import SupplierStatus, SupplierTier
+from domain.enums import ChainDirection, SupplierStatus, SupplierTier
 
 from .base import EntityResponse
 
@@ -16,6 +16,8 @@ class SupplierCreate(BaseModel):
     website: str | None = Field(default=None, max_length=500)
     supplier_tier: SupplierTier = SupplierTier.TIER_1
     notes: str | None = None
+    chain_direction: str = ChainDirection.UPSTREAM.value
+    downstream_type: str | None = None
 
 
 class SupplierUpdate(BaseModel):
@@ -28,6 +30,8 @@ class SupplierUpdate(BaseModel):
     supplier_tier: SupplierTier | None = None
     supplier_status: SupplierStatus | None = None
     notes: str | None = None
+    chain_direction: str | None = None
+    downstream_type: str | None = None
 
 
 class SupplierResponse(EntityResponse):
@@ -41,6 +45,8 @@ class SupplierResponse(EntityResponse):
     supplier_tier: str
     supplier_status: str
     notes: str | None = None
+    chain_direction: str = ChainDirection.UPSTREAM.value
+    downstream_type: str | None = None
 
 
 class SupplierRiskProfile(BaseModel):

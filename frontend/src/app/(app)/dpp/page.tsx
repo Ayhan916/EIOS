@@ -41,10 +41,10 @@ export default function DPPListPage() {
     listDPPs({
       dpp_status: statusFilter || undefined,
       format: formatFilter || undefined,
+      is_public: showPublicOnly || undefined,
     })
       .then((res) => {
-        const filtered = showPublicOnly ? res.items.filter((d) => d.is_public) : res.items;
-        setItems(filtered);
+        setItems(res.items);
         setTotal(res.total);
       })
       .catch((e) => setError(e.message ?? "Failed to load passports"))
@@ -72,8 +72,8 @@ export default function DPPListPage() {
           <option value="">{t("dpp.allStatuses")}</option>
           <option value="DRAFT">{t("dpp.draft")}</option>
           <option value="ACTIVE">{t("common.active")}</option>
-          <option value="WITHDRAWN">Withdrawn</option>
-          <option value="EXPIRED">Expired</option>
+          <option value="WITHDRAWN">{t("dpp.withdrawn")}</option>
+          <option value="EXPIRED">{t("dpp.expired")}</option>
         </select>
         <select
           value={formatFilter}
@@ -108,11 +108,11 @@ export default function DPPListPage() {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Passport UID</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("dpp.passportUid")}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">{t("dpp.format")}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">{t("common.status")}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">PCF (kg CO₂e)</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Substances</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("dpp.substances")}</th>
                 <th className="px-4 py-3 text-left font-medium text-gray-500">{t("dpp.disclosed")}</th>
                 <th className="px-4 py-3" />
               </tr>
@@ -167,7 +167,7 @@ export default function DPPListPage() {
             </tbody>
           </table>
           <div className="border-t border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-500">
-            {total} total passport{total !== 1 ? "s" : ""}
+            {t("dpp.totalPassports").replace("{n}", String(total))}
           </div>
         </div>
       )}

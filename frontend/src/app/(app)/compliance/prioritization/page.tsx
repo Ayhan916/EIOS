@@ -11,6 +11,7 @@ import {
   Info,
 } from "lucide-react";
 import { prioritizationApi, PrioritizationDecision } from "@/lib/api/prioritization";
+import { useLanguage } from "@/lib/i18n/context";
 
 // ── Score badge ───────────────────────────────────────────────────────────────
 
@@ -53,6 +54,7 @@ function OverrideModal({
   onSave,
   isPending,
 }: OverrideModalProps) {
+  const { t } = useLanguage();
   const [newRank, setNewRank] = useState(decision.priority_rank);
   const [comment, setComment] = useState(decision.override_comment ?? "");
   const commentTooShort = comment.trim().length < 10;
@@ -61,19 +63,15 @@ function OverrideModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-900 shadow-2xl p-6 space-y-4">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-          Override Rank — {decision.supplier_name}
+          {t("prio.overrideTitle").replace("{name}", decision.supplier_name)}
         </h3>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          Auto-computed rank:{" "}
-          <span className="font-bold text-gray-700 dark:text-gray-200">
-            #{decision.priority_rank}
-          </span>{" "}
-          (score {decision.priority_score.toFixed(2)})
+          {t("prio.autoRank").replace("{rank}", String(decision.priority_rank)).replace("{score}", decision.priority_score.toFixed(2))}
         </p>
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            New rank (1 = highest priority)
+            {t("prio.newRankLabel")}
           </label>
           <input
             type="number"
@@ -87,9 +85,9 @@ function OverrideModal({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Justification{" "}
+            {t("prio.justificationLabel")}{" "}
             <span className="text-rose-500">*</span>{" "}
-            <span className="text-gray-400">(required — CSDDD Art. 10)</span>
+            <span className="text-gray-400">{t("prio.justificationRequired")}</span>
           </label>
           <textarea
             rows={4}
@@ -99,7 +97,7 @@ function OverrideModal({
             className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white resize-none"
           />
           {commentTooShort && comment.length > 0 && (
-            <p className="mt-1 text-xs text-rose-500">Minimum 10 characters required.</p>
+            <p className="mt-1 text-xs text-rose-500">{t("prio.minChars")}</p>
           )}
         </div>
 
@@ -108,14 +106,14 @@ function OverrideModal({
             onClick={onClose}
             className="rounded-lg px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
           <button
             onClick={() => onSave(newRank, comment.trim())}
             disabled={commentTooShort || isPending}
             className="rounded-lg px-4 py-2 text-sm font-semibold bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50"
           >
-            {isPending ? "Saving…" : "Save Override"}
+            {isPending ? t("prio.saving") : t("prio.saveOverride")}
           </button>
         </div>
       </div>
@@ -151,6 +149,7 @@ function ReasoningCell({ reasoning }: { reasoning: string }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function PrioritizationPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [capacity, setCapacity] = useState(4);
   const [overrideTarget, setOverrideTarget] = useState<PrioritizationDecision | null>(null);
@@ -180,7 +179,7 @@ export default function PrioritizationPage() {
     : null;
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -189,10 +188,10 @@ export default function PrioritizationPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Prioritisation Framework
+              {t("prio.title")}
             </h1>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              CSDDD Art. 10 · LkSG §5 — Ranked supplier audit priorities
+              {t("prio.subtitle")}
             </p>
           </div>
         </div>
@@ -200,7 +199,7 @@ export default function PrioritizationPage() {
         {/* Compute controls */}
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-            Capacity / quarter:
+            {t("prio.capacityLabel")}
             <input
               type="number"
               min={1}
@@ -216,7 +215,7 @@ export default function PrioritizationPage() {
             className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
           >
             <RefreshCw className={`h-4 w-4 ${computeMutation.isPending ? "animate-spin" : ""}`} />
-            {computeMutation.isPending ? "Computing…" : "Compute Ranking"}
+            {computeMutation.isPending ? t("prio.computing") : t("prio.computeRanking")}
           </button>
         </div>
       </div>
@@ -224,8 +223,10 @@ export default function PrioritizationPage() {
       {/* Last computed */}
       {computedAt && (
         <p className="text-xs text-gray-400">
-          Last computed: {computedAt} · {data?.total_suppliers} suppliers ·{" "}
-          {data?.resource_capacity_per_quarter} audits/quarter capacity
+          {t("prio.lastComputed")
+            .replace("{date}", computedAt ?? "")
+            .replace("{n}", String(data?.total_suppliers ?? 0))
+            .replace("{q}", String(data?.resource_capacity_per_quarter ?? 0))}
         </p>
       )}
 
@@ -234,11 +235,9 @@ export default function PrioritizationPage() {
         <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-sm text-blue-700 dark:text-blue-300 flex items-start gap-2">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
-            With {data?.resource_capacity_per_quarter} audits/quarter,{" "}
-            <strong>
-              {decisions.slice(0, data?.resource_capacity_per_quarter ?? 4).length} supplier(s)
-            </strong>{" "}
-            are scheduled for the next quarter (highlighted in blue below).
+            {t("prio.scheduledNotice")
+              .replace("{q}", String(data?.resource_capacity_per_quarter ?? 0))
+              .replace("{n}", String(decisions.slice(0, data?.resource_capacity_per_quarter ?? 4).length))}
           </span>
         </div>
       )}
@@ -246,30 +245,30 @@ export default function PrioritizationPage() {
       {/* Error */}
       {isError && (
         <div className="rounded-lg border border-rose-200 bg-rose-50 dark:bg-rose-900/20 px-4 py-3 text-sm text-rose-700">
-          Failed to load ranking. Click "Compute Ranking" to generate one.
+          {t("prio.loadError")}
         </div>
       )}
 
       {/* Table */}
       {isLoading ? (
-        <div className="text-sm text-gray-400 py-8 text-center">Loading…</div>
+        <div className="text-sm text-gray-400 py-8 text-center">{t("prio.loading")}</div>
       ) : decisions.length === 0 ? (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-16 text-center text-gray-400">
-          No ranking computed yet. Set capacity and click "Compute Ranking".
+          {t("prio.noRanking")}
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 dark:bg-gray-800 text-xs uppercase text-gray-500 dark:text-gray-400">
               <tr>
-                <th className="px-4 py-3 text-left">Rank</th>
-                <th className="px-4 py-3 text-left">Supplier</th>
-                <th className="px-4 py-3 text-center">Score</th>
-                <th className="px-4 py-3 text-center">Severity</th>
-                <th className="px-4 py-3 text-center">Probability</th>
-                <th className="px-4 py-3 text-center">Scale</th>
-                <th className="px-4 py-3 text-center">Reasoning</th>
-                <th className="px-4 py-3 text-center">Override</th>
+                <th className="px-4 py-3 text-left">{t("prio.colRank")}</th>
+                <th className="px-4 py-3 text-left">{t("prio.colSupplier")}</th>
+                <th className="px-4 py-3 text-center">{t("prio.colScore")}</th>
+                <th className="px-4 py-3 text-center">{t("prio.colSeverity")}</th>
+                <th className="px-4 py-3 text-center">{t("prio.colProbability")}</th>
+                <th className="px-4 py-3 text-center">{t("prio.colScale")}</th>
+                <th className="px-4 py-3 text-center">{t("prio.colReasoning")}</th>
+                <th className="px-4 py-3 text-center">{t("prio.colOverride")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -296,7 +295,7 @@ export default function PrioritizationPage() {
                       {d.supplier_name}
                       {inScope && (
                         <span className="ml-2 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs px-2 py-0.5">
-                          Q next
+                          {t("prio.qNext")}
                         </span>
                       )}
                     </td>
@@ -337,8 +336,7 @@ export default function PrioritizationPage() {
 
       {/* Regulation notice */}
       <p className="text-xs text-gray-400 dark:text-gray-500">
-        Scoring formula: Severity × 40% + Probability × 35% + Scale × 25% (CSDDD Art. 10; LkSG
-        §5). Overrides are logged in the audit trail with mandatory justification.
+        {t("prio.regulationNote")}
       </p>
 
       {/* Override modal */}

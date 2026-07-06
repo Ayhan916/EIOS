@@ -67,7 +67,7 @@ function ObjectiveRow({ obj }: { obj: ESGObjective }) {
           onClick={() => advance.mutate("ACTIVE")}
           disabled={advance.isPending}
         >
-          Activate
+          {t("common.activate")}
         </Button>
       )}
       {obj.objective_status === "ACTIVE" && (
@@ -77,7 +77,7 @@ function ObjectiveRow({ obj }: { obj: ESGObjective }) {
           onClick={() => advance.mutate("COMPLETED")}
           disabled={advance.isPending}
         >
-          Complete
+          {t("auditor.complete")}
         </Button>
       )}
 

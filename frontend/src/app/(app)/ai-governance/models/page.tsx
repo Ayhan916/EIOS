@@ -74,7 +74,7 @@ function ModelCard({ m }: { m: AIModel }) {
             {topRisk && (
               <Badge className={riskBadgeClass(topRisk)}>
                 <ShieldAlert className="h-3 w-3 mr-1" />
-                {topRisk} risk
+                {t("aiGov.riskLabel").replace("{level}", topRisk)}
               </Badge>
             )}
           </div>
@@ -87,18 +87,18 @@ function ModelCard({ m }: { m: AIModel }) {
           <p className="text-xs text-muted-foreground line-clamp-2">{m.purpose}</p>
         )}
         {useCases.length > 0 && (
-          <p className="text-[10px] text-muted-foreground">{useCases.length} {t("aiGov.useCasesTitle").toLowerCase()}{useCases.length !== 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-muted-foreground">{(useCases.length === 1 ? t("aiGov.useCaseCount") : t("aiGov.useCaseCountPlural")).replace("{n}", String(useCases.length))}</p>
         )}
         {/* #72 Drift alert badge */}
         {topDrift && (
           <div className={`flex items-start gap-1.5 rounded border px-2 py-1.5 text-[11px] ${driftSeverityClass[topDrift.severity] ?? driftSeverityClass.LOW}`}>
             <AlertTriangle className="h-3 w-3 flex-shrink-0 mt-px" />
             <div className="min-w-0">
-              <span className="font-semibold">{topDrift.severity} drift</span>
+              <span className="font-semibold">{t("aiGov.driftLabel").replace("{severity}", topDrift.severity)}</span>
               <span className="mx-1">·</span>
               <span className="text-[10px]">{topDrift.alert_type.replace(/_/g, " ")}</span>
               {activeDrifts.length > 1 && (
-                <span className="ml-1 text-[10px] opacity-70">+{activeDrifts.length - 1} more</span>
+                <span className="ml-1 text-[10px] opacity-70">{t("aiGov.driftMore").replace("{n}", String(activeDrifts.length - 1))}</span>
               )}
               <p className="mt-0.5 line-clamp-1 opacity-80">{topDrift.description}</p>
             </div>
@@ -180,7 +180,7 @@ export default function AIModelsPage() {
                   onChange={(e) => setForm((f) => ({ ...f, model_type: e.target.value }))}
                 >
                   {["LLM", "CLASSIFICATION", "RISK_SCORING", "EMBEDDING", "RANKING", "FORECASTING", "OTHER"].map(
-                    (t) => <option key={t}>{t}</option>
+                    (opt) => <option key={opt}>{opt}</option>
                   )}
                 </select>
               </div>

@@ -8,8 +8,8 @@ import {
   CheckCheck,
   ChevronLeft,
   ChevronRight,
-  ExternalLink,
   Inbox,
+  Settings,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,9 @@ const TYPE_COLORS: Record<string, string> = {
   recommendation_assigned:  "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200",
   finding_escalated:        "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200",
   risk_critical:            "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  cap_overdue:              "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200",
+  grievance_received:       "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-200",
+  compliance_gap_detected:  "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200",
 };
 
 type FilterType = "all" | "unread" | keyof typeof TYPE_COLORS;
@@ -49,16 +52,24 @@ function timeAgo(dateStr: string): string {
 const PAGE_SIZE = 20;
 
 function entityUrl(type: string | null, id: string | null): string | null {
-  if (!type || !id) return null;
-  const map: Record<string, string> = {
+  if (!type) return null;
+  const t = type.toLowerCase();
+  const withId: Record<string, string> = {
     assessment: `/assessments/${id}`,
     finding: `/findings/${id}`,
     risk: `/risks/${id}`,
-    recommendation: `/recommendations`,
     supplier: `/suppliers/${id}`,
+    cap: `/corrective-action-plans`,
+  };
+  const withoutId: Record<string, string> = {
+    recommendation: `/recommendations`,
+    grievance: `/compliance/grievances`,
+    compliance_gap: `/compliance/gaps`,
+    report: `/reports`,
     kpi: `/sustainability/kpis`,
   };
-  return map[type.toLowerCase()] ?? null;
+  if (id && withId[t]) return withId[t];
+  return withoutId[t] ?? null;
 }
 
 export default function NotificationsPage() {
@@ -75,6 +86,9 @@ export default function NotificationsPage() {
     recommendation_assigned:  { label: t("inbox.assigned"),   color: TYPE_COLORS.recommendation_assigned },
     finding_escalated:        { label: t("inbox.escalation"), color: TYPE_COLORS.finding_escalated },
     risk_critical:            { label: t("inbox.risk"),       color: TYPE_COLORS.risk_critical },
+    cap_overdue:              { label: "CAP Overdue",         color: TYPE_COLORS.cap_overdue },
+    grievance_received:       { label: "Grievance",           color: TYPE_COLORS.grievance_received },
+    compliance_gap_detected:  { label: "Compliance Gap",      color: TYPE_COLORS.compliance_gap_detected },
   };
 
   async function load() {
@@ -89,7 +103,11 @@ export default function NotificationsPage() {
     }
   }
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const interval = setInterval(load, 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function handleRead(id: string) {
     await markNotificationRead(id);
@@ -121,18 +139,25 @@ export default function NotificationsPage() {
             {unreadCount > 0 ? `${unreadCount} ${t("inbox.unread")}` : t("inbox.allCaughtUp")}
           </p>
         </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReadAll}
-            className="gap-1.5"
-            aria-label="Mark all notifications as read"
-          >
-            <CheckCheck className="h-4 w-4" aria-hidden="true" />
-            {t("inbox.markAllRead")}
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {unreadCount > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleReadAll}
+              className="gap-1.5"
+              aria-label="Mark all notifications as read"
+            >
+              <CheckCheck className="h-4 w-4" aria-hidden="true" />
+              {t("inbox.markAllRead")}
+            </Button>
+          )}
+          <Link href="/settings/notifications">
+            <Button variant="ghost" size="sm" aria-label="Notification settings">
+              <Settings className="h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Filters */}

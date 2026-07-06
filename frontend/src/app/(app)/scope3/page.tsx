@@ -128,7 +128,7 @@ export default function Scope3Page() {
   if (error) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-900">{t("scope3.title")}</h1>
         <p className="mt-1 text-sm text-gray-500">
@@ -139,17 +139,17 @@ export default function Scope3Page() {
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <nav className="flex gap-6">
-          {tabs.map((t) => (
+          {tabs.map((tab) => (
             <button
-              key={t.key}
-              onClick={() => setActiveTab(t.key)}
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
               className={`pb-2 text-sm font-medium transition-colors ${
-                activeTab === t.key
+                activeTab === tab.key
                   ? "border-b-2 border-blue-600 text-blue-600"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              {t.label}
+              {tab.label}
             </button>
           ))}
         </nav>
@@ -231,8 +231,8 @@ export default function Scope3Page() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scope3.reportingYear")}</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">Total kg CO₂e</th>
-                  <th className="px-4 py-3 text-right font-medium text-gray-500">Total tCO₂e</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-500">{t("scope3.totalKgCo2e")}</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-500">{t("scope3.totalTco2e")}</th>
                   <th className="px-4 py-3 text-center font-medium text-gray-500">{t("nav.products")}</th>
                   <th className="px-4 py-3 text-center font-medium text-gray-500">{t("scope3.fullLca")}</th>
                   <th className="px-4 py-3 text-center font-medium text-gray-500">{t("scope3.partialLca")}</th>
@@ -279,21 +279,21 @@ export default function Scope3Page() {
           <table className="min-w-full divide-y divide-gray-200 text-sm">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Product ID</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500">Year</th>
-                <th className="px-4 py-3 text-right font-medium text-gray-500">PCF (kg CO₂e)</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">LCA Coverage</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500">Materials</th>
-                <th className="px-4 py-3 text-center font-medium text-gray-500">With LCA</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Source</th>
-                <th className="px-4 py-3 text-left font-medium text-gray-500">Calculated</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scope3.productId")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-500">{t("scope3.year")}</th>
+                <th className="px-4 py-3 text-right font-medium text-gray-500">{t("scope3.pcfKgCo2e")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scope3.lcaCoverage")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-500">{t("scope3.materials")}</th>
+                <th className="px-4 py-3 text-center font-medium text-gray-500">{t("scope3.withLca")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scope3.source")}</th>
+                <th className="px-4 py-3 text-left font-medium text-gray-500">{t("scope3.calculated")}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 bg-white">
               {pcfs.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
-                    No PCF records yet. Use &quot;Calculate PCF&quot; to compute the first one.
+                    {t("scope3.noPcf")}
                   </td>
                 </tr>
               ) : (
@@ -335,11 +335,10 @@ export default function Scope3Page() {
           <div className="rounded-lg border border-gray-200 bg-white p-6 space-y-4">
             <h2 className="text-base font-semibold text-gray-900">{t("scope3.computePcf")}</h2>
             <p className="text-sm text-gray-500">
-              Computes PCF from BOM material weights × LCA carbon intensity data.
-              Result is persisted and versioned for audit purposes.
+              {t("scope3.computePcfDesc")}
             </p>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Product ID</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t("scope3.productId")}</label>
               <input
                 type="text"
                 value={calcProductId}
@@ -386,7 +385,7 @@ export default function Scope3Page() {
               <h3 className="text-sm font-semibold text-gray-900">{t("scope3.pcf")}</h3>
               <dl className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <dt className="text-gray-500">PCF</dt>
+                  <dt className="text-gray-500">{t("scope3.pcf")}</dt>
                   <dd className="font-semibold text-blue-700">
                     {calcResult.pcf_kg_co2e_per_unit !== null
                       ? `${calcResult.pcf_kg_co2e_per_unit.toFixed(6)} kg CO₂e/unit`
@@ -394,23 +393,23 @@ export default function Scope3Page() {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Year</dt>
+                  <dt className="text-gray-500">{t("scope3.year")}</dt>
                   <dd className="text-gray-900">{calcResult.reporting_year}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Materials in BOM</dt>
+                  <dt className="text-gray-500">{t("scope3.bomMaterials")}</dt>
                   <dd className="text-gray-900">{calcResult.bom_materials_total}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">With LCA Data</dt>
+                  <dt className="text-gray-500">{t("scope3.withLcaData")}</dt>
                   <dd className="text-gray-900">{calcResult.bom_materials_with_lca}</dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Weight Coverage</dt>
+                  <dt className="text-gray-500">{t("scope3.weightCoverage")}</dt>
                   <dd><CoverageBar pct={calcResult.weight_coverage_pct} /></dd>
                 </div>
                 <div>
-                  <dt className="text-gray-500">Source</dt>
+                  <dt className="text-gray-500">{t("scope3.source")}</dt>
                   <dd className="text-gray-700">{calcResult.pcf_source}</dd>
                 </div>
               </dl>
@@ -418,16 +417,16 @@ export default function Scope3Page() {
               {calcResult.material_breakdown.length > 0 && (
                 <div>
                   <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-400 mb-2">
-                    Material Breakdown
+                    {t("scope3.materialBreakdown")}
                   </h4>
                   <div className="overflow-hidden rounded border border-gray-100">
                     <table className="min-w-full divide-y divide-gray-100 text-xs">
                       <thead className="bg-gray-50">
                         <tr>
-                          <th className="px-3 py-2 text-left font-medium text-gray-500">Material</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500">Weight %</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500">CO₂e/kg</th>
-                          <th className="px-3 py-2 text-right font-medium text-gray-500">Contribution</th>
+                          <th className="px-3 py-2 text-left font-medium text-gray-500">{t("scope3.material")}</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">{t("scope3.weightPct")}</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">{t("scope3.co2ePerKg")}</th>
+                          <th className="px-3 py-2 text-right font-medium text-gray-500">{t("scope3.contribution")}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50 bg-white">
