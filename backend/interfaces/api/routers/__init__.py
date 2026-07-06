@@ -82,6 +82,7 @@ from .supplier_assessment import router as supplier_assessment_router, public_ro
 from .esap_export import router as esap_export_router
 from .threshold_monitor import router as threshold_monitor_router
 from .regulatory_radar import router as regulatory_radar_router
+from .workflow_context import router as workflow_context_router
 
 __all__ = [
     "agents_router",
@@ -175,4 +176,5 @@ __all__ = [
     "esap_export_router",
     "threshold_monitor_router",
     "regulatory_radar_router",
+    "workflow_context_router",
 ]

@@ -119,6 +119,7 @@ from interfaces.api.routers import (
     esap_export_router,
     threshold_monitor_router,
     regulatory_radar_router,
+    workflow_context_router,
 )
 from interfaces.api.routers.demo import router as demo_router
 from shared.config import settings
@@ -526,3 +527,4 @@ app.include_router(supplier_assessment_public_router, prefix=API_V1)
 app.include_router(esap_export_router, prefix=API_V1)
 app.include_router(threshold_monitor_router, prefix=API_V1)
 app.include_router(regulatory_radar_router, prefix=API_V1)
+app.include_router(workflow_context_router, prefix=API_V1)

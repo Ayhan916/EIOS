@@ -30,6 +30,7 @@ import { CopilotDrawer } from "@/components/copilot-drawer";
 import { AskKBButton } from "@/components/layout/knowledge-search";
 import { useLanguage } from "@/lib/i18n/context";
 import { CAPTab } from "@/components/cap-tab";
+import { WorkflowProgressBar } from "@/components/workflow/WorkflowProgressBar";
 
 // ── CAP section wrapper ───────────────────────────────────────────────────────
 
@@ -372,6 +373,9 @@ export default function FindingDetailPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      {/* ── Workflow Pipeline Bar ─────────────────────────────────────────── */}
+      <WorkflowProgressBar entityType="finding" entityId={id} />
+
       {/* ── Back + Header ─────────────────────────────────────────────────── */}
       <div>
         <Link

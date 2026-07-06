@@ -74,6 +74,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Spinner } from "@/components/ui/spinner";
 import { Separator } from "@/components/ui/separator";
+import { WorkflowProgressBar } from "@/components/workflow/WorkflowProgressBar";
 
 const STRENGTH_STYLES: Record<string, string> = {
   "Very Strong": "bg-emerald-100 text-emerald-800",
@@ -663,6 +664,9 @@ export default function AssessmentDetailPage({
 
   return (
     <div className="space-y-6">
+      {/* ── Workflow Pipeline Bar ─────────────────────────────────────────── */}
+      <WorkflowProgressBar entityType="assessment" entityId={id} />
+
       {/* Breadcrumb + header */}
       <div>
         <Button variant="ghost" size="sm" asChild className="mb-4 -ml-1 gap-1">

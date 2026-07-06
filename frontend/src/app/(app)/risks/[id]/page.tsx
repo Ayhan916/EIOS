@@ -30,6 +30,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatDate } from "@/lib/utils";
 import { CopilotDrawer } from "@/components/copilot-drawer";
 import { AskKBButton } from "@/components/layout/knowledge-search";
+import { WorkflowProgressBar } from "@/components/workflow/WorkflowProgressBar";
 
 // ── #56 Audit Trail ──────────────────────────────────────────────────────────
 
@@ -306,6 +307,9 @@ export default function RiskDetailPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      {/* ── Workflow Pipeline Bar ─────────────────────────────────────────── */}
+      <WorkflowProgressBar entityType="risk" entityId={id} />
+
       {/* ── Back + Header ─────────────────────────────────────────────────── */}
       <div>
         <Link
