@@ -23,7 +23,7 @@ pytestmark = pytest.mark.integration
 
 TEST_DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db",
+    "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_test_db",
 )
 
 _ORG = "int-test-org"

@@ -19,7 +19,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.main import app
 from infrastructure.persistence.models import Base
 
-_DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
+_DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_test_db"
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
 
 pytestmark = pytest.mark.integration

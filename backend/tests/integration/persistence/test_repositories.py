@@ -29,7 +29,7 @@ from infrastructure.persistence.repositories import (
     SQLRiskRepository,
 )
 
-_DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
+_DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_test_db"
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
 
 _NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
