@@ -58,17 +58,32 @@ async def reset_demo_data(session: AsyncSession) -> User:
 async def _wipe_demo_data(session: AsyncSession) -> None:
     from sqlalchemy import text
 
-    for table in (
-        "recommendations",
-        "findings",
-        "risks",
-        "assessments",
-        "suppliers",
-        "users",
-        "organizations",
-    ):
+    # recommendations and findings join via assessments; risks join via created_by (demo user)
+    await session.execute(
+        text(
+            "DELETE FROM recommendations WHERE assessment_id IN "  # noqa: S608
+            "(SELECT id FROM assessments WHERE organization_id = :oid)"
+        ),
+        {"oid": DEMO_ORG_ID},
+    )
+    await session.execute(
+        text(
+            "DELETE FROM findings WHERE assessment_id IN "  # noqa: S608
+            "(SELECT id FROM assessments WHERE organization_id = :oid)"
+        ),
+        {"oid": DEMO_ORG_ID},
+    )
+    await session.execute(
+        text(
+            "DELETE FROM risks WHERE created_by IN "  # noqa: S608
+            "(SELECT id FROM users WHERE organization_id = :oid)"
+        ),
+        {"oid": DEMO_ORG_ID},
+    )
+    for table in ("assessments", "suppliers", "users", "organizations"):
+        col = "id" if table == "organizations" else "organization_id"
         await session.execute(
-            text(f"DELETE FROM {table} WHERE organization_id = :oid"),  # noqa: S608
+            text(f"DELETE FROM {table} WHERE {col} = :oid"),  # noqa: S608
             {"oid": DEMO_ORG_ID},
         )
     await session.flush()
