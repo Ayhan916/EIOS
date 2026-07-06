@@ -85,6 +85,15 @@ const de = {
   "auth.forgotPassword": "Passwort vergessen?",
   "auth.signOut": "Abmelden",
 
+  // ── Demo-Modus ──────────────────────────────────────────────────────────────
+  "demo.activateButton": "Demo-Modus aktivieren",
+  "demo.exitButton": "Demo beenden",
+  "demo.bannerText": "Demo-Modus aktiv — alle Daten sind Beispieldaten und werden nicht gespeichert.",
+  "demo.resetButton": "Demo zurücksetzen",
+  "demo.activating": "Demo wird geladen…",
+  "demo.resetting": "Demo wird zurückgesetzt…",
+  "demo.tooltip": "Zeigt Beispieldaten für Demos. Ihre echten Daten bleiben unberührt.",
+
   // ── Navigation ──────────────────────────────────────────────────────────────
   "nav.dashboard": "Dashboard",
   "nav.inbox": "Posteingang",

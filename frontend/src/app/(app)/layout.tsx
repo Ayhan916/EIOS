@@ -13,6 +13,7 @@ import { QuickCreateFAB } from "@/components/layout/quick-create-fab";
 import { NavigationProgress } from "@/components/layout/navigation-progress";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Spinner } from "@/components/ui/spinner";
+import { DemoModeBanner } from "@/components/demo/DemoModeBanner";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -67,6 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <NotificationBell />
         </header>
+        <DemoModeBanner />
         <main className="flex-1 overflow-y-auto">
           <div className="p-8">{children}</div>
         </main>

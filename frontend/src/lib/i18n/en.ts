@@ -85,6 +85,15 @@ const en = {
   "auth.forgotPassword": "Forgot password?",
   "auth.signOut": "Sign out",
 
+  // ── Demo Mode ───────────────────────────────────────────────────────────────
+  "demo.activateButton": "Activate demo mode",
+  "demo.exitButton": "Exit demo",
+  "demo.bannerText": "Demo mode active — all data shown is sample data and is not saved.",
+  "demo.resetButton": "Reset demo",
+  "demo.activating": "Loading demo…",
+  "demo.resetting": "Resetting demo…",
+  "demo.tooltip": "Shows sample data for demos. Your real data is not affected.",
+
   // ── Navigation ──────────────────────────────────────────────────────────────
   "nav.dashboard": "Dashboard",
   "nav.inbox": "Inbox",

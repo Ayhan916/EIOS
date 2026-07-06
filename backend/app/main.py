@@ -120,6 +120,7 @@ from interfaces.api.routers import (
     threshold_monitor_router,
     regulatory_radar_router,
 )
+from interfaces.api.routers.demo import router as demo_router
 from shared.config import settings
 
 # ── Background tasks ──────────────────────────────────────────────────────────
@@ -436,6 +437,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
 app.include_router(health_router)
 app.include_router(metrics_router)
 app.include_router(auth_router, prefix=API_V1)
+app.include_router(demo_router, prefix=API_V1)
 app.include_router(organizations_router, prefix=API_V1)
 app.include_router(sectors_router, prefix=API_V1)
 app.include_router(assessments_router, prefix=API_V1)

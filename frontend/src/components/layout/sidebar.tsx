@@ -20,6 +20,7 @@ import {
   LayoutDashboard,
   Layers,
   Leaf,
+  Clapperboard,
   LogOut,
   Network,
   PlayCircle,
@@ -66,6 +67,8 @@ import { useTheme } from "@/components/theme-provider";
 import { listNotifications } from "@/lib/api/notifications";
 import { useLanguage, type TranslationKey } from "@/lib/i18n/context";
 import { useReadiness } from "@/hooks/use-readiness";
+import { activateDemo, resetDemo } from "@/lib/api/demo";
+import { isDemoMode, enterDemoMode, exitDemoMode } from "@/lib/demo";
 
 // ─── Nav section definitions ──────────────────────────────────────────────────
 
@@ -369,6 +372,8 @@ export function Sidebar() {
   const { resolvedTheme, setTheme } = useTheme();
   const { t } = useLanguage();
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const demoActive = isDemoMode();
 
   function getActiveSectionId(): string | null {
     for (const section of NAV_SECTIONS) {
@@ -581,6 +586,65 @@ export function Sidebar() {
             )}
           </button>
         </div>
+        {/* Demo Mode toggle — admin only */}
+        {user?.role === "admin" && (
+          demoActive ? (
+            <div className="mb-1 flex gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={exitDemoMode}
+                className="flex-1 justify-start gap-2 bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300"
+              >
+                <Clapperboard className="h-4 w-4" aria-hidden="true" />
+                {t("demo.exitButton" as Parameters<typeof t>[0])}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={demoLoading}
+                onClick={async () => {
+                  setDemoLoading(true);
+                  try {
+                    const res = await resetDemo();
+                    enterDemoMode(res);
+                  } finally {
+                    setDemoLoading(false);
+                  }
+                }}
+                title={t("demo.resetButton" as Parameters<typeof t>[0])}
+                className="px-2 text-amber-400 hover:bg-amber-500/30 hover:text-amber-300"
+              >
+                <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                  <path d="M3 3v5h5" />
+                </svg>
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={demoLoading}
+              onClick={async () => {
+                setDemoLoading(true);
+                try {
+                  const res = await activateDemo();
+                  enterDemoMode(res);
+                } finally {
+                  setDemoLoading(false);
+                }
+              }}
+              title={t("demo.tooltip" as Parameters<typeof t>[0])}
+              className="mb-1 w-full justify-start gap-2 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            >
+              <Clapperboard className="h-4 w-4" aria-hidden="true" />
+              {demoLoading
+                ? t("demo.activating" as Parameters<typeof t>[0])
+                : t("demo.activateButton" as Parameters<typeof t>[0])}
+            </Button>
+          )
+        )}
         <Button
           variant="ghost"
           size="sm"
