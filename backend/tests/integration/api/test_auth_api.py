@@ -2,12 +2,18 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from shared.rate_limit import reset_for_tests
 
 pytestmark = pytest.mark.integration
 
 BASE = "/api/v1/auth"
 
 _DEFAULT_ORG = "EIOS Test Org"
+
+
+@pytest.fixture(autouse=True)
+def _reset_rl() -> None:
+    reset_for_tests()
 
 
 async def test_register_new_user(setup_test_schema: None) -> None:

@@ -59,7 +59,7 @@ async def test_list_risks_by_sector(client: AsyncClient) -> None:
     )
     r3 = await client.post(
         BASE + "/",
-        json={"title": "R3", "description": "D", "sector_id": "other"},
+        json={"title": "R3", "description": "D"},
     )
 
     response = await client.get(BASE + "/", params={"sector_id": sector_id})

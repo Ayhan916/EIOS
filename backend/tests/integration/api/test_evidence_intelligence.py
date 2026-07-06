@@ -16,6 +16,8 @@ Scenarios covered:
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -30,6 +32,7 @@ from domain.enums import EntityStatus, EvidenceStrength
 from domain.finding import Finding
 from domain.finding_evidence_link import FindingEvidenceLink
 from infrastructure.persistence.database import AsyncSessionFactory
+from infrastructure.persistence.models.evidence import EvidenceModel
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
 from infrastructure.persistence.repositories.finding_evidence_link import (
@@ -303,10 +306,22 @@ async def test_evidence_insights_correct_structure(setup_test_schema: None) -> N
         )
         saved_finding = await finding_repo.save(finding)
 
+        _now = datetime.now(timezone.utc)
+        session.add(EvidenceModel(
+            id="ev-test-001",
+            organization_id=org_id,
+            title="Test Evidence",
+            source="test-source",
+            description="Evidence for insights test",
+            created_at=_now,
+            updated_at=_now,
+        ))
+        await session.flush()
+
         link = FindingEvidenceLink(
             finding_id=saved_finding.id,
             evidence_id="ev-test-001",
-            evidence_chunk_id="chunk-test-001",
+            evidence_chunk_id=None,
             page_number=5,
             confidence_score=0.75,
             supporting_excerpt="Child labour violations confirmed.",

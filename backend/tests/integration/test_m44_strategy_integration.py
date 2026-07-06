@@ -15,7 +15,7 @@ import uuid
 import pytest
 import pytest_asyncio
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from infrastructure.persistence.models.base import Base
 
@@ -51,28 +51,26 @@ async def session(engine):
         await s.rollback()
 
 
-def _make_sync_session_from_async(async_session: AsyncSession):
-    """Wrap the async session's sync connection for service calls."""
-    return async_session.sync_session
-
-
 # ── Digital Twin integration ──────────────────────────────────────────────────
 
 @pytest.mark.asyncio
 async def test_create_and_list_digital_twin(session):
     from application.strategy import digital_twin_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    twin = digital_twin_service.create_digital_twin(
-        org_id, "Integration Twin", _ACTOR, sync_s,
-        emissions_baseline_tco2e=5000.0,
-        financial_baseline={"revenue": 100_000.0},
+    twin = await session.run_sync(
+        lambda s: digital_twin_service.create_digital_twin(
+            org_id, "Integration Twin", _ACTOR, s,
+            emissions_baseline_tco2e=5000.0,
+            financial_baseline={"revenue": 100_000.0},
+        )
     )
     assert twin.id is not None
     assert twin.organization_id == org_id
 
-    twins = digital_twin_service.list_digital_twins(org_id, sync_s)
+    twins = await session.run_sync(
+        lambda s: digital_twin_service.list_digital_twins(org_id, s)
+    )
     assert len(twins) == 1
     assert twins[0].name == "Integration Twin"
 
@@ -80,19 +78,23 @@ async def test_create_and_list_digital_twin(session):
 @pytest.mark.asyncio
 async def test_create_snapshot_for_twin(session):
     from application.strategy import digital_twin_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    twin = digital_twin_service.create_digital_twin(
-        org_id, "Twin With Snapshot", _ACTOR, sync_s,
-        emissions_baseline_tco2e=1000.0,
+    twin = await session.run_sync(
+        lambda s: digital_twin_service.create_digital_twin(
+            org_id, "Twin With Snapshot", _ACTOR, s,
+            emissions_baseline_tco2e=1000.0,
+        )
     )
-    snap = digital_twin_service.create_snapshot(
-        org_id, twin.id, "ANNUAL", "2024", _ACTOR, sync_s,
-        sustainability_state={"emissions_tco2e": 950.0},
-        financial_esg_state={"revenue": 80_000.0},
+    twin_id = twin.id
+    snap = await session.run_sync(
+        lambda s: digital_twin_service.create_snapshot(
+            org_id, twin_id, "ANNUAL", "2024", _ACTOR, s,
+            sustainability_state={"emissions_tco2e": 950.0},
+            financial_esg_state={"revenue": 80_000.0},
+        )
     )
-    assert snap.twin_id == twin.id
+    assert snap.twin_id == twin_id
     assert snap.snapshot_type == "ANNUAL"
     assert snap.sustainability_state["emissions_tco2e"] == 950.0
 
@@ -103,15 +105,18 @@ async def test_create_snapshot_for_twin(session):
 async def test_resolve_baseline_from_twin(session):
     from application.strategy import digital_twin_service
     from application.strategy.scenario_service import resolve_strategy_baseline
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    digital_twin_service.create_digital_twin(
-        org_id, "Twin For Baseline", _ACTOR, sync_s,
-        emissions_baseline_tco2e=3000.0,
-        financial_baseline={"revenue": 200_000.0},
+    await session.run_sync(
+        lambda s: digital_twin_service.create_digital_twin(
+            org_id, "Twin For Baseline", _ACTOR, s,
+            emissions_baseline_tco2e=3000.0,
+            financial_baseline={"revenue": 200_000.0},
+        )
     )
-    baseline = resolve_strategy_baseline(org_id, sync_s)
+    baseline = await session.run_sync(
+        lambda s: resolve_strategy_baseline(org_id, s)
+    )
     assert baseline.get("emissions_tco2e") == 3000.0
     assert baseline.get("revenue") == 200_000.0
 
@@ -120,11 +125,10 @@ async def test_resolve_baseline_from_twin(session):
 async def test_resolve_baseline_no_twin_raises(session):
     from application.strategy.scenario_service import resolve_strategy_baseline
     from application.strategy.digital_twin_service import StrategyError
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"empty-org-{uuid.uuid4().hex[:8]}"
 
     with pytest.raises(StrategyError, match="No baseline found"):
-        resolve_strategy_baseline(org_id, sync_s)
+        await session.run_sync(lambda s: resolve_strategy_baseline(org_id, s))
 
 
 # ── Scenario + Execution integration ─────────────────────────────────────────
@@ -132,29 +136,41 @@ async def test_resolve_baseline_no_twin_raises(session):
 @pytest.mark.asyncio
 async def test_full_scenario_execution_workflow(session):
     from application.strategy import digital_twin_service, scenario_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    twin = digital_twin_service.create_digital_twin(
-        org_id, "Workflow Twin", _ACTOR, sync_s,
-        emissions_baseline_tco2e=2000.0,
-        financial_baseline={"revenue": 500_000.0},
+    twin = await session.run_sync(
+        lambda s: digital_twin_service.create_digital_twin(
+            org_id, "Workflow Twin", _ACTOR, s,
+            emissions_baseline_tco2e=2000.0,
+            financial_baseline={"revenue": 500_000.0},
+        )
+    )
+    twin_id = twin.id
+
+    scenario = await session.run_sync(
+        lambda s: scenario_service.create_scenario(
+            org_id, "Workflow Scenario", "CLIMATE", _ACTOR, s,
+            time_horizon_years=5,
+        )
+    )
+    scenario_id = scenario.id
+
+    await session.run_sync(
+        lambda s: scenario_service.create_assumption(
+            org_id, scenario_id, "emissions_growth_pct_annual", "Emissions Growth Rate",
+            -3.0, _ACTOR, s, unit="pct/yr",
+        )
     )
 
-    scenario = scenario_service.create_scenario(
-        org_id, "Workflow Scenario", "CLIMATE", _ACTOR, sync_s,
-        time_horizon_years=5,
+    baseline = await session.run_sync(
+        lambda s: scenario_service.resolve_strategy_baseline(org_id, s)
     )
-    scenario_service.create_assumption(
-        org_id, scenario.id, "emissions_growth_pct_annual", "Emissions Growth Rate",
-        -3.0, _ACTOR, sync_s, unit="pct/yr",
-    )
-
-    baseline = scenario_service.resolve_strategy_baseline(org_id, sync_s)
-    execution = scenario_service.execute_scenario(
-        org_id, scenario.id, _ACTOR, sync_s,
-        twin_id=twin.id,
-        baseline_override=baseline,
+    execution = await session.run_sync(
+        lambda s: scenario_service.execute_scenario(
+            org_id, scenario_id, _ACTOR, s,
+            twin_id=twin_id,
+            baseline_override=baseline,
+        )
     )
     assert execution.execution_status == "Completed"
     assert execution.projected_emissions["emissions_tco2e"] < 2000.0
@@ -165,19 +181,23 @@ async def test_full_scenario_execution_workflow(session):
 @pytest.mark.asyncio
 async def test_create_and_instantiate_scenario_template(session):
     from application.strategy import template_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    template = template_service.create_scenario_template(
-        org_id, "NZ Template", "NET_ZERO", "CLIMATE", _ACTOR, sync_s,
-        default_assumptions={"emissions_growth_pct_annual": -5.0},
-        default_time_horizon_years=10,
+    template = await session.run_sync(
+        lambda s: template_service.create_scenario_template(
+            org_id, "NZ Template", "NET_ZERO", "CLIMATE", _ACTOR, s,
+            default_assumptions={"emissions_growth_pct_annual": -5.0},
+            default_time_horizon_years=10,
+        )
     )
     assert template.template_name == "NZ Template"
     assert template.usage_count == 0
 
-    scenario = template_service.instantiate_from_template(
-        org_id, template.id, "NZ Scenario from Template", _ACTOR, sync_s,
+    template_id = template.id
+    scenario = await session.run_sync(
+        lambda s: template_service.instantiate_from_template(
+            org_id, template_id, "NZ Scenario from Template", _ACTOR, s,
+        )
     )
     assert scenario.name == "NZ Scenario from Template"
     assert template.usage_count == 1
@@ -188,21 +208,27 @@ async def test_create_and_instantiate_scenario_template(session):
 @pytest.mark.asyncio
 async def test_methodology_approval_lifecycle(session):
     from application.strategy import methodology_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    methodology = methodology_service.create_methodology(
-        org_id, "SBTi 1.5C Linear", _ACTOR, sync_s,
-        formula_description="Linear reduction from 2024 baseline",
-        applicable_to=["FORECAST", "PATHWAY"],
+    methodology = await session.run_sync(
+        lambda s: methodology_service.create_methodology(
+            org_id, "SBTi 1.5C Linear", _ACTOR, s,
+            formula_description="Linear reduction from 2024 baseline",
+            applicable_to=["FORECAST", "PATHWAY"],
+        )
     )
     assert methodology.approval_status == "DRAFT"
 
-    approved = methodology_service.approve_methodology(org_id, methodology.id, _ACTOR, sync_s)
+    methodology_id = methodology.id
+    approved = await session.run_sync(
+        lambda s: methodology_service.approve_methodology(org_id, methodology_id, _ACTOR, s)
+    )
     assert approved.approval_status == "APPROVED"
     assert approved.approved_by == _ACTOR
 
-    deprecated = methodology_service.deprecate_methodology(org_id, methodology.id, _ACTOR, sync_s)
+    deprecated = await session.run_sync(
+        lambda s: methodology_service.deprecate_methodology(org_id, methodology_id, _ACTOR, s)
+    )
     assert deprecated.approval_status == "DEPRECATED"
 
 
@@ -211,23 +237,33 @@ async def test_methodology_approval_lifecycle(session):
 @pytest.mark.asyncio
 async def test_scenario_comparison_integration(session):
     from application.strategy import comparison_service, scenario_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
-    s1 = scenario_service.create_scenario(org_id, "Base", "CLIMATE", _ACTOR, sync_s)
-    s2 = scenario_service.create_scenario(org_id, "Alt", "CLIMATE", _ACTOR, sync_s)
+    s1 = await session.run_sync(
+        lambda s: scenario_service.create_scenario(org_id, "Base", "CLIMATE", _ACTOR, s)
+    )
+    s2 = await session.run_sync(
+        lambda s: scenario_service.create_scenario(org_id, "Alt", "CLIMATE", _ACTOR, s)
+    )
+    s1_id, s2_id = s1.id, s2.id
 
     baseline_a = {"emissions_tco2e": 1000.0, "revenue": 50_000.0}
     baseline_b = {"emissions_tco2e": 800.0, "revenue": 60_000.0}
 
-    scenario_service.execute_scenario(org_id, s1.id, _ACTOR, sync_s, baseline_override=baseline_a)
-    scenario_service.execute_scenario(org_id, s2.id, _ACTOR, sync_s, baseline_override=baseline_b)
+    await session.run_sync(
+        lambda s: scenario_service.execute_scenario(org_id, s1_id, _ACTOR, s, baseline_override=baseline_a)
+    )
+    await session.run_sync(
+        lambda s: scenario_service.execute_scenario(org_id, s2_id, _ACTOR, s, baseline_override=baseline_b)
+    )
 
-    comparison = comparison_service.compare_scenarios(
-        org_id, "Base vs Alt", [s1.id, s2.id], _ACTOR, sync_s
+    comparison = await session.run_sync(
+        lambda s: comparison_service.compare_scenarios(
+            org_id, "Base vs Alt", [s1_id, s2_id], _ACTOR, s
+        )
     )
     assert comparison.comparison_name == "Base vs Alt"
-    assert s2.id in comparison.emissions_delta
+    assert s2_id in comparison.emissions_delta
 
 
 # ── Pathway frequency integration ─────────────────────────────────────────────
@@ -235,18 +271,19 @@ async def test_scenario_comparison_integration(session):
 @pytest.mark.asyncio
 async def test_pathway_quarterly_milestones_integration(session):
     from application.strategy import pathway_service
-    sync_s = _make_sync_session_from_async(session)
     org_id = f"{_ORG}-{uuid.uuid4().hex[:8]}"
 
     import datetime
     current_year = datetime.datetime.now(datetime.timezone.utc).year
     target_year = current_year + 2
 
-    pathway = pathway_service.create_pathway(
-        org_id, "Quarterly Pathway", "EXPECTED", target_year, _ACTOR, sync_s,
-        baseline_emissions_tco2e=1000.0,
-        target_emissions_tco2e=0.0,
-        milestone_frequency="QUARTERLY",
+    pathway = await session.run_sync(
+        lambda s: pathway_service.create_pathway(
+            org_id, "Quarterly Pathway", "EXPECTED", target_year, _ACTOR, s,
+            baseline_emissions_tco2e=1000.0,
+            target_emissions_tco2e=0.0,
+            milestone_frequency="QUARTERLY",
+        )
     )
     assert pathway.milestone_frequency == "QUARTERLY"
     milestones = pathway.milestones["milestones"]

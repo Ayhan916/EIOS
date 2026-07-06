@@ -9,6 +9,7 @@ To skip in CI without PostgreSQL: pytest tests/unit/ -v
 """
 
 import os
+from datetime import datetime, timezone
 
 import pytest
 import pytest_asyncio
@@ -20,6 +21,7 @@ from domain.evidence import Evidence
 from domain.finding import Finding
 from domain.risk import Risk
 from infrastructure.persistence.models import Base
+from infrastructure.persistence.models.sector import SectorModel
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLEvidenceRepository,
@@ -29,6 +31,12 @@ from infrastructure.persistence.repositories import (
 
 _DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_db"
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
+
+_NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
+
+
+def _sector(id: str, name: str, nace_code: str) -> SectorModel:
+    return SectorModel(id=id, name=name, nace_code=nace_code, created_at=_NOW, updated_at=_NOW)
 
 pytestmark = pytest.mark.integration
 
@@ -83,6 +91,9 @@ class TestAssessmentRepository:
     async def test_list_by_sector(self, session: AsyncSession) -> None:
         repo = SQLAssessmentRepository(session)
         sector_id = "sector-test-001"
+        session.add(_sector(sector_id, "Test Sector", "TS-001"))
+        session.add(_sector("other-sector", "Other Sector", "TS-002"))
+        await session.flush()
         a1 = Assessment(title="A1", description="D", sector_id=sector_id)
         a2 = Assessment(title="A2", description="D", sector_id=sector_id)
         a3 = Assessment(title="A3", description="D", sector_id="other-sector")
@@ -161,6 +172,8 @@ class TestFindingRepository:
 class TestRiskRepository:
     async def test_save_and_retrieve(self, session: AsyncSession) -> None:
         repo = SQLRiskRepository(session)
+        session.add(_sector("sector-mining-001", "Mining", "B"))
+        await session.flush()
         risk = Risk(
             title="Supply Chain Labour Risk",
             description="Elevated risk in NACE B sectors",
@@ -176,9 +189,11 @@ class TestRiskRepository:
     async def test_list_by_sector(self, session: AsyncSession) -> None:
         repo = SQLRiskRepository(session)
         sector_id = "sector-for-risk-test"
+        session.add(_sector(sector_id, "Risk Test Sector", "RT-001"))
+        await session.flush()
         await repo.save(Risk(title="R1", description="D", sector_id=sector_id))
         await repo.save(Risk(title="R2", description="D", sector_id=sector_id))
-        await repo.save(Risk(title="R3", description="D", sector_id="other"))
+        await repo.save(Risk(title="R3", description="D", sector_id=None))
 
         results = await repo.list_by_sector(sector_id)
         assert len(results) == 2

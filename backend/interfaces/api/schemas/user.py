@@ -27,6 +27,7 @@ class UserResponse(BaseModel):
 
 class NotificationPreferencesUpdate(BaseModel):
     """Strict update — only the 4 supported keys are accepted."""
+    model_config = ConfigDict(extra="forbid")
     email_workflow_completed: bool | None = None
     email_action_overdue: bool | None = None
     email_assessment_approved: bool | None = None

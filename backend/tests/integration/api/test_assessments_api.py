@@ -59,7 +59,7 @@ async def test_list_assessments_by_sector(client: AsyncClient) -> None:
 
     response = await client.get(BASE + "/", params={"sector_id": sector_id})
     assert response.status_code == 200
-    assert len(response.json()) == 2
+    assert response.json()["total"] == 2
 
     for aid in [a1.json()["id"], a2.json()["id"]]:
         await client.delete(f"{BASE}/{aid}")
