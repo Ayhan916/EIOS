@@ -316,6 +316,38 @@ services:
     networks:
       - public
 
+  # ── Observability stack ────────────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.52.0
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    volumes:
+      - ./backend/infrastructure/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./backend/infrastructure/observability/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - prometheus_data:/prometheus
+    expose:
+      - "9090"
+    networks:
+      - internal
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - ./nginx/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - alertmanager_data:/alertmanager
+    expose:
+      - "9093"
+    networks:
+      - internal
+
 volumes:
   postgres_data:
     driver: local
@@ -326,6 +358,10 @@ volumes:
   redis_data:
     driver: local
   redis_blacklist_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  alertmanager_data:
     driver: local
 
 networks:
