@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, BookOpen, CheckCircle, AlertTriangle, RefreshCw } from "lucide-react";
+import { Search, BookOpen, CheckCircle, AlertTriangle, RefreshCw, GitBranch, ChevronDown, ChevronUp, ExternalLink } from "lucide-react";
+import { FEATURES, WORKFLOWS, type FeatureEntry, type WorkflowId } from "@/lib/data/feature-knowledge-graph";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -387,6 +388,248 @@ function IngestTab() {
   );
 }
 
+// ── Feature Graph Tab ─────────────────────────────────────────────────────────
+
+const GAP_COLORS: Record<string, string> = {
+  critical: "bg-red-100 text-red-700 border border-red-200",
+  high:     "bg-orange-100 text-orange-700 border border-orange-200",
+  medium:   "bg-amber-100 text-amber-800 border border-amber-200",
+};
+
+function FeatureCard({ feature }: { feature: FeatureEntry }) {
+  const [expanded, setExpanded] = useState(false);
+  const openGaps = feature.gaps.filter((g) => !g.closed);
+  const hasDetail = !!feature.frontendDetail;
+
+  return (
+    <Card className={`transition-all ${openGaps.length === 0 ? "border-emerald-200" : openGaps.some(g => g.severity === "critical" || g.severity === "high") ? "border-orange-200" : "border-amber-100"}`}>
+      <CardContent className="pt-4 pb-3">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex items-start gap-2 min-w-0">
+            <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-xs font-mono font-semibold text-slate-600">
+              {feature.id}
+            </span>
+            <div className="min-w-0">
+              <p className="font-semibold text-sm text-slate-900 leading-tight">{feature.name}</p>
+              {feature.csdddArticle && (
+                <span className="text-[10px] text-slate-400">{feature.csdddArticle}</span>
+              )}
+            </div>
+          </div>
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="shrink-0 rounded p-0.5 hover:bg-muted transition-colors"
+          >
+            {expanded
+              ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+          </button>
+        </div>
+
+        {/* Workflow badges */}
+        <div className="mt-2 flex flex-wrap gap-1">
+          {feature.workflows.map((wf) => (
+            <span key={wf} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${WORKFLOWS[wf].color}`}>
+              {wf}
+            </span>
+          ))}
+        </div>
+
+        {/* Frontend status row */}
+        <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className={feature.frontendList ? "text-emerald-600" : "text-red-500"}>
+            {feature.frontendList ? "✓ Liste" : "✗ Liste"}
+          </span>
+          <span className={hasDetail ? "text-emerald-600" : "text-red-500"}>
+            {hasDetail ? "✓ Detail" : "✗ Detail"}
+          </span>
+          <span className={feature.tests.length > 0 ? "text-emerald-600" : "text-red-500"}>
+            {feature.tests.length > 0 ? `✓ Tests (${feature.tests.length})` : "✗ Tests"}
+          </span>
+        </div>
+
+        {/* Gap count pill */}
+        {openGaps.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {openGaps.map((g, i) => (
+              <span key={i} className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${GAP_COLORS[g.severity]}`}>
+                {g.text}
+              </span>
+            ))}
+          </div>
+        )}
+        {openGaps.length === 0 && (
+          <p className="mt-2 text-[10px] text-emerald-600 font-medium">✓ Keine offenen Gaps</p>
+        )}
+
+        {/* Expanded detail */}
+        {expanded && (
+          <div className="mt-4 pt-3 border-t border-border space-y-3 text-xs text-muted-foreground">
+            <div>
+              <p className="font-semibold text-slate-700 mb-0.5">Backend</p>
+              <p className="font-mono text-[10px] break-all">{feature.backendService}</p>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700 mb-0.5">API Router</p>
+              <p className="font-mono text-[10px] break-all">{feature.apiRouter}</p>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700 mb-0.5">DB Model</p>
+              <p className="font-mono text-[10px] break-all">{feature.dbModel}</p>
+            </div>
+            {feature.upstream.length > 0 && (
+              <div>
+                <p className="font-semibold text-slate-700 mb-1">Upstream (FK-Abhängigkeiten)</p>
+                <div className="flex flex-wrap gap-1">
+                  {feature.upstream.map((u) => (
+                    <span key={u} className="rounded bg-blue-50 text-blue-700 px-1.5 py-0.5 text-[10px]">{u}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {feature.downstream.length > 0 && (
+              <div>
+                <p className="font-semibold text-slate-700 mb-1">Downstream</p>
+                <div className="flex flex-wrap gap-1">
+                  {feature.downstream.map((d) => (
+                    <span key={d} className="rounded bg-violet-50 text-violet-700 px-1.5 py-0.5 text-[10px]">{d}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {feature.tests.length > 0 && (
+              <div>
+                <p className="font-semibold text-slate-700 mb-1">Test-Dateien</p>
+                {feature.tests.map((t) => (
+                  <p key={t} className="font-mono text-[10px] text-slate-500">{t}</p>
+                ))}
+              </div>
+            )}
+            {feature.frontendList && (
+              <div className="flex items-center gap-3 pt-1">
+                <a
+                  href={feature.frontendList.includes("[id]") ? "#" : feature.frontendList}
+                  className="flex items-center gap-1 text-blue-600 hover:underline text-[10px]"
+                >
+                  <ExternalLink className="h-3 w-3" /> Liste öffnen
+                </a>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function FeatureGraphTab() {
+  const [search, setSearch] = useState("");
+  const [wfFilter, setWfFilter] = useState<WorkflowId | "ALL">("ALL");
+  const [gapFilter, setGapFilter] = useState<"ALL" | "HAS_GAPS" | "CLEAN">("ALL");
+
+  const filtered = FEATURES.filter((f) => {
+    const matchSearch =
+      !search ||
+      f.name.toLowerCase().includes(search.toLowerCase()) ||
+      f.id.toLowerCase().includes(search.toLowerCase());
+    const matchWf = wfFilter === "ALL" || f.workflows.includes(wfFilter);
+    const openGaps = f.gaps.filter((g) => !g.closed);
+    const matchGap =
+      gapFilter === "ALL" ||
+      (gapFilter === "HAS_GAPS" && openGaps.length > 0) ||
+      (gapFilter === "CLEAN" && openGaps.length === 0);
+    return matchSearch && matchWf && matchGap;
+  });
+
+  const totalGaps = FEATURES.reduce((n, f) => n + f.gaps.filter((g) => !g.closed).length, 0);
+  const highGaps  = FEATURES.reduce((n, f) => n + f.gaps.filter((g) => !g.closed && (g.severity === "critical" || g.severity === "high")).length, 0);
+  const cleanFeatures = FEATURES.filter((f) => f.gaps.filter((g) => !g.closed).length === 0).length;
+
+  return (
+    <div className="space-y-5">
+      {/* KPI bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Features total", value: FEATURES.length, color: "text-slate-700" },
+          { label: "Workflows", value: 5, color: "text-blue-700" },
+          { label: "Offene Gaps",  value: totalGaps, color: totalGaps > 0 ? "text-orange-600" : "text-emerald-600" },
+          { label: "Kritische Gaps", value: highGaps, color: highGaps > 0 ? "text-red-600" : "text-emerald-600" },
+        ].map((kpi) => (
+          <div key={kpi.label} className="rounded-xl border bg-white dark:bg-gray-900 px-4 py-3">
+            <p className="text-xs text-muted-foreground">{kpi.label}</p>
+            <p className={`text-2xl font-bold tabular-nums ${kpi.color}`}>{kpi.value}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Search + Filter */}
+      <div className="flex flex-wrap gap-3 items-center">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <input
+            className="w-full rounded-md border border-border bg-background pl-8 pr-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            placeholder="Feature suchen (Name oder ID)…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+
+        <div className="flex gap-1 flex-wrap">
+          {(["ALL", "WF-01", "WF-02", "WF-03", "WF-04", "WF-05"] as const).map((wf) => (
+            <button
+              key={wf}
+              onClick={() => setWfFilter(wf)}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${
+                wfFilter === wf
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {wf === "ALL" ? "Alle Workflows" : wf}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-1">
+          {(["ALL", "HAS_GAPS", "CLEAN"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setGapFilter(f)}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${
+                gapFilter === f
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:bg-muted"
+              }`}
+            >
+              {f === "ALL" ? "Alle" : f === "HAS_GAPS" ? "Hat Gaps" : "✓ Ohne Gaps"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Results count */}
+      <p className="text-xs text-muted-foreground">
+        {filtered.length} von {FEATURES.length} Features
+      </p>
+
+      {/* Feature grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+        {filtered.map((f) => (
+          <FeatureCard key={f.id} feature={f} />
+        ))}
+      </div>
+
+      {filtered.length === 0 && (
+        <div className="py-12 text-center">
+          <GitBranch className="mx-auto mb-3 h-10 w-10 text-muted-foreground/30" />
+          <p className="text-sm text-muted-foreground">Keine Features gefunden.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function KnowledgePage() {
@@ -403,9 +646,14 @@ export default function KnowledgePage() {
         <TabsList>
           <TabsTrigger value="search">{t("kb.tabSearch")}</TabsTrigger>
           <TabsTrigger value="ingest">{t("kb.tabIngest")}</TabsTrigger>
+          <TabsTrigger value="graph" className="gap-1.5">
+            <GitBranch className="h-3.5 w-3.5" />
+            Feature Graph
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="search" className="mt-6"><SearchTab /></TabsContent>
         <TabsContent value="ingest" className="mt-6"><IngestTab /></TabsContent>
+        <TabsContent value="graph" className="mt-6"><FeatureGraphTab /></TabsContent>
       </Tabs>
     </div>
   );
