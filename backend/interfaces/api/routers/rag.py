@@ -99,6 +99,7 @@ class AnalyzeRequest(BaseModel):
 class AnalyzeSource(BaseModel):
     rank: int
     doc_type: str
+    source_type: str  # "news" | "intelligence" | "document" | "historical"
     content_preview: str
     severity: str | None
     source_name: str | None
@@ -109,6 +110,7 @@ class AnalyzeSource(BaseModel):
 class AnalyzeResponse(BaseModel):
     answer: str
     sources: list[AnalyzeSource]
+    sources_breakdown: dict[str, int]  # {"news": 2, "intelligence": 1, "document": 3, "historical": 1}
     chunks_found: int
     model: str
     query: str
@@ -256,6 +258,7 @@ async def analyze_with_rag(
     return AnalyzeResponse(
         answer=result["answer"],
         sources=[AnalyzeSource(**s) for s in result["sources"]],
+        sources_breakdown=result["sources_breakdown"],
         chunks_found=result["chunks_found"],
         model=result["model"],
         query=result["query"],

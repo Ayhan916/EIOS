@@ -3,6 +3,8 @@ import apiClient from "./client";
 export interface RagSource {
   rank: number;
   doc_type: string;
+  /** "news" | "intelligence" | "document" | "historical" */
+  source_type: string;
   content_preview: string;
   severity: string | null;
   source_name: string | null;
@@ -13,6 +15,8 @@ export interface RagSource {
 export interface RagAnalyzeResponse {
   answer: string;
   sources: RagSource[];
+  /** How many chunks came from each source type */
+  sources_breakdown: Record<string, number>;
   chunks_found: number;
   model: string;
   query: string;

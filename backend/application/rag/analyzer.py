@@ -12,13 +12,16 @@ from __future__ import annotations
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .retrieval import retrieve
+from .cross_source_retrieval import retrieve_cross_source
 
 logger = structlog.get_logger(__name__)
 
 _SYSTEM_PROMPT = """Du bist ein spezialisierter Lieferketten-Risikoanalyst für EIOS.
-Du analysierst externe Intelligence-Daten (Nachrichten, Sanktionen, Risikoereignisse)
-zu Lieferanten und beantwortest Fragen auf Basis der bereitgestellten Quellen.
+Du analysierst Daten aus mehreren Wissensquellen zu Lieferanten:
+  - Aktuelle Nachrichten (News)
+  - Intelligence-Events (Sanktionen, Vorfälle, Risikohinweise)
+  - ESG-/Nachhaltigkeitsberichte und Geschäftsberichte (Dokumente)
+  - Historisches Wissen aus vergangenen Ereignissen und Gegenmaßnahmen
 
 Regeln:
 - Antworte IMMER auf Deutsch
@@ -26,7 +29,16 @@ Regeln:
 - Wenn die Quellen keine Antwort liefern, sage das klar
 - Sei konkret, präzise und handlungsorientiert
 - Nenne relevante Regulierungen (LkSG, CSDDD, CSRD) wenn passend
+- Nutze Erkenntnisse aus historischen Ereignissen um Empfehlungen abzuleiten
 - Formatiere die Antwort übersichtlich (Absätze, Aufzählungen)"""
+
+
+_SOURCE_TYPE_LABELS: dict[str, str] = {
+    "news": "Nachricht",
+    "intelligence": "Intelligence-Event",
+    "document": "Dokument",
+    "historical": "Historisches Wissen",
+}
 
 
 def _build_context(chunks: list[dict]) -> str:
@@ -36,17 +48,18 @@ def _build_context(chunks: list[dict]) -> str:
 
     lines = []
     for i, chunk in enumerate(chunks, 1):
-        meta_parts = []
-        if chunk.get("doc_type") == "news_article":
-            meta_parts.append("Nachricht")
-        elif chunk.get("doc_type") == "intelligence_event":
-            meta_parts.append("Intelligence-Event")
+        source_type = chunk.get("source_type", "")
+        meta_parts = [_SOURCE_TYPE_LABELS.get(source_type, "Quelle")]
         if chunk.get("severity"):
             meta_parts.append(f"Schweregrad: {chunk['severity']}")
         if chunk.get("published_at"):
             meta_parts.append(chunk["published_at"][:10])
         if chunk.get("source_name"):
             meta_parts.append(chunk["source_name"])
+        if chunk.get("csddd_right"):
+            meta_parts.append(f"CSDDD-Recht: {chunk['csddd_right']}")
+        if chunk.get("outcome_category"):
+            meta_parts.append(f"Ergebnis: {chunk['outcome_category']}")
 
         meta = " | ".join(meta_parts)
         lines.append(f"[Quelle {i}] {meta}")
@@ -72,8 +85,8 @@ async def analyze(
       chunks_found — Anzahl relevanter Chunks gefunden
       model        — verwendetes LLM-Modell
     """
-    # 1. Relevante Dokumente abrufen
-    chunks = await retrieve(
+    # 1. Relevante Dokumente aus allen Quellen abrufen (Cross-Source)
+    chunks = await retrieve_cross_source(
         query=query,
         organization_id=organization_id,
         session=session,
@@ -121,31 +134,44 @@ async def analyze(
         else:
             answer = "Keine relevanten Informationen gefunden und LLM nicht verfügbar."
 
-    # 5. Quellen aufbereiten
-    sources = [
-        {
-            "rank": i + 1,
-            "doc_type": c["doc_type"],
-            "content_preview": c["content"][:120] + "…" if len(c["content"]) > 120 else c["content"],
-            "severity": c.get("severity"),
-            "source_name": c.get("source_name"),
-            "published_at": c.get("published_at", "")[:10] if c.get("published_at") else None,
-            "similarity": c["similarity"],
-        }
-        for i, c in enumerate(chunks)
-    ]
+    # 5. Quellen aufbereiten + Breakdown zählen
+    sources_breakdown: dict[str, int] = {
+        "news": 0,
+        "intelligence": 0,
+        "document": 0,
+        "historical": 0,
+    }
+    sources = []
+    for i, c in enumerate(chunks):
+        st = c.get("source_type", "document")
+        if st in sources_breakdown:
+            sources_breakdown[st] += 1
+        sources.append(
+            {
+                "rank": i + 1,
+                "doc_type": c["doc_type"],
+                "source_type": st,
+                "content_preview": c["content"][:120] + "…" if len(c["content"]) > 120 else c["content"],
+                "severity": c.get("severity"),
+                "source_name": c.get("source_name"),
+                "published_at": c.get("published_at", "")[:10] if c.get("published_at") else None,
+                "similarity": c["similarity"],
+            }
+        )
 
     logger.info(
         "rag_analyze.done",
         org=organization_id,
         supplier_id=supplier_id,
         chunks=len(chunks),
+        breakdown=sources_breakdown,
         model=model_used,
     )
 
     return {
         "answer": answer,
         "sources": sources,
+        "sources_breakdown": sources_breakdown,
         "chunks_found": len(chunks),
         "model": model_used,
         "query": query,
