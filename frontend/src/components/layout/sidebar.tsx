@@ -52,6 +52,7 @@ import {
   Sun,
   Wind,
   BookOpen,
+  Library,
   Fingerprint,
   ScrollText,
   Megaphone,
@@ -228,6 +229,7 @@ const NAV_SECTIONS: NavSection[] = [
     items: [
       { labelKey: "nav.copilot",         href: "/copilot",                  icon: MessageCircle },
       { labelKey: "nav.knowledgeBase",   href: "/knowledge",                icon: BookOpen },
+      { labelKey: "nav.documentLibrary", href: "/documents",                icon: Library },
       { labelKey: "nav.aiModels",        href: "/ai-governance/models",     icon: Layers },
       { labelKey: "nav.aiMonitoring",    href: "/ai-governance/monitoring", icon: Radio },
       { labelKey: "nav.workflowMonitor", href: "/workflows",                icon: PlayCircle },

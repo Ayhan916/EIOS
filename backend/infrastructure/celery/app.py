@@ -27,6 +27,7 @@ celery_app = Celery(
         "infrastructure.celery.tasks.schedule_checker",
         "infrastructure.celery.tasks.certificate_expiry",
         "infrastructure.celery.tasks.risk_draft",
+        "infrastructure.celery.tasks.document_pipeline",
     ],
 )
 
@@ -77,6 +78,10 @@ celery_app.conf.update(
         "check-certificate-expiry-daily": {
             "task": "eios.certificates.check_expiry",
             "schedule": 86400,  # every 24 hours
+        },
+        "refresh-document-sources-twice-daily": {
+            "task": "eios.documents.refresh_scheduled",
+            "schedule": 43200,  # every 12 hours
         },
     },
 )
