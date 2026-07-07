@@ -1,6 +1,11 @@
 import apiClient from "./client";
 import type { RecommendationResponse, RecommendationUpdate } from "@/types/api";
 
+export async function getRecommendation(id: string): Promise<RecommendationResponse> {
+  const res = await apiClient.get<RecommendationResponse>(`/recommendations/${id}`);
+  return res.data;
+}
+
 export async function createRecommendation(body: {
   title: string;
   description: string;

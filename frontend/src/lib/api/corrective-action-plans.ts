@@ -51,6 +51,11 @@ export const capApi = {
     return res.data;
   },
 
+  getById: async (id: string): Promise<CAP> => {
+    const res = await apiClient.get(`/corrective-action-plans/${id}`);
+    return res.data;
+  },
+
   listForOrg: async (capStatus?: string): Promise<CAP[]> => {
     const params = capStatus ? { cap_status: capStatus } : {};
     const res = await apiClient.get("/corrective-action-plans/", { params });

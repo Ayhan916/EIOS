@@ -12,7 +12,7 @@ interface Message {
 }
 
 interface CopilotDrawerProps {
-  contextType: "finding" | "risk" | "disclosure" | "compliance" | "general";
+  contextType: "finding" | "risk" | "disclosure" | "compliance" | "recommendation" | "cap" | "general";
   contextId?: string;
   contextSummary?: string;
 }

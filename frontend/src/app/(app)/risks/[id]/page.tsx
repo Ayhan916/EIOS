@@ -516,7 +516,7 @@ export default function RiskDetailPage() {
                     return (
                       <Link
                         key={rec.id}
-                        href="/recommendations"
+                        href={`/recommendations/${rec.id}`}
                         className="flex items-start justify-between gap-3 rounded-lg border border-border px-3 py-2.5 hover:bg-muted/40 transition-colors"
                       >
                         <div className="min-w-0 flex-1">

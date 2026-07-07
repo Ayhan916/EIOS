@@ -304,6 +304,7 @@ export interface RecommendationResponse extends EntityResponse {
   expected_risk: string | null;
   expected_roi: string | null;
   implementation_complexity: string | null;
+  assessment_id: string | null;
 }
 
 export interface RecommendationUpdate {
