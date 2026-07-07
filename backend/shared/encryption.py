@@ -13,8 +13,6 @@ Existing plaintext values are returned as-is even after encryption is enabled.
 
 from __future__ import annotations
 
-import base64
-
 from cryptography.fernet import Fernet, InvalidToken
 
 from shared.config import settings
@@ -42,7 +40,7 @@ def decrypt_field(ciphertext: str) -> str:
     """Decrypt a field value, or return as-is if it is plaintext (no prefix)."""
     if not ciphertext.startswith(_ENC_PREFIX):
         return ciphertext  # legacy plaintext — return unchanged
-    token = ciphertext[len(_ENC_PREFIX):]
+    token = ciphertext[len(_ENC_PREFIX) :]
     f = _fernet()
     if f is None:
         raise ValueError(

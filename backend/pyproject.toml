@@ -79,8 +79,14 @@ line-length = 100
 select = ["E", "F", "I", "UP", "B", "SIM"]
 ignore = [
     "B008",   # FastAPI Depends() in default args
+    "B904",   # raise-without-from — FastAPI raise HTTPException inside except is idiomatic
+    "E501",   # line too long — ruff format enforces style; remaining overlong lines are strings/comments
+    "E741",   # ambiguous variable names — common in algorithmic / index code
     "UP042",  # StrEnum migration — deferred; existing str+Enum pattern is stable
     "UP046",  # Generic type-param syntax — Python 3.12+ only, deferred
+    "SIM102", # Nested if → combine with and — pre-existing style
+    "SIM105", # try-except-pass → contextlib.suppress — explicit pass is clearer in context
+    "SIM115", # open() without context manager — allowed in test assertions and short reads
     "SIM117", # Nested with statements — pre-existing style; merge deferred
 ]
 
@@ -88,22 +94,18 @@ ignore = [
 # SQLAlchemy ORM models use forward-reference class names in Mapped[] annotations
 # that are resolved at runtime via the SQLAlchemy registry, not at import time.
 "infrastructure/persistence/models/*.py" = ["F821"]
-# Agent system-prompt strings are intentionally long; wrapping them degrades readability.
-"application/agents/*.py" = ["E501"]
-# Compliance module uses long f-string messages for regulatory explanation text.
-"application/compliance/*.py" = ["E501"]
-# Extraction parsers contain long regex patterns that must not be line-wrapped.
-"application/extraction/*.py" = ["E501"]
-# Sector intelligence files contain long explanation strings.
-"application/sector_intelligence/*.py" = ["E501"]
-# Rate-limit module has long inline comments explaining algorithm behaviour.
-"shared/rate_limit.py" = ["E501"]
-# PDF renderer module docstring contains long string in comment block.
-"infrastructure/reporting/pdf_renderer.py" = ["E501"]
-# Integration tests: long assertion messages, unused loop vars, exception chaining in helpers.
-"tests/integration/**/*.py" = ["E501", "F841", "B904"]
-# Unit test for sector intelligence: long fixture strings + intentional unused vars in test setup.
-"tests/unit/application/test_sector_intelligence.py" = ["E501", "F841"]
+# Sector intelligence uses forward-reference model names in function return type hints.
+"application/sector_intelligence/*.py" = ["F821"]
+# __init__.py files re-export symbols for Alembic/SQLAlchemy model discovery.
+"**/__init__.py" = ["F401"]
+# Integration tests: unused loop vars, exception chaining in helpers.
+"tests/integration/**/*.py" = ["F841", "B017"]
+# Unit tests: mid-file imports for test isolation, blind exception in Pydantic validation tests.
+"tests/unit/**/*.py" = ["E402", "B017", "F841"]
+# SSO validation module uses lazy imports after module-level constants (intentional).
+"application/enterprise/sso_validation.py" = ["E402"]
+# Operating system router has lazy imports inside function bodies to avoid circular imports.
+"interfaces/api/routers/operating_system.py" = ["I001", "B009"]
 
 [tool.mypy]
 python_version = "3.12"

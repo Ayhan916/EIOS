@@ -44,8 +44,8 @@ class Settings(BaseSettings):
     s3_enabled: bool = False
     s3_bucket: str = "eios-documents"
     s3_region: str = "us-east-1"
-    s3_endpoint_url: str = ""          # empty = AWS S3; set to MinIO URL for local dev
-    aws_access_key_id: str = ""        # empty = use IAM role / instance profile
+    s3_endpoint_url: str = ""  # empty = AWS S3; set to MinIO URL for local dev
+    aws_access_key_id: str = ""  # empty = use IAM role / instance profile
     aws_secret_access_key: str = ""
     s3_presigned_url_expire_seconds: int = 3600
 

@@ -9,7 +9,7 @@ import asyncio
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import UTC, date, datetime
+from datetime import date
 
 import structlog
 from fastapi import FastAPI, Request
@@ -24,102 +24,103 @@ from app.middleware import (
     RequestLoggingMiddleware,
     SecurityHeadersMiddleware,
 )
-from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
 from infrastructure.embeddings.deps import init_embedding_provider
 from infrastructure.llm.deps import init_llm_provider
+from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
 from interfaces.api.routers import (
+    activity_chain_router,
+    agent_monitoring_router,
     agents_router,
+    ai_governance_router,
     api_platform_router,
-    copilot_router,
-    disclosure_router,
-    due_diligence_router,
-    external_intelligence_router,
-    operations_router,
-    regulatory_router,
     assessments_benchmark_router,
     assessments_compliance_router,
     assessments_router,
     audit_router,
     auth_router,
+    automations_router,
+    board_signoff_router,
     comments_router,
+    commercial_router,
+    contractual_assurance_router,
+    copilot_router,
+    corrective_action_plan_router,
     dashboard_router,
+    dd_governance_public_router,
+    dd_governance_router,
+    disclosure_router,
+    dpp_router,
+    due_diligence_router,
+    effectiveness_router,
+    enterprise_router,
+    erp_router,
+    esap_export_router,
+    evaluation_router,
     evidences_router,
     executive_router,
+    external_intelligence_router,
+    financial_esg_router,
     findings_router,
     frameworks_router,
+    ghg_router,
+    grievance_router,
     health_router,
+    impact_assessment_router,
+    integrations_router,
     knowledge_router,
+    m46_3_router,
+    material_router,
     metrics_router,
     mfa_router,
-    notifications_router,
-    organizations_router,
-    recommendations_router,
-    reports_router,
-    risks_router,
-    sector_intelligence_router,
-    sectors_router,
-    supplier_intelligence_router,
-    supplier_portal_router,
-    supplier_portal_internal_router,
-    suppliers_router,
-    users_router,
-    workflows_router,
-    agent_monitoring_router,
-    surveillance_router,
     network_router,
-    operating_system_router,
-    enterprise_router,
-    ai_governance_router,
-    sustainability_router,
-    financial_esg_router,
-    strategy_router,
-    ghg_router,
-    m46_3_router,
-    region_router,
-    regulatory_reporting_router,
-    integrations_router,
-    commercial_router,
-    security_audit_router,
-    supplier_twin_router,
-    supplier_extensions_router,
-    material_router,
-    product_router,
-    dpp_router,
-    supply_chain_events_router,
-    erp_router,
-    supply_chain_compliance_router,
-    scope3_router,
-    sector_risk_register_router,
     news_router,
-    automations_router,
+    rag_router,
+    notifications_router,
+    operating_system_router,
+    operations_router,
+    organizations_router,
     pipeline_router,
-    grievance_router,
     prioritization_router,
+    product_router,
+    readiness_router,
+    recommendations_router,
+    region_router,
     regulatory_change_router,
-    evaluation_router,
-    self_improvement_router,
-    corrective_action_plan_router,
-    stakeholders_router,
-    stakeholders_public_router,
-    dd_governance_router,
-    dd_governance_public_router,
+    regulatory_radar_router,
+    regulatory_reporting_router,
+    regulatory_router,
     remedy_cases_router,
     remedy_grievance_router,
     remedy_report_router,
-    effectiveness_router,
+    reports_router,
+    risks_router,
+    scope3_router,
     scoping_router,
-    activity_chain_router,
-    contractual_assurance_router,
+    sector_intelligence_router,
+    sector_risk_register_router,
+    sectors_router,
+    security_audit_router,
+    self_improvement_router,
     sme_support_router,
-    readiness_router,
-    impact_assessment_router,
-    board_signoff_router,
-    supplier_assessment_router,
+    stakeholders_public_router,
+    stakeholders_router,
+    strategy_router,
     supplier_assessment_public_router,
-    esap_export_router,
+    supplier_assessment_router,
+    supplier_extensions_router,
+    supplier_intelligence_router,
+    supplier_portal_internal_router,
+    supplier_portal_router,
+    supplier_twin_router,
+    suppliers_router,
+    supply_chain_compliance_router,
+    supply_chain_events_router,
+    surveillance_router,
+    sustainability_router,
     threshold_monitor_router,
-    regulatory_radar_router,
+    users_router,
     workflow_context_router,
+    workflows_router,
 )
 from interfaces.api.routers.demo import router as demo_router
 from shared.config import settings
@@ -144,10 +145,10 @@ async def _check_overdue_loop() -> None:
     second per-row user lookup inside the service.
     Total DB cost: ceil(overdue_count / 500) queries + 1 dedupe-check + 1 INSERT per new notif.
     """
-    from infrastructure.persistence.database import AsyncSessionFactory
-    from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
     from application import notification_service
     from domain.enums import NotificationType
+    from infrastructure.persistence.database import AsyncSessionFactory
+    from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 
     _BATCH = 500
     log = structlog.get_logger("overdue_task")
@@ -233,19 +234,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # M46 — OTel tracing (must run before any requests are served)
     from infrastructure.observability.tracing import configure_tracing  # noqa: PLC0415
+
     configure_tracing(app)
 
-    from infrastructure.redis.client import init_redis  # noqa: PLC0415
-    from infrastructure.redis.blacklist import init_redis_blacklist  # noqa: PLC0415
     from infrastructure.kafka.producer import init_kafka_producer  # noqa: PLC0415
+    from infrastructure.redis.blacklist import init_redis_blacklist  # noqa: PLC0415
+    from infrastructure.redis.client import init_redis  # noqa: PLC0415
+
     await init_redis()
     await init_redis_blacklist()
     await init_kafka_producer()
     logger.info("kafka_ready", servers=settings.kafka_bootstrap_servers)
 
     # Wire production SSO validators (M45.1 — G-002)
+    from infrastructure.sso.oidc_validator import ProductionOIDCValidator  # noqa: PLC0415
     from infrastructure.sso.saml_validator import ProductionSAMLValidator  # noqa: PLC0415
-    from infrastructure.sso.oidc_validator import ProductionOIDCValidator   # noqa: PLC0415
+
     app.state.saml_validator = ProductionSAMLValidator()
     app.state.oidc_validator = ProductionOIDCValidator()
     logger.info("sso_validators_ready")
@@ -294,7 +298,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.warning("disclosure_seed_failed", error=str(_dseed_exc))
 
     # Seed M35 questionnaire templates (idempotent)
-    from application.supplier_portal.questionnaire_service import seed_builtin_templates  # noqa: PLC0415
+    from application.supplier_portal.questionnaire_service import (
+        seed_builtin_templates,  # noqa: PLC0415
+    )
+
     try:
         async with AsyncSessionFactory() as _qseed_session, _qseed_session.begin():
             await seed_builtin_templates(_qseed_session)
@@ -304,6 +311,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Seed M36 monitoring agents (idempotent)
     from application.agent_monitoring.agent_service import seed_monitoring_agents  # noqa: PLC0415
+
     try:
         async with AsyncSessionFactory() as _aseed_session, _aseed_session.begin():
             await seed_monitoring_agents(_aseed_session)
@@ -311,10 +319,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     except Exception as _aseed_exc:
         logger.warning("monitoring_agents_seed_failed", error=str(_aseed_exc))
 
-    from application.external_intelligence.scheduler import run_intelligence_scheduler  # noqa: PLC0415
     from application.agent_monitoring.scheduler import run_agent_scheduler  # noqa: PLC0415
+    from application.external_intelligence.scheduler import (
+        run_intelligence_scheduler,  # noqa: PLC0415
+    )
 
-    global _overdue_task, _webhook_recovery_task, _intelligence_scheduler_task, _agent_scheduler_task, _outbox_task, _consumer_task
+    global \
+        _overdue_task, \
+        _webhook_recovery_task, \
+        _intelligence_scheduler_task, \
+        _agent_scheduler_task, \
+        _outbox_task, \
+        _consumer_task
     _overdue_task = asyncio.create_task(_check_overdue_loop())
     logger.info("overdue_task_started")
     _webhook_recovery_task = asyncio.create_task(run_webhook_recovery_loop())
@@ -337,6 +353,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     async def _outbox_loop() -> None:
         from application.supply_chain.outbox import OutboxPublisher  # noqa: PLC0415
+
         while True:
             try:
                 async with AsyncSessionFactory() as _session:
@@ -350,6 +367,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     async def _consumer_loop() -> None:
         from infrastructure.kafka.consumer import get_kafka_consumer as _get  # noqa: PLC0415
+
         _c = _get()
         await _c.consume_loop(on_event_log=None)
 
@@ -374,9 +392,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     if _agent_scheduler_task is not None:
         _agent_scheduler_task.cancel()
 
-    from infrastructure.redis.client import close_redis  # noqa: PLC0415
-    from infrastructure.redis.blacklist import close_redis_blacklist  # noqa: PLC0415
     from infrastructure.kafka.producer import close_kafka_producer  # noqa: PLC0415
+    from infrastructure.redis.blacklist import close_redis_blacklist  # noqa: PLC0415
+    from infrastructure.redis.client import close_redis  # noqa: PLC0415
+
     await close_redis()
     await close_redis_blacklist()
     await close_kafka_producer()
@@ -499,6 +518,7 @@ app.include_router(supply_chain_compliance_router, prefix=API_V1)
 app.include_router(scope3_router, prefix=API_V1)
 app.include_router(sector_risk_register_router, prefix=API_V1)
 app.include_router(news_router, prefix=API_V1)
+app.include_router(rag_router, prefix=API_V1)
 app.include_router(automations_router, prefix=API_V1)
 app.include_router(pipeline_router, prefix=API_V1)
 app.include_router(grievance_router, prefix=API_V1)

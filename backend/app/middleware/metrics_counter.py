@@ -43,6 +43,7 @@ class MetricsCounterMiddleware(BaseHTTPMiddleware):
 
         # Legacy in-process counters (backward compat for /metrics JSON)
         from interfaces.api.routers.metrics import counters  # noqa: PLC0415
+
         counters.record_request(response.status_code)
 
         return response

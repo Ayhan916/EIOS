@@ -81,6 +81,7 @@ async def blacklist_token(jti: str, ttl_seconds: int) -> None:
     dropped due to memory pressure.  Falls back silently if Redis is unavailable.
     """
     from infrastructure.redis.blacklist import get_redis_blacklist
+
     redis = get_redis_blacklist()
     if redis is not None:
         await redis.setex(f"blacklist:{jti}", ttl_seconds, "1")
@@ -93,6 +94,7 @@ async def is_token_blacklisted(jti: str) -> bool:
     acceptable here because tokens still expire naturally via 'exp'.
     """
     from infrastructure.redis.blacklist import get_redis_blacklist
+
     redis = get_redis_blacklist()
     if redis is None:
         return False

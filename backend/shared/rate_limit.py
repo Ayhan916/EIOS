@@ -44,6 +44,7 @@ def _check_memory(key: str, limit: int, window_seconds: int = 60) -> bool:
 
 async def _check_redis(key: str, limit: int, window_seconds: int = 60) -> bool:
     from infrastructure.redis.client import get_redis
+
     redis = get_redis()
     if redis is None:
         return _check_memory(key, limit, window_seconds)

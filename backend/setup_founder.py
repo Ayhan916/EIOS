@@ -12,7 +12,7 @@ import asyncio
 import os
 import sys
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import asyncpg
 import bcrypt
@@ -36,8 +36,9 @@ DSN = _RAW_URL.replace("postgresql+asyncpg://", "postgresql://").replace(
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _hash(pw: str) -> str:
@@ -45,6 +46,7 @@ def _hash(pw: str) -> str:
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
+
 
 async def main() -> None:
     try:
@@ -82,7 +84,12 @@ async def main() -> None:
                     (id, name, created_at, updated_at, created_by, updated_by, version)
                 VALUES ($1, $2, $3, $4, $5, $6, 1)
                 """,
-                org_id, ORG_NAME, now, now, user_id, user_id,
+                org_id,
+                ORG_NAME,
+                now,
+                now,
+                user_id,
+                user_id,
             )
             print(f"[INFO] Created organization '{ORG_NAME}' (id={org_id})")
 
@@ -96,8 +103,16 @@ async def main() -> None:
                 ($1, $2, $3, $4, $5, $6,
                  TRUE, 1, $7, $8, $9, $10)
             """,
-            user_id, EMAIL, "Ayhan Yaman", pw_hash, ROLE, org_id,
-            now, now, user_id, user_id,
+            user_id,
+            EMAIL,
+            "Ayhan Yaman",
+            pw_hash,
+            ROLE,
+            org_id,
+            now,
+            now,
+            user_id,
+            user_id,
         )
 
     await conn.close()
