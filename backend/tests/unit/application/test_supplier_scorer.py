@@ -1,7 +1,5 @@
 """Unit tests for the Supplier Scoring Engine (M28)."""
 
-import pytest
-
 from application.scoring.supplier_scorer import (
     SCORE_VERSION,
     ScoreInputs,
@@ -11,7 +9,6 @@ from application.scoring.supplier_scorer import (
     calculate_trend,
 )
 from domain.enums import RiskBand, TrendDirection
-
 
 # ── Fixtures ──────────────────────────────────────────────────────────────────
 

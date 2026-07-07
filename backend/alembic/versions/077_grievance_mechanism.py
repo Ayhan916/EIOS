@@ -11,6 +11,7 @@ Create Date: 2026-07-03
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "077"
@@ -38,8 +39,12 @@ def upgrade() -> None:
         sa.Column("reviewer_notes", sa.Text, nullable=True),
         sa.Column("resolution_notes", sa.Text, nullable=True),
         sa.Column("resolved_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("regulation_refs", sa.String(255), nullable=False,
-                  server_default="LkSG §8; CSDDD Art. 14"),
+        sa.Column(
+            "regulation_refs",
+            sa.String(255),
+            nullable=False,
+            server_default="LkSG §8; CSDDD Art. 14",
+        ),
         sa.Column("linked_finding_id", sa.String(36), nullable=True),
         # BaseEntity columns
         sa.Column("status", sa.String(30), nullable=False, server_default="active"),
@@ -50,10 +55,16 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_grievance_reports_organization_id", "grievance_reports", ["organization_id"])
+    op.create_index(
+        "ix_grievance_reports_organization_id", "grievance_reports", ["organization_id"]
+    )
     op.create_index("ix_grievance_reports_status", "grievance_reports", ["grievance_status"])
-    op.create_index("ix_grievance_reports_reference_code", "grievance_reports", ["anonymized_reference_code"])
-    op.create_index("ix_grievance_reports_related_supplier", "grievance_reports", ["related_supplier_id"])
+    op.create_index(
+        "ix_grievance_reports_reference_code", "grievance_reports", ["anonymized_reference_code"]
+    )
+    op.create_index(
+        "ix_grievance_reports_related_supplier", "grievance_reports", ["related_supplier_id"]
+    )
 
 
 def downgrade() -> None:

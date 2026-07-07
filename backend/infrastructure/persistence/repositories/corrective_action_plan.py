@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.corrective_action_plan import CorrectiveActionPlan
@@ -96,10 +96,14 @@ class SQLCAPRepository(BaseRepository[CorrectiveActionPlan, CorrectiveActionPlan
         return self._to_domain(m)
 
     async def get_by_finding(self, finding_id: str, org_id: str) -> CorrectiveActionPlan | None:
-        stmt = select(CorrectiveActionPlanModel).where(
-            CorrectiveActionPlanModel.finding_id == finding_id,
-            CorrectiveActionPlanModel.organization_id == org_id,
-        ).limit(1)
+        stmt = (
+            select(CorrectiveActionPlanModel)
+            .where(
+                CorrectiveActionPlanModel.finding_id == finding_id,
+                CorrectiveActionPlanModel.organization_id == org_id,
+            )
+            .limit(1)
+        )
         result = await self._session.execute(stmt)
         m = result.scalar_one_or_none()
         return self._to_domain(m) if m else None
@@ -126,6 +130,7 @@ class SQLCAPRepository(BaseRepository[CorrectiveActionPlan, CorrectiveActionPlan
     async def kpis(self, org_id: str) -> dict:
         """Returns: open, overdue, verified, closed, total, completion_rate."""
         from datetime import date as _date
+
         stmt = select(
             CorrectiveActionPlanModel.cap_status,
             CorrectiveActionPlanModel.deadline,
@@ -136,12 +141,10 @@ class SQLCAPRepository(BaseRepository[CorrectiveActionPlan, CorrectiveActionPlan
         total = len(rows)
         closed_count = sum(1 for r in rows if r.cap_status == "CLOSED")
         verified_count = sum(1 for r in rows if r.cap_status == "VERIFIED")
-        open_count = sum(
-            1 for r in rows
-            if r.cap_status not in ("CLOSED", "VERIFIED")
-        )
+        open_count = sum(1 for r in rows if r.cap_status not in ("CLOSED", "VERIFIED"))
         overdue_count = sum(
-            1 for r in rows
+            1
+            for r in rows
             if r.cap_status not in ("CLOSED", "VERIFIED")
             and r.deadline is not None
             and r.deadline < today

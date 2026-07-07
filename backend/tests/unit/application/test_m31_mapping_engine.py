@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.compliance.mapping_engine import (
-    auto_map_entity,
-    create_manual_mapping,
     _HIGH_CONFIDENCE,
     _LOW_CONFIDENCE,
+    auto_map_entity,
+    create_manual_mapping,
 )
 from domain.enums import EntityStatus
 from domain.regulation import RegulationRequirement

@@ -2,21 +2,18 @@
 
 from __future__ import annotations
 
-import asyncio
-from dataclasses import dataclass
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from application.external_intelligence.base_adapter import RawDataset
 from application.external_intelligence.connectors.base import (
     BaseLiveConnector,
     ConnectorRunResult,
     run_with_retry,
 )
-from application.external_intelligence.base_adapter import RawDataset
 from domain.enums import ExternalSourceName
-
 
 # ── Minimal concrete connector for testing ──────────────────────────────────
 
@@ -208,12 +205,8 @@ async def test_run_returns_connector_run_result():
             new_callable=AsyncMock,
             return_value="lock-123",
         ),
-        patch(
-            "application.external_intelligence.metrics.ext_counters.record_dataset_refresh"
-        ),
-        patch(
-            "application.external_intelligence.metrics.ext_counters.record_connector_runtime"
-        ),
+        patch("application.external_intelligence.metrics.ext_counters.record_dataset_refresh"),
+        patch("application.external_intelligence.metrics.ext_counters.record_connector_runtime"),
     ):
         result = await connector.run(mock_session, max_retries=1)
 

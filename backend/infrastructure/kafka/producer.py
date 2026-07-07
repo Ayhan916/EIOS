@@ -18,6 +18,7 @@ from aiokafka import AIOKafkaProducer
 from aiokafka.errors import KafkaConnectionError
 
 from shared.config import settings
+
 from .events import DomainEvent
 
 logger = structlog.get_logger(__name__)

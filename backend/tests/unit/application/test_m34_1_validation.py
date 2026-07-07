@@ -2,23 +2,21 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
-
 import pytest
 
 from application.external_intelligence.base_adapter import RawDataset
 from application.external_intelligence.validation_service import (
-    ValidationResult,
-    validate_dataset,
     _recompute_hash,
+    validate_dataset,
 )
 from domain.enums import ExternalSourceName
 
 
 def _make_raw(records: list[dict], source: str = "world_bank") -> RawDataset:
     return RawDataset(
-        source_name=ExternalSourceName(source) if source in [e.value for e in ExternalSourceName] else source,
+        source_name=ExternalSourceName(source)
+        if source in [e.value for e in ExternalSourceName]
+        else source,
         source_version="2025-01",
         records=records,
     )
@@ -78,7 +76,9 @@ def test_at_minimum_rows_valid():
 
 
 def test_missing_required_field_fails():
-    records = [{"country_code": "DE"} for _ in range(60)]  # missing governance_score, corruption_score
+    records = [
+        {"country_code": "DE"} for _ in range(60)
+    ]  # missing governance_score, corruption_score
     raw = _make_raw(records)
     result = validate_dataset(raw)
     assert result.is_valid is False
@@ -125,7 +125,6 @@ def test_hash_mismatch_fails(monkeypatch):
     object.__setattr__(raw, "_hash_override", "tampered")
 
     # Patch dataset_hash property to return tampered value
-    original_hash = raw.dataset_hash
     # Rebuild with records that differ
     raw2 = RawDataset(
         source_name=ExternalSourceName.WORLD_BANK,

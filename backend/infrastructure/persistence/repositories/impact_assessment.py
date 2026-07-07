@@ -1,7 +1,8 @@
 """Repository — Impact Severity Assessments (CSDDD Art. 3/6)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -14,7 +15,7 @@ from infrastructure.persistence.models.impact_assessment import ImpactAssessment
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _to_domain(m: ImpactAssessmentModel) -> ImpactAssessment:
@@ -175,8 +176,6 @@ class SQLImpactAssessmentRepository:
             ],
         }
 
-    def preview(
-        self, gravity: int, scope: int, remediability: int, likelihood: int
-    ) -> dict:
+    def preview(self, gravity: int, scope: int, remediability: int, likelihood: int) -> dict:
         """Preview score without persisting — for live calculator UI."""
         return assess(gravity, scope, remediability, likelihood)

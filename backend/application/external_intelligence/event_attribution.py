@@ -9,19 +9,19 @@ from domain.enums import CSDDDRight, EsgCategory, RiskSignalType
 
 # Primary protected right per signal type (most representative)
 _SIGNAL_TO_RIGHT: dict[str, str] = {
-    RiskSignalType.SANCTIONS.value:     CSDDDRight.MODERN_SLAVERY.value,
-    RiskSignalType.CORRUPTION.value:    CSDDDRight.HUMAN_DIGNITY.value,
+    RiskSignalType.SANCTIONS.value: CSDDDRight.MODERN_SLAVERY.value,
+    RiskSignalType.CORRUPTION.value: CSDDDRight.HUMAN_DIGNITY.value,
     RiskSignalType.LABOUR_RIGHTS.value: CSDDDRight.FORCED_LABOUR.value,
     RiskSignalType.ENVIRONMENTAL.value: CSDDDRight.ENVIRONMENTAL_DESTRUCTION.value,
-    RiskSignalType.GOVERNANCE.value:    CSDDDRight.FREEDOM_OF_EXPRESSION.value,
+    RiskSignalType.GOVERNANCE.value: CSDDDRight.FREEDOM_OF_EXPRESSION.value,
 }
 
 _SIGNAL_TO_ESG: dict[str, str] = {
-    RiskSignalType.SANCTIONS.value:     EsgCategory.GOVERNANCE.value,
-    RiskSignalType.CORRUPTION.value:    EsgCategory.GOVERNANCE.value,
+    RiskSignalType.SANCTIONS.value: EsgCategory.GOVERNANCE.value,
+    RiskSignalType.CORRUPTION.value: EsgCategory.GOVERNANCE.value,
     RiskSignalType.LABOUR_RIGHTS.value: EsgCategory.SOCIAL.value,
     RiskSignalType.ENVIRONMENTAL.value: EsgCategory.ENVIRONMENTAL.value,
-    RiskSignalType.GOVERNANCE.value:    EsgCategory.GOVERNANCE.value,
+    RiskSignalType.GOVERNANCE.value: EsgCategory.GOVERNANCE.value,
 }
 
 

@@ -7,18 +7,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── F1: send_internal_message scoped by organization_id ──────────────────────
+
 
 class TestF1InternalMessageIsolation:
     def test_send_internal_message_filters_by_organization_id(self) -> None:
         """Source must include organization_id in the conversation WHERE clause."""
-        import inspect
         import importlib
         import importlib.util
-        import ast
 
-        spec = importlib.util.spec_from_file_location(
+        importlib.util.spec_from_file_location(
             "_spi_internal",
             "interfaces/api/routers/supplier_portal_internal.py",
         )
@@ -37,6 +35,7 @@ class TestF1InternalMessageIsolation:
 
 
 # ── F2: DB-backed single-use password reset tokens ───────────────────────────
+
 
 class TestF2PasswordResetTokens:
     @pytest.mark.asyncio
@@ -131,6 +130,7 @@ class TestF2PasswordResetTokens:
 
 # ── F3: SELECT FOR UPDATE on concurrent state transitions ────────────────────
 
+
 class TestF3SelectForUpdate:
     def test_review_submission_uses_with_for_update(self) -> None:
         src = open("application/supplier_portal/evidence_service.py").read()
@@ -155,6 +155,7 @@ class TestF3SelectForUpdate:
 
 
 # ── F4: Status rollback prevention ───────────────────────────────────────────
+
 
 class TestF4StatusRollback:
     @pytest.mark.asyncio
@@ -204,6 +205,7 @@ class TestF4StatusRollback:
 
 # ── F5: Activity logging on every state transition ───────────────────────────
 
+
 class TestF5ActivityLogging:
     @pytest.mark.asyncio
     async def test_submit_evidence_logs_event(self) -> None:
@@ -229,10 +231,7 @@ class TestF5ActivityLogging:
 
         async def side_effect(*args, **kwargs):
             nonlocal call_count
-            if call_count < len(execute_results):
-                r = execute_results[call_count]
-            else:
-                r = MagicMock()
+            r = execute_results[call_count] if call_count < len(execute_results) else MagicMock()
             call_count += 1
             return r
 
@@ -288,7 +287,7 @@ class TestF5ActivityLogging:
         session.add = MagicMock()
         session.flush = AsyncMock()
 
-        msg = await send_message(
+        await send_message(
             conversation_id="conv-1",
             sender_id="usr-s1",
             sender_type="supplier",
@@ -301,6 +300,7 @@ class TestF5ActivityLogging:
 
 
 # ── F6: Dashboard real queries ────────────────────────────────────────────────
+
 
 class TestF6DashboardRealQueries:
     @pytest.mark.asyncio
@@ -331,6 +331,7 @@ class TestF6DashboardRealQueries:
 
 
 # ── F7: Brute-force lockout ───────────────────────────────────────────────────
+
 
 class TestF7BruteForceLogin:
     @pytest.mark.asyncio
@@ -413,6 +414,7 @@ class TestF7BruteForceLogin:
         user.locked_until = None
 
         call_count = 0
+
         async def execute_side(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -443,6 +445,7 @@ class TestF7BruteForceLogin:
 
 
 # ── F8: Duplicate submission prevention ──────────────────────────────────────
+
 
 class TestF8DuplicateSubmission:
     @pytest.mark.asyncio
@@ -490,6 +493,7 @@ class TestF8DuplicateSubmission:
 
 # ── F9: Question belongs to template validation ───────────────────────────────
 
+
 class TestF9QuestionValidation:
     @pytest.mark.asyncio
     async def test_save_answer_rejects_question_from_different_template(self) -> None:
@@ -501,6 +505,7 @@ class TestF9QuestionValidation:
         assignment.supplier_id = "sup-1"
 
         call_count = 0
+
         async def execute_side(*args, **kwargs):
             nonlocal call_count
             call_count += 1
@@ -527,6 +532,7 @@ class TestF9QuestionValidation:
 
 
 # ── F10: Activity endpoint limit cap ─────────────────────────────────────────
+
 
 class TestF10ActivityLimitCap:
     def test_activity_endpoint_limit_has_upper_bound(self) -> None:

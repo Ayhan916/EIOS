@@ -20,7 +20,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class CredibilityProfile:
-    level: str   # "High" | "Medium" | "Low"
+    level: str  # "High" | "Medium" | "Low"
     reason: str  # Human-readable explanation for UI / audit trail
 
 

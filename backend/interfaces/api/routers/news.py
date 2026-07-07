@@ -14,6 +14,7 @@ router = APIRouter(prefix="/news", tags=["news"])
 def _assert_org(user: User) -> str:
     if not user.organization_id:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=403, detail="No organisation assigned.")
     return user.organization_id
 
@@ -27,7 +28,9 @@ async def get_news_feed(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> dict:
-    from application.news_feed.news_service import get_news_feed as _get_feed, get_last_refresh
+    from application.news_feed.news_service import get_last_refresh
+    from application.news_feed.news_service import get_news_feed as _get_feed
+
     org_id = _assert_org(current_user)
     articles, total = await _get_feed(
         organization_id=org_id,
@@ -56,10 +59,12 @@ async def trigger_refresh(
 ) -> dict:
     """Trigger a manual news refresh in the background."""
     from application.news_feed.news_service import refresh_news_for_org
+
     org_id = _assert_org(current_user)
 
     async def _run() -> None:
         from infrastructure.persistence.database import AsyncSessionFactory
+
         async with AsyncSessionFactory() as bg_session:
             await refresh_news_for_org(
                 organization_id=org_id,

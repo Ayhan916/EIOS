@@ -17,6 +17,7 @@ Create Date: 2026-06-22
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "046"
@@ -30,7 +31,9 @@ def upgrade() -> None:
     op.create_table(
         "sustainability_objectives",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("category", sa.String(20), nullable=False),
@@ -49,14 +52,23 @@ def upgrade() -> None:
     op.create_table(
         "esg_targets",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
-        sa.Column("objective_id", sa.String(36), sa.ForeignKey("sustainability_objectives.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
+        sa.Column(
+            "objective_id",
+            sa.String(36),
+            sa.ForeignKey("sustainability_objectives.id"),
+            nullable=False,
+        ),
         sa.Column("metric_name", sa.String(255), nullable=False),
         sa.Column("baseline_value", sa.Float, nullable=False, server_default="0"),
         sa.Column("target_value", sa.Float, nullable=False),
         sa.Column("target_unit", sa.String(50), nullable=True),
         sa.Column("current_value", sa.Float, nullable=True),
-        sa.Column("measurement_frequency", sa.String(20), nullable=False, server_default="QUARTERLY"),
+        sa.Column(
+            "measurement_frequency", sa.String(20), nullable=False, server_default="QUARTERLY"
+        ),
         sa.Column("target_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
         sa.Column("created_by", sa.String(36), nullable=False),
@@ -69,7 +81,9 @@ def upgrade() -> None:
     op.create_table(
         "esg_kpis",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("category", sa.String(40), nullable=False),
@@ -90,7 +104,9 @@ def upgrade() -> None:
         "kpi_measurements",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("kpi_id", sa.String(36), sa.ForeignKey("esg_kpis.id"), nullable=False),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("period_start", sa.DateTime(timezone=True), nullable=False),
         sa.Column("period_end", sa.DateTime(timezone=True), nullable=False),
         sa.Column("measured_value", sa.Float, nullable=False),
@@ -109,7 +125,9 @@ def upgrade() -> None:
         "kpi_alerts",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("kpi_id", sa.String(36), sa.ForeignKey("esg_kpis.id"), nullable=False),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("alert_type", sa.String(30), nullable=False),
         sa.Column("triggered_value", sa.Float, nullable=False),
         sa.Column("threshold_value", sa.Float, nullable=True),
@@ -127,7 +145,9 @@ def upgrade() -> None:
     op.create_table(
         "sustainability_scorecards",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("period_start", sa.DateTime(timezone=True), nullable=False),
         sa.Column("period_end", sa.DateTime(timezone=True), nullable=False),
         sa.Column("environmental_score", sa.Float, nullable=False, server_default="0"),
@@ -147,7 +167,9 @@ def upgrade() -> None:
     op.create_table(
         "emission_sources",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("inventory_id", sa.String(36), nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("scope", sa.String(10), nullable=False),
@@ -171,7 +193,9 @@ def upgrade() -> None:
     op.create_table(
         "carbon_inventories",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("reporting_year", sa.Integer, nullable=False),
         sa.Column("period_start", sa.DateTime(timezone=True), nullable=False),
         sa.Column("period_end", sa.DateTime(timezone=True), nullable=False),
@@ -187,14 +211,18 @@ def upgrade() -> None:
         sa.Column("updated_by", sa.String(36), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("organization_id", "reporting_year", name="uq_carbon_inventory_org_year"),
+        sa.UniqueConstraint(
+            "organization_id", "reporting_year", name="uq_carbon_inventory_org_year"
+        ),
     )
 
     # ── decarbonization_initiatives ───────────────────────────────────────────
     op.create_table(
         "decarbonization_initiatives",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("roadmap_id", sa.String(36), nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
@@ -216,7 +244,9 @@ def upgrade() -> None:
     op.create_table(
         "net_zero_roadmaps",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("baseline_year", sa.Integer, nullable=False),
@@ -235,7 +265,9 @@ def upgrade() -> None:
     op.create_table(
         "net_zero_milestones",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("roadmap_id", sa.String(36), sa.ForeignKey("net_zero_roadmaps.id"), nullable=False),
+        sa.Column(
+            "roadmap_id", sa.String(36), sa.ForeignKey("net_zero_roadmaps.id"), nullable=False
+        ),
         sa.Column("milestone_year", sa.Integer, nullable=False),
         sa.Column("target_emissions", sa.Float, nullable=False),
         sa.Column("actual_emissions", sa.Float, nullable=True),
@@ -251,7 +283,9 @@ def upgrade() -> None:
     op.create_table(
         "science_based_targets",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("scope", sa.String(20), nullable=False),
         sa.Column("target_type", sa.String(20), nullable=False),
         sa.Column("baseline_year", sa.Integer, nullable=False),
@@ -273,7 +307,9 @@ def upgrade() -> None:
     op.create_table(
         "climate_risk_assessments",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("assessment_year", sa.Integer, nullable=False),
         sa.Column("scenario", sa.String(10), nullable=False, server_default="2C"),
@@ -297,7 +333,9 @@ def upgrade() -> None:
     op.create_table(
         "sustainability_assurance_records",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("report_type", sa.String(30), nullable=False),
         sa.Column("reviewed_period_start", sa.DateTime(timezone=True), nullable=False),
         sa.Column("reviewed_period_end", sa.DateTime(timezone=True), nullable=False),
@@ -316,14 +354,21 @@ def upgrade() -> None:
     op.create_table(
         "csrd_performance_mappings",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("kpi_id", sa.String(36), nullable=True),
         sa.Column("objective_id", sa.String(36), nullable=True),
         sa.Column("target_id", sa.String(36), nullable=True),
         sa.Column("esrs_standard", sa.String(10), nullable=False),
         sa.Column("disclosure_requirement", sa.String(255), nullable=True),
         sa.Column("data_point_reference", sa.String(255), nullable=True),
-        sa.Column("mapping_compliance_status", sa.String(20), nullable=False, server_default="NOT_ASSESSED"),
+        sa.Column(
+            "mapping_compliance_status",
+            sa.String(20),
+            nullable=False,
+            server_default="NOT_ASSESSED",
+        ),
         sa.Column("notes", sa.Text, nullable=True),
         sa.Column("created_by", sa.String(36), nullable=False),
         sa.Column("updated_by", sa.String(36), nullable=False),
@@ -335,13 +380,20 @@ def upgrade() -> None:
     op.create_table(
         "issb_sustainability_mappings",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("kpi_id", sa.String(36), nullable=True),
         sa.Column("objective_id", sa.String(36), nullable=True),
         sa.Column("issb_standard", sa.String(10), nullable=False),
         sa.Column("disclosure_topic", sa.String(255), nullable=True),
         sa.Column("metric_reference", sa.String(255), nullable=True),
-        sa.Column("mapping_compliance_status", sa.String(20), nullable=False, server_default="NOT_ASSESSED"),
+        sa.Column(
+            "mapping_compliance_status",
+            sa.String(20),
+            nullable=False,
+            server_default="NOT_ASSESSED",
+        ),
         sa.Column("notes", sa.Text, nullable=True),
         sa.Column("created_by", sa.String(36), nullable=False),
         sa.Column("updated_by", sa.String(36), nullable=False),
@@ -353,7 +405,9 @@ def upgrade() -> None:
     op.create_table(
         "performance_forecasts",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("kpi_id", sa.String(36), nullable=True),
         sa.Column("forecast_type", sa.String(30), nullable=False),
         sa.Column("method", sa.String(20), nullable=False),
@@ -374,7 +428,9 @@ def upgrade() -> None:
     op.create_table(
         "scenario_analyses",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("scenario_type", sa.String(40), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
@@ -392,7 +448,9 @@ def upgrade() -> None:
     op.create_table(
         "sustainability_performance_reports",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("period_start", sa.DateTime(timezone=True), nullable=False),
         sa.Column("period_end", sa.DateTime(timezone=True), nullable=False),

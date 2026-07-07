@@ -64,9 +64,7 @@ class WorkflowEngine:
             # Retrieve knowledge chunks if this step requests it
             if step.retrieve_knowledge and self._knowledge is not None:
                 try:
-                    rich_chunks = await self._knowledge.search(
-                        query, limit=step.knowledge_limit
-                    )
+                    rich_chunks = await self._knowledge.search(query, limit=step.knowledge_limit)
                     knowledge_chunks = [c.text for c in rich_chunks]
                     # Accumulate full metadata for evidence linking after extraction
                     all_retrieved_chunks.extend([c.to_dict() for c in rich_chunks])
@@ -168,7 +166,10 @@ class WorkflowEngine:
 
         # Store retrieved chunk metadata for evidence linking (consumed by executor → evidence_linker)
         if all_retrieved_chunks:
-            workflow_run.run_metadata = {**workflow_run.run_metadata, "retrieved_chunks": all_retrieved_chunks}
+            workflow_run.run_metadata = {
+                **workflow_run.run_metadata,
+                "retrieved_chunks": all_retrieved_chunks,
+            }
 
         # Aggregate token usage
         workflow_run.total_input_tokens = sum(r.input_tokens for r in step_results)

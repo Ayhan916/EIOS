@@ -19,12 +19,11 @@ Deterministic formulae:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.financial_esg.kpi_service import FinancialESGError, _assert_org, _now
+from application.financial_esg.kpi_service import FinancialESGError, _now
 from application.financial_esg.metrics import financial_esg_counters
 from infrastructure.persistence.models.financial_esg import CostOfRiskAssessmentModel
 
@@ -85,8 +84,11 @@ def create_cost_of_risk_assessment(
     notes: str | None = None,
 ) -> CostOfRiskAssessmentModel:
     computed = _compute_risk(
-        supplier_risk_score, climate_risk_score, compliance_risk_score,
-        operational_risk_score, exposure_base,
+        supplier_risk_score,
+        climate_risk_score,
+        compliance_risk_score,
+        operational_risk_score,
+        exposure_base,
     )
     now = _now()
     record = CostOfRiskAssessmentModel(

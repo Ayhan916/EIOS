@@ -18,13 +18,13 @@ Covers:
 from __future__ import annotations
 
 import inspect
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_session(scalar_one_or_none=None, scalars_all=None, scalar_one=0):
     session = AsyncMock()
@@ -49,8 +49,14 @@ def _make_supplier(supplier_id="sup-1", name="ACME Corp", country="DE", industry
     return s
 
 
-def _make_score(esg_score=75.0, risk_score=30.0, trend="Stable", trend_delta=0.0,
-                supplier_id="sup-1", score_id="score-1"):
+def _make_score(
+    esg_score=75.0,
+    risk_score=30.0,
+    trend="Stable",
+    trend_delta=0.0,
+    supplier_id="sup-1",
+    score_id="score-1",
+):
     sc = MagicMock()
     sc.id = score_id
     sc.supplier_id = supplier_id
@@ -62,10 +68,17 @@ def _make_score(esg_score=75.0, risk_score=30.0, trend="Stable", trend_delta=0.0
     return sc
 
 
-def _make_signal(signal_id="sig-1", org="org-1", supplier_id="sup-1",
-                 signal_type="DRIFT", severity="HIGH", signal_status="ACTIVE",
-                 dedupe_key=None):
+def _make_signal(
+    signal_id="sig-1",
+    org="org-1",
+    supplier_id="sup-1",
+    signal_type="DRIFT",
+    severity="HIGH",
+    signal_status="ACTIVE",
+    dedupe_key=None,
+):
     from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
+
     s = MagicMock(spec=SurveillanceSignalModel)
     s.id = signal_id
     s.organization_id = org
@@ -89,11 +102,11 @@ def _make_signal(signal_id="sig-1", org="org-1", supplier_id="sup-1",
 
 # ── 1. Signal Service ──────────────────────────────────────────────────────────
 
+
 class TestSignalCreation:
     @pytest.mark.asyncio
     async def test_create_signal_adds_to_session(self):
         from application.surveillance.signal_service import create_signal
-        from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
         session = _make_session(scalar_one_or_none=None)
 
@@ -163,7 +176,8 @@ class TestSignalCreation:
         )
 
         signal_calls = [
-            c.args[0] for c in session.add.call_args_list
+            c.args[0]
+            for c in session.add.call_args_list
             if isinstance(c.args[0], SurveillanceSignalModel)
         ]
         assert len(signal_calls) == 1
@@ -218,6 +232,7 @@ class TestSignalCreation:
 
     def test_signal_audit_wired(self):
         from application.surveillance import signal_service
+
         src = inspect.getsource(signal_service.create_signal)
         assert "surveillance.signal.created" in src
         assert "_log_audit_event" in src
@@ -225,11 +240,11 @@ class TestSignalCreation:
 
 # ── 2. Watchlist Service ───────────────────────────────────────────────────────
 
+
 class TestWatchlistService:
     @pytest.mark.asyncio
     async def test_add_to_watchlist_creates_entry(self):
         from application.surveillance.watchlist_service import add_to_watchlist
-        from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
 
         session = _make_session(scalar_one_or_none=None)
 
@@ -290,23 +305,25 @@ class TestWatchlistService:
 
     def test_auto_watchlist_triggers_from_score_drop(self):
         from application.surveillance import watchlist_service
+
         src = inspect.getsource(watchlist_service.auto_watchlist_from_score_drop)
         assert "_SCORE_DROP_THRESHOLD" in src
         assert "add_to_watchlist" in src
 
     def test_audit_on_watchlist_add(self):
         from application.surveillance import watchlist_service
+
         src = inspect.getsource(watchlist_service.add_to_watchlist)
         assert "surveillance.watchlist.added" in src
 
 
 # ── 3. Risk Episodes ───────────────────────────────────────────────────────────
 
+
 class TestRiskEpisodes:
     @pytest.mark.asyncio
     async def test_create_episode(self):
         from application.surveillance.episode_service import create_episode
-        from infrastructure.persistence.models.surveillance import RiskEpisodeModel
 
         session = _make_session(scalar_one_or_none=None)
 
@@ -367,15 +384,18 @@ class TestRiskEpisodes:
 
     def test_episode_audit_wired(self):
         from application.surveillance import episode_service
+
         src = inspect.getsource(episode_service.create_episode)
         assert "surveillance.episode.created" in src
 
 
 # ── 4. Risk Drift Engine ───────────────────────────────────────────────────────
 
+
 class TestRiskDriftEngine:
     def test_drift_thresholds_defined(self):
         from application.surveillance import risk_drift_engine
+
         assert risk_drift_engine._ESG_DRIFT_MINOR == -5.0
         assert risk_drift_engine._ESG_DRIFT_MODERATE == -10.0
         assert risk_drift_engine._ESG_DRIFT_SEVERE == -20.0
@@ -454,14 +474,17 @@ class TestRiskDriftEngine:
 
     def test_drift_engine_has_run_function(self):
         from application.surveillance import risk_drift_engine
+
         assert hasattr(risk_drift_engine, "run")
 
 
 # ── 5. Emerging Risk Engine ────────────────────────────────────────────────────
 
+
 class TestEmergingRiskEngine:
     def test_thresholds_defined(self):
         from application.surveillance import emerging_risk_engine
+
         assert emerging_risk_engine._FINDING_SURGE_THRESHOLD == 5
         assert emerging_risk_engine._REMEDIATION_FAIL_THRESHOLD == 3
 
@@ -492,19 +515,23 @@ class TestEmergingRiskEngine:
 
     def test_emerging_risk_engine_has_run_function(self):
         from application.surveillance import emerging_risk_engine
+
         assert hasattr(emerging_risk_engine, "run")
 
 
 # ── 6. Correlation Engine ──────────────────────────────────────────────────────
 
+
 class TestCorrelationEngine:
     def test_correlation_thresholds_defined(self):
         from application.surveillance import correlation_engine
+
         assert correlation_engine._COUNTRY_DRIFT_MIN_SUPPLIERS == 2
         assert correlation_engine._SECTOR_DRIFT_MIN_SUPPLIERS == 2
 
     def test_correlation_engine_has_run_function(self):
         from application.surveillance import correlation_engine
+
         assert hasattr(correlation_engine, "run")
 
     @pytest.mark.asyncio
@@ -530,15 +557,18 @@ class TestCorrelationEngine:
 
 # ── 7. Early Warning Engine ────────────────────────────────────────────────────
 
+
 class TestEarlyWarningEngine:
     def test_thresholds_defined(self):
         from application.surveillance import early_warning_engine
+
         assert early_warning_engine._RESPONSE_RATE_THRESHOLD == 0.5
         assert early_warning_engine._EVIDENCE_SLOWDOWN_DAYS == 14
         assert early_warning_engine._INACTIVITY_DAYS == 30
 
     def test_early_warning_engine_has_run_function(self):
         from application.surveillance import early_warning_engine
+
         assert hasattr(early_warning_engine, "run")
 
     @pytest.mark.asyncio
@@ -574,17 +604,24 @@ class TestEarlyWarningEngine:
 
 # ── 8. Predictive Escalation Engine ───────────────────────────────────────────
 
+
 class TestPredictiveEscalationEngine:
     def test_constants_defined(self):
         from application.surveillance import predictive_escalation_engine
+
         assert predictive_escalation_engine._RISK_TREND_MONTHS == 3
         assert predictive_escalation_engine._MIN_DRIFT_SIGNALS == 3
 
     def test_deterministic_rule_source(self):
         from application.surveillance import predictive_escalation_engine
+
         src = inspect.getsource(predictive_escalation_engine)
         # Must NOT import or call LLM clients
-        import_lines = [ln for ln in src.splitlines() if ln.strip().startswith("import") or ln.strip().startswith("from")]
+        import_lines = [
+            ln
+            for ln in src.splitlines()
+            if ln.strip().startswith("import") or ln.strip().startswith("from")
+        ]
         for ln in import_lines:
             assert "openai" not in ln.lower()
             assert "anthropic" not in ln.lower()
@@ -592,6 +629,7 @@ class TestPredictiveEscalationEngine:
 
     def test_rationale_stored_in_explainability(self):
         from application.surveillance import predictive_escalation_engine
+
         src = inspect.getsource(predictive_escalation_engine._rule_rising_risk_plus_overdue)
         assert "rationale" in src
         assert "rule_triggered" in src
@@ -599,7 +637,7 @@ class TestPredictiveEscalationEngine:
     @pytest.mark.asyncio
     async def test_watchlist_plus_drift_triggers_critical(self):
         from application.surveillance.predictive_escalation_engine import (
-            _rule_watchlist_with_multiple_drift
+            _rule_watchlist_with_multiple_drift,
         )
 
         supplier = _make_supplier()
@@ -634,14 +672,17 @@ class TestPredictiveEscalationEngine:
 
     def test_predictive_engine_has_run_function(self):
         from application.surveillance import predictive_escalation_engine
+
         assert hasattr(predictive_escalation_engine, "run")
 
 
 # ── 9. Portfolio Monitor ───────────────────────────────────────────────────────
 
+
 class TestPortfolioMonitor:
     def test_portfolio_monitor_has_required_functions(self):
         from application.surveillance import portfolio_monitor
+
         assert hasattr(portfolio_monitor, "compute_portfolio_stats")
         assert hasattr(portfolio_monitor, "compute_heatmap")
         assert hasattr(portfolio_monitor, "compute_supplier_risk_timeline")
@@ -671,9 +712,16 @@ class TestPortfolioMonitor:
         stats = await compute_portfolio_stats("org-1", session)
 
         required_keys = {
-            "total_suppliers", "suppliers_at_risk", "suppliers_improving",
-            "suppliers_deteriorating", "suppliers_stable", "suppliers_needing_review",
-            "watchlist_count", "active_signals", "critical_signals", "open_episodes",
+            "total_suppliers",
+            "suppliers_at_risk",
+            "suppliers_improving",
+            "suppliers_deteriorating",
+            "suppliers_stable",
+            "suppliers_needing_review",
+            "watchlist_count",
+            "active_signals",
+            "critical_signals",
+            "open_episodes",
         }
         assert required_keys.issubset(set(stats.keys()))
 
@@ -722,9 +770,11 @@ class TestPortfolioMonitor:
 
 # ── 10. Metrics ───────────────────────────────────────────────────────────────
 
+
 class TestSurveillanceMetrics:
     def test_counters_singleton_exists(self):
         from application.surveillance.metrics import surveillance_counters
+
         assert surveillance_counters is not None
 
     def test_record_signal_created_increments_total(self):
@@ -785,6 +835,7 @@ class TestSurveillanceMetrics:
 
 # ── 11. Tenant Isolation ───────────────────────────────────────────────────────
 
+
 class TestTenantIsolation:
     @pytest.mark.asyncio
     async def test_get_signal_wrong_org_returns_none(self):
@@ -814,40 +865,48 @@ class TestTenantIsolation:
 
     def test_signal_queries_filter_org_id(self):
         from application.surveillance import signal_service
+
         src = inspect.getsource(signal_service.list_signals)
         assert "organization_id" in src
 
     def test_watchlist_queries_filter_org_id(self):
         from application.surveillance import watchlist_service
+
         src = inspect.getsource(watchlist_service.list_watchlist)
         assert "organization_id" in src
 
     def test_episode_queries_filter_org_id(self):
         from application.surveillance import episode_service
+
         src = inspect.getsource(episode_service.list_episodes)
         assert "organization_id" in src
 
 
 # ── 12. Scheduler Integration ─────────────────────────────────────────────────
 
+
 class TestSchedulerIntegration:
     def test_surveillance_monitor_in_agent_types(self):
         from domain.agent_monitoring import AgentType
+
         assert hasattr(AgentType, "SURVEILLANCE_MONITOR")
         assert AgentType.SURVEILLANCE_MONITOR == "SURVEILLANCE_MONITOR"
 
     def test_surveillance_monitor_in_builtin_agents(self):
         from domain.agent_monitoring import BUILTIN_AGENTS
+
         types = [a["agent_type"].value for a in BUILTIN_AGENTS]
         assert "SURVEILLANCE_MONITOR" in types
 
     def test_surveillance_monitor_in_dispatch_map(self):
         from application.agent_monitoring import scheduler
+
         src = inspect.getsource(scheduler._dispatch)
         assert "SURVEILLANCE_MONITOR" in src
 
     def test_all_surveillance_engines_wired_in_dispatcher(self):
         from application.agent_monitoring import scheduler
+
         src = inspect.getsource(scheduler._dispatch)
         for engine in [
             "risk_drift_engine",
@@ -861,16 +920,31 @@ class TestSchedulerIntegration:
 
 # ── 13. Model Definitions ──────────────────────────────────────────────────────
 
+
 class TestSurveillanceModels:
     def test_surveillance_signal_model_fields(self):
         from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
         columns = {c.key for c in SurveillanceSignalModel.__table__.columns}
         required = {
-            "id", "organization_id", "supplier_id", "source_type", "source_id",
-            "signal_type", "severity", "confidence", "title", "description",
-            "detected_at", "expires_at", "signal_status", "acknowledged_by",
-            "acknowledged_at", "episode_id", "explainability_json", "dedupe_key",
+            "id",
+            "organization_id",
+            "supplier_id",
+            "source_type",
+            "source_id",
+            "signal_type",
+            "severity",
+            "confidence",
+            "title",
+            "description",
+            "detected_at",
+            "expires_at",
+            "signal_status",
+            "acknowledged_by",
+            "acknowledged_at",
+            "episode_id",
+            "explainability_json",
+            "dedupe_key",
         }
         assert required.issubset(columns)
 
@@ -879,8 +953,14 @@ class TestSurveillanceModels:
 
         columns = {c.key for c in SupplierWatchlistModel.__table__.columns}
         required = {
-            "id", "organization_id", "supplier_id", "watch_reason",
-            "severity", "added_by_type", "created_by", "watchlist_status",
+            "id",
+            "organization_id",
+            "supplier_id",
+            "watch_reason",
+            "severity",
+            "added_by_type",
+            "created_by",
+            "watchlist_status",
         }
         assert required.issubset(columns)
 
@@ -889,18 +969,26 @@ class TestSurveillanceModels:
 
         columns = {c.key for c in RiskEpisodeModel.__table__.columns}
         required = {
-            "id", "organization_id", "supplier_id", "title", "description",
-            "severity", "episode_status", "started_at", "closed_at", "signal_count",
+            "id",
+            "organization_id",
+            "supplier_id",
+            "title",
+            "description",
+            "severity",
+            "episode_status",
+            "started_at",
+            "closed_at",
+            "signal_count",
         }
         assert required.issubset(columns)
 
     def test_risk_trend_model_has_unique_constraint(self):
-        from infrastructure.persistence.models.surveillance import RiskTrendModel
         from sqlalchemy import UniqueConstraint
 
+        from infrastructure.persistence.models.surveillance import RiskTrendModel
+
         constraints = [
-            c for c in RiskTrendModel.__table__.constraints
-            if isinstance(c, UniqueConstraint)
+            c for c in RiskTrendModel.__table__.constraints if isinstance(c, UniqueConstraint)
         ]
         assert len(constraints) >= 1
         constraint_cols = {col.name for c in constraints for col in c.columns}

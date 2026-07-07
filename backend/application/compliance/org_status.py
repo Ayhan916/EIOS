@@ -95,8 +95,7 @@ def compute_framework_status(
     elif ratio >= _COMPLIANT_THRESHOLD and critical == 0 and high == 0:
         status = "Compliant"
         explanation = (
-            f"{covered}/{total} requirements covered ({ratio:.0%}), "
-            "no Critical or High gaps."
+            f"{covered}/{total} requirements covered ({ratio:.0%}), no Critical or High gaps."
         )
     elif ratio >= _PARTIAL_THRESHOLD or (critical == 0):
         status = "Partially Compliant"
@@ -151,7 +150,7 @@ def compute_org_status(
     """
     frameworks: list[FrameworkStatus] = []
 
-    for reg_id, (reg_code, reqs) in requirements_by_regulation.items():
+    for _reg_id, (reg_code, reqs) in requirements_by_regulation.items():
         fw_status = compute_framework_status(
             regulation_code=reg_code,
             regulation_name=reg_code,

@@ -113,9 +113,7 @@ class SQLImprovementRepository(BaseRepository[ImprovementProposal, ImprovementPr
         return [self._to_domain(m) for m in result.scalars().all()]
 
     async def count_by_status(self) -> dict[str, int]:
-        result = await self._session.execute(
-            select(ImprovementProposalModel.approval_status)
-        )
+        result = await self._session.execute(select(ImprovementProposalModel.approval_status))
         counts: dict[str, int] = {}
         for row in result.scalars().all():
             counts[row] = counts.get(row, 0) + 1

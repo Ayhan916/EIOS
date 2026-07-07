@@ -7,8 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── ESG Objectives ─────────────────────────────────────────────────────────────
+
 
 class ESGObjectiveCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
@@ -43,6 +43,7 @@ class ESGObjectiveResponse(BaseModel):
 
 
 # ── ESG Targets ───────────────────────────────────────────────────────────────
+
 
 class ESGTargetCreate(BaseModel):
     metric_name: str = Field(..., min_length=1, max_length=255)
@@ -79,6 +80,7 @@ class ESGTargetResponse(BaseModel):
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
+
 class ESGKPICreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     category: str = Field(
@@ -113,6 +115,7 @@ class ESGKPIResponse(BaseModel):
 
 # ── KPI Measurements ──────────────────────────────────────────────────────────
 
+
 class KPIMeasurementCreate(BaseModel):
     period_start: datetime
     period_end: datetime
@@ -140,6 +143,7 @@ class KPIMeasurementResponse(BaseModel):
 
 # ── KPI Alerts ────────────────────────────────────────────────────────────────
 
+
 class KPIAlertCreate(BaseModel):
     alert_type: str = Field(..., pattern="^(THRESHOLD_BREACH|MISSED_TARGET|DETERIORATING_TREND)$")
     triggered_value: float
@@ -166,6 +170,7 @@ class KPIAlertResponse(BaseModel):
 
 # ── Scorecards ────────────────────────────────────────────────────────────────
 
+
 class ScorecardComputeRequest(BaseModel):
     period_start: datetime
     period_end: datetime
@@ -190,6 +195,7 @@ class SustainabilityScorecardResponse(BaseModel):
 
 
 # ── Emission Sources ──────────────────────────────────────────────────────────
+
 
 class EmissionSourceCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -230,6 +236,7 @@ class EmissionSourceResponse(BaseModel):
 
 # ── Carbon Inventory ──────────────────────────────────────────────────────────
 
+
 class CarbonInventoryCreate(BaseModel):
     reporting_year: int = Field(..., ge=1990, le=2100)
     period_start: datetime
@@ -257,6 +264,7 @@ class CarbonInventoryResponse(BaseModel):
 
 
 # ── Decarbonization Initiatives ───────────────────────────────────────────────
+
 
 class DecarbonizationInitiativeCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -299,6 +307,7 @@ class DecarbonizationInitiativeResponse(BaseModel):
 
 
 # ── Net Zero Roadmap ──────────────────────────────────────────────────────────
+
 
 class NetZeroRoadmapCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -353,6 +362,7 @@ class NetZeroMilestoneResponse(BaseModel):
 
 # ── Science Based Targets ─────────────────────────────────────────────────────
 
+
 class ScienceBasedTargetCreate(BaseModel):
     scope: str = Field(..., pattern="^(SCOPE1_2|SCOPE3|ALL)$")
     target_type: str = Field(..., pattern="^(ABSOLUTE|INTENSITY)$")
@@ -391,6 +401,7 @@ class ScienceBasedTargetResponse(BaseModel):
 
 
 # ── Climate Risk ──────────────────────────────────────────────────────────────
+
 
 class ClimateRiskAssessmentCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
@@ -431,6 +442,7 @@ class ClimateRiskAssessmentResponse(BaseModel):
 
 # ── Assurance ─────────────────────────────────────────────────────────────────
 
+
 class AssuranceRecordCreate(BaseModel):
     report_type: str = Field(..., pattern="^(EMISSIONS|KPI|FULL_ESG)$")
     reviewed_period_start: datetime
@@ -459,6 +471,7 @@ class AssuranceRecordResponse(BaseModel):
 
 
 # ── CSRD Mapping ──────────────────────────────────────────────────────────────
+
 
 class CSRDMappingCreate(BaseModel):
     esrs_standard: str = Field(..., pattern="^(E1|E2|E3|E4|E5|S1|S2|S3|S4|G1)$")
@@ -493,6 +506,7 @@ class CSRDMappingResponse(BaseModel):
 
 # ── ISSB Mapping ──────────────────────────────────────────────────────────────
 
+
 class ISSBMappingCreate(BaseModel):
     issb_standard: str = Field(..., pattern="^(S1|S2)$")
     kpi_id: str | None = None
@@ -523,6 +537,7 @@ class ISSBMappingResponse(BaseModel):
 
 
 # ── Forecasts ─────────────────────────────────────────────────────────────────
+
 
 class ForecastCreate(BaseModel):
     forecast_type: str = Field(..., pattern="^(EMISSIONS|KPI_ATTAINMENT|TARGET_ACHIEVEMENT)$")
@@ -556,6 +571,7 @@ class ForecastResponse(BaseModel):
 
 # ── Scenarios ─────────────────────────────────────────────────────────────────
 
+
 class ScenarioCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     scenario_type: str = Field(
@@ -585,11 +601,14 @@ class ScenarioResponse(BaseModel):
 
 # ── Sustainability Reports ─────────────────────────────────────────────────────
 
+
 class SustainabilityReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     period_start: datetime
     period_end: datetime
-    report_type: str = Field("FULL", pattern="^(KPI_SUMMARY|EMISSIONS_SUMMARY|TARGET_PROGRESS|FULL)$")
+    report_type: str = Field(
+        "FULL", pattern="^(KPI_SUMMARY|EMISSIONS_SUMMARY|TARGET_PROGRESS|FULL)$"
+    )
 
 
 class SustainabilityReportResponse(BaseModel):
@@ -615,6 +634,7 @@ class SustainabilityReportResponse(BaseModel):
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 class SustainabilityDashboard(BaseModel):
     organization_id: str
     total_objectives: int
@@ -631,6 +651,7 @@ class SustainabilityDashboard(BaseModel):
 
 
 # ── Rollups ───────────────────────────────────────────────────────────────────
+
 
 class EmissionsRollupSchema(BaseModel):
     total_emissions: float
@@ -688,6 +709,7 @@ class RollupSummaryResponse(BaseModel):
 
 
 # ── Executive Sustainability Summary ──────────────────────────────────────────
+
 
 class SustainabilityExecutiveSummary(BaseModel):
     status: str = "ok"

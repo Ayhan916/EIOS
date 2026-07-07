@@ -27,20 +27,19 @@ _HIGH_PRIORITY_FRAMEWORKS = {"CSRD", "LkSG", "CSDDD", "ESRS", "ISSB", "TCFD", "S
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
     """Run regulatory monitor for one organization. Returns findings created."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.regulatory import (
         RegulationModel,
         RegulationRequirementModel,
     )
-    from sqlalchemy import select
 
     findings_created = 0
     now = datetime.now(UTC)
     upcoming_cutoff = now + timedelta(days=_UPCOMING_DAYS)
 
     # Load all active regulations
-    regs_stmt = select(RegulationModel).where(
-        RegulationModel.reg_status == "active"
-    )
+    regs_stmt = select(RegulationModel).where(RegulationModel.reg_status == "active")
     regulations = list((await session.execute(regs_stmt)).scalars().all())
 
     for regulation in regulations:
@@ -101,7 +100,9 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
 
     if total_reqs > 0 and len(regulations) > 0:
         # Report framework coverage as INFO
-        priority_regs = [r for r in regulations if any(fw in r.code for fw in _HIGH_PRIORITY_FRAMEWORKS)]
+        priority_regs = [
+            r for r in regulations if any(fw in r.code for fw in _HIGH_PRIORITY_FRAMEWORKS)
+        ]
         if priority_regs:
             finding = await create_finding(
                 organization_id=organization_id,

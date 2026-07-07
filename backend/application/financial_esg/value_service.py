@@ -17,12 +17,16 @@ Climate finance ROI:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.financial_esg.kpi_service import FinancialESGError, FinancialESGConflict, _assert_org, _now
+from application.financial_esg.kpi_service import (
+    FinancialESGError,
+    _assert_org,
+    _now,
+)
 from application.financial_esg.metrics import financial_esg_counters
 from infrastructure.persistence.models.financial_esg import (
     INITIATIVE_STATUSES_FIN,
@@ -154,8 +158,7 @@ def create_climate_finance_analysis(
     notes: str | None = None,
 ) -> ClimateFinanceAnalysisModel:
     cost_per_ton = (
-        round(transition_investment / emissions_reduction, 6)
-        if emissions_reduction > 0 else None
+        round(transition_investment / emissions_reduction, 6) if emissions_reduction > 0 else None
     )
     roi = None
     if transition_investment > 0 and emissions_reduction > 0:
@@ -191,7 +194,11 @@ def create_climate_finance_analysis(
         actor_id=actor_id,
         resource_type="climate_finance_analysis",
         resource_id=rec.id,
-        details={"analysis_year": analysis_year, "cost_per_ton_reduced": cost_per_ton, "roi_percent": roi},
+        details={
+            "analysis_year": analysis_year,
+            "cost_per_ton_reduced": cost_per_ton,
+            "roi_percent": roi,
+        },
     )
     financial_esg_counters.record_climate_finance_analysis()
     return rec

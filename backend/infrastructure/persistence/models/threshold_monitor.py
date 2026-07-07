@@ -1,4 +1,5 @@
 """SQLAlchemy models — CSDDD Threshold Monitor (CSDDD-010)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,7 +24,9 @@ class CompanyProfileModel(Base):
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
         Index("ix_company_profiles_org_year", "organization_id", "fiscal_year", unique=True),

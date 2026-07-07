@@ -263,9 +263,7 @@ class SecretReferenceModel(BaseModel):
     # Human-readable label (e.g. "IdP client_secret for Azure AD")
     label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     # ISO-8601 timestamp of when the reference was created
-    reference_created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    reference_created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class SCIMTokenModel(BaseModel):
@@ -294,12 +292,8 @@ class SCIMTokenModel(BaseModel):
     # Optional human label ("Azure AD SCIM connector")
     label: Mapped[str | None] = mapped_column(String(255), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    expires_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
-    last_used_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # How many times this token has been used (audit metric)
     use_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 

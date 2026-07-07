@@ -10,9 +10,10 @@ Security:
   - Scoring is deterministic, auditable, no LLM (M43/M44 constraint)
   - All scores are saved for audit trail
 """
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -28,6 +29,7 @@ router = APIRouter(prefix="/readiness", tags=["readiness"])
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class ArticleScoreResponse(BaseModel):
     article: str
@@ -48,7 +50,7 @@ class ReadinessSnapshotResponse(BaseModel):
     overall_level: str
     article_scores: list[ArticleScoreResponse]
     computed_at: Any
-    computed_by: Optional[str]
+    computed_by: str | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -80,7 +82,9 @@ def get_latest(
     repo = SQLReadinessRepository(db)
     snap = repo.latest(user.organization_id)
     if not snap:
-        raise HTTPException(status_code=404, detail="No snapshot yet — POST /readiness/compute first")
+        raise HTTPException(
+            status_code=404, detail="No snapshot yet — POST /readiness/compute first"
+        )
     return snap
 
 

@@ -31,9 +31,7 @@ class _ExtCounters:
         self.dataset_refresh_total += 1
         if not success:
             self.dataset_refresh_failed_total += 1
-        self._connector_refresh[connector_name] = (
-            self._connector_refresh.get(connector_name, 0) + 1
-        )
+        self._connector_refresh[connector_name] = self._connector_refresh.get(connector_name, 0) + 1
 
     def record_connector_failure(self, connector_name: str) -> None:
         # M4: dataset_refresh_failed_total is incremented by record_dataset_refresh(success=False)
@@ -73,9 +71,7 @@ class _ExtCounters:
         return round(total / count, 3) if count > 0 else 0.0
 
     def all_connectors(self) -> list[str]:
-        return sorted(
-            set(self._connector_refresh) | set(self._connector_failures)
-        )
+        return sorted(set(self._connector_refresh) | set(self._connector_failures))
 
     def to_prometheus_lines(self, env: str) -> list[str]:
         lines = [
@@ -104,7 +100,7 @@ class _ExtCounters:
                 "# TYPE eios_connector_failures_total counter",
                 f'eios_connector_failures_total{{connector="{n}",environment="{env}"}} {self.connector_failures(name)}',
                 "",
-                f'# HELP eios_connector_runtime_seconds_avg Average runtime for {name}',
+                f"# HELP eios_connector_runtime_seconds_avg Average runtime for {name}",
                 "# TYPE eios_connector_runtime_seconds_avg gauge",
                 f'eios_connector_runtime_seconds_avg{{connector="{n}",environment="{env}"}} {self.connector_avg_runtime(name)}',
                 "",

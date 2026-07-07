@@ -171,9 +171,7 @@ async def get_dashboard(
             finding_count=row.finding_count,
             risk_count=row.risk_count,
             created_at=(
-                row.AssessmentModel.created_at.isoformat()
-                if row.AssessmentModel.created_at
-                else ""
+                row.AssessmentModel.created_at.isoformat() if row.AssessmentModel.created_at else ""
             ),
             review_status=row.AssessmentModel.review_status or "Draft",
         )
@@ -194,10 +192,7 @@ async def get_dashboard(
         .order_by("month")
         .limit(12)
     )
-    assessments_over_time = [
-        MonthlyCount(month=row.month, count=row.cnt)
-        for row in monthly_rows
-    ]
+    assessments_over_time = [MonthlyCount(month=row.month, count=row.cnt) for row in monthly_rows]
 
     # ── 8. Review queue KPIs (M26) ─────────────────────────────────────────────
     review_queue_rows = await session.execute(
@@ -214,9 +209,7 @@ async def get_dashboard(
 
     awaiting_review = sum(1 for r in review_queue_items if r.review_status == "InReview")
     reviews_overdue = sum(
-        1
-        for r in review_queue_items
-        if r.review_due_date and r.review_due_date < now
+        1 for r in review_queue_items if r.review_due_date and r.review_due_date < now
     )
     recently_approved_row = await session.execute(
         select(func.count(AssessmentModel.id)).where(
@@ -309,9 +302,7 @@ async def get_dashboard(
     critical_expr = func.coalesce(
         func.sum(case((FindingModel.severity == "Critical", 1), else_=0)), 0
     )
-    high_expr = func.coalesce(
-        func.sum(case((FindingModel.severity == "High", 1), else_=0)), 0
-    )
+    high_expr = func.coalesce(func.sum(case((FindingModel.severity == "High", 1), else_=0)), 0)
 
     watchlist_rows = await session.execute(
         select(
@@ -329,7 +320,9 @@ async def get_dashboard(
             SupplierModel.organization_id == org_id,
             SupplierModel.status.notin_(_excluded),
         )
-        .group_by(SupplierModel.id, SupplierModel.name, SupplierModel.country, SupplierModel.supplier_tier)
+        .group_by(
+            SupplierModel.id, SupplierModel.name, SupplierModel.country, SupplierModel.supplier_tier
+        )
         .order_by(critical_expr.desc())
         .limit(8)
     )
@@ -364,7 +357,9 @@ async def get_dashboard(
         )
         .group_by(AssessmentModel.supplier_id)
     )
-    supplier_overdue_actions: dict[str, int] = {r.supplier_id: r.overdue_cnt for r in supplier_overdue_row}
+    supplier_overdue_actions: dict[str, int] = {
+        r.supplier_id: r.overdue_cnt for r in supplier_overdue_row
+    }
 
     supplier_watchlist = [
         SupplierWatchlistItem(

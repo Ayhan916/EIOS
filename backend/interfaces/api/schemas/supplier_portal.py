@@ -23,12 +23,12 @@ SECURITY: password_hash is NEVER included in any response schema.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, EmailStr, Field
 
-
 # ── Auth ──────────────────────────────────────────────────────────────────────
+
 
 class InviteSupplierUserRequest(BaseModel):
     supplier_id: str
@@ -64,6 +64,7 @@ class PasswordResetConfirm(BaseModel):
 
 # ── Supplier User ─────────────────────────────────────────────────────────────
 
+
 class SupplierUserResponse(BaseModel):
     id: str
     supplier_id: str
@@ -71,9 +72,9 @@ class SupplierUserResponse(BaseModel):
     display_name: str
     role: str
     is_active: bool
-    last_login_at: Optional[datetime]
-    invited_at: Optional[datetime]
-    accepted_at: Optional[datetime]
+    last_login_at: datetime | None
+    invited_at: datetime | None
+    accepted_at: datetime | None
     notification_preferences: dict[str, Any] = {}
     created_at: datetime
     updated_at: datetime
@@ -82,16 +83,17 @@ class SupplierUserResponse(BaseModel):
 
 
 class SupplierUserUpdate(BaseModel):
-    display_name: Optional[str] = None
-    notification_preferences: Optional[dict[str, Any]] = None
+    display_name: str | None = None
+    notification_preferences: dict[str, Any] | None = None
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 class ActivityEventResponse(BaseModel):
     id: str
     supplier_id: str
-    supplier_user_id: Optional[str]
+    supplier_user_id: str | None
     event_type: str
     entity_type: str
     entity_id: str
@@ -114,25 +116,26 @@ class DashboardResponse(BaseModel):
 
 # ── Evidence ──────────────────────────────────────────────────────────────────
 
+
 class EvidenceRequestCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     description: str = ""
-    due_date: Optional[datetime] = None
-    assessment_id: Optional[str] = None
-    assigned_to_supplier_user_id: Optional[str] = None
+    due_date: datetime | None = None
+    assessment_id: str | None = None
+    assigned_to_supplier_user_id: str | None = None
 
 
 class EvidenceRequestResponse(BaseModel):
     id: str
     supplier_id: str
     organization_id: str
-    assessment_id: Optional[str]
+    assessment_id: str | None
     title: str
     description: str
-    due_date: Optional[datetime]
+    due_date: datetime | None
     evidence_status: str
     created_by_user_id: str
-    assigned_to_supplier_user_id: Optional[str]
+    assigned_to_supplier_user_id: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -150,9 +153,9 @@ class EvidenceSubmissionResponse(BaseModel):
     supplier_id: str
     comments: str
     submission_status: str
-    submitted_at: Optional[datetime]
-    reviewed_by: Optional[str]
-    reviewed_at: Optional[datetime]
+    submitted_at: datetime | None
+    reviewed_by: str | None
+    reviewed_at: datetime | None
     reviewer_comments: str
     created_at: datetime
     updated_at: datetime
@@ -167,7 +170,7 @@ class EvidenceSubmissionFileResponse(BaseModel):
     file_path: str
     file_size: int
     content_type: str
-    uploaded_at: Optional[datetime]
+    uploaded_at: datetime | None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -179,6 +182,7 @@ class ReviewSubmissionRequest(BaseModel):
 
 
 # ── Questionnaire ─────────────────────────────────────────────────────────────
+
 
 class QuestionnaireQuestionResponse(BaseModel):
     id: str
@@ -209,7 +213,7 @@ class QuestionnaireTemplateResponse(BaseModel):
 class QuestionnaireAssignRequest(BaseModel):
     template_id: str
     supplier_id: str
-    due_date: Optional[datetime] = None
+    due_date: datetime | None = None
 
 
 class QuestionnaireAssignmentResponse(BaseModel):
@@ -220,13 +224,13 @@ class QuestionnaireAssignmentResponse(BaseModel):
     organization_id: str
     assigned_by_user_id: str
     questionnaire_status: str
-    due_date: Optional[datetime]
-    assigned_at: Optional[datetime]
-    submitted_at: Optional[datetime]
-    reviewed_at: Optional[datetime]
-    reviewed_by: Optional[str]
+    due_date: datetime | None
+    assigned_at: datetime | None
+    submitted_at: datetime | None
+    reviewed_at: datetime | None
+    reviewed_by: str | None
     reviewer_comments: str
-    score: Optional[float]
+    score: float | None
     created_at: datetime
     updated_at: datetime
 
@@ -237,23 +241,24 @@ class SaveAnswerRequest(BaseModel):
     question_id: str
     answer_text: str = ""
     answer_json: str = "null"
-    file_path: Optional[str] = None
+    file_path: str | None = None
 
 
 class ReviewAssignmentRequest(BaseModel):
     new_status: str = Field(..., pattern="^(approved|rejected)$")
     reviewer_comments: str = ""
-    score: Optional[float] = None
+    score: float | None = None
 
 
 # ── Remediation ───────────────────────────────────────────────────────────────
+
 
 class RemediationPlanCreate(BaseModel):
     finding_id: str
     title: str = Field(..., min_length=1, max_length=500)
     description: str = ""
-    due_date: Optional[datetime] = None
-    owner_supplier_user_id: Optional[str] = None
+    due_date: datetime | None = None
+    owner_supplier_user_id: str | None = None
 
 
 class RemediationPlanResponse(BaseModel):
@@ -263,13 +268,13 @@ class RemediationPlanResponse(BaseModel):
     organization_id: str
     title: str
     description: str
-    owner_supplier_user_id: Optional[str]
-    due_date: Optional[datetime]
+    owner_supplier_user_id: str | None
+    due_date: datetime | None
     remediation_status: str
     completion_percentage: int
-    verified_by: Optional[str]
-    verified_at: Optional[datetime]
-    created_by: Optional[str]
+    verified_by: str | None
+    verified_at: datetime | None
+    created_by: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -278,7 +283,7 @@ class RemediationPlanResponse(BaseModel):
 
 class UpdateProgressRequest(BaseModel):
     completion_percentage: int = Field(..., ge=0, le=100)
-    new_status: Optional[str] = None
+    new_status: str | None = None
 
 
 class VerifyPlanRequest(BaseModel):
@@ -286,6 +291,7 @@ class VerifyPlanRequest(BaseModel):
 
 
 # ── Messaging ─────────────────────────────────────────────────────────────────
+
 
 class ConversationCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)

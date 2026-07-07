@@ -21,17 +21,39 @@ _FRAMEWORK = "LkSG"
 _FRAMEWORK_VERSION = "2023"
 _LEGAL_BASIS = "Lieferkettensorgfaltspflichtengesetz (LkSG) vom 16. Juli 2021"
 
-_HR_KEYWORDS = frozenset({
-    "human rights", "labour", "labor", "child labour", "forced labour",
-    "discrimination", "health", "safety", "freedom of association",
-    "living wage", "trafficking", "modern slavery", "grievance",
-})
+_HR_KEYWORDS = frozenset(
+    {
+        "human rights",
+        "labour",
+        "labor",
+        "child labour",
+        "forced labour",
+        "discrimination",
+        "health",
+        "safety",
+        "freedom of association",
+        "living wage",
+        "trafficking",
+        "modern slavery",
+        "grievance",
+    }
+)
 
-_ENV_KEYWORDS = frozenset({
-    "environmental", "climate", "emissions", "pollution", "waste",
-    "biodiversity", "water", "mercury", "persistent organic",
-    "hazardous", "deforestation",
-})
+_ENV_KEYWORDS = frozenset(
+    {
+        "environmental",
+        "climate",
+        "emissions",
+        "pollution",
+        "waste",
+        "biodiversity",
+        "water",
+        "mercury",
+        "persistent organic",
+        "hazardous",
+        "deforestation",
+    }
+)
 
 
 def _categorise(finding: dict) -> str:
@@ -175,8 +197,14 @@ def build_lksg_statement(
     # ── §10 Abs. 2 (d) — Preventive and remediation measures ───────────────
     open_recs = sum(1 for r in recommendations if r.get("action_status") == "open")
     in_progress_recs = sum(1 for r in recommendations if r.get("action_status") == "in_progress")
-    resolved_recs = sum(1 for r in recommendations if r.get("action_status") in ("resolved", "verified"))
-    overdue_recs = sum(1 for r in recommendations if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False))
+    resolved_recs = sum(
+        1 for r in recommendations if r.get("action_status") in ("resolved", "verified")
+    )
+    overdue_recs = sum(
+        1
+        for r in recommendations
+        if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False)
+    )
     total_recs = len(recommendations)
     closure_rate = round(resolved_recs / total_recs, 4) if total_recs else 0.0
 
@@ -259,7 +287,9 @@ def build_lksg_statement(
         "by_status": by_status,
         "by_category": by_cat,
         "resolved": resolved_grievances,
-        "resolution_rate": round(resolved_grievances / total_grievances, 4) if total_grievances else 0.0,
+        "resolution_rate": round(resolved_grievances / total_grievances, 4)
+        if total_grievances
+        else 0.0,
         "confidentiality": (
             "Reporter identity is never disclosed to the subject of the report. "
             "Anonymous submissions are accepted. A reference code is issued to every reporter."
@@ -277,8 +307,14 @@ def build_lksg_statement(
             "organization_name": organization_name,
             "reporting_year": reporting_year,
             "report_type": "lksg_statement",
-            "sections": ["(a) measures", "(b) risk_analysis", "(c) prioritisation",
-                         "(d) actions", "(e) effectiveness", "(f) grievance"],
+            "sections": [
+                "(a) measures",
+                "(b) risk_analysis",
+                "(c) prioritisation",
+                "(d) actions",
+                "(e) effectiveness",
+                "(f) grievance",
+            ],
         },
         "section_a_measures": measures,
         "section_b_risk_analysis": risk_analysis,

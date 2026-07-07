@@ -14,13 +14,13 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Shared helpers ─────────────────────────────────────────────────────────────
+
 
 def _fake_session() -> MagicMock:
     session = MagicMock()
@@ -143,10 +143,12 @@ def _mock_assignment(org="org-1") -> MagicMock:
 
 # ── 1. Calendar Service ────────────────────────────────────────────────────────
 
+
 class TestCalendarService:
     @pytest.mark.asyncio
     async def test_create_event_returns_dict(self):
         from application.operating_system.calendar_service import create_event
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         scheduled = datetime(2026, 3, 31, 10, 0, tzinfo=UTC)
@@ -170,6 +172,7 @@ class TestCalendarService:
     @pytest.mark.asyncio
     async def test_create_event_emits_audit_event(self):
         from application.operating_system.calendar_service import create_event
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         added = []
@@ -184,12 +187,14 @@ class TestCalendarService:
         )
 
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "calendar.event_created" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_list_events_returns_all(self):
         from application.operating_system.calendar_service import list_events
+
         session = _fake_session()
         evt = _mock_calendar_event()
         session.execute = AsyncMock(return_value=_scalars_result([evt]))
@@ -202,6 +207,7 @@ class TestCalendarService:
     @pytest.mark.asyncio
     async def test_get_event_not_found_returns_none(self):
         from application.operating_system.calendar_service import get_event
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -212,6 +218,7 @@ class TestCalendarService:
     @pytest.mark.asyncio
     async def test_update_event_emits_updated_audit(self):
         from application.operating_system.calendar_service import update_event
+
         session = _fake_session()
         evt = _mock_calendar_event()
         session.execute = AsyncMock(return_value=_scalar_result(evt))
@@ -222,12 +229,14 @@ class TestCalendarService:
 
         assert row is not None
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "calendar.event_updated" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_delete_event_returns_false_when_not_found(self):
         from application.operating_system.calendar_service import delete_event
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -238,6 +247,7 @@ class TestCalendarService:
     @pytest.mark.asyncio
     async def test_delete_event_emits_deleted_audit(self):
         from application.operating_system.calendar_service import delete_event
+
         session = _fake_session()
         evt = _mock_calendar_event()
         session.execute = AsyncMock(return_value=_scalar_result(evt))
@@ -248,16 +258,19 @@ class TestCalendarService:
 
         assert result is True
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "calendar.event_deleted" for e in audit_events)
 
 
 # ── 2. Program Service ─────────────────────────────────────────────────────────
 
+
 class TestProgramService:
     @pytest.mark.asyncio
     async def test_create_program_status_active(self):
         from application.operating_system.program_service import create_program
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -270,6 +283,7 @@ class TestProgramService:
     @pytest.mark.asyncio
     async def test_create_program_emits_audit(self):
         from application.operating_system.program_service import create_program
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         added = []
@@ -278,12 +292,14 @@ class TestProgramService:
         await create_program("org-1", "Test Program", session)
 
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "program.created" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_list_programs_empty(self):
         from application.operating_system.program_service import list_programs
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalars_result([]))
 
@@ -294,6 +310,7 @@ class TestProgramService:
     @pytest.mark.asyncio
     async def test_update_program_to_archived_emits_deleted_audit(self):
         from application.operating_system.program_service import update_program
+
         session = _fake_session()
         prog = _mock_program()
         session.execute = AsyncMock(return_value=_scalar_result(prog))
@@ -304,12 +321,14 @@ class TestProgramService:
 
         assert row is not None
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "program.deleted" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_get_program_not_found(self):
         from application.operating_system.program_service import get_program
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -320,10 +339,12 @@ class TestProgramService:
 
 # ── 3. Control Service ────────────────────────────────────────────────────────
 
+
 class TestControlService:
     @pytest.mark.asyncio
     async def test_create_control_default_not_tested(self):
         from application.operating_system.control_service import create_control
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -341,6 +362,7 @@ class TestControlService:
     @pytest.mark.asyncio
     async def test_create_control_emits_audit(self):
         from application.operating_system.control_service import create_control
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         added = []
@@ -349,12 +371,14 @@ class TestControlService:
         await create_control("org-1", "Test Control", "DETECTIVE", session=session)
 
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "control.created" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_list_controls_with_type_filter(self):
         from application.operating_system.control_service import list_controls
+
         session = _fake_session()
         ctrl = _mock_control()
         session.execute = AsyncMock(return_value=_scalars_result([ctrl]))
@@ -367,6 +391,7 @@ class TestControlService:
     @pytest.mark.asyncio
     async def test_update_control_not_found_returns_none(self):
         from application.operating_system.control_service import update_control
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -377,17 +402,21 @@ class TestControlService:
 
 # ── 4. Control Test Service ───────────────────────────────────────────────────
 
+
 class TestControlTestService:
     @pytest.mark.asyncio
     async def test_create_test_pass_updates_parent_effectiveness(self):
         from application.operating_system.control_test_service import create_test
+
         session = _fake_session()
         ctrl = _mock_control()
         # First call returns the test, second returns the control
-        session.execute = AsyncMock(side_effect=[
-            _scalar_result(None),   # dedup check (no existing test model in flush)
-            _scalar_result(ctrl),   # parent control lookup
-        ])
+        session.execute = AsyncMock(
+            side_effect=[
+                _scalar_result(None),  # dedup check (no existing test model in flush)
+                _scalar_result(ctrl),  # parent control lookup
+            ]
+        )
         session.execute = AsyncMock(return_value=_scalar_result(ctrl))
 
         row = await create_test(
@@ -405,6 +434,7 @@ class TestControlTestService:
     @pytest.mark.asyncio
     async def test_create_test_fail_sets_ineffective(self):
         from application.operating_system.control_test_service import create_test
+
         session = _fake_session()
         ctrl = _mock_control()
         session.execute = AsyncMock(return_value=_scalar_result(ctrl))
@@ -423,6 +453,7 @@ class TestControlTestService:
     @pytest.mark.asyncio
     async def test_create_test_partial_sets_partially_effective(self):
         from application.operating_system.control_test_service import create_test
+
         session = _fake_session()
         ctrl = _mock_control()
         session.execute = AsyncMock(return_value=_scalar_result(ctrl))
@@ -440,6 +471,7 @@ class TestControlTestService:
     @pytest.mark.asyncio
     async def test_create_test_emits_audit(self):
         from application.operating_system.control_test_service import create_test
+
         session = _fake_session()
         ctrl = _mock_control()
         session.execute = AsyncMock(return_value=_scalar_result(ctrl))
@@ -449,12 +481,14 @@ class TestControlTestService:
         await create_test("org-1", "ctrl-1", "PASS", datetime.now(UTC), session)
 
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "control.tested" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_delete_test_not_found_returns_false(self):
         from application.operating_system.control_test_service import delete_test
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -465,6 +499,7 @@ class TestControlTestService:
     @pytest.mark.asyncio
     async def test_list_tests_filtered_by_control(self):
         from application.operating_system.control_test_service import list_tests
+
         session = _fake_session()
         t = _mock_control_test()
         session.execute = AsyncMock(return_value=_scalars_result([t]))
@@ -477,10 +512,14 @@ class TestControlTestService:
 
 # ── 5. Compliance Operation Service ──────────────────────────────────────────
 
+
 class TestComplianceOperationService:
     @pytest.mark.asyncio
     async def test_create_operation_default_in_progress(self):
-        from application.operating_system.compliance_operation_service import create_compliance_operation
+        from application.operating_system.compliance_operation_service import (
+            create_compliance_operation,
+        )
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -493,6 +532,7 @@ class TestComplianceOperationService:
     @pytest.mark.asyncio
     async def test_sync_from_m31_creates_when_not_exists(self):
         from application.operating_system.compliance_operation_service import sync_from_m31
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -511,24 +551,27 @@ class TestComplianceOperationService:
     @pytest.mark.asyncio
     async def test_sync_from_m31_updates_existing(self):
         from application.operating_system.compliance_operation_service import sync_from_m31
+
         session = _fake_session()
         existing = _mock_compliance_op()
         session.execute = AsyncMock(return_value=_scalar_result(existing))
         added = []
         session.add = MagicMock(side_effect=lambda obj: added.append(obj))
 
-        row = await sync_from_m31("org-1", "CSRD", 90.0, 1, session)
+        await sync_from_m31("org-1", "CSRD", 90.0, 1, session)
 
         assert existing.coverage_percent == 90.0
         assert existing.gap_count == 1
         # Should not create a new ComplianceOperationModel
         from infrastructure.persistence.models.operating_system import ComplianceOperationModel
+
         new_ops = [o for o in added if isinstance(o, ComplianceOperationModel)]
         assert len(new_ops) == 0
 
     @pytest.mark.asyncio
     async def test_sync_from_m31_emits_synced_audit(self):
         from application.operating_system.compliance_operation_service import sync_from_m31
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         added = []
@@ -537,12 +580,16 @@ class TestComplianceOperationService:
         await sync_from_m31("org-1", "ESRS", 60.0, 5, session)
 
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "compliance_op.synced" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_list_operations_empty(self):
-        from application.operating_system.compliance_operation_service import list_compliance_operations
+        from application.operating_system.compliance_operation_service import (
+            list_compliance_operations,
+        )
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalars_result([]))
 
@@ -552,7 +599,10 @@ class TestComplianceOperationService:
 
     @pytest.mark.asyncio
     async def test_get_operation_not_found(self):
-        from application.operating_system.compliance_operation_service import get_compliance_operation
+        from application.operating_system.compliance_operation_service import (
+            get_compliance_operation,
+        )
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -563,10 +613,12 @@ class TestComplianceOperationService:
 
 # ── 6. Accountability Service ─────────────────────────────────────────────────
 
+
 class TestAccountabilityService:
     @pytest.mark.asyncio
     async def test_assign_creates_active_assignment(self):
         from application.operating_system.accountability_service import assign_accountability
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -586,21 +638,23 @@ class TestAccountabilityService:
     @pytest.mark.asyncio
     async def test_assign_emits_assigned_audit(self):
         from application.operating_system.accountability_service import assign_accountability
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         added = []
         session.add = MagicMock(side_effect=lambda obj: added.append(obj))
 
-        await assign_accountability("org-1", "ESGObjective", "obj-1", "REVIEWER",
-                                    "user-2", session)
+        await assign_accountability("org-1", "ESGObjective", "obj-1", "REVIEWER", "user-2", session)
 
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "accountability.assigned" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_remove_assignment_soft_deletes(self):
         from application.operating_system.accountability_service import remove_assignment
+
         session = _fake_session()
         asgn = _mock_assignment()
         session.execute = AsyncMock(return_value=_scalar_result(asgn))
@@ -612,12 +666,14 @@ class TestAccountabilityService:
         assert result is True
         assert asgn.assignment_status == "REMOVED"
         from infrastructure.persistence.models.audit_event import AuditEventModel
+
         audit_events = [o for o in added if isinstance(o, AuditEventModel)]
         assert any(e.action == "accountability.removed" for e in audit_events)
 
     @pytest.mark.asyncio
     async def test_remove_assignment_not_found(self):
         from application.operating_system.accountability_service import remove_assignment
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -628,6 +684,7 @@ class TestAccountabilityService:
     @pytest.mark.asyncio
     async def test_list_assignments_by_role(self):
         from application.operating_system.accountability_service import list_assignments
+
         session = _fake_session()
         asgn = _mock_assignment()
         session.execute = AsyncMock(return_value=_scalars_result([asgn]))
@@ -640,6 +697,7 @@ class TestAccountabilityService:
     @pytest.mark.asyncio
     async def test_get_assignment_not_found(self):
         from application.operating_system.accountability_service import get_assignment
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -650,13 +708,16 @@ class TestAccountabilityService:
 
 # ── 7. Executive Oversight ────────────────────────────────────────────────────
 
+
 class TestExecutiveOversight:
     def test_executive_dashboard_schema_has_esg_summary(self):
-        from interfaces.api.schemas.executive import ExecutiveDashboard, ESGOperatingSummary
+        from interfaces.api.schemas.executive import ExecutiveDashboard
+
         assert "esg_summary" in ExecutiveDashboard.model_fields
 
     def test_esg_operating_summary_has_required_fields(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         fields = set(ESGOperatingSummary.model_fields.keys())
         assert "objectives_at_risk" in fields
         assert "initiatives_at_risk" in fields
@@ -665,39 +726,72 @@ class TestExecutiveOversight:
         assert "overdue_esg_actions" in fields
 
     def test_esg_summary_is_optional(self):
-        from interfaces.api.schemas.executive import ExecutiveDashboard, PortfolioSummary, ActionSummary, GovernanceSummary
+        from interfaces.api.schemas.executive import (
+            ActionSummary,
+            ExecutiveDashboard,
+            GovernanceSummary,
+            PortfolioSummary,
+        )
+
         dashboard = ExecutiveDashboard(
             portfolio_summary=PortfolioSummary(
-                total_suppliers=0, scored_suppliers=0, critical_risk_suppliers=0,
-                high_risk_suppliers=0, moderate_risk_suppliers=0, low_risk_suppliers=0,
-                improving_suppliers=0, deteriorating_suppliers=0,
-                avg_esg_score=None, avg_risk_score=None, risk_distribution={},
+                total_suppliers=0,
+                scored_suppliers=0,
+                critical_risk_suppliers=0,
+                high_risk_suppliers=0,
+                moderate_risk_suppliers=0,
+                low_risk_suppliers=0,
+                improving_suppliers=0,
+                deteriorating_suppliers=0,
+                avg_esg_score=None,
+                avg_risk_score=None,
+                risk_distribution={},
             ),
-            action_summary=ActionSummary(open_actions=0, overdue_actions=0,
-                                         total_actions=0, resolution_rate=None),
-            governance_summary=GovernanceSummary(assessments_awaiting_review=0,
-                                                  assessments_approved=0, critical_findings_total=0),
+            action_summary=ActionSummary(
+                open_actions=0, overdue_actions=0, total_actions=0, resolution_rate=None
+            ),
+            governance_summary=GovernanceSummary(
+                assessments_awaiting_review=0, assessments_approved=0, critical_findings_total=0
+            ),
         )
         assert dashboard.esg_summary is None
 
     def test_esg_summary_can_be_set(self):
-        from interfaces.api.schemas.executive import ExecutiveDashboard, ESGOperatingSummary, PortfolioSummary, ActionSummary, GovernanceSummary
+        from interfaces.api.schemas.executive import (
+            ActionSummary,
+            ESGOperatingSummary,
+            ExecutiveDashboard,
+            GovernanceSummary,
+            PortfolioSummary,
+        )
+
         summary = ESGOperatingSummary(
-            objectives_at_risk=2, initiatives_at_risk=1,
-            strategic_risks_critical=3, strategic_risks_total=5,
+            objectives_at_risk=2,
+            initiatives_at_risk=1,
+            strategic_risks_critical=3,
+            strategic_risks_total=5,
             overdue_esg_actions=4,
         )
         dashboard = ExecutiveDashboard(
             portfolio_summary=PortfolioSummary(
-                total_suppliers=0, scored_suppliers=0, critical_risk_suppliers=0,
-                high_risk_suppliers=0, moderate_risk_suppliers=0, low_risk_suppliers=0,
-                improving_suppliers=0, deteriorating_suppliers=0,
-                avg_esg_score=None, avg_risk_score=None, risk_distribution={},
+                total_suppliers=0,
+                scored_suppliers=0,
+                critical_risk_suppliers=0,
+                high_risk_suppliers=0,
+                moderate_risk_suppliers=0,
+                low_risk_suppliers=0,
+                improving_suppliers=0,
+                deteriorating_suppliers=0,
+                avg_esg_score=None,
+                avg_risk_score=None,
+                risk_distribution={},
             ),
-            action_summary=ActionSummary(open_actions=0, overdue_actions=0,
-                                         total_actions=0, resolution_rate=None),
-            governance_summary=GovernanceSummary(assessments_awaiting_review=0,
-                                                  assessments_approved=0, critical_findings_total=0),
+            action_summary=ActionSummary(
+                open_actions=0, overdue_actions=0, total_actions=0, resolution_rate=None
+            ),
+            governance_summary=GovernanceSummary(
+                assessments_awaiting_review=0, assessments_approved=0, critical_findings_total=0
+            ),
             esg_summary=summary,
         )
         assert dashboard.esg_summary.objectives_at_risk == 2
@@ -706,9 +800,11 @@ class TestExecutiveOversight:
 
 # ── 8. Timeline Endpoint ──────────────────────────────────────────────────────
 
+
 class TestTimelineEndpoint:
     def test_timeline_entry_schema_fields(self):
         from interfaces.api.schemas.operating_system import TimelineEntry
+
         fields = set(TimelineEntry.model_fields.keys())
         assert "event_type" in fields
         assert "entity_type" in fields
@@ -719,6 +815,7 @@ class TestTimelineEndpoint:
 
     def test_timeline_entry_instantiation(self):
         from interfaces.api.schemas.operating_system import TimelineEntry
+
         entry = TimelineEntry(
             event_type="objective.created",
             entity_type="ESGObjective",
@@ -732,8 +829,11 @@ class TestTimelineEndpoint:
 
     def test_timeline_route_exists_in_router(self):
         import os
+
         router_path = os.path.normpath(
-            os.path.join(os.path.dirname(__file__), "../../../interfaces/api/routers/operating_system.py")
+            os.path.join(
+                os.path.dirname(__file__), "../../../interfaces/api/routers/operating_system.py"
+            )
         )
         with open(router_path) as f:
             content = f.read()
@@ -741,23 +841,36 @@ class TestTimelineEndpoint:
 
     def test_all_new_routes_registered(self):
         import os
+
         router_path = os.path.normpath(
-            os.path.join(os.path.dirname(__file__), "../../../interfaces/api/routers/operating_system.py")
+            os.path.join(
+                os.path.dirname(__file__), "../../../interfaces/api/routers/operating_system.py"
+            )
         )
         with open(router_path) as f:
             content = f.read()
-        for expected in ["/calendar", "/programs", "/controls", "/tests",
-                         "/compliance-operations", "/accountability", "/timeline"]:
-            assert f'"{expected}"' in content or f"'{expected}'" in content, \
+        for expected in [
+            "/calendar",
+            "/programs",
+            "/controls",
+            "/tests",
+            "/compliance-operations",
+            "/accountability",
+            "/timeline",
+        ]:
+            assert f'"{expected}"' in content or f"'{expected}'" in content, (
                 f"Missing route: {expected}"
+            )
 
 
 # ── 9. Cross-Module Orchestration ─────────────────────────────────────────────
+
 
 class TestCrossModuleOrchestration:
     @pytest.mark.asyncio
     async def test_ingest_idempotent_skips_when_exists(self):
         from application.operating_system.action_service import ingest_from_module_idempotent
+
         session = _fake_session()
         existing_action = MagicMock()
         session.execute = AsyncMock(return_value=_scalar_result(existing_action))
@@ -777,6 +890,7 @@ class TestCrossModuleOrchestration:
     @pytest.mark.asyncio
     async def test_ingest_idempotent_creates_when_not_exists(self):
         from application.operating_system.action_service import ingest_from_module_idempotent
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
 
@@ -797,6 +911,7 @@ class TestCrossModuleOrchestration:
     @pytest.mark.asyncio
     async def test_m37_critical_signal_triggers_esg_action(self):
         from application.surveillance.signal_service import create_signal
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         ingested = []
@@ -823,6 +938,7 @@ class TestCrossModuleOrchestration:
     @pytest.mark.asyncio
     async def test_m37_non_critical_signal_does_not_trigger_action(self):
         from application.surveillance.signal_service import create_signal
+
         session = _fake_session()
         session.execute = AsyncMock(return_value=_scalar_result(None))
         ingested = []
@@ -846,6 +962,7 @@ class TestCrossModuleOrchestration:
 
     def test_dashboard_schema_has_new_fields(self):
         from interfaces.api.schemas.operating_system import OperatingSystemDashboard
+
         fields = set(OperatingSystemDashboard.model_fields.keys())
         assert "compliance_operations" in fields
         assert "governance_calendar_events" in fields

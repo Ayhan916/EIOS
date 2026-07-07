@@ -9,13 +9,17 @@ from pydantic import BaseModel, Field
 
 class GHGCalculateRequest(BaseModel):
     scope: str = Field(description="SCOPE1, SCOPE2, or SCOPE3")
-    category: str = Field(description="e.g. fuel_combustion, purchased_electricity, business_travel")
+    category: str = Field(
+        description="e.g. fuel_combustion, purchased_electricity, business_travel"
+    )
     subcategory: str = Field(description="e.g. natural_gas, diesel, electricity")
     amount: float = Field(gt=0, description="Activity quantity in the specified unit")
     unit: str = Field(description="Unit of the activity amount, e.g. kWh, litre, km")
     source: str = Field(description="Factor source: DEFRA_2023 or EPA_2023")
     region: str = Field(description="Geographic region: UK, US, etc.")
-    supplier_id: str | None = Field(default=None, description="Optional supplier this emission is attributed to")
+    supplier_id: str | None = Field(
+        default=None, description="Optional supplier this emission is attributed to"
+    )
     notes: str | None = Field(default=None, max_length=2000)
     reporting_year: int | None = Field(default=None, ge=2000, le=2100)
 

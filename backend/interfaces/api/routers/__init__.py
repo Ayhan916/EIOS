@@ -1,88 +1,94 @@
-from .stakeholders import router as stakeholders_router, public_router as stakeholders_public_router
-from .dd_governance import router as dd_governance_router, public_router as dd_governance_public_router
+from .activity_chain import router as activity_chain_router
+from .agent_monitoring import router as agent_monitoring_router
 from .agents import router as agents_router
-from .disclosure import router as disclosure_router
-from .due_diligence import router as due_diligence_router
-from .copilot import router as copilot_router
-from .regulatory import router as regulatory_router
+from .ai_governance import router as ai_governance_router
 from .api_platform import router as api_platform_router
-from .executive import router as executive_router
-from .comments import router as comments_router
-from .suppliers import router as suppliers_router
-from .supplier_intelligence import router as supplier_intelligence_router
-from .notifications import router as notifications_router
 from .assessments import router as assessments_router
 from .audit import router as audit_router
 from .auth import router as auth_router
+from .automations import router as automations_router
+from .board_signoff import router as board_signoff_router
+from .comments import router as comments_router
+from .commercial import router as commercial_router
 from .compliance import assessments_compliance_router, frameworks_router
+from .contractual_assurance import router as contractual_assurance_router
+from .copilot import router as copilot_router
+from .corrective_action_plan import router as corrective_action_plan_router
 from .dashboard import router as dashboard_router
+from .dd_governance import public_router as dd_governance_public_router
+from .dd_governance import router as dd_governance_router
+from .disclosure import router as disclosure_router
+from .dpp import router as dpp_router
+from .due_diligence import router as due_diligence_router
+from .effectiveness import router as effectiveness_router
+from .enterprise import router as enterprise_router
+from .erp import router as erp_router
+from .esap_export import router as esap_export_router
+from .evaluation import router as evaluation_router
 from .evidences import router as evidences_router
+from .executive import router as executive_router
+from .external_intelligence import router as external_intelligence_router
+from .financial_esg import router as financial_esg_router
 from .findings import router as findings_router
+from .ghg import router as ghg_router
+from .grievance import router as grievance_router
 from .health import router as health_router
+from .impact_assessment import router as impact_assessment_router
+from .integrations import router as integrations_router
 from .knowledge import router as knowledge_router
+from .m46_3 import router as m46_3_router
+from .material import router as material_router
 from .metrics import router as metrics_router
+from .mfa import router as mfa_router
+from .network import router as network_router
+from .news import router as news_router
+from .rag import router as rag_router
+from .notifications import router as notifications_router
+from .operating_system import router as operating_system_router
+from .operations import router as operations_router
 from .organizations import router as organizations_router
+from .pipeline import router as pipeline_router
+from .prioritization import router as prioritization_router
+from .product import router as product_router
+from .readiness import router as readiness_router
 from .recommendations import router as recommendations_router
+from .region import router as region_router
+from .regulatory import router as regulatory_router
+from .regulatory_change import router as regulatory_change_router
+from .regulatory_radar import router as regulatory_radar_router
+from .regulatory_reporting import router as regulatory_reporting_router
+from .remedy_cases import grievance_router as remedy_grievance_router
+from .remedy_cases import report_router as remedy_report_router
+from .remedy_cases import router as remedy_cases_router
 from .reports import router as reports_router
 from .risks import router as risks_router
+from .scope3 import router as scope3_router
+from .scoping import router as scoping_router
 from .sector_intelligence import assessments_benchmark_router, sector_intelligence_router
+from .sector_risk_register import router as sector_risk_register_router
 from .sectors import router as sectors_router
-from .users import router as users_router
-from .workflows import router as workflows_router
-from .external_intelligence import router as external_intelligence_router
-from .operations import router as operations_router
+from .security_audit import router as security_audit_router
+from .self_improvement import router as self_improvement_router
+from .sme_support import router as sme_support_router
+from .stakeholders import public_router as stakeholders_public_router
+from .stakeholders import router as stakeholders_router
+from .strategy import router as strategy_router
+from .supplier_assessment import public_router as supplier_assessment_public_router
+from .supplier_assessment import router as supplier_assessment_router
+from .supplier_extensions import router as supplier_extensions_router
+from .supplier_intelligence import router as supplier_intelligence_router
 from .supplier_portal import router as supplier_portal_router
 from .supplier_portal_internal import router as supplier_portal_internal_router
-from .agent_monitoring import router as agent_monitoring_router
-from .surveillance import router as surveillance_router
-from .network import router as network_router
-from .operating_system import router as operating_system_router
-from .enterprise import router as enterprise_router
-from .ai_governance import router as ai_governance_router
-from .sustainability import router as sustainability_router
-from .financial_esg import router as financial_esg_router
-from .strategy import router as strategy_router
-from .mfa import router as mfa_router
-from .ghg import router as ghg_router
-from .m46_3 import router as m46_3_router
-from .region import router as region_router
-from .regulatory_reporting import router as regulatory_reporting_router
-from .integrations import router as integrations_router
-from .commercial import router as commercial_router
-from .security_audit import router as security_audit_router
 from .supplier_twin import router as supplier_twin_router
-from .supplier_extensions import router as supplier_extensions_router
-from .material import router as material_router
-from .product import router as product_router
-from .dpp import router as dpp_router
-from .supply_chain_events import router as supply_chain_events_router
-from .erp import router as erp_router
+from .suppliers import router as suppliers_router
 from .supply_chain_compliance import router as supply_chain_compliance_router
-from .scope3 import router as scope3_router
-from .news import router as news_router
-from .sector_risk_register import router as sector_risk_register_router
-from .automations import router as automations_router
-from .pipeline import router as pipeline_router
-from .grievance import router as grievance_router
-from .prioritization import router as prioritization_router
-from .regulatory_change import router as regulatory_change_router
-from .evaluation import router as evaluation_router
-from .self_improvement import router as self_improvement_router
-from .corrective_action_plan import router as corrective_action_plan_router
-from .remedy_cases import router as remedy_cases_router, grievance_router as remedy_grievance_router, report_router as remedy_report_router
-from .effectiveness import router as effectiveness_router
-from .scoping import router as scoping_router
-from .activity_chain import router as activity_chain_router
-from .contractual_assurance import router as contractual_assurance_router
-from .sme_support import router as sme_support_router
-from .readiness import router as readiness_router
-from .impact_assessment import router as impact_assessment_router
-from .board_signoff import router as board_signoff_router
-from .supplier_assessment import router as supplier_assessment_router, public_router as supplier_assessment_public_router
-from .esap_export import router as esap_export_router
+from .supply_chain_events import router as supply_chain_events_router
+from .surveillance import router as surveillance_router
+from .sustainability import router as sustainability_router
 from .threshold_monitor import router as threshold_monitor_router
-from .regulatory_radar import router as regulatory_radar_router
+from .users import router as users_router
 from .workflow_context import router as workflow_context_router
+from .workflows import router as workflows_router
 
 __all__ = [
     "agents_router",
@@ -177,4 +183,5 @@ __all__ = [
     "threshold_monitor_router",
     "regulatory_radar_router",
     "workflow_context_router",
+    "rag_router",
 ]

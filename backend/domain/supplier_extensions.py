@@ -12,14 +12,14 @@ for the Enterprise Digital Supply Chain Twin:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import UTC, datetime, date
+from dataclasses import dataclass
+from datetime import UTC, date, datetime
 from enum import Enum
 
 from .base_entity import BaseEntity
 
-
 # ── Enumerations ──────────────────────────────────────────────────────────────
+
 
 class LocationType(str, Enum):
     PLANT = "PLANT"
@@ -48,23 +48,23 @@ class ContactRole(str, Enum):
 
 
 class CertificationType(str, Enum):
-    ISO_14001 = "ISO_14001"           # Environmental Management
-    ISO_45001 = "ISO_45001"           # Occupational H&S
-    ISO_9001 = "ISO_9001"             # Quality Management
-    ISO_50001 = "ISO_50001"           # Energy Management
-    ISO_27001 = "ISO_27001"           # Information Security
-    IATF_16949 = "IATF_16949"         # Automotive Quality
-    SA8000 = "SA8000"                 # Social Accountability
-    EMAS = "EMAS"                     # EU Eco-Management
-    REACH = "REACH"                   # EU Chemicals
-    ROHS = "RoHS"                     # Restriction of Hazardous Substances
-    OHSAS_18001 = "OHSAS_18001"       # H&S (predecessor to ISO 45001)
-    FSC = "FSC"                       # Forest Stewardship Council
-    RSPO = "RSPO"                     # Responsible Sourcing of Palm Oil
-    RMAP = "RMAP"                     # Responsible Minerals Assurance Process
-    CDP = "CDP"                       # Carbon Disclosure Project
-    ECOVADIS = "ECOVADIS"             # EcoVadis sustainability rating
-    TISAX = "TISAX"                   # Automotive Information Security
+    ISO_14001 = "ISO_14001"  # Environmental Management
+    ISO_45001 = "ISO_45001"  # Occupational H&S
+    ISO_9001 = "ISO_9001"  # Quality Management
+    ISO_50001 = "ISO_50001"  # Energy Management
+    ISO_27001 = "ISO_27001"  # Information Security
+    IATF_16949 = "IATF_16949"  # Automotive Quality
+    SA8000 = "SA8000"  # Social Accountability
+    EMAS = "EMAS"  # EU Eco-Management
+    REACH = "REACH"  # EU Chemicals
+    ROHS = "RoHS"  # Restriction of Hazardous Substances
+    OHSAS_18001 = "OHSAS_18001"  # H&S (predecessor to ISO 45001)
+    FSC = "FSC"  # Forest Stewardship Council
+    RSPO = "RSPO"  # Responsible Sourcing of Palm Oil
+    RMAP = "RMAP"  # Responsible Minerals Assurance Process
+    CDP = "CDP"  # Carbon Disclosure Project
+    ECOVADIS = "ECOVADIS"  # EcoVadis sustainability rating
+    TISAX = "TISAX"  # Automotive Information Security
     CUSTOM = "CUSTOM"
 
 
@@ -126,6 +126,7 @@ class ESGMetricType(str, Enum):
 
 
 # ── Domain Entities ───────────────────────────────────────────────────────────
+
 
 @dataclass(slots=True, kw_only=True)
 class SupplierLocation(BaseEntity):
@@ -223,8 +224,8 @@ class SupplierOwnership(BaseEntity):
     ticker_symbol: str | None = None
     market_cap_eur: float | None = None
     # Legal identifiers
-    lei_code: str | None = None        # Legal Entity Identifier (ISO 17442)
-    duns_number: str | None = None     # Dun & Bradstreet
+    lei_code: str | None = None  # Legal Entity Identifier (ISO 17442)
+    duns_number: str | None = None  # Dun & Bradstreet
     vat_number: str | None = None
     registration_number: str | None = None
     registration_country: str | None = None
@@ -241,7 +242,7 @@ class SupplierESGMetric(BaseEntity):
     supplier_id: str
     organization_id: str
     reporting_year: int
-    reporting_period: str = "ANNUAL"    # ANNUAL | H1 | H2 | Q1 | Q2 | Q3 | Q4
+    reporting_period: str = "ANNUAL"  # ANNUAL | H1 | H2 | Q1 | Q2 | Q3 | Q4
     metric_type: ESGMetricType
     custom_metric_name: str | None = None
     value: float
@@ -257,6 +258,7 @@ class SupplierESGMetric(BaseEntity):
 
 
 # ── KAN-90 — External ESG Ratings ────────────────────────────────────────────
+
 
 class ESGRatingProvider(str, Enum):
     ECOVADIS = "ECOVADIS"
@@ -283,11 +285,11 @@ class ExternalESGRating(BaseEntity):
     # Numeric score (provider-specific scale — stored alongside percentage for comparability)
     score: float | None = None
     max_score: float | None = None
-    score_pct: float | None = None        # 0–100 normalised, computed if score+max_score given
+    score_pct: float | None = None  # 0–100 normalised, computed if score+max_score given
     # Tier / letter grade (EcoVadis: Bronze/Silver/Gold/Platinum; MSCI: AAA–CCC)
     grade: str | None = None
     # Peer benchmarking
-    percentile: float | None = None       # 0–100
+    percentile: float | None = None  # 0–100
     peer_group: str | None = None
     # Sub-scores (environment / social / governance)
     environmental_score: float | None = None

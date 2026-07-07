@@ -11,11 +11,11 @@ Uses the same colour palette and latin-1 safety as the board report renderer.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fpdf import FPDF
-from fpdf.enums import Align, XPos, YPos
+from fpdf.enums import XPos, YPos
 
 _DARK = (30, 40, 55)
 _MID = (80, 95, 110)
@@ -42,9 +42,17 @@ _SEVERITY_COLOURS: dict[str, tuple[int, int, int]] = {
 
 _UNICODE_MAP = str.maketrans(
     {
-        "—": " - ", "–": "-", "'": "'", "'": "'",
-        "“": '"', "”": '"', "…": "...", "•": "*",
-        " ": " ", "→": "->", "≥": ">=", "≤": "<=",
+        "—": " - ",
+        "–": "-",
+        "'": "'",
+        "“": '"',
+        "”": '"',
+        "…": "...",
+        "•": "*",
+        " ": " ",
+        "→": "->",
+        "≥": ">=",
+        "≤": "<=",
     }
 )
 
@@ -85,7 +93,12 @@ class _ComplianceReport(FPDF):
         self.set_y(-13)
         self.set_font("Helvetica", "", 7)
         self.set_text_color(*_MID)
-        self.cell(0, 5, f"Page {self.page_no()}  |  EIOS Regulatory Intelligence  |  CONFIDENTIAL", align="C")
+        self.cell(
+            0,
+            5,
+            f"Page {self.page_no()}  |  EIOS Regulatory Intelligence  |  CONFIDENTIAL",
+            align="C",
+        )
 
     def cover_page(self, subtitle: str, period: str) -> None:
         self.add_page()
@@ -105,7 +118,9 @@ class _ComplianceReport(FPDF):
         self.set_text_color(*_MID)
         if period:
             self.cell(0, 6, _safe(period), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
-        self.cell(0, 6, f"Generated: {self._generated_at}", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.cell(
+            0, 6, f"Generated: {self._generated_at}", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        )
 
     def section_heading(self, title: str) -> None:
         self.ln(4)
@@ -143,7 +158,7 @@ class _ComplianceReport(FPDF):
         self.set_font("Helvetica", "B", 8)
         self.set_fill_color(*_DARK)
         self.set_text_color(*_WHITE)
-        for h, w in zip(headers, col_widths):
+        for h, w in zip(headers, col_widths, strict=False):
             self.cell(w, 7, h, fill=True, border=1)
         self.ln()
         self.set_font("Helvetica", "", 8)
@@ -153,13 +168,31 @@ class _ComplianceReport(FPDF):
             self.set_text_color(*_DARK)
             status = fw.get("status", "Unknown")
             colour = _STATUS_COLOURS.get(status, _MID)
-            self.cell(col_widths[0], 6, _safe(fw.get("regulation_code", ""), 22), fill=fill, border=1)
+            self.cell(
+                col_widths[0], 6, _safe(fw.get("regulation_code", ""), 22), fill=fill, border=1
+            )
             self.set_text_color(*colour)
             self.cell(col_widths[1], 6, _latin1(status), fill=fill, border=1)
             self.set_text_color(*_DARK)
-            self.cell(col_widths[2], 6, str(fw.get("covered_requirements", 0)), fill=fill, border=1, align="C")
-            self.cell(col_widths[3], 6, str(fw.get("total_requirements", 0)), fill=fill, border=1, align="C")
-            self.cell(col_widths[4], 6, str(fw.get("open_gap_count", 0)), fill=fill, border=1, align="C")
+            self.cell(
+                col_widths[2],
+                6,
+                str(fw.get("covered_requirements", 0)),
+                fill=fill,
+                border=1,
+                align="C",
+            )
+            self.cell(
+                col_widths[3],
+                6,
+                str(fw.get("total_requirements", 0)),
+                fill=fill,
+                border=1,
+                align="C",
+            )
+            self.cell(
+                col_widths[4], 6, str(fw.get("open_gap_count", 0)), fill=fill, border=1, align="C"
+            )
             crit = fw.get("critical_gap_count", 0)
             if crit:
                 self.set_text_color(*_RED)
@@ -176,7 +209,7 @@ class _ComplianceReport(FPDF):
         self.set_font("Helvetica", "B", 8)
         self.set_fill_color(*_DARK)
         self.set_text_color(*_WHITE)
-        for h, w in zip(headers, col_widths):
+        for h, w in zip(headers, col_widths, strict=False):
             self.cell(w, 7, h, fill=True, border=1)
         self.ln()
         self.set_font("Helvetica", "", 7)
@@ -184,7 +217,9 @@ class _ComplianceReport(FPDF):
             fill = i % 2 == 0
             self.set_fill_color(*(245, 247, 249) if fill else (255, 255, 255))
             self.set_text_color(*_DARK)
-            self.cell(col_widths[0], 6, _safe(gap.get("requirement_code", ""), 28), fill=fill, border=1)
+            self.cell(
+                col_widths[0], 6, _safe(gap.get("requirement_code", ""), 28), fill=fill, border=1
+            )
             self.cell(col_widths[1], 6, _safe(gap.get("gap_type", ""), 26), fill=fill, border=1)
             sev = gap.get("severity", "Medium")
             self.set_text_color(*_SEVERITY_COLOURS.get(sev, _DARK))
@@ -240,8 +275,11 @@ def render_esrs_readiness_report(
     pdf.section_heading("ESRS Readiness Overview")
     for fw in esrs_fw:
         pdf.kv_row("Status", fw.get("status", "Unknown"), bold_value=True)
-        pdf.kv_row("Requirements Covered", f"{fw.get('covered_requirements',0)} / {fw.get('total_requirements',0)}")
-        pdf.kv_row("Coverage Ratio", f"{fw.get('coverage_ratio', 0)*100:.1f}%")
+        pdf.kv_row(
+            "Requirements Covered",
+            f"{fw.get('covered_requirements', 0)} / {fw.get('total_requirements', 0)}",
+        )
+        pdf.kv_row("Coverage Ratio", f"{fw.get('coverage_ratio', 0) * 100:.1f}%")
         pdf.kv_row("Open Gaps", str(fw.get("open_gap_count", 0)))
 
     esrs_gaps = [g for g in gaps if str(g.get("requirement_code", "")).startswith("ESRS")]
@@ -266,7 +304,10 @@ def render_csddd_due_diligence_report(
     pdf.section_heading("Due Diligence Status")
     for fw in csddd_fw:
         pdf.kv_row("Compliance Status", fw.get("status", "Unknown"), bold_value=True)
-        pdf.kv_row("Requirements Covered", f"{fw.get('covered_requirements',0)} / {fw.get('total_requirements',0)}")
+        pdf.kv_row(
+            "Requirements Covered",
+            f"{fw.get('covered_requirements', 0)} / {fw.get('total_requirements', 0)}",
+        )
         pdf.kv_row("Open Gaps", str(fw.get("open_gap_count", 0)))
 
     csddd_gaps = [g for g in gaps if str(g.get("requirement_code", "")).startswith("CSDDD")]
@@ -279,4 +320,4 @@ def render_csddd_due_diligence_report(
 
 
 def _now_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")

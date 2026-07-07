@@ -13,7 +13,9 @@ from infrastructure.persistence.repositories.base import BaseRepository
 from shared.encryption import decrypt_field, encrypt_field
 
 
-class SQLWebhookSubscriptionRepository(BaseRepository[WebhookSubscription, WebhookSubscriptionModel]):
+class SQLWebhookSubscriptionRepository(
+    BaseRepository[WebhookSubscription, WebhookSubscriptionModel]
+):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, WebhookSubscriptionModel)
 
@@ -57,25 +59,35 @@ class SQLWebhookSubscriptionRepository(BaseRepository[WebhookSubscription, Webho
             last_triggered_at=model.last_triggered_at,
         )
 
-    async def list_active_for_event(self, organization_id: str, event_type: str) -> list[WebhookSubscription]:
+    async def list_active_for_event(
+        self, organization_id: str, event_type: str
+    ) -> list[WebhookSubscription]:
         rows = (
-            await self._session.execute(
-                select(WebhookSubscriptionModel).where(
-                    WebhookSubscriptionModel.organization_id == organization_id,
-                    WebhookSubscriptionModel.is_active.is_(True),
+            (
+                await self._session.execute(
+                    select(WebhookSubscriptionModel).where(
+                        WebhookSubscriptionModel.organization_id == organization_id,
+                        WebhookSubscriptionModel.is_active.is_(True),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows if event_type in (r.events or [])]
 
     async def list_for_org(self, organization_id: str) -> list[WebhookSubscription]:
         rows = (
-            await self._session.execute(
-                select(WebhookSubscriptionModel)
-                .where(WebhookSubscriptionModel.organization_id == organization_id)
-                .order_by(WebhookSubscriptionModel.created_at.desc())
+            (
+                await self._session.execute(
+                    select(WebhookSubscriptionModel)
+                    .where(WebhookSubscriptionModel.organization_id == organization_id)
+                    .order_by(WebhookSubscriptionModel.created_at.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
 
@@ -129,38 +141,52 @@ class SQLWebhookDeliveryRepository(BaseRepository[WebhookDelivery, WebhookDelive
             delivered_at=model.delivered_at,
         )
 
-    async def list_for_subscription(self, subscription_id: str, limit: int = 50) -> list[WebhookDelivery]:
+    async def list_for_subscription(
+        self, subscription_id: str, limit: int = 50
+    ) -> list[WebhookDelivery]:
         rows = (
-            await self._session.execute(
-                select(WebhookDeliveryModel)
-                .where(WebhookDeliveryModel.subscription_id == subscription_id)
-                .order_by(WebhookDeliveryModel.created_at.desc())
-                .limit(limit)
+            (
+                await self._session.execute(
+                    select(WebhookDeliveryModel)
+                    .where(WebhookDeliveryModel.subscription_id == subscription_id)
+                    .order_by(WebhookDeliveryModel.created_at.desc())
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
     async def list_pending_retries(self, before: datetime) -> list[WebhookDelivery]:
         rows = (
-            await self._session.execute(
-                select(WebhookDeliveryModel).where(
-                    WebhookDeliveryModel.delivery_status == "failed",
-                    WebhookDeliveryModel.retry_at <= before,
-                    WebhookDeliveryModel.retry_count < 5,
+            (
+                await self._session.execute(
+                    select(WebhookDeliveryModel).where(
+                        WebhookDeliveryModel.delivery_status == "failed",
+                        WebhookDeliveryModel.retry_at <= before,
+                        WebhookDeliveryModel.retry_count < 5,
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
     async def count_by_status_for_org(self, organization_id: str) -> dict[str, int]:
         """Return delivery counts grouped by status for all subscriptions in an org."""
         sub_ids = (
-            await self._session.execute(
-                select(WebhookSubscriptionModel.id).where(
-                    WebhookSubscriptionModel.organization_id == organization_id
+            (
+                await self._session.execute(
+                    select(WebhookSubscriptionModel.id).where(
+                        WebhookSubscriptionModel.organization_id == organization_id
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         if not sub_ids:
             return {"pending": 0, "failed": 0, "dead_letter": 0, "delivered": 0}
         rows = (
@@ -181,20 +207,28 @@ class SQLWebhookDeliveryRepository(BaseRepository[WebhookDelivery, WebhookDelive
     async def list_for_org(self, organization_id: str, limit: int = 100) -> list[WebhookDelivery]:
         """Fetch deliveries for all subscriptions in an org (for delivery log UI)."""
         sub_ids = (
-            await self._session.execute(
-                select(WebhookSubscriptionModel.id).where(
-                    WebhookSubscriptionModel.organization_id == organization_id
+            (
+                await self._session.execute(
+                    select(WebhookSubscriptionModel.id).where(
+                        WebhookSubscriptionModel.organization_id == organization_id
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         if not sub_ids:
             return []
         rows = (
-            await self._session.execute(
-                select(WebhookDeliveryModel)
-                .where(WebhookDeliveryModel.subscription_id.in_(sub_ids))
-                .order_by(WebhookDeliveryModel.created_at.desc())
-                .limit(limit)
+            (
+                await self._session.execute(
+                    select(WebhookDeliveryModel)
+                    .where(WebhookDeliveryModel.subscription_id.in_(sub_ids))
+                    .order_by(WebhookDeliveryModel.created_at.desc())
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]

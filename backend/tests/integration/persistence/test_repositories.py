@@ -9,7 +9,7 @@ To skip in CI without PostgreSQL: pytest tests/unit/ -v
 """
 
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -32,11 +32,12 @@ from infrastructure.persistence.repositories import (
 _DEFAULT_DB = "postgresql+asyncpg://eios:eios_dev@localhost:5432/eios_test_db"
 TEST_DATABASE_URL = os.environ.get("DATABASE_URL", _DEFAULT_DB)
 
-_NOW = datetime(2024, 1, 1, tzinfo=timezone.utc)
+_NOW = datetime(2024, 1, 1, tzinfo=UTC)
 
 
 def _sector(id: str, name: str, nace_code: str) -> SectorModel:
     return SectorModel(id=id, name=name, nace_code=nace_code, created_at=_NOW, updated_at=_NOW)
+
 
 pytestmark = pytest.mark.integration
 

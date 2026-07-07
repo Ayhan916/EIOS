@@ -2,17 +2,22 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.due_diligence.human_rights_engine import (
-    build_human_rights_report,
-    _classify_finding,
     _TOPIC_KEYWORDS,
+    _classify_finding,
+    build_human_rights_report,
 )
 
 
 def _finding(id: str, title: str = "", category: str = "", severity: str = "High") -> dict:
-    return {"id": id, "title": title, "category": category, "severity": severity, "supplier_id": "s1", "description": ""}
+    return {
+        "id": id,
+        "title": title,
+        "category": category,
+        "severity": severity,
+        "supplier_id": "s1",
+        "description": "",
+    }
 
 
 def _base_args(**kwargs) -> dict:
@@ -109,8 +114,22 @@ class TestHumanRightsSummary:
 
     def test_suppliers_impacted(self):
         findings = [
-            {"id": "f1", "title": "child labour", "category": "", "severity": "High", "supplier_id": "s1", "description": ""},
-            {"id": "f2", "title": "health hazard", "category": "", "severity": "High", "supplier_id": "s2", "description": ""},
+            {
+                "id": "f1",
+                "title": "child labour",
+                "category": "",
+                "severity": "High",
+                "supplier_id": "s1",
+                "description": "",
+            },
+            {
+                "id": "f2",
+                "title": "health hazard",
+                "category": "",
+                "severity": "High",
+                "supplier_id": "s2",
+                "description": "",
+            },
         ]
         result = build_human_rights_report(**_base_args(findings=findings))
         assert result["summary"]["suppliers_impacted"] >= 2
@@ -119,9 +138,30 @@ class TestHumanRightsSummary:
 class TestHumanRightsRemediation:
     def test_remediation_counts(self):
         recs = [
-            {"id": "r1", "title": "Fix", "action_status": "open", "supplier_id": "s1", "priority": "High", "overdue": False},
-            {"id": "r2", "title": "Fix", "action_status": "resolved", "supplier_id": "s1", "priority": "Medium", "overdue": False},
-            {"id": "r3", "title": "Fix", "action_status": "in_progress", "supplier_id": "s1", "priority": "Low", "overdue": True},
+            {
+                "id": "r1",
+                "title": "Fix",
+                "action_status": "open",
+                "supplier_id": "s1",
+                "priority": "High",
+                "overdue": False,
+            },
+            {
+                "id": "r2",
+                "title": "Fix",
+                "action_status": "resolved",
+                "supplier_id": "s1",
+                "priority": "Medium",
+                "overdue": False,
+            },
+            {
+                "id": "r3",
+                "title": "Fix",
+                "action_status": "in_progress",
+                "supplier_id": "s1",
+                "priority": "Low",
+                "overdue": True,
+            },
         ]
         result = build_human_rights_report(**_base_args(recommendations=recs))
         assert result["remediation"]["open"] == 1

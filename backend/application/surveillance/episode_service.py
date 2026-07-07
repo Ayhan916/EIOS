@@ -80,7 +80,10 @@ async def create_episode(
 
     surveillance_counters.record_episode_created()
     await _log_audit_event(
-        session, "surveillance.episode.created", episode.id, detail=title,
+        session,
+        "surveillance.episode.created",
+        episode.id,
+        detail=title,
         actor_id=created_by or "surveillance_engine",
     )
     return episode
@@ -97,8 +100,9 @@ async def attach_signal_to_episode(
     P3 fix: organization_id guard prevents cross-tenant attachment.
     When provided, the episode lookup is scoped to the given org.
     """
-    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
 
     stmt = select(RiskEpisodeModel).where(RiskEpisodeModel.id == episode_id)
     if organization_id is not None:
@@ -121,8 +125,9 @@ async def transition_episode(
     user_id: str,
     session,
 ) -> object:
-    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
 
     # P1 governance fix: MONITORING → OPEN is removed. Once escalated to
     # monitoring, the episode must progress forward to RESOLVED, not backward.
@@ -142,9 +147,7 @@ async def transition_episode(
 
     new_status_upper = new_status.upper()
     if new_status_upper not in allowed.get(episode.episode_status, []):
-        raise ValueError(
-            f"Cannot transition from {episode.episode_status} to {new_status_upper}"
-        )
+        raise ValueError(f"Cannot transition from {episode.episode_status} to {new_status_upper}")
 
     now = datetime.now(UTC)
     episode.episode_status = new_status_upper
@@ -172,12 +175,11 @@ async def list_episodes(
     limit: int = 50,
     session,
 ) -> list:
-    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
     from sqlalchemy import select
 
-    stmt = select(RiskEpisodeModel).where(
-        RiskEpisodeModel.organization_id == organization_id
-    )
+    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
+
+    stmt = select(RiskEpisodeModel).where(RiskEpisodeModel.organization_id == organization_id)
     if supplier_id:
         stmt = stmt.where(RiskEpisodeModel.supplier_id == supplier_id)
     if episode_status:
@@ -187,8 +189,9 @@ async def list_episodes(
 
 
 async def get_episode(episode_id: str, organization_id: str, session) -> object | None:
-    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import RiskEpisodeModel
 
     stmt = select(RiskEpisodeModel).where(
         RiskEpisodeModel.id == episode_id,

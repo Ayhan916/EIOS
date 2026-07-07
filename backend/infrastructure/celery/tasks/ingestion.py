@@ -14,6 +14,7 @@ Asyncio compatibility:
 from __future__ import annotations
 
 import asyncio
+
 import structlog
 
 from infrastructure.celery.app import celery_app
@@ -57,14 +58,16 @@ async def _run_ingestion(
     filename: str,
     mime_type: str,
 ) -> dict[str, object]:
+    from application.ingestion.pipeline import ingest_document  # noqa: PLC0415
+    from infrastructure.embeddings.deps import get_embedding_provider  # noqa: PLC0415
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
-    from infrastructure.persistence.repositories.evidence import SQLEvidenceRepository  # noqa: PLC0415
+    from infrastructure.persistence.repositories.evidence import (
+        SQLEvidenceRepository,  # noqa: PLC0415
+    )
     from infrastructure.persistence.repositories.evidence_chunk import (  # noqa: PLC0415
         SQLEvidenceChunkRepository,
     )
-    from infrastructure.embeddings.deps import get_embedding_provider  # noqa: PLC0415
     from infrastructure.storage.s3 import download_file  # noqa: PLC0415
-    from application.ingestion.pipeline import ingest_document  # noqa: PLC0415
     from shared.config import settings  # noqa: PLC0415
 
     # Download file bytes from S3

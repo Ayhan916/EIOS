@@ -65,8 +65,12 @@ class LogoutRequest(BaseModel):
 
 
 class ExternalAccessTokenRequest(BaseModel):
-    label: str = Field(min_length=1, max_length=255, description="Human-readable label (e.g. audit firm name)")
-    org_id: str | None = Field(default=None, description="Target org; defaults to the admin's own org")
+    label: str = Field(
+        min_length=1, max_length=255, description="Human-readable label (e.g. audit firm name)"
+    )
+    org_id: str | None = Field(
+        default=None, description="Target org; defaults to the admin's own org"
+    )
 
 
 class ExternalAccessTokenResponse(BaseModel):

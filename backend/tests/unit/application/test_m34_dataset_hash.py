@@ -7,7 +7,6 @@ Order of records must not matter (sorted by canonical JSON).
 
 import hashlib
 import json
-import pytest
 
 from application.external_intelligence.base_adapter import RawDataset
 from domain.enums import ExternalSourceName
@@ -22,6 +21,7 @@ def _canonical_hash(records: list[dict]) -> str:
 
 
 # ── RawDataset.dataset_hash ────────────────────────────────────────────────────
+
 
 class TestDatasetHash:
     def _make(self, records):

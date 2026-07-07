@@ -137,17 +137,13 @@ def test_high_only_no_critical_clause():
 
 
 def test_more_deteriorating_than_improving():
-    s = generate_executive_summary(
-        _inputs(deteriorating_count=5, improving_count=2)
-    )
+    s = generate_executive_summary(_inputs(deteriorating_count=5, improving_count=2))
     assert "Risk exposure is increasing" in s
     assert "5" in s
 
 
 def test_more_improving_than_deteriorating():
-    s = generate_executive_summary(
-        _inputs(improving_count=6, deteriorating_count=1)
-    )
+    s = generate_executive_summary(_inputs(improving_count=6, deteriorating_count=1))
     assert "Portfolio risk is improving" in s
     assert "6" in s
 
@@ -179,17 +175,13 @@ def test_country_and_sector():
 
 
 def test_country_only():
-    s = generate_executive_summary(
-        _inputs(top_risk_country="Brazil", top_risk_sector=None)
-    )
+    s = generate_executive_summary(_inputs(top_risk_country="Brazil", top_risk_sector=None))
     assert "Brazil" in s
     assert "sector" not in s
 
 
 def test_no_geo_info_omitted():
-    s = generate_executive_summary(
-        _inputs(top_risk_country=None, top_risk_sector=None)
-    )
+    s = generate_executive_summary(_inputs(top_risk_country=None, top_risk_sector=None))
     assert "concentration is in" not in s
 
 
@@ -288,9 +280,7 @@ def test_no_cta_when_clean_portfolio():
 
 
 def test_period_label_appears_in_esg_sentence():
-    s = generate_executive_summary(
-        _inputs(avg_esg_score=75.0, period_label="for Q1 2026")
-    )
+    s = generate_executive_summary(_inputs(avg_esg_score=75.0, period_label="for Q1 2026"))
     assert "for Q1 2026" in s
 
 
@@ -315,7 +305,7 @@ def test_sentence_count_in_range():
         )
     )
     # Count sentences by period-space or period-end
-    sentences = [s.strip() for s in result.replace(". ", ".|").replace(".", "").split("|") if s.strip()]
+    [s.strip() for s in result.replace(". ", ".|").replace(".", "").split("|") if s.strip()]
     # Should produce between 4 and 8 sentences
     sentence_count = result.count(". ") + (1 if result.endswith(".") else 0)
     assert 4 <= sentence_count <= 8

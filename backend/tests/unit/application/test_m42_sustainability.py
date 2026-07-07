@@ -16,17 +16,11 @@ Tests for:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from application.sustainability.objective_service import (
-    SustainabilityConflict,
-    SustainabilityError,
-    _assert_org,
-    compute_progress,
-)
 from application.sustainability import (
     carbon_service,
     climate_service,
@@ -36,17 +30,23 @@ from application.sustainability import (
     roadmap_service,
     scoring_service,
 )
-from application.sustainability.scoring_service import (
-    _linear_trend,
-    _moving_average,
-    _kpi_attainment,
-)
 from application.sustainability.carbon_service import calculate_emissions
 from application.sustainability.climate_service import _compute_overall_risk
+from application.sustainability.objective_service import (
+    SustainabilityConflict,
+    SustainabilityError,
+    _assert_org,
+    compute_progress,
+)
 from application.sustainability.roadmap_service import _compute_target_emissions
-
+from application.sustainability.scoring_service import (
+    _kpi_attainment,
+    _linear_trend,
+    _moving_average,
+)
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _session(get_return=None, *, query_count=0):
     s = MagicMock()
@@ -109,10 +109,11 @@ def _mock_report(org="org1", is_final=False):
 
 
 def _now():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── TestM42TargetProgress ─────────────────────────────────────────────────────
+
 
 class TestM42TargetProgress:
     def test_zero_baseline_to_target(self):
@@ -139,6 +140,7 @@ class TestM42TargetProgress:
 
 # ── TestM42CarbonCalculations ─────────────────────────────────────────────────
 
+
 class TestM42CarbonCalculations:
     def test_calculate_emissions_basic(self):
         result = calculate_emissions(1000.0, 0.233)
@@ -153,7 +155,7 @@ class TestM42CarbonCalculations:
     def test_emission_source_computes_calculated_emissions(self):
         s = _session()
         with patch("application.sustainability.carbon_service.emit_audit_event"):
-            src = carbon_service.add_emission_source(
+            carbon_service.add_emission_source(
                 organization_id="org1",
                 name="Boiler",
                 scope="SCOPE1",
@@ -189,6 +191,7 @@ class TestM42CarbonCalculations:
 
 # ── TestM42CarbonInventory ────────────────────────────────────────────────────
 
+
 class TestM42CarbonInventory:
     def test_recalculate_aggregates_by_scope(self):
         inv = _mock_inventory(status="DRAFT")
@@ -210,38 +213,31 @@ class TestM42CarbonInventory:
         inv = _mock_inventory(status="FINALIZED")
         s = _session(get_return=inv)
         with pytest.raises(SustainabilityConflict):
-            carbon_service.recalculate_inventory(
-                "inv1", "user1", s, organization_id="org1"
-            )
+            carbon_service.recalculate_inventory("inv1", "user1", s, organization_id="org1")
 
     def test_finalize_already_finalized_raises(self):
         inv = _mock_inventory(status="FINALIZED")
         s = _session(get_return=inv)
         with pytest.raises(SustainabilityConflict, match="already finalized"):
-            carbon_service.finalize_inventory(
-                "inv1", "user1", s, organization_id="org1"
-            )
+            carbon_service.finalize_inventory("inv1", "user1", s, organization_id="org1")
 
     def test_finalize_draft_succeeds(self):
         inv = _mock_inventory(status="DRAFT")
         s = _session(get_return=inv)
         s.query.return_value.filter.return_value.all.return_value = []
         with patch("application.sustainability.carbon_service.emit_audit_event"):
-            result = carbon_service.finalize_inventory(
-                "inv1", "user1", s, organization_id="org1"
-            )
+            result = carbon_service.finalize_inventory("inv1", "user1", s, organization_id="org1")
         assert result.inventory_status == "FINALIZED"
 
     def test_tenant_isolation_recalculate(self):
         inv = _mock_inventory(org="other_org", status="DRAFT")
         s = _session(get_return=inv)
         with pytest.raises(SustainabilityError, match="not found"):
-            carbon_service.recalculate_inventory(
-                "inv1", "user1", s, organization_id="org1"
-            )
+            carbon_service.recalculate_inventory("inv1", "user1", s, organization_id="org1")
 
 
 # ── TestM42KPIAlerts ──────────────────────────────────────────────────────────
+
 
 class TestM42KPIAlerts:
     def test_measurement_triggers_alert_when_threshold_exceeded(self):
@@ -312,6 +308,7 @@ class TestM42KPIAlerts:
 
 # ── TestM42RoadmapLogic ───────────────────────────────────────────────────────
 
+
 class TestM42RoadmapLogic:
     def test_compute_target_emissions_formula(self):
         result = _compute_target_emissions(1000.0, 50.0)
@@ -326,7 +323,7 @@ class TestM42RoadmapLogic:
     def test_create_roadmap_sets_target_emissions(self):
         s = _session()
         with patch("application.sustainability.roadmap_service.emit_audit_event"):
-            rm = roadmap_service.create_roadmap(
+            roadmap_service.create_roadmap(
                 organization_id="org1",
                 name="Net Zero 2040",
                 baseline_year=2020,
@@ -366,6 +363,7 @@ class TestM42RoadmapLogic:
 
 # ── TestM42Scorecard ──────────────────────────────────────────────────────────
 
+
 class TestM42Scorecard:
     def test_kpi_attainment_below_target(self):
         assert _kpi_attainment(50.0, 100.0) == 50.0
@@ -389,9 +387,7 @@ class TestM42Scorecard:
         s = _session()
         s.query.return_value.filter.return_value.filter.return_value.all.return_value = []
         with patch("application.sustainability.scoring_service.emit_audit_event"):
-            sc = scoring_service.compute_scorecard(
-                "org1", _now(), _now(), "user1", s
-            )
+            scoring_service.compute_scorecard("org1", _now(), _now(), "user1", s)
         assert s.add.called
         args = s.add.call_args[0][0]
         assert args.overall_score == 0.0
@@ -399,6 +395,7 @@ class TestM42Scorecard:
 
 
 # ── TestM42Forecasting ────────────────────────────────────────────────────────
+
 
 class TestM42Forecasting:
     def test_linear_trend_positive_slope(self):
@@ -426,7 +423,7 @@ class TestM42Forecasting:
 
     def test_create_forecast_linear_trend(self):
         s = _session()
-        fc = scoring_service.create_forecast(
+        scoring_service.create_forecast(
             organization_id="org1",
             forecast_type="EMISSIONS",
             method="LINEAR_TREND",
@@ -444,7 +441,7 @@ class TestM42Forecasting:
 
     def test_create_forecast_moving_average(self):
         s = _session()
-        fc = scoring_service.create_forecast(
+        scoring_service.create_forecast(
             organization_id="org1",
             forecast_type="EMISSIONS",
             method="MOVING_AVERAGE",
@@ -492,10 +489,11 @@ class TestM42Forecasting:
 
 # ── TestM42ScenarioAnalysis ───────────────────────────────────────────────────
 
+
 class TestM42ScenarioAnalysis:
     def test_supplier_improvement_formula(self):
         s = _session()
-        sc = scoring_service.create_scenario(
+        scoring_service.create_scenario(
             organization_id="org1",
             name="Supplier Test",
             scenario_type="SUPPLIER_IMPROVEMENT",
@@ -552,6 +550,7 @@ class TestM42ScenarioAnalysis:
 
 # ── TestM42ClimateRisk ────────────────────────────────────────────────────────
 
+
 class TestM42ClimateRisk:
     def test_overall_risk_formula(self):
         result = _compute_overall_risk(80.0, 60.0, 40.0)
@@ -607,6 +606,7 @@ class TestM42ClimateRisk:
 
 # ── TestM42ReportImmutability ─────────────────────────────────────────────────
 
+
 class TestM42ReportImmutability:
     def test_finalize_report_sets_is_final(self):
         report = _mock_report(is_final=False)
@@ -621,20 +621,17 @@ class TestM42ReportImmutability:
         report = _mock_report(is_final=True)
         s = _session(get_return=report)
         with pytest.raises(SustainabilityConflict, match="already finalized"):
-            reporting_service.finalize_report(
-                "report1", "user1", s, organization_id="org1"
-            )
+            reporting_service.finalize_report("report1", "user1", s, organization_id="org1")
 
     def test_finalize_cross_tenant_blocked(self):
         report = _mock_report(org="other_org", is_final=False)
         s = _session(get_return=report)
         with pytest.raises(SustainabilityError, match="not found"):
-            reporting_service.finalize_report(
-                "report1", "user1", s, organization_id="org1"
-            )
+            reporting_service.finalize_report("report1", "user1", s, organization_id="org1")
 
 
 # ── TestM42TenantIsolation ────────────────────────────────────────────────────
+
 
 class TestM42TenantIsolation:
     def test_assert_org_none_raises(self):
@@ -673,21 +670,18 @@ class TestM42TenantIsolation:
         s = _session(get_return=inv)
         s.query.return_value.filter.return_value.all.return_value = []
         with pytest.raises(SustainabilityError, match="not found"):
-            carbon_service.finalize_inventory(
-                "inv1", "user1", s, organization_id="org1"
-            )
+            carbon_service.finalize_inventory("inv1", "user1", s, organization_id="org1")
 
     def test_complete_assurance_cross_tenant(self):
         rec = MagicMock()
         rec.organization_id = "other_org"
         s = _session(get_return=rec)
         with pytest.raises(SustainabilityError, match="not found"):
-            reporting_service.complete_assurance(
-                "rec1", "user1", s, organization_id="org1"
-            )
+            reporting_service.complete_assurance("rec1", "user1", s, organization_id="org1")
 
 
 # ── TestM42ObjectiveService ────────────────────────────────────────────────────
+
 
 class TestM42ObjectiveService:
     def test_create_objective_invalid_category(self):
@@ -750,6 +744,7 @@ class TestM42ObjectiveService:
 
 # ── TestM42CSRDMapping ────────────────────────────────────────────────────────
 
+
 class TestM42CSRDMapping:
     def test_invalid_esrs_standard_raises(self):
         s = _session()
@@ -786,6 +781,7 @@ class TestM42CSRDMapping:
 
 
 # ── TestM42ISSBMapping ────────────────────────────────────────────────────────
+
 
 class TestM42ISSBMapping:
     def test_invalid_issb_standard_raises(self):

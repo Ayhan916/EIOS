@@ -13,6 +13,7 @@ Create Date: 2026-06-29
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "071"
@@ -46,8 +47,18 @@ def upgrade() -> None:
         sa.Column("config_json", sa.Text, nullable=True),
         sa.Column("created_by", sa.String(36), nullable=True),
         sa.Column("updated_by", sa.String(36), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.UniqueConstraint("organization_id", "name", name="uq_erp_connectors_org_name"),
     )
     op.create_index("ix_erp_connectors_org", "erp_connectors", ["organization_id"])
@@ -72,8 +83,18 @@ def upgrade() -> None:
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("runtime_seconds", sa.String(20), nullable=True),
         sa.Column("initiated_by", sa.String(36), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
     )
     op.create_index("ix_erp_sync_jobs_connector", "erp_sync_jobs", ["connector_id"])
     op.create_index("ix_erp_sync_jobs_status", "erp_sync_jobs", ["job_status"])
@@ -92,10 +113,22 @@ def upgrade() -> None:
         sa.Column("is_required", sa.String(5), nullable=False, server_default="False"),
         sa.Column("default_value", sa.String(500), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.UniqueConstraint(
-            "connector_id", "entity_type", "erp_field",
+            "connector_id",
+            "entity_type",
+            "erp_field",
             name="uq_erp_field_mapping_connector_entity_field",
         ),
     )

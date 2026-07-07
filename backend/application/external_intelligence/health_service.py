@@ -10,9 +10,9 @@ Health statuses:
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
-from datetime import UTC, datetime
-from typing import Sequence
+from datetime import datetime
 
 import structlog
 
@@ -43,8 +43,9 @@ async def get_connector_health(
     session,
 ) -> ConnectorHealth:
     """Compute health status from the connector_runs table."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.connector_run import ConnectorRunModel
-    from sqlalchemy import select, func
 
     stmt = (
         select(ConnectorRunModel)
@@ -69,7 +70,9 @@ async def get_connector_health(
         )
 
     total = len(rows)
-    successful = [r for r in rows if r.status == ConnectorStatus.HEALTHY.value or r.status == "degraded"]
+    successful = [
+        r for r in rows if r.status == ConnectorStatus.HEALTHY.value or r.status == "degraded"
+    ]
     failed = [r for r in rows if r.status == ConnectorStatus.FAILED.value]
 
     last_success = next(
@@ -125,13 +128,15 @@ async def get_all_connector_health(
     """
     if connector_names is None:
         from application.external_intelligence.connectors import ALL_CONNECTORS
+
         connector_names = [cls.connector_name for cls in ALL_CONNECTORS]
 
     if not connector_names:
         return []
 
-    from infrastructure.persistence.models.connector_run import ConnectorRunModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.connector_run import ConnectorRunModel
 
     stmt = (
         select(ConnectorRunModel)

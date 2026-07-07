@@ -2,21 +2,33 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.due_diligence.environmental_engine import (
-    build_environmental_report,
-    _classify_finding,
     _TOPIC_KEYWORDS,
+    _classify_finding,
+    build_environmental_report,
 )
 
 
 def _finding(id: str, title: str = "", category: str = "", severity: str = "High") -> dict:
-    return {"id": id, "title": title, "category": category, "severity": severity, "supplier_id": "s1", "description": ""}
+    return {
+        "id": id,
+        "title": title,
+        "category": category,
+        "severity": severity,
+        "supplier_id": "s1",
+        "description": "",
+    }
 
 
 def _control(id: str, title: str = "Env control", effectiveness: float | None = 0.8) -> dict:
-    return {"id": id, "title": title, "control_type": "Preventive", "effectiveness": effectiveness, "status": "Active", "description": ""}
+    return {
+        "id": id,
+        "title": title,
+        "control_type": "Preventive",
+        "effectiveness": effectiveness,
+        "status": "Active",
+        "description": "",
+    }
 
 
 def _base_args(**kwargs) -> dict:
@@ -97,9 +109,27 @@ class TestEnvironmentalSummary:
 
     def test_unresolved_risks_counted(self):
         risks = [
-            {"id": "r1", "title": "emissions risk", "risk_level": "Critical", "category": "emissions", "supplier_id": "s1"},
-            {"id": "r2", "title": "flood risk", "risk_level": "High", "category": "climate", "supplier_id": "s1"},
-            {"id": "r3", "title": "low risk", "risk_level": "Low", "category": "water", "supplier_id": "s1"},
+            {
+                "id": "r1",
+                "title": "emissions risk",
+                "risk_level": "Critical",
+                "category": "emissions",
+                "supplier_id": "s1",
+            },
+            {
+                "id": "r2",
+                "title": "flood risk",
+                "risk_level": "High",
+                "category": "climate",
+                "supplier_id": "s1",
+            },
+            {
+                "id": "r3",
+                "title": "low risk",
+                "risk_level": "Low",
+                "category": "water",
+                "supplier_id": "s1",
+            },
         ]
         result = build_environmental_report(**_base_args(risks=risks))
         assert result["summary"]["unresolved_risks"] >= 2

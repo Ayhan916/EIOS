@@ -25,7 +25,9 @@ class CorrectiveActionPlanModel(BaseModel):
 
     evidence_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     evidence_file_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    evidence_submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    evidence_submitted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     verification_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     verified_by_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)

@@ -18,16 +18,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from interfaces.api.deps import get_current_user, get_db, require_admin, require_analyst
 from interfaces.api.schemas.surveillance import (
     AddWatchlistRequest,
-    AcknowledgeSignalRequest,
     CreateEpisodeRequest,
-    DismissSignalRequest,
     HeatmapCell,
     RiskEpisodeResponse,
     RiskTimelineEvent,
     RiskTrendResponse,
+    SupplierWatchlistResponse,
     SurveillanceDashboard,
     SurveillanceSignalResponse,
-    SupplierWatchlistResponse,
     TransitionEpisodeRequest,
 )
 
@@ -38,6 +36,7 @@ _ADMIN = Depends(require_admin)
 
 
 # ── Signals ───────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/signals",
@@ -133,6 +132,7 @@ async def dismiss_signal(
 
 # ── Watchlists ────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/watchlists",
     response_model=list[SupplierWatchlistResponse],
@@ -204,6 +204,7 @@ async def remove_from_watchlist(
 
 
 # ── Risk Episodes ─────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/episodes",
@@ -302,6 +303,7 @@ async def transition_episode(
 
 # ── Risk Trends ───────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/trends",
     response_model=list[RiskTrendResponse],
@@ -313,8 +315,9 @@ async def list_trends(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[RiskTrendResponse]:
-    from infrastructure.persistence.models.surveillance import RiskTrendModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import RiskTrendModel
 
     stmt = select(RiskTrendModel).where(
         RiskTrendModel.organization_id == current_user.organization_id
@@ -327,6 +330,7 @@ async def list_trends(
 
 
 # ── Risk Timeline ─────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/suppliers/{supplier_id}/timeline",
@@ -349,6 +353,7 @@ async def supplier_risk_timeline(
 
 # ── Heatmaps ──────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/heatmaps/{dimension}",
     response_model=list[HeatmapCell],
@@ -362,15 +367,14 @@ async def get_heatmap(
     from application.surveillance.portfolio_monitor import compute_heatmap
 
     try:
-        cells = await compute_heatmap(
-            current_user.organization_id, dimension, session
-        )
+        cells = await compute_heatmap(current_user.organization_id, dimension, session)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     return [HeatmapCell(**c) for c in cells]
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/dashboard",
@@ -381,20 +385,16 @@ async def get_surveillance_dashboard(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> SurveillanceDashboard:
+    from application.surveillance.episode_service import list_episodes
     from application.surveillance.portfolio_monitor import compute_portfolio_stats
     from application.surveillance.signal_service import list_signals
-    from application.surveillance.episode_service import list_episodes
     from application.surveillance.watchlist_service import list_watchlist
 
     org_id = current_user.organization_id
 
     stats = await compute_portfolio_stats(org_id, session)
-    recent_signals = await list_signals(
-        org_id, signal_status="ACTIVE", limit=10, session=session
-    )
-    recent_episodes = await list_episodes(
-        org_id, episode_status="OPEN", limit=10, session=session
-    )
+    recent_signals = await list_signals(org_id, signal_status="ACTIVE", limit=10, session=session)
+    recent_episodes = await list_episodes(org_id, episode_status="OPEN", limit=10, session=session)
     watchlist = await list_watchlist(org_id, active_only=True, limit=20, session=session)
 
     return SurveillanceDashboard(

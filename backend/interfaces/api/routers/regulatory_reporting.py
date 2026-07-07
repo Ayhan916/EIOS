@@ -37,6 +37,7 @@ _MAX_AUDIT_ROWS = 50_000
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
+
 class RegulatoryDeadlineResponse(BaseModel):
     id: str
     framework_code: str
@@ -76,6 +77,7 @@ class FrameworkMappingResponse(BaseModel):
 
 # ── G-023: Regulatory Calendar ────────────────────────────────────────────────
 
+
 @router.get(
     "/regulatory/calendar",
     response_model=list[RegulatoryDeadlineResponse],
@@ -89,11 +91,13 @@ async def get_regulatory_calendar(
     session: AsyncSession = Depends(get_db),
 ) -> list[RegulatoryDeadlineResponse]:
     """Return regulatory reporting deadlines, filterable by jurisdiction/framework/year."""
-    from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel  # noqa: PLC0415
+    from infrastructure.persistence.models.regulatory_calendar import (
+        RegulatoryDeadlineModel,  # noqa: PLC0415
+    )
 
     stmt = select(RegulatoryDeadlineModel).where(
-        (RegulatoryDeadlineModel.organization_id.is_(None)) |
-        (RegulatoryDeadlineModel.organization_id == current_user.organization_id)
+        (RegulatoryDeadlineModel.organization_id.is_(None))
+        | (RegulatoryDeadlineModel.organization_id == current_user.organization_id)
     )
     if jurisdiction:
         stmt = stmt.where(RegulatoryDeadlineModel.jurisdiction == jurisdiction.upper())
@@ -101,9 +105,7 @@ async def get_regulatory_calendar(
         stmt = stmt.where(RegulatoryDeadlineModel.framework_code == framework_code.upper())
     if year:
         stmt = stmt.where(
-            RegulatoryDeadlineModel.deadline_date.between(
-                date(year, 1, 1), date(year, 12, 31)
-            )
+            RegulatoryDeadlineModel.deadline_date.between(date(year, 1, 1), date(year, 12, 31))
         )
     stmt = stmt.order_by(RegulatoryDeadlineModel.deadline_date)
     result = await session.execute(stmt)
@@ -122,7 +124,9 @@ async def create_custom_deadline(
     session: AsyncSession = Depends(get_db),
 ) -> RegulatoryDeadlineResponse:
     """Add a custom regulatory deadline for the organisation."""
-    from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel  # noqa: PLC0415
+    from infrastructure.persistence.models.regulatory_calendar import (
+        RegulatoryDeadlineModel,  # noqa: PLC0415
+    )
 
     if not current_user.organization_id:
         raise HTTPException(status_code=400, detail="User must belong to an organization")
@@ -146,6 +150,7 @@ async def create_custom_deadline(
 
 # ── G-012: XBRL / GRI Export ─────────────────────────────────────────────────
 
+
 @router.get(
     "/disclosure/packages/{package_id}/export",
     dependencies=[_ANALYST],
@@ -164,18 +169,22 @@ async def export_reporting_package(
     """
     from infrastructure.persistence.models.disclosure import ReportingPackageModel  # noqa: PLC0415
 
-    pkg = (await session.execute(
-        select(ReportingPackageModel).where(
-            ReportingPackageModel.id == package_id,
-            ReportingPackageModel.organization_id == current_user.organization_id,
+    pkg = (
+        await session.execute(
+            select(ReportingPackageModel).where(
+                ReportingPackageModel.id == package_id,
+                ReportingPackageModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if pkg is None:
         raise HTTPException(status_code=404, detail="Reporting package not found")
 
     org_name = current_user.organization_id  # fallback — real impl loads org.name
     report_data = pkg.report_data or {}
-    period_end = pkg.publication_date.date() if hasattr(pkg.publication_date, "date") else date.today()
+    period_end = (
+        pkg.publication_date.date() if hasattr(pkg.publication_date, "date") else date.today()
+    )
     period_start = date(period_end.year, 1, 1)
 
     if format == "json":
@@ -186,7 +195,10 @@ async def export_reporting_package(
         )
 
     if format == "xbrl":
-        from application.reporting.xbrl_exporter import build_ixbrl, compute_document_hash  # noqa: PLC0415
+        from application.reporting.xbrl_exporter import (  # noqa: PLC0415
+            build_ixbrl,
+            compute_document_hash,
+        )
 
         ixbrl_bytes = build_ixbrl(
             organization_name=org_name,
@@ -209,7 +221,7 @@ async def export_reporting_package(
         )
 
     # format=gri
-    from application.reporting.gri_exporter import build_gri_report, build_gri_csv  # noqa: PLC0415
+    from application.reporting.gri_exporter import build_gri_report  # noqa: PLC0415
 
     gri_report = build_gri_report(
         organization_name=org_name,
@@ -226,6 +238,7 @@ async def export_reporting_package(
 
 
 # ── G-038: TCFD Report ───────────────────────────────────────────────────────
+
 
 @router.get(
     "/executive/tcfd",
@@ -276,6 +289,7 @@ async def get_tcfd_report(
 
 # ── G-039: SFDR PAI ──────────────────────────────────────────────────────────
 
+
 @router.get(
     "/financial-esg/sfdr/pai",
     dependencies=[_ANALYST],
@@ -295,12 +309,18 @@ async def get_sfdr_pai(
     year_start = datetime(reference_year, 1, 1, tzinfo=UTC)
     year_end = datetime(reference_year, 12, 31, 23, 59, 59, tzinfo=UTC)
 
-    ghg_rows = (await session.execute(
-        select(GHGCalculationModel).where(
-            GHGCalculationModel.organization_id == current_user.organization_id,
-            GHGCalculationModel.calculated_at.between(year_start, year_end),
+    ghg_rows = (
+        (
+            await session.execute(
+                select(GHGCalculationModel).where(
+                    GHGCalculationModel.organization_id == current_user.organization_id,
+                    GHGCalculationModel.calculated_at.between(year_start, year_end),
+                )
+            )
         )
-    )).scalars().all()
+        .scalars()
+        .all()
+    )
 
     scope1 = scope2 = scope3 = None
     for r in ghg_rows:
@@ -330,6 +350,7 @@ async def get_sfdr_pai(
 
 # ── G-013: Audit Trail Export ────────────────────────────────────────────────
 
+
 @router.get(
     "/audit/events/export",
     dependencies=[_ADMIN],
@@ -347,16 +368,17 @@ async def export_audit_trail(
     Scoped to the authenticated organization. Max 50,000 rows per export.
     For larger exports, trigger a background job (not yet implemented).
     """
+    from application.reporting.audit_exporter import (  # noqa: PLC0415
+        make_csv_filename,
+        stream_audit_csv,
+    )
     from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
-    from application.reporting.audit_exporter import stream_audit_csv, make_csv_filename  # noqa: PLC0415
 
     if not current_user.organization_id:
         raise HTTPException(status_code=400, detail="User must belong to an organization")
 
     # AuditEventModel.owner stores the organization_id (inherited from BaseModel)
-    stmt = select(AuditEventModel).where(
-        AuditEventModel.owner == current_user.organization_id
-    )
+    stmt = select(AuditEventModel).where(AuditEventModel.owner == current_user.organization_id)
     if start:
         try:
             dt_start = datetime.fromisoformat(start).replace(tzinfo=UTC)
@@ -402,6 +424,7 @@ async def export_audit_trail(
 
 # ── G-028: Control Framework Mapping ─────────────────────────────────────────
 
+
 @router.post(
     "/controls/{control_id}/framework-mappings",
     response_model=FrameworkMappingResponse,
@@ -415,7 +438,9 @@ async def create_framework_mapping(
     session: AsyncSession = Depends(get_db),
 ) -> FrameworkMappingResponse:
     """Map a control to an external framework control (ISO14001, SOC2, ISO27001, GRC)."""
-    from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel  # noqa: PLC0415
+    from infrastructure.persistence.models.framework_mapping import (
+        ControlFrameworkMappingModel,  # noqa: PLC0415
+    )
 
     if not current_user.organization_id:
         raise HTTPException(status_code=400, detail="User must belong to an organization")
@@ -455,7 +480,9 @@ async def list_framework_mappings(
     session: AsyncSession = Depends(get_db),
 ) -> list[FrameworkMappingResponse]:
     """List all framework mappings for a control."""
-    from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel  # noqa: PLC0415
+    from infrastructure.persistence.models.framework_mapping import (
+        ControlFrameworkMappingModel,  # noqa: PLC0415
+    )
 
     stmt = select(ControlFrameworkMappingModel).where(
         ControlFrameworkMappingModel.control_id == control_id,
@@ -478,15 +505,19 @@ async def delete_framework_mapping(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> None:
-    from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel  # noqa: PLC0415
+    from infrastructure.persistence.models.framework_mapping import (
+        ControlFrameworkMappingModel,  # noqa: PLC0415
+    )
 
-    mapping = (await session.execute(
-        select(ControlFrameworkMappingModel).where(
-            ControlFrameworkMappingModel.id == mapping_id,
-            ControlFrameworkMappingModel.control_id == control_id,
-            ControlFrameworkMappingModel.organization_id == current_user.organization_id,
+    mapping = (
+        await session.execute(
+            select(ControlFrameworkMappingModel).where(
+                ControlFrameworkMappingModel.id == mapping_id,
+                ControlFrameworkMappingModel.control_id == control_id,
+                ControlFrameworkMappingModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if mapping is None:
         raise HTTPException(status_code=404, detail="Mapping not found")
     await session.delete(mapping)

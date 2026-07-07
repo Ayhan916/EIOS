@@ -10,8 +10,9 @@ Creates:
   sme_support_measures     — individual support measures within a program
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "093"
 down_revision = "092"
@@ -36,7 +37,9 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_sme_profiles_org", "sme_profiles", ["organization_id"])
-    op.create_index("ix_sme_profiles_supplier", "sme_profiles", ["organization_id", "supplier_id"], unique=True)
+    op.create_index(
+        "ix_sme_profiles_supplier", "sme_profiles", ["organization_id", "supplier_id"], unique=True
+    )
 
     op.create_table(
         "sme_support_programs",
@@ -56,14 +59,25 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_sme_support_programs_org", "sme_support_programs", ["organization_id"])
-    op.create_index("ix_sme_support_programs_supplier", "sme_support_programs", ["organization_id", "supplier_id"])
-    op.create_index("ix_sme_support_programs_status", "sme_support_programs", ["organization_id", "status"])
+    op.create_index(
+        "ix_sme_support_programs_supplier",
+        "sme_support_programs",
+        ["organization_id", "supplier_id"],
+    )
+    op.create_index(
+        "ix_sme_support_programs_status", "sme_support_programs", ["organization_id", "status"]
+    )
 
     op.create_table(
         "sme_support_measures",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("organization_id", sa.String(36), nullable=False),
-        sa.Column("program_id", sa.String(36), sa.ForeignKey("sme_support_programs.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "program_id",
+            sa.String(36),
+            sa.ForeignKey("sme_support_programs.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("title", sa.String(255), nullable=False),
         sa.Column("support_type", sa.String(30), nullable=False, server_default="training"),
         sa.Column("status", sa.String(20), nullable=False, server_default="planned"),

@@ -18,7 +18,9 @@ class ControlFrameworkMappingModel(Base):
     __tablename__ = "control_framework_mappings"
     __table_args__ = (
         UniqueConstraint(
-            "control_id", "framework_code", "framework_control_id",
+            "control_id",
+            "framework_code",
+            "framework_control_id",
             name="uq_ctrl_fw_mapping",
         ),
         Index("ix_ctrl_fw_control_id", "control_id"),

@@ -3,32 +3,33 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
 from infrastructure.persistence.models.ai_governance import (
+    COMPLIANCE_STATUSES,
     CONTROL_TYPES,
+    REGULATION_FRAMEWORKS,
     RISK_LEVELS,
     TEST_RESULTS,
     AIControlModel,
     AIControlTestModel,
-    AIRiskAssessmentModel,
-    AIRegulationMappingModel,
     AIRegulationMappingHistoryModel,
-    REGULATION_FRAMEWORKS,
-    COMPLIANCE_STATUSES,
+    AIRegulationMappingModel,
+    AIRiskAssessmentModel,
 )
 
 from .inventory_service import AIGovernanceError, _assert_org_ownership
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Controls ─────────────────────────────────────────────────────────────────
+
 
 def create_control(
     organization_id: str,
@@ -143,6 +144,7 @@ def list_control_tests(
 
 # ── Risk Assessments ──────────────────────────────────────────────────────────
 
+
 def create_risk_assessment(
     model_id: str,
     actor_id: str,
@@ -199,6 +201,7 @@ def create_risk_assessment(
 
 
 # ── Regulation Mappings ───────────────────────────────────────────────────────
+
 
 def create_regulation_mapping(
     framework: str,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -17,5 +18,5 @@ class ReportingPackage(BaseEntity):
     package_type: str = ""
     publication_date: datetime = field(default_factory=lambda: datetime.now(UTC))
     published_by: str = ""
-    report_data: dict = field(default_factory=dict)
+    report_data: dict[str, Any] = field(default_factory=dict)
     report_hash: str = ""

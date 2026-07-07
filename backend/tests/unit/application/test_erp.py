@@ -10,13 +10,12 @@ Tests cover:
 
 from __future__ import annotations
 
-import json
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
+import pytest
+
 from application.erp.adapters.csv_adapter import CsvERPAdapter
-from application.erp.adapters.rest import RestERPAdapter
 from application.erp.connector_service import ERPConnectorService
 from application.erp.sync_service import ERPSyncService
 
@@ -85,6 +84,7 @@ def _make_job(org_id: str, status: str = "RUNNING"):
 
 
 # ── ERPConnectorService ────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_create_connector_adds_to_session():
@@ -165,8 +165,13 @@ async def test_upsert_field_mapping_creates_new():
 
     svc = ERPConnectorService(db)
     mapping = await svc.upsert_field_mapping(
-        org_id, _uid(), "Material", "MATNR", "external_ref",
-        transform_fn="trim", is_required=True,
+        org_id,
+        _uid(),
+        "Material",
+        "MATNR",
+        "external_ref",
+        transform_fn="trim",
+        is_required=True,
     )
 
     db.add.assert_called_once()
@@ -187,8 +192,12 @@ async def test_upsert_field_mapping_updates_existing():
     db.execute = AsyncMock(return_value=result_mock)
 
     svc = ERPConnectorService(db)
-    mapping = await svc.upsert_field_mapping(
-        org_id, _uid(), "Material", "MATNR", "name",
+    await svc.upsert_field_mapping(
+        org_id,
+        _uid(),
+        "Material",
+        "MATNR",
+        "name",
     )
 
     assert existing.eios_field == "name"
@@ -196,6 +205,7 @@ async def test_upsert_field_mapping_updates_existing():
 
 
 # ── CsvERPAdapter ──────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_csv_adapter_parse_materials():
@@ -221,7 +231,9 @@ async def test_csv_adapter_skips_rows_without_external_ref():
 
 @pytest.mark.asyncio
 async def test_csv_adapter_parse_bom():
-    csv_data = "MATNR;IDNRK;MENGE;MEINS;WEIGHT_PCT\nPRD001;MAT001;2.0;KG;30.0\nPRD001;MAT002;1.0;KG;70.0\n"
+    csv_data = (
+        "MATNR;IDNRK;MENGE;MEINS;WEIGHT_PCT\nPRD001;MAT001;2.0;KG;30.0\nPRD001;MAT002;1.0;KG;70.0\n"
+    )
     adapter = CsvERPAdapter(bom_csv=csv_data)
     records = await adapter.fetch_bom()
 
@@ -235,6 +247,7 @@ async def test_csv_adapter_parse_bom():
 @pytest.mark.asyncio
 async def test_csv_adapter_push_dpp_returns_csv_output():
     from application.erp.adapters.base import ERPDPPRecord
+
     adapter = CsvERPAdapter()
     records = [
         ERPDPPRecord(
@@ -268,6 +281,7 @@ async def test_csv_adapter_test_connection_false_when_empty():
 
 
 # ── ERPSyncService ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_sync_service_creates_job_on_inbound():

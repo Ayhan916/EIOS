@@ -12,12 +12,11 @@ The background loop in main.py calls run_once() every N seconds.
 
 from __future__ import annotations
 
-import json
 from datetime import UTC, datetime
 from uuid import uuid4
 
 import structlog
-from sqlalchemy import select, update
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.kafka.events import DomainEvent
@@ -45,10 +44,14 @@ class OutboxService:
             id=str(uuid4()),
             organization_id=event.organization_id,
             topic=topic,
-            event_type=event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type),
+            event_type=event.event_type.value
+            if hasattr(event.event_type, "value")
+            else str(event.event_type),
             aggregate_type=event.aggregate_type,
             aggregate_id=event.aggregate_id,
-            payload_json=event.to_json().decode("utf-8") if isinstance(event.to_json(), bytes) else event.to_json(),
+            payload_json=event.to_json().decode("utf-8")
+            if isinstance(event.to_json(), bytes)
+            else event.to_json(),
             outbox_status="PENDING",
             attempts=0,
             created_at=_now(),
@@ -88,7 +91,9 @@ class OutboxPublisher:
 
                 if settings.kafka_enabled:
                     from aiokafka import AIOKafkaProducer as _P  # noqa: F401 — guard import
+
                     from infrastructure.kafka.producer import _producer as _p
+
                     if _p is not None:
                         await _p.send_and_wait(
                             entry.topic,

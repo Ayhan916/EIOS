@@ -9,15 +9,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def _log_audit(session, action: str, entity_id: str, organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()), status="Active", version=1,
-        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
-        action=action, entity_type="ESGControl", entity_id=entity_id,
-        actor_id=None, outcome="success", detail=detail,
-        event_metadata={"organization_id": organization_id},
-    ))
+
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type="ESGControl",
+            entity_id=entity_id,
+            actor_id=None,
+            outcome="success",
+            detail=detail,
+            event_metadata={"organization_id": organization_id},
+        )
+    )
 
 
 async def create_control(
@@ -30,28 +42,46 @@ async def create_control(
     evidence_required: bool = False,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ESGControlModel
+
     now = datetime.now(UTC)
     ctrl = ESGControlModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, control_name=control_name, control_type=control_type,
-        owner_user_id=owner_user_id, frequency=frequency, evidence_required=evidence_required,
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        control_name=control_name,
+        control_type=control_type,
+        owner_user_id=owner_user_id,
+        frequency=frequency,
+        evidence_required=evidence_required,
         effectiveness_status="NOT_TESTED",
     )
     session.add(ctrl)
     await session.flush()
-    await _log_audit(session, "control.created", ctrl.id, organization_id,
-                     detail=f"name={control_name} type={control_type}")
+    await _log_audit(
+        session,
+        "control.created",
+        ctrl.id,
+        organization_id,
+        detail=f"name={control_name} type={control_type}",
+    )
     from application.operating_system.metrics import os_counters
+
     os_counters.record_control_created()
     return _to_dict(ctrl)
 
 
 async def list_controls(
-    organization_id: str, session: AsyncSession,
-    control_type: str | None = None, effectiveness_status: str | None = None,
+    organization_id: str,
+    session: AsyncSession,
+    control_type: str | None = None,
+    effectiveness_status: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGControlModel
+
     stmt = select(ESGControlModel).where(ESGControlModel.organization_id == organization_id)
     if control_type:
         stmt = stmt.where(ESGControlModel.control_type == control_type)
@@ -62,10 +92,9 @@ async def list_controls(
     return [_to_dict(r) for r in rows]
 
 
-async def get_control(
-    organization_id: str, control_id: str, session: AsyncSession
-) -> dict | None:
+async def get_control(organization_id: str, control_id: str, session: AsyncSession) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGControlModel
+
     stmt = select(ESGControlModel).where(
         ESGControlModel.organization_id == organization_id,
         ESGControlModel.id == control_id,
@@ -78,6 +107,7 @@ async def update_control(
     organization_id: str, control_id: str, session: AsyncSession, **fields
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGControlModel
+
     stmt = select(ESGControlModel).where(
         ESGControlModel.organization_id == organization_id,
         ESGControlModel.id == control_id,

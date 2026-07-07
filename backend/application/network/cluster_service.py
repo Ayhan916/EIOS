@@ -47,16 +47,15 @@ async def list_clusters(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.network import IncidentClusterModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import IncidentClusterModel
 
     stmt = select(IncidentClusterModel).where(
         IncidentClusterModel.organization_id == organization_id
     )
     if cluster_status:
-        stmt = stmt.where(
-            IncidentClusterModel.cluster_status == cluster_status.upper()
-        )
+        stmt = stmt.where(IncidentClusterModel.cluster_status == cluster_status.upper())
     stmt = stmt.order_by(IncidentClusterModel.created_at.desc()).limit(limit)
     return list((await session.execute(stmt)).scalars().all())
 
@@ -66,8 +65,9 @@ async def get_cluster(
     organization_id: str,
     session,
 ) -> object | None:
-    from infrastructure.persistence.models.network import IncidentClusterModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import IncidentClusterModel
 
     stmt = select(IncidentClusterModel).where(
         IncidentClusterModel.id == cluster_id,

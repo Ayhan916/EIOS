@@ -14,8 +14,8 @@ Covers all audit findings fixed in M41.1:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, call, patch
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -33,6 +33,8 @@ from application.ai_governance.inventory_service import (
     _assert_org_ownership,
 )
 from infrastructure.persistence.models.ai_governance import (
+    HIGH_SEVERITY_LEVELS,
+    TERMINAL_WORKFLOW_STATUSES,
     AIDecisionLogModel,
     AIIncidentModel,
     AIModelModel,
@@ -42,15 +44,13 @@ from infrastructure.persistence.models.ai_governance import (
     ModelApprovalWorkflowModel,
     PromptChangeModel,
     PromptTemplateModel,
-    TERMINAL_WORKFLOW_STATUSES,
-    HIGH_SEVERITY_LEVELS,
 )
-
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
 
+
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _flush_session(get_return=None):
@@ -117,6 +117,7 @@ def _mock_mapping(mapping_id="rm1", org="org1", status="NOT_ASSESSED"):
 
 # ── TestM41Security ───────────────────────────────────────────────────────────
 
+
 class TestM41Security:
     """Services must attribute actions to a real actor_id, not 'system'."""
 
@@ -151,12 +152,8 @@ class TestM41Security:
     def test_approve_prompt_records_actor(self):
         pt = _mock_prompt(approved=False)
         s, added = _flush_session(get_return=pt)
-        with patch(
-            "application.ai_governance.prompt_service.emit_audit_event"
-        ):
-            prompt_service.approve_prompt_template(
-                "pt1", "approver-1", s, organization_id="org1"
-            )
+        with patch("application.ai_governance.prompt_service.emit_audit_event"):
+            prompt_service.approve_prompt_template("pt1", "approver-1", s, organization_id="org1")
         assert pt.approved_by == "approver-1"
 
     def test_resolve_drift_alert_records_actor(self):
@@ -176,9 +173,7 @@ class TestM41Security:
         q.first.return_value = model
         s.query.return_value = q
 
-        with patch(
-            "application.ai_governance.monitoring_service.emit_audit_event"
-        ) as mock_emit:
+        with patch("application.ai_governance.monitoring_service.emit_audit_event") as mock_emit:
             monitoring_service.resolve_drift_alert(
                 "alert1", "ops-engineer", s, organization_id="org1"
             )
@@ -189,6 +184,7 @@ class TestM41Security:
 
 
 # ── TestM41TenantIsolation ────────────────────────────────────────────────────
+
 
 class TestM41TenantIsolation:
     """Cross-tenant mutations must raise AIGovernanceError."""
@@ -220,17 +216,13 @@ class TestM41TenantIsolation:
         inc = _mock_incident(org="org-A")
         s, _ = _flush_session(get_return=inc)
         with pytest.raises(AIGovernanceError):
-            incident_service.resolve_incident(
-                "inc1", "attacker", s, organization_id="org-B"
-            )
+            incident_service.resolve_incident("inc1", "attacker", s, organization_id="org-B")
 
     def test_approve_prompt_cross_org_blocked(self):
         pt = _mock_prompt(org="org-A", approved=False)
         s, _ = _flush_session(get_return=pt)
         with pytest.raises(AIGovernanceError):
-            prompt_service.approve_prompt_template(
-                "pt1", "attacker", s, organization_id="org-B"
-            )
+            prompt_service.approve_prompt_template("pt1", "attacker", s, organization_id="org-B")
 
     def test_revise_prompt_cross_org_blocked(self):
         pt = _mock_prompt(org="org-A")
@@ -256,11 +248,12 @@ class TestM41TenantIsolation:
 
 # ── TestM41WorkflowFSM ────────────────────────────────────────────────────────
 
+
 class TestM41WorkflowFSM:
     """Terminal workflow states must be immutable."""
 
     def test_terminal_statuses_defined(self):
-        assert TERMINAL_WORKFLOW_STATUSES == frozenset({"APPROVED", "REJECTED", "SKIPPED"})
+        assert frozenset({"APPROVED", "REJECTED", "SKIPPED"}) == TERMINAL_WORKFLOW_STATUSES
 
     @pytest.mark.parametrize("terminal_status", ["APPROVED", "REJECTED", "SKIPPED"])
     def test_terminal_state_raises_conflict(self, terminal_status):
@@ -306,6 +299,7 @@ class TestM41WorkflowFSM:
 
 
 # ── TestM41PromptGovernance ───────────────────────────────────────────────────
+
 
 class TestM41PromptGovernance:
     """Prompt approval, cross-org rejection, and history preservation."""
@@ -384,11 +378,12 @@ class TestM41PromptGovernance:
 
 # ── TestM41IncidentGovernance ─────────────────────────────────────────────────
 
+
 class TestM41IncidentGovernance:
     """HIGH/CRITICAL incidents require human review; resolution is idempotent."""
 
     def test_high_severity_constants_defined(self):
-        assert HIGH_SEVERITY_LEVELS == frozenset({"HIGH", "CRITICAL"})
+        assert frozenset({"HIGH", "CRITICAL"}) == HIGH_SEVERITY_LEVELS
 
     @pytest.mark.parametrize("severity", ["HIGH", "CRITICAL"])
     def test_high_severity_incident_requires_human_review(self, severity):
@@ -401,9 +396,7 @@ class TestM41IncidentGovernance:
         s.query.return_value = q
 
         with pytest.raises(AIGovernanceError, match="human review"):
-            incident_service.resolve_incident(
-                "inc1", "u1", s, organization_id="org1"
-            )
+            incident_service.resolve_incident("inc1", "u1", s, organization_id="org1")
 
     @pytest.mark.parametrize("severity", ["HIGH", "CRITICAL"])
     def test_high_severity_resolves_with_approved_review(self, severity):
@@ -417,30 +410,25 @@ class TestM41IncidentGovernance:
         s.query.return_value = q
 
         with patch("application.ai_governance.incident_service.emit_audit_event"):
-            result = incident_service.resolve_incident(
-                "inc1", "u1", s, organization_id="org1"
-            )
+            result = incident_service.resolve_incident("inc1", "u1", s, organization_id="org1")
         assert result.is_resolved is True
 
     def test_low_severity_resolves_without_review(self):
         inc = _mock_incident(severity="LOW", resolved=False)
         s, _ = _flush_session(get_return=inc)
         with patch("application.ai_governance.incident_service.emit_audit_event"):
-            result = incident_service.resolve_incident(
-                "inc1", "u1", s, organization_id="org1"
-            )
+            result = incident_service.resolve_incident("inc1", "u1", s, organization_id="org1")
         assert result.is_resolved is True
 
     def test_already_resolved_raises_conflict(self):
         inc = _mock_incident(resolved=True)
         s, _ = _flush_session(get_return=inc)
         with pytest.raises(AIGovernanceConflict, match="already resolved"):
-            incident_service.resolve_incident(
-                "inc1", "u1", s, organization_id="org1"
-            )
+            incident_service.resolve_incident("inc1", "u1", s, organization_id="org1")
 
 
 # ── TestM41Auditability ───────────────────────────────────────────────────────
+
 
 class TestM41Auditability:
     """Governance actions must emit named audit events."""
@@ -461,20 +449,14 @@ class TestM41Auditability:
         added = []
         s.add.side_effect = lambda obj: added.append(obj)
 
-        with patch(
-            "application.ai_governance.monitoring_service.emit_audit_event"
-        ) as mock_emit:
-            monitoring_service.resolve_drift_alert(
-                "alert1", "u1", s, organization_id="org1"
-            )
+        with patch("application.ai_governance.monitoring_service.emit_audit_event") as mock_emit:
+            monitoring_service.resolve_drift_alert("alert1", "u1", s, organization_id="org1")
         mock_emit.assert_called_once()
         assert mock_emit.call_args.kwargs["event_type"] == "ai.drift_alert.resolved"
 
     def test_regulation_mapping_creation_emits_audit_event(self):
         s, added = _flush_session()
-        with patch(
-            "application.ai_governance.control_service.emit_audit_event"
-        ) as mock_emit:
+        with patch("application.ai_governance.control_service.emit_audit_event") as mock_emit:
             control_service.create_regulation_mapping(
                 framework="EU_AI_ACT",
                 organization_id="org1",
@@ -487,9 +469,7 @@ class TestM41Auditability:
     def test_regulation_mapping_status_change_emits_audit_event(self):
         rm = _mock_mapping()
         s, added = _flush_session(get_return=rm)
-        with patch(
-            "application.ai_governance.control_service.emit_audit_event"
-        ) as mock_emit:
+        with patch("application.ai_governance.control_service.emit_audit_event") as mock_emit:
             control_service.update_regulation_mapping_status(
                 "rm1", "COMPLIANT", "u1", s, organization_id="org1"
             )
@@ -503,15 +483,14 @@ class TestM41Auditability:
             control_service.update_regulation_mapping_status(
                 "rm1", "COMPLIANT", "u1", s, organization_id="org1"
             )
-        history = next(
-            obj for obj in added if isinstance(obj, AIRegulationMappingHistoryModel)
-        )
+        history = next(obj for obj in added if isinstance(obj, AIRegulationMappingHistoryModel))
         assert history.previous_status == "NOT_ASSESSED"
         assert history.new_status == "COMPLIANT"
         assert history.changed_by == "u1"
 
 
 # ── TestM41Pagination ─────────────────────────────────────────────────────────
+
 
 class TestM41Pagination:
     """All list functions must pass limit/offset through to the query."""
@@ -584,6 +563,7 @@ class TestM41Pagination:
 
 
 # ── TestM41DecisionLogging ────────────────────────────────────────────────────
+
 
 class TestM41DecisionLogging:
     """Decision log service stores pre-hashed values as-is (no re-hash)."""

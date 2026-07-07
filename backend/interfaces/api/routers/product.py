@@ -16,7 +16,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dpp.service import DPPService
 from application.product.service import ProductBOMService, ProductService
-from domain.product import ProductStatus, ProductType, TargetMarket
+from domain.product import ProductStatus, ProductType
+from domain.user import User
 from infrastructure.kafka.producer import KafkaEventProducer, get_kafka_producer
 from interfaces.api.deps import (
     get_current_user,
@@ -24,8 +25,7 @@ from interfaces.api.deps import (
     require_analyst,
     scope_gate,
 )
-from domain.user import User
-from interfaces.api.schemas.dpp import DPPListResponse, DPPResponse
+from interfaces.api.schemas.dpp import DPPResponse
 from interfaces.api.schemas.product import (
     ProductBOMItemCreate,
     ProductBOMItemResponse,
@@ -48,6 +48,7 @@ router = APIRouter(
 
 
 # ── Product Core ──────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=ProductListResponse)
 async def list_products(
@@ -168,15 +169,14 @@ async def archive_product(
     kafka: KafkaEventProducer = Depends(get_kafka_producer),
 ) -> None:
     svc = ProductService(db, kafka)
-    deleted = await svc.archive(
-        current_user.organization_id, product_id, actor_id=current_user.id
-    )
+    deleted = await svc.archive(current_user.organization_id, product_id, actor_id=current_user.id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Product not found")
     await db.commit()
 
 
 # ── BOM ───────────────────────────────────────────────────────────────────────
+
 
 @router.get("/{product_id}/bom", response_model=list[ProductBOMItemResponse])
 async def list_bom(
@@ -239,6 +239,7 @@ async def delete_bom_item(
 
 
 # ── Aggregated views ──────────────────────────────────────────────────────────
+
 
 @router.get(
     "/{product_id}/compliance",

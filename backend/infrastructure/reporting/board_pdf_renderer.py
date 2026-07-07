@@ -10,7 +10,7 @@ assessment pdf_renderer.  All colour constants are shared via the same palette.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fpdf import FPDF
@@ -35,9 +35,16 @@ _BAND_COLOURS: dict[str, tuple[int, int, int]] = {
 
 _UNICODE_MAP = str.maketrans(
     {
-        "—": " - ", "–": "-", "‘": "'", "’": "'",
-        "“": '"', "”": '"', "…": "...", "•": "*",
-        " ": " ", "→": "->",
+        "—": " - ",
+        "–": "-",
+        "‘": "'",
+        "’": "'",
+        "“": '"',
+        "”": '"',
+        "…": "...",
+        "•": "*",
+        " ": " ",
+        "→": "->",
     }
 )
 
@@ -88,7 +95,9 @@ class _BoardReport(FPDF):
         self.ln(1)
         self.set_font("Helvetica", "", 7)
         self.set_text_color(*_MID)
-        self.cell(0, 5, f"Generated {self._generated_at}  |  Report ID: {self._report_id}", align="L")
+        self.cell(
+            0, 5, f"Generated {self._generated_at}  |  Report ID: {self._report_id}", align="L"
+        )
         self.cell(0, 5, f"Page {self.page_no()}", align="R")
 
     def _section(self, text: str) -> None:
@@ -174,7 +183,7 @@ def render_board_report_pdf(
     # Pin creation date to report generation time so repeated downloads produce
     # byte-identical PDFs from the same snapshot.
     try:
-        pdf.set_creation_date(datetime.fromisoformat(generated_at).replace(tzinfo=timezone.utc))
+        pdf.set_creation_date(datetime.fromisoformat(generated_at).replace(tzinfo=UTC))
     except (ValueError, TypeError):
         pass  # fall back to FPDF2 default if generated_at is not parseable
 
@@ -207,8 +216,14 @@ def _cover(pdf: _BoardReport, meta: dict, period: str, org: str) -> None:
     pdf.set_text_color(*_WHITE)
     pdf.cell(0, 10, "Board & Executive Report", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, "ESG Supplier Intelligence  |  EIOS Platform", align="C",
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(
+        0,
+        8,
+        "ESG Supplier Intelligence  |  EIOS Platform",
+        align="C",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
 
     pdf.set_y(75)
     pdf.set_text_color(*_DARK)
@@ -242,12 +257,17 @@ def _cover(pdf: _BoardReport, meta: dict, period: str, org: str) -> None:
     pdf.set_y(pdf.get_y() + 3)
     pdf.set_font("Helvetica", "B", 8)
     pdf.set_text_color(120, 80, 0)
-    pdf.cell(0, 4, "CONFIDENTIAL - BOARD USE ONLY", align="C",
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(0, 4, "CONFIDENTIAL - BOARD USE ONLY", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
     pdf.set_font("Helvetica", "", 7)
-    pdf.cell(0, 4, "This document contains commercially sensitive ESG intelligence. "
-             "Do not distribute without board authorisation.", align="C",
-             new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+    pdf.cell(
+        0,
+        4,
+        "This document contains commercially sensitive ESG intelligence. "
+        "Do not distribute without board authorisation.",
+        align="C",
+        new_x=XPos.LMARGIN,
+        new_y=YPos.NEXT,
+    )
     pdf.set_text_color(*_DARK)
 
 
@@ -268,14 +288,16 @@ def _portfolio_health(pdf: _BoardReport, data: dict) -> None:
         return
     pdf._section("Portfolio Health")
 
-    pdf._stat_block([
-        ("Total Suppliers", str(ps.get("total_suppliers", 0)), _ACCENT),
-        ("Scored", str(ps.get("scored_suppliers", 0)), _MID),
-        ("Critical Risk", str(ps.get("critical_risk_suppliers", 0)), _RED),
-        ("High Risk", str(ps.get("high_risk_suppliers", 0)), (210, 80, 0)),
-        ("Deteriorating", str(ps.get("deteriorating_suppliers", 0)), _AMBER),
-        ("Improving", str(ps.get("improving_suppliers", 0)), _GREEN),
-    ])
+    pdf._stat_block(
+        [
+            ("Total Suppliers", str(ps.get("total_suppliers", 0)), _ACCENT),
+            ("Scored", str(ps.get("scored_suppliers", 0)), _MID),
+            ("Critical Risk", str(ps.get("critical_risk_suppliers", 0)), _RED),
+            ("High Risk", str(ps.get("high_risk_suppliers", 0)), (210, 80, 0)),
+            ("Deteriorating", str(ps.get("deteriorating_suppliers", 0)), _AMBER),
+            ("Improving", str(ps.get("improving_suppliers", 0)), _GREEN),
+        ]
+    )
 
     if ps.get("avg_esg_score") is not None:
         pdf._kv("Average ESG Score", f"{ps['avg_esg_score']:.1f} / 100")
@@ -335,8 +357,12 @@ def _top_high_risk(pdf: _BoardReport, data: dict) -> None:
 
     usable = pdf.w - pdf.l_margin - pdf.r_margin
     cols: list[tuple[str, float]] = [
-        ("Rank", 12), ("Supplier", usable - 12 - 22 - 28 - 22 - 30),
-        ("Band", 22), ("Risk Score", 28), ("Trend", 22), ("Country", 30),
+        ("Rank", 12),
+        ("Supplier", usable - 12 - 22 - 28 - 22 - 30),
+        ("Band", 22),
+        ("Risk Score", 28),
+        ("Trend", 22),
+        ("Country", 30),
     ]
     pdf._table_header(cols)
 
@@ -376,7 +402,9 @@ def _top_deteriorating(pdf: _BoardReport, data: dict) -> None:
     usable = pdf.w - pdf.l_margin - pdf.r_margin
     cols: list[tuple[str, float]] = [
         ("Supplier", usable - 22 - 22 - 28),
-        ("Trend Delta", 22), ("Band", 22), ("Risk Score", 28),
+        ("Trend Delta", 22),
+        ("Band", 22),
+        ("Risk Score", 28),
     ]
     pdf._table_header(cols)
 
@@ -412,8 +440,10 @@ def _critical_findings(pdf: _BoardReport, data: dict) -> None:
     pdf._section(f"Critical Findings Summary  ({len(items)})")
     usable = pdf.w - pdf.l_margin - pdf.r_margin
     cols: list[tuple[str, float]] = [
-        ("Supplier", usable * 0.30), ("Finding", usable * 0.45),
-        ("Pillar", usable * 0.12), ("Category", usable * 0.13),
+        ("Supplier", usable * 0.30),
+        ("Finding", usable * 0.45),
+        ("Pillar", usable * 0.12),
+        ("Category", usable * 0.13),
     ]
     pdf._table_header(cols)
 
@@ -444,8 +474,10 @@ def _overdue_actions(pdf: _BoardReport, data: dict) -> None:
     pdf._section(f"Overdue Actions  ({len(items)})")
     usable = pdf.w - pdf.l_margin - pdf.r_margin
     cols: list[tuple[str, float]] = [
-        ("Supplier", usable * 0.28), ("Action", usable * 0.40),
-        ("Due Date", usable * 0.15), ("Days Overdue", usable * 0.17),
+        ("Supplier", usable * 0.28),
+        ("Action", usable * 0.40),
+        ("Due Date", usable * 0.15),
+        ("Days Overdue", usable * 0.17),
     ]
     pdf._table_header(cols)
 
@@ -455,7 +487,9 @@ def _overdue_actions(pdf: _BoardReport, data: dict) -> None:
         pdf.set_text_color(*_DARK)
         pdf.cell(cols[0][1], 6, _safe(item.get("supplier_name", ""), 30), fill=True)
         pdf.cell(cols[1][1], 6, _safe(item.get("title", ""), 50), fill=True)
-        pdf.cell(cols[2][1], 6, _safe(str(item.get("due_date", "-"))[:10], 15), fill=True, align="C")
+        pdf.cell(
+            cols[2][1], 6, _safe(str(item.get("due_date", "-"))[:10], 15), fill=True, align="C"
+        )
         days = item.get("days_overdue", 0)
         pdf.set_text_color(*(_RED if days > 14 else _AMBER))
         pdf.cell(cols[3][1], 6, str(days), fill=True, align="C")
@@ -475,12 +509,24 @@ def _governance_metrics(pdf: _BoardReport, data: dict) -> None:
     pdf.add_page()
     pdf._section("Governance Metrics")
 
-    pdf._stat_block([
-        ("Assessments in Review", str(gov.get("assessments_awaiting_review", 0)), _ACCENT),
-        ("Approved This Period", str(gov.get("assessments_approved", 0)), _GREEN),
-        ("Avg Review Days", f"{gov.get('avg_review_days', 0):.1f}" if gov.get("avg_review_days") else "-", _MID),
-        ("Approval Rate", f"{gov.get('approval_rate', 0) * 100:.0f}%" if gov.get("approval_rate") is not None else "-", _GREEN),
-    ])
+    pdf._stat_block(
+        [
+            ("Assessments in Review", str(gov.get("assessments_awaiting_review", 0)), _ACCENT),
+            ("Approved This Period", str(gov.get("assessments_approved", 0)), _GREEN),
+            (
+                "Avg Review Days",
+                f"{gov.get('avg_review_days', 0):.1f}" if gov.get("avg_review_days") else "-",
+                _MID,
+            ),
+            (
+                "Approval Rate",
+                f"{gov.get('approval_rate', 0) * 100:.0f}%"
+                if gov.get("approval_rate") is not None
+                else "-",
+                _GREEN,
+            ),
+        ]
+    )
 
     if gov.get("rejection_rate") is not None:
         pdf._kv("Rejection Rate", f"{gov['rejection_rate'] * 100:.1f}%")
@@ -497,12 +543,26 @@ def _action_effectiveness(pdf: _BoardReport, data: dict) -> None:
         return
 
     pdf._section("Action Effectiveness")
-    pdf._stat_block([
-        ("Opened This Period", str(eff.get("opened_this_period", 0)), _ACCENT),
-        ("Closed This Period", str(eff.get("closed_this_period", 0)), _GREEN),
-        ("Resolution Rate", f"{eff.get('resolution_rate', 0) * 100:.0f}%" if eff.get("resolution_rate") is not None else "-", _MID),
-        ("Avg Resolution Days", f"{eff.get('avg_resolution_days', 0):.1f}" if eff.get("avg_resolution_days") is not None else "-", _MID),
-    ])
+    pdf._stat_block(
+        [
+            ("Opened This Period", str(eff.get("opened_this_period", 0)), _ACCENT),
+            ("Closed This Period", str(eff.get("closed_this_period", 0)), _GREEN),
+            (
+                "Resolution Rate",
+                f"{eff.get('resolution_rate', 0) * 100:.0f}%"
+                if eff.get("resolution_rate") is not None
+                else "-",
+                _MID,
+            ),
+            (
+                "Avg Resolution Days",
+                f"{eff.get('avg_resolution_days', 0):.1f}"
+                if eff.get("avg_resolution_days") is not None
+                else "-",
+                _MID,
+            ),
+        ]
+    )
     pdf.ln(3)
 
 
@@ -527,8 +587,12 @@ def _kpi_trends(pdf: _BoardReport, data: dict) -> None:
 
     usable = pdf.w - pdf.l_margin - pdf.r_margin
     cols: list[tuple[str, float]] = [
-        ("Month", 25), ("Avg ESG", 25), ("Avg Risk", 25),
-        ("Suppliers Scored", 30), ("High+Critical", 30), ("Remaining", usable - 135),
+        ("Month", 25),
+        ("Avg ESG", 25),
+        ("Avg Risk", 25),
+        ("Suppliers Scored", 30),
+        ("High+Critical", 30),
+        ("Remaining", usable - 135),
     ]
     pdf._table_header(cols)
 

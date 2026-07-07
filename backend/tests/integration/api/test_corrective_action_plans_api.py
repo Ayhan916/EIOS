@@ -138,7 +138,11 @@ async def test_cap_submit_evidence(client: AsyncClient) -> None:
 
     cap = await client.post(
         BASE + "/",
-        json={"finding_id": finding_id, "title": "Evidence test", "description": "Evidence submission"},
+        json={
+            "finding_id": finding_id,
+            "title": "Evidence test",
+            "description": "Evidence submission",
+        },
     )
     cap_id = cap.json()["id"]
 
@@ -192,7 +196,11 @@ async def test_cap_list_filter_by_status(client: AsyncClient) -> None:
 
     cap = await client.post(
         BASE + "/",
-        json={"finding_id": finding_id, "title": "Draft filter test", "description": "Status filter"},
+        json={
+            "finding_id": finding_id,
+            "title": "Draft filter test",
+            "description": "Status filter",
+        },
     )
     cap_id = cap.json()["id"]
 

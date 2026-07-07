@@ -21,8 +21,6 @@ from domain.enums import EntityStatus
 from domain.prioritization import PrioritizationDecision
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.finding import FindingModel
-from infrastructure.persistence.models.supplier import SupplierModel
-from infrastructure.persistence.models.supplier_score import SupplierScoreModel
 from infrastructure.persistence.repositories.prioritization import (
     SQLPrioritizationRepository,
 )

@@ -63,8 +63,9 @@ async def compute_centrality(
     Returns list of dicts with supplier_id, inbound, outbound, degree_centrality,
     connected_component_size.
     """
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     degree_stats = await compute_degree_stats(organization_id, session)
     if not degree_stats:
@@ -117,13 +118,15 @@ async def compute_centrality(
         degree_centrality = (inbound + outbound) / max_degree
         component_size = component_size_by_supplier.get(supplier_id, 1)
 
-        results.append({
-            "supplier_id": supplier_id,
-            "inbound_degree": inbound,
-            "outbound_degree": outbound,
-            "degree_centrality": round(min(degree_centrality, 1.0), 4),
-            "connected_component_size": component_size,
-        })
+        results.append(
+            {
+                "supplier_id": supplier_id,
+                "inbound_degree": inbound,
+                "outbound_degree": outbound,
+                "degree_centrality": round(min(degree_centrality, 1.0), 4),
+                "connected_component_size": component_size,
+            }
+        )
 
     results.sort(key=lambda x: x["degree_centrality"], reverse=True)
 
@@ -155,8 +158,9 @@ async def upsert_criticality(
       0.20 × assessment_risk_factor
       0.10 × remediation_factor
     """
-    from infrastructure.persistence.models.network import SupplierCriticalityModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierCriticalityModel
 
     degree_centrality = centrality_data.get("degree_centrality", 0.0)
     inbound = centrality_data.get("inbound_degree", 0)
@@ -192,8 +196,13 @@ async def upsert_criticality(
         "finding_factor": finding_factor,
         "assessment_factor": assessment_factor,
         "remediation_factor": remediation_factor,
-        "weights": {"centrality": 0.25, "dependency": 0.25, "finding": 0.20,
-                    "assessment": 0.20, "remediation": 0.10},
+        "weights": {
+            "centrality": 0.25,
+            "dependency": 0.25,
+            "finding": 0.20,
+            "assessment": 0.20,
+            "remediation": 0.10,
+        },
     }
 
     stmt = select(SupplierCriticalityModel).where(
@@ -250,8 +259,9 @@ async def get_criticality(
     supplier_id: str,
     session,
 ) -> object | None:
-    from infrastructure.persistence.models.network import SupplierCriticalityModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierCriticalityModel
 
     stmt = select(SupplierCriticalityModel).where(
         SupplierCriticalityModel.organization_id == organization_id,
@@ -266,15 +276,14 @@ async def list_criticality(
     limit: int = 100,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.network import SupplierCriticalityModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierCriticalityModel
 
     stmt = select(SupplierCriticalityModel).where(
         SupplierCriticalityModel.organization_id == organization_id
     )
     if criticality_level:
-        stmt = stmt.where(
-            SupplierCriticalityModel.criticality == criticality_level.upper()
-        )
+        stmt = stmt.where(SupplierCriticalityModel.criticality == criticality_level.upper())
     stmt = stmt.order_by(SupplierCriticalityModel.criticality_score.desc()).limit(limit)
     return list((await session.execute(stmt)).scalars().all())

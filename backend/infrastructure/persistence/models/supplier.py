@@ -8,9 +8,7 @@ from .base import BaseModel
 
 class SupplierModel(BaseModel):
     __tablename__ = "suppliers"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "name", name="uq_suppliers_org_name"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "name", name="uq_suppliers_org_name"),)
 
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False, index=True
@@ -26,6 +24,9 @@ class SupplierModel(BaseModel):
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     chain_direction: Mapped[str] = mapped_column(String(20), nullable=False, default="upstream")
     downstream_type: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    supplier_type: Mapped[str] = mapped_column(String(30), nullable=False, default="manufacturing")
+    commodity: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    commodity_code: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     assessments: Mapped[list[AssessmentModel]] = relationship(back_populates="supplier")
     scores: Mapped[list[SupplierScoreModel]] = relationship(

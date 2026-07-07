@@ -20,6 +20,7 @@ def client() -> TestClient:
 # GET / — list sectors
 # ---------------------------------------------------------------------------
 
+
 class TestListSectors:
     def test_returns_200(self, client: TestClient) -> None:
         resp = client.get("/sector-risk-register/")
@@ -39,9 +40,13 @@ class TestListSectors:
     def test_each_item_has_required_fields(self, client: TestClient) -> None:
         items = client.get("/sector-risk-register/?calibrated_only=true").json()
         required = {
-            "nace_code", "nace_section", "sector_name",
-            "is_calibrated", "highest_probability",
-            "average_probability", "rights_above_7",
+            "nace_code",
+            "nace_section",
+            "sector_name",
+            "is_calibrated",
+            "highest_probability",
+            "average_probability",
+            "rights_above_7",
         }
         for item in items:
             assert required <= set(item.keys()), f"Missing fields in {item}"
@@ -62,6 +67,7 @@ class TestListSectors:
 # GET /scenarios/templates
 # ---------------------------------------------------------------------------
 
+
 class TestScenarioTemplates:
     def test_returns_200(self, client: TestClient) -> None:
         resp = client.get("/sector-risk-register/scenarios/templates")
@@ -74,8 +80,12 @@ class TestScenarioTemplates:
     def test_each_template_has_required_fields(self, client: TestClient) -> None:
         templates = client.get("/sector-risk-register/scenarios/templates").json()
         required = {
-            "scenario_type", "name", "description",
-            "affected_nace_sections", "sources", "affected_rights_count",
+            "scenario_type",
+            "name",
+            "description",
+            "affected_nace_sections",
+            "sources",
+            "affected_rights_count",
         }
         for t in templates:
             assert required <= set(t.keys())
@@ -99,6 +109,7 @@ class TestScenarioTemplates:
 # ---------------------------------------------------------------------------
 # GET /{nace_code} — baseline
 # ---------------------------------------------------------------------------
+
 
 class TestSectorBaseline:
     def test_automotive_returns_200(self, client: TestClient) -> None:
@@ -158,30 +169,27 @@ class TestSectorBaseline:
 
     def test_logistics_sector_name(self, client: TestClient) -> None:
         data = client.get("/sector-risk-register/49").json()
-        assert "transport" in data["sector_name"].lower() or "logistics" in data["sector_name"].lower()
+        assert (
+            "transport" in data["sector_name"].lower() or "logistics" in data["sector_name"].lower()
+        )
 
 
 # ---------------------------------------------------------------------------
 # GET /{nace_code}/simulate
 # ---------------------------------------------------------------------------
 
+
 class TestSimulate:
     def test_returns_200_with_valid_inputs(self, client: TestClient) -> None:
-        resp = client.get(
-            "/sector-risk-register/29/simulate?scenario=geopolitical_conflict"
-        )
+        resp = client.get("/sector-risk-register/29/simulate?scenario=geopolitical_conflict")
         assert resp.status_code == 200
 
     def test_returns_21_rights(self, client: TestClient) -> None:
-        data = client.get(
-            "/sector-risk-register/29/simulate?scenario=labour_unrest"
-        ).json()
+        data = client.get("/sector-risk-register/29/simulate?scenario=labour_unrest").json()
         assert len(data["rights"]) == 21
 
     def test_each_right_has_scenario_block(self, client: TestClient) -> None:
-        data = client.get(
-            "/sector-risk-register/29/simulate?scenario=natural_disaster"
-        ).json()
+        data = client.get("/sector-risk-register/29/simulate?scenario=natural_disaster").json()
         for right in data["rights"]:
             assert right["scenario"] is not None
             sc = right["scenario"]
@@ -192,19 +200,13 @@ class TestSimulate:
             assert "explanation" in sc
 
     def test_scenario_scores_in_range(self, client: TestClient) -> None:
-        data = client.get(
-            "/sector-risk-register/13/simulate?scenario=supply_shortage"
-        ).json()
+        data = client.get("/sector-risk-register/13/simulate?scenario=supply_shortage").json()
         for right in data["rights"]:
             adj = right["scenario"]["adjusted_probability"]
-            assert 1 <= adj <= 10, (
-                f"Right {right['right_id']} has adjusted_probability {adj}"
-            )
+            assert 1 <= adj <= 10, f"Right {right['right_id']} has adjusted_probability {adj}"
 
     def test_summary_block_present(self, client: TestClient) -> None:
-        data = client.get(
-            "/sector-risk-register/29/simulate?scenario=regulatory_change"
-        ).json()
+        data = client.get("/sector-risk-register/29/simulate?scenario=regulatory_change").json()
         summary = data["summary"]
         assert "rights_increased" in summary
         assert "rights_above_7_baseline" in summary
@@ -213,9 +215,7 @@ class TestSimulate:
         assert "highest_risk_score" in summary
 
     def test_summary_rights_increased_non_negative(self, client: TestClient) -> None:
-        data = client.get(
-            "/sector-risk-register/29/simulate?scenario=geopolitical_conflict"
-        ).json()
+        data = client.get("/sector-risk-register/29/simulate?scenario=geopolitical_conflict").json()
         assert data["summary"]["rights_increased"] >= 0
 
     def test_determinism_via_api(self, client: TestClient) -> None:
@@ -239,16 +239,17 @@ class TestSimulate:
         resp = client.get("/sector-risk-register/00/simulate?scenario=labour_unrest")
         assert resp.status_code == 404
 
-    @pytest.mark.parametrize("scenario", [
-        "geopolitical_conflict",
-        "sanctions_escalation",
-        "natural_disaster",
-        "regulatory_change",
-        "labour_unrest",
-        "supply_shortage",
-    ])
-    def test_all_scenarios_work_for_automotive(
-        self, client: TestClient, scenario: str
-    ) -> None:
+    @pytest.mark.parametrize(
+        "scenario",
+        [
+            "geopolitical_conflict",
+            "sanctions_escalation",
+            "natural_disaster",
+            "regulatory_change",
+            "labour_unrest",
+            "supply_shortage",
+        ],
+    )
+    def test_all_scenarios_work_for_automotive(self, client: TestClient, scenario: str) -> None:
         resp = client.get(f"/sector-risk-register/29/simulate?scenario={scenario}")
         assert resp.status_code == 200, f"Scenario {scenario} failed: {resp.text}"

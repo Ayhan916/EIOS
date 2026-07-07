@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ class StrategyError(Exception):
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -133,7 +133,11 @@ def create_snapshot(
         actor_id=actor_id,
         resource_type="digital_twin_snapshot",
         resource_id=snap.id,
-        details={"twin_id": twin_id, "snapshot_type": snapshot_type, "snapshot_period": snapshot_period},
+        details={
+            "twin_id": twin_id,
+            "snapshot_type": snapshot_type,
+            "snapshot_period": snapshot_period,
+        },
     )
     strategy_counters.record_snapshot()
     return snap

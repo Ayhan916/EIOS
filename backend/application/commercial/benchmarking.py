@@ -103,6 +103,7 @@ def compute_benchmark(
         supplier_scores: {overall_esg_score, environmental_score, social_score, governance_score}
         peers: list of peer supplier score dicts (same structure, excluding the target supplier)
     """
+
     def score(d: dict, key: str) -> float | None:
         v = d.get(key)
         return float(v) if v is not None else None

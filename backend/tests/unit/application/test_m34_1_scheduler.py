@@ -10,9 +10,7 @@ import pytest
 
 from application.external_intelligence.freshness_service import (
     DatasetFreshness,
-    assess_freshness,
 )
-from domain.enums import FreshnessStatus
 
 
 def _make_freshness(status: str, source: str = "world_bank") -> DatasetFreshness:

@@ -95,6 +95,7 @@ async def _run_due_connectors() -> None:
                     from application.external_intelligence.benchmark_refresh_service import (
                         refresh_for_dataset,
                     )
+
                     await refresh_for_dataset(
                         result.dataset_id,
                         connector.connector_name,
@@ -115,8 +116,9 @@ async def _get_last_successful_refresh(
     session,
 ) -> datetime | None:
     """Return the timestamp of the last successful run for a connector."""
-    from infrastructure.persistence.models.connector_run import ConnectorRunModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.connector_run import ConnectorRunModel
 
     stmt = (
         select(ConnectorRunModel)
@@ -166,6 +168,7 @@ async def trigger_connector_refresh(
             from application.external_intelligence.benchmark_refresh_service import (
                 refresh_for_dataset,
             )
+
             await refresh_for_dataset(result.dataset_id, connector_name, session)
         except Exception as exc:
             logger.warning("benchmark_refresh_failed_on_manual_trigger", error=str(exc))

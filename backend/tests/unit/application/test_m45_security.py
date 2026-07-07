@@ -11,16 +11,14 @@ Tests:
 from __future__ import annotations
 
 import pytest
-import jwt as pyjwt
 
+from shared.config import settings
 from shared.security import (
     create_access_token,
-    create_refresh_token,
     create_mfa_session_token,
+    create_refresh_token,
     decode_token,
-    ALGORITHM,
 )
-from shared.config import settings
 
 
 class TestJWTPayloads:
@@ -69,6 +67,7 @@ class TestBlacklistWithoutRedis:
     @pytest.mark.asyncio
     async def test_is_token_blacklisted_returns_false_without_redis(self) -> None:
         from shared.security import is_token_blacklisted
+
         # Redis is not initialised in unit tests
         result = await is_token_blacklisted("some-jti")
         assert result is False
@@ -76,5 +75,6 @@ class TestBlacklistWithoutRedis:
     @pytest.mark.asyncio
     async def test_blacklist_token_does_not_raise_without_redis(self) -> None:
         from shared.security import blacklist_token
+
         # Should silently succeed (no Redis available)
         await blacklist_token("some-jti", ttl_seconds=900)

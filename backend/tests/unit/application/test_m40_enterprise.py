@@ -147,8 +147,9 @@ class TestEnterpriseSchemas:
         assert e.default_data_residency == "EU"
 
     def test_enterprise_create_requires_name(self) -> None:
-        from interfaces.api.schemas.enterprise import EnterpriseCreate
         from pydantic import ValidationError
+
+        from interfaces.api.schemas.enterprise import EnterpriseCreate
 
         with pytest.raises(ValidationError):
             EnterpriseCreate()  # type: ignore[call-arg]
@@ -244,28 +245,32 @@ class TestSSOEncryption:
     def test_score_from_rollup_grade_present(self) -> None:
         from application.enterprise.rollup_service import _score_from_rollup
 
-        result = _score_from_rollup({
-            "compliance_readiness": 90.0,
-            "critical_risks": 0,
-            "total_risks": 2,
-            "open_findings": 0,
-            "total_findings": 4,
-            "supplier_count": 5,
-        })
+        result = _score_from_rollup(
+            {
+                "compliance_readiness": 90.0,
+                "critical_risks": 0,
+                "total_risks": 2,
+                "open_findings": 0,
+                "total_findings": 4,
+                "supplier_count": 5,
+            }
+        )
         assert "grade" in result
         assert result["grade"] in ("A", "B", "C", "D", "F")
 
     def test_score_from_rollup_components_normalized(self) -> None:
         from application.enterprise.rollup_service import _score_from_rollup
 
-        result = _score_from_rollup({
-            "compliance_readiness": 50.0,
-            "critical_risks": 1,
-            "total_risks": 10,
-            "open_findings": 5,
-            "total_findings": 20,
-            "supplier_count": 0,
-        })
+        result = _score_from_rollup(
+            {
+                "compliance_readiness": 50.0,
+                "critical_risks": 1,
+                "total_risks": 10,
+                "open_findings": 5,
+                "total_findings": 20,
+                "supplier_count": 0,
+            }
+        )
         for v in result["components"].values():
             assert 0.0 <= v <= 1.0
 
@@ -305,8 +310,9 @@ class TestEnterpriseOrmModels:
         assert EnterpriseRiskModel.__tablename__ == "enterprise_risks"
 
     def test_organization_has_enterprise_fields(self) -> None:
-        from infrastructure.persistence.models.organization import OrganizationModel
         import sqlalchemy as sa
+
+        from infrastructure.persistence.models.organization import OrganizationModel
 
         cols = {c.name for c in sa.inspect(OrganizationModel).columns}
         assert "enterprise_id" in cols
@@ -316,8 +322,9 @@ class TestEnterpriseOrmModels:
         assert "data_classification" in cols
 
     def test_user_has_enterprise_scope_fields(self) -> None:
-        from infrastructure.persistence.models.user import UserModel
         import sqlalchemy as sa
+
+        from infrastructure.persistence.models.user import UserModel
 
         cols = {c.name for c in sa.inspect(UserModel).columns}
         assert "enterprise_scope" in cols
@@ -337,6 +344,7 @@ class TestTenantIsolationContracts:
 
     def test_list_enterprise_risks_requires_enterprise_id(self) -> None:
         import inspect
+
         from application.enterprise.risk_service import list_enterprise_risks
 
         sig = inspect.signature(list_enterprise_risks)
@@ -344,6 +352,7 @@ class TestTenantIsolationContracts:
 
     def test_list_business_units_requires_enterprise_id(self) -> None:
         import inspect
+
         from application.enterprise.hierarchy_service import list_business_units
 
         sig = inspect.signature(list_business_units)
@@ -351,6 +360,7 @@ class TestTenantIsolationContracts:
 
     def test_list_identity_providers_requires_enterprise_id(self) -> None:
         import inspect
+
         from application.enterprise.sso_service import list_identity_providers
 
         sig = inspect.signature(list_identity_providers)
@@ -358,6 +368,7 @@ class TestTenantIsolationContracts:
 
     def test_global_search_requires_enterprise_id(self) -> None:
         import inspect
+
         from application.enterprise.search_service import global_search
 
         sig = inspect.signature(global_search)
@@ -366,6 +377,7 @@ class TestTenantIsolationContracts:
     def test_assign_enterprise_role_audits_action(self) -> None:
         """The function signature must accept actor_id for auditability."""
         import inspect
+
         from application.enterprise.admin_service import assign_enterprise_role
 
         sig = inspect.signature(assign_enterprise_role)
@@ -373,6 +385,7 @@ class TestTenantIsolationContracts:
 
     def test_scim_create_user_audits_action(self) -> None:
         import inspect
+
         from application.enterprise.scim_service import scim_create_user
 
         sig = inspect.signature(scim_create_user)
@@ -380,6 +393,7 @@ class TestTenantIsolationContracts:
 
     def test_create_enterprise_risk_audits_action(self) -> None:
         import inspect
+
         from application.enterprise.risk_service import create_enterprise_risk
 
         sig = inspect.signature(create_enterprise_risk)

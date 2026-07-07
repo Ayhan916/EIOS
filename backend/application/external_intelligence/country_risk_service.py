@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import CountryRiskLevel, EntityStatus
+from domain.enums import CountryRiskLevel
 from domain.external_intelligence import CountryRiskProfile
 
 _RISK_THRESHOLDS = {
@@ -108,6 +108,7 @@ async def list_country_risks(
 
 def _domain_to_model(p: CountryRiskProfile):
     from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
+
     return CountryRiskProfileModel(
         id=p.id,
         status=p.status.value if hasattr(p.status, "value") else p.status,

@@ -13,6 +13,7 @@ Routes:
 
 from __future__ import annotations
 
+import time
 from datetime import UTC, datetime
 
 import structlog
@@ -23,8 +24,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.copilot.action_advisor_engine import build_action_advisor_payload
 from application.copilot.analytics_service import get_analytics
-from application.copilot.audit_package_service import create_audit_package, generate_audit_pdf
-from application.copilot.citation_integrity import verify_citations
 from application.copilot.copilot_service import ask
 from application.copilot.executive_brief_engine import build_executive_brief_payload
 from application.copilot.reproducibility_verifier import verify_audit_package
@@ -36,8 +35,8 @@ from application.copilot.suggested_questions import get_suggested_questions
 from application.ports.llm import LLMProvider, Message
 from domain.copilot import CopilotConversation, CopilotMessage
 from domain.copilot_audit import CopilotAnswerReview, CopilotFeedback
-from domain.enums import CopilotMessageRole
-from domain.enums import EntityStatus
+from domain.enums import CopilotMessageRole, EntityStatus
+from domain.user import User
 from infrastructure.llm.deps import get_llm_provider
 from infrastructure.observability.metrics import (
     record_answer,
@@ -57,7 +56,6 @@ from infrastructure.persistence.repositories.copilot import (
 from infrastructure.persistence.repositories.copilot_audit import (
     SQLCopilotAnswerReviewRepository,
     SQLCopilotAuditPackageRepository,
-    SQLCopilotCitationIntegrityRepository,
     SQLCopilotFeedbackRepository,
 )
 from interfaces.api.deps import (
@@ -89,7 +87,6 @@ from interfaces.api.schemas.copilot_audit import (
     VerificationCheckSchema,
     VerificationResultResponse,
 )
-from domain.user import User
 
 logger = structlog.get_logger(__name__)
 
@@ -167,7 +164,7 @@ async def ask_copilot(
     if assistant_msg.context_truncated:
         record_context_truncation(org_id)
     # Record per-contradiction type
-    for c in (assistant_msg.retrieved_sources.get("_contradictions") or []):
+    for c in assistant_msg.retrieved_sources.get("_contradictions") or []:
         record_contradiction(org_id, c.get("contradiction_type", "unknown"))
 
     contradictions_for_response = [
@@ -220,7 +217,9 @@ async def list_conversations(
     ]
 
 
-@router.post("/conversations", response_model=CopilotConversationSummary, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/conversations", response_model=CopilotConversationSummary, status_code=status.HTTP_201_CREATED
+)
 async def create_conversation(
     body: CreateConversationRequest,
     current_user: User = Depends(get_current_user),
@@ -248,7 +247,9 @@ async def create_conversation(
     )
 
 
-@router.get("/conversations/{conversation_id}/messages", response_model=list[CopilotMessageResponse])
+@router.get(
+    "/conversations/{conversation_id}/messages", response_model=list[CopilotMessageResponse]
+)
 async def list_messages(
     conversation_id: str,
     current_user: User = Depends(get_current_user),
@@ -291,7 +292,11 @@ async def suggested_questions(
     return SuggestedQuestionsResponse(context_type=context_type, questions=questions)
 
 
-@router.get("/executive-brief", response_model=ExecutiveBriefResponse, dependencies=[Depends(require_executive)])
+@router.get(
+    "/executive-brief",
+    response_model=ExecutiveBriefResponse,
+    dependencies=[Depends(require_executive)],
+)
 async def executive_brief(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
@@ -310,7 +315,9 @@ async def executive_brief(
 
     # Fetch overdue actions for executive payload
     from datetime import date
+
     from infrastructure.persistence.models.recommendation import RecommendationModel
+
     overdue_stmt = (
         select(RecommendationModel)
         .where(
@@ -322,9 +329,13 @@ async def executive_brief(
     )
     overdue_recs = (await session.execute(overdue_stmt)).scalars().all()
     overdue_data = [
-        {"id": r.id, "title": r.title, "priority": r.priority,
-         "due_date": str(r.due_date) if r.due_date else "",
-         "days_overdue": (date.today() - r.due_date).days if r.due_date else 0}
+        {
+            "id": r.id,
+            "title": r.title,
+            "priority": r.priority,
+            "due_date": str(r.due_date) if r.due_date else "",
+            "days_overdue": (date.today() - r.due_date).days if r.due_date else 0,
+        }
         for r in overdue_recs
     ]
 
@@ -339,6 +350,7 @@ async def executive_brief(
     )
 
     import json
+
     context = json.dumps(payload, default=str, ensure_ascii=False)[:6000]
     system = (
         "You are the EIOS AI Sustainability Copilot generating an executive brief. "
@@ -347,15 +359,21 @@ async def executive_brief(
         f"DATA:\n{context}"
     )
     llm_resp = await llm.complete(
-        messages=[Message(role="user", content="Generate an executive sustainability brief based on the data provided.")],
+        messages=[
+            Message(
+                role="user",
+                content="Generate an executive sustainability brief based on the data provided.",
+            )
+        ],
         system=system,
         max_tokens=1200,
         temperature=0.0,
     )
 
-    all_source_ids = exec_result.source_ids + supplier_result.source_ids + compliance_result.source_ids
+    exec_result.source_ids + supplier_result.source_ids + compliance_result.source_ids
     from application.copilot.citation_extractor import extract_citations
     from application.copilot.context_assembler import build_citation_map
+
     cmap = build_citation_map([exec_result, supplier_result, compliance_result, disclosure_result])
     citations = extract_citations(llm_resp.content, cmap)
 
@@ -384,12 +402,12 @@ async def action_advisor(
 
     # Fetch findings, risks, gaps, open recommendations
     from sqlalchemy import select
-    from infrastructure.persistence.models.finding import FindingModel
-    from infrastructure.persistence.models.risk import RiskModel
 
     findings_stmt = (
         select(FindingModel)
-        .where(FindingModel.organization_id == org_id, FindingModel.severity.in_(["Critical", "High"]))
+        .where(
+            FindingModel.organization_id == org_id, FindingModel.severity.in_(["Critical", "High"])
+        )
         .limit(20)
     )
     findings = (await session.execute(findings_stmt)).scalars().all()
@@ -404,6 +422,7 @@ async def action_advisor(
     compliance_result = await retrieve_compliance_context(org_id, session)
 
     from datetime import date
+
     recs_stmt = (
         select(RecommendationModel)
         .where(
@@ -416,7 +435,9 @@ async def action_advisor(
     today = date.today()
     recs_data = [
         {
-            "id": r.id, "title": r.title, "priority": r.priority,
+            "id": r.id,
+            "title": r.title,
+            "priority": r.priority,
             "action_status": r.action_status,
             "due_date": str(r.due_date) if r.due_date else None,
             "overdue": bool(r.due_date and r.due_date < today),
@@ -424,8 +445,24 @@ async def action_advisor(
         for r in recs
     ]
 
-    findings_data = [{"id": f.id, "title": f.title, "severity": f.severity, "category": getattr(f, "category", "")} for f in findings]
-    risks_data = [{"id": r.id, "title": r.title, "risk_level": r.risk_level, "category": getattr(r, "category", "")} for r in risks]
+    findings_data = [
+        {
+            "id": f.id,
+            "title": f.title,
+            "severity": f.severity,
+            "category": getattr(f, "category", ""),
+        }
+        for f in findings
+    ]
+    risks_data = [
+        {
+            "id": r.id,
+            "title": r.title,
+            "risk_level": r.risk_level,
+            "category": getattr(r, "category", ""),
+        }
+        for r in risks
+    ]
 
     payload = build_action_advisor_payload(
         findings=findings_data,
@@ -435,6 +472,7 @@ async def action_advisor(
     )
 
     import json
+
     context = json.dumps(payload, default=str, ensure_ascii=False)[:5000]
     system = (
         "You are the EIOS AI Action Advisor. "
@@ -443,7 +481,9 @@ async def action_advisor(
         f"DATA:\n{context}"
     )
     llm_resp = await llm.complete(
-        messages=[Message(role="user", content="Which actions should we take to reduce ESG risk fastest?")],
+        messages=[
+            Message(role="user", content="Which actions should we take to reduce ESG risk fastest?")
+        ],
         system=system,
         max_tokens=1000,
         temperature=0.0,
@@ -451,6 +491,7 @@ async def action_advisor(
 
     from application.copilot.citation_extractor import extract_citations
     from application.copilot.context_assembler import build_citation_map
+
     cmap = build_citation_map([compliance_result])
     cmap.update({f.id: "Finding" for f in findings})
     cmap.update({r.id: "Risk" for r in risks})
@@ -543,6 +584,7 @@ async def founder_chat(
     and cost trends. Never uses supplier or ESG data.
     """
     from uuid import uuid4 as _uuid4
+
     from application.copilot.founder_context import build_founder_context
 
     org_id = current_user.organization_id
@@ -550,6 +592,7 @@ async def founder_chat(
 
     # Detect if we have real data
     import json as _json
+
     ctx_data = _json.loads(context_json)
     context_available = ctx_data.get("platform_health") is not None
 
@@ -755,6 +798,7 @@ async def get_audit_package(
         from application.copilot.audit_package_service import compute_package_hash
         from domain.copilot_audit import CopilotAuditPackage
         from domain.enums import AuditVerificationStatus
+
         payload = {
             "schema_version": "1.0",
             "generated_at": datetime.now(UTC).isoformat(),

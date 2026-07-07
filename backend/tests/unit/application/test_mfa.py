@@ -9,17 +9,17 @@ Tests run without a real database or Redis — they test the pure logic:
 
 from __future__ import annotations
 
-import pytest
 import pyotp
+import pytest
 
 from application.mfa.service import (
-    generate_totp_secret,
-    build_otp_uri,
-    verify_totp,
-    encrypt_secret,
-    decrypt_secret,
     _hash_backup_code,
     _verify_backup_code,
+    build_otp_uri,
+    decrypt_secret,
+    encrypt_secret,
+    generate_totp_secret,
+    verify_totp,
 )
 
 

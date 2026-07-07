@@ -38,6 +38,7 @@ def _get_fernet() -> Fernet:
     # Derive a stable 32-byte key from the configured secret via truncation/padding.
     import base64
     import hashlib
+
     raw = hashlib.sha256(key_source.encode()).digest()  # always 32 bytes
     fernet_key = base64.urlsafe_b64encode(raw)
     return Fernet(fernet_key)
@@ -90,7 +91,9 @@ async def setup_mfa(user_id: str, email: str, session: AsyncSession) -> MFASetup
     otp_uri = build_otp_uri(raw_secret, email)
 
     # Generate backup codes
-    plaintext_codes = [secrets.token_hex(_BACKUP_CODE_BYTES).upper() for _ in range(_BACKUP_CODE_COUNT)]
+    plaintext_codes = [
+        secrets.token_hex(_BACKUP_CODE_BYTES).upper() for _ in range(_BACKUP_CODE_COUNT)
+    ]
 
     # Persist encrypted secret (mfa_enabled stays False until confirm)
     await session.execute(
@@ -140,9 +143,7 @@ async def confirm_mfa(user_id: str, code: str, session: AsyncSession) -> bool:
         return False
 
     await session.execute(
-        text(
-            "UPDATE users SET mfa_enabled = TRUE, mfa_confirmed_at = :now WHERE id = :user_id"
-        ),
+        text("UPDATE users SET mfa_enabled = TRUE, mfa_confirmed_at = :now WHERE id = :user_id"),
         {"now": datetime.now(UTC), "user_id": user_id},
     )
     logger.info("mfa_confirmed", user_id=user_id)
@@ -152,9 +153,7 @@ async def confirm_mfa(user_id: str, code: str, session: AsyncSession) -> bool:
 async def verify_mfa_code(user_id: str, code: str, session: AsyncSession) -> bool:
     """Verify a TOTP code for login. Returns True on success."""
     row = await session.execute(
-        text(
-            "SELECT encrypted_mfa_secret, mfa_enabled FROM users WHERE id = :user_id"
-        ),
+        text("SELECT encrypted_mfa_secret, mfa_enabled FROM users WHERE id = :user_id"),
         {"user_id": user_id},
     )
     result = row.fetchone()
@@ -184,9 +183,7 @@ async def consume_backup_code(user_id: str, code: str, session: AsyncSession) ->
     for row_id, code_hash in candidates:
         if _verify_backup_code(code, code_hash):
             await session.execute(
-                text(
-                    "UPDATE mfa_backup_codes SET used_at = :now WHERE id = :id"
-                ),
+                text("UPDATE mfa_backup_codes SET used_at = :now WHERE id = :id"),
                 {"now": datetime.now(UTC), "id": row_id},
             )
             logger.info("mfa_backup_code_consumed", user_id=user_id)

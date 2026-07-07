@@ -34,20 +34,22 @@ async def _log(
     metadata: dict | None = None,
 ) -> None:
     now = datetime.now(UTC)
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=now,
-        updated_at=now,
-        action=action,
-        entity_type="IdentityProvider",
-        entity_id=entity_id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=detail,
-        event_metadata=metadata or {},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action=action,
+            entity_type="IdentityProvider",
+            entity_id=entity_id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=detail,
+            event_metadata=metadata or {},
+        )
+    )
 
 
 async def create_identity_provider(
@@ -118,9 +120,7 @@ async def create_identity_provider(
     return idp
 
 
-async def get_identity_provider(
-    idp_id: str, session: AsyncSession
-) -> IdentityProviderModel | None:
+async def get_identity_provider(idp_id: str, session: AsyncSession) -> IdentityProviderModel | None:
     result = await session.execute(
         select(IdentityProviderModel).where(IdentityProviderModel.id == idp_id)
     )
@@ -139,9 +139,7 @@ async def list_identity_providers(
     return list(result.scalars().all())
 
 
-async def deactivate_identity_provider(
-    idp_id: str, actor_id: str, session: AsyncSession
-) -> bool:
+async def deactivate_identity_provider(idp_id: str, actor_id: str, session: AsyncSession) -> bool:
     idp = await get_identity_provider(idp_id, session)
     if not idp:
         return False
@@ -168,9 +166,7 @@ async def delete_identity_provider(
     # Clean up the secret before removing the reference row
     if idp.secret_reference_id:
         ref_result = await session.execute(
-            select(SecretReferenceModel).where(
-                SecretReferenceModel.id == idp.secret_reference_id
-            )
+            select(SecretReferenceModel).where(SecretReferenceModel.id == idp.secret_reference_id)
         )
         ref = ref_result.scalar_one_or_none()
         if ref:
@@ -298,26 +294,26 @@ async def create_group_mapping(
     )
     session.add(mapping)
     await session.flush()
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=now,
-        updated_at=now,
-        action="enterprise.group_mapping.created",
-        entity_type="GroupMapping",
-        entity_id=mapping.id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=f"Group '{idp_group}' → role '{mapped_role}'",
-        event_metadata={"idp_id": idp_id},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action="enterprise.group_mapping.created",
+            entity_type="GroupMapping",
+            entity_id=mapping.id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=f"Group '{idp_group}' → role '{mapped_role}'",
+            event_metadata={"idp_id": idp_id},
+        )
+    )
     return mapping
 
 
-async def list_group_mappings(
-    idp_id: str, session: AsyncSession
-) -> list[GroupMappingModel]:
+async def list_group_mappings(idp_id: str, session: AsyncSession) -> list[GroupMappingModel]:
     result = await session.execute(
         select(GroupMappingModel).where(
             GroupMappingModel.idp_id == idp_id,
@@ -365,7 +361,7 @@ class SSOLoginResult:
 
 async def process_sso_login(
     enterprise_id: str,
-    validated_identity: "ValidatedIdentity",  # noqa: F821 — forward ref; import below
+    validated_identity: ValidatedIdentity,  # noqa: F821 — forward ref; import below
     session: AsyncSession,
     user_id: str | None = None,
 ) -> SSOLoginResult:
@@ -378,7 +374,6 @@ async def process_sso_login(
              to look up the user by external SSO id (future extension point).
              For now pass the resolved user_id explicitly.
     """
-    from application.enterprise.sso_validation import ValidatedIdentity  # noqa: PLC0415
 
     idp_id = validated_identity.idp_id
     idp_groups = validated_identity.groups
@@ -387,9 +382,7 @@ async def process_sso_login(
     mappings = await list_group_mappings(idp_id, session)
 
     idp_group_set = set(idp_groups)
-    matched: list[GroupMappingModel] = [
-        m for m in mappings if m.idp_group in idp_group_set
-    ]
+    matched: list[GroupMappingModel] = [m for m in mappings if m.idp_group in idp_group_set]
 
     def _rank(m: GroupMappingModel) -> int:
         if m.mapped_role in ("bu_admin", "regional_admin"):
@@ -402,9 +395,7 @@ async def process_sso_login(
     best = matched[0] if matched else None
 
     target_user_id = user_id or validated_identity.external_id
-    user_result = await session.execute(
-        select(UserModel).where(UserModel.id == target_user_id)
-    )
+    user_result = await session.execute(select(UserModel).where(UserModel.id == target_user_id))
     user = user_result.scalar_one_or_none()
 
     now = datetime.now(UTC)
@@ -427,27 +418,29 @@ async def process_sso_login(
         user.region_id = region_id
         user.updated_at = now
 
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=now,
-        updated_at=now,
-        action="sso.login.success",
-        entity_type="User",
-        entity_id=target_user_id,
-        actor_id=target_user_id,
-        outcome="success",
-        detail=f"SSO login via IdP {idp_id}; role '{applied_role}' applied",
-        event_metadata={
-            "enterprise_id": enterprise_id,
-            "idp_id": idp_id,
-            "issuer": validated_identity.issuer,
-            "matched_groups": list(idp_group_set & {m.idp_group for m in matched}),
-            "applied_role": applied_role,
-            "enterprise_scope": enterprise_scope,
-        },
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action="sso.login.success",
+            entity_type="User",
+            entity_id=target_user_id,
+            actor_id=target_user_id,
+            outcome="success",
+            detail=f"SSO login via IdP {idp_id}; role '{applied_role}' applied",
+            event_metadata={
+                "enterprise_id": enterprise_id,
+                "idp_id": idp_id,
+                "issuer": validated_identity.issuer,
+                "matched_groups": list(idp_group_set & {m.idp_group for m in matched}),
+                "applied_role": applied_role,
+                "enterprise_scope": enterprise_scope,
+            },
+        )
+    )
 
     return SSOLoginResult(
         user_id=target_user_id,

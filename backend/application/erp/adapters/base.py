@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 @dataclass
 class ERPMaterialRecord:
     """Normalized material record from an ERP system."""
+
     external_ref: str
     name: str
     material_type: str = "RAW_MATERIAL"
@@ -33,6 +34,7 @@ class ERPMaterialRecord:
 @dataclass
 class ERPBOMRecord:
     """Normalized BOM line from an ERP system."""
+
     product_external_ref: str
     material_external_ref: str
     quantity: float = 1.0
@@ -45,6 +47,7 @@ class ERPBOMRecord:
 @dataclass
 class ERPDPPRecord:
     """Passport data to push outbound to an ERP system."""
+
     passport_uid: str
     product_external_ref: str
     carbon_footprint_kg_co2e: float | None

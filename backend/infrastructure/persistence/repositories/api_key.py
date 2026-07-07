@@ -77,20 +77,22 @@ class SQLApiKeyRepository(BaseRepository[ApiKey, ApiKeyModel]):
 
     async def get_by_hash(self, key_hash: str) -> ApiKey | None:
         row = (
-            await self._session.execute(
-                select(ApiKeyModel).where(ApiKeyModel.key_hash == key_hash)
-            )
+            await self._session.execute(select(ApiKeyModel).where(ApiKeyModel.key_hash == key_hash))
         ).scalar_one_or_none()
         return self._to_domain(row) if row else None
 
     async def list_for_org(self, organization_id: str) -> list[ApiKey]:
         rows = (
-            await self._session.execute(
-                select(ApiKeyModel)
-                .where(ApiKeyModel.organization_id == organization_id)
-                .order_by(ApiKeyModel.created_at.desc())
+            (
+                await self._session.execute(
+                    select(ApiKeyModel)
+                    .where(ApiKeyModel.organization_id == organization_id)
+                    .order_by(ApiKeyModel.created_at.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
     async def increment_usage(
@@ -128,9 +130,7 @@ class SQLApiKeyRepository(BaseRepository[ApiKey, ApiKeyModel]):
             .values(requests_this_hour=1, hour_window_start=now)
         )
 
-    async def atomic_increment_and_get_counts(
-        self, key_id: str, now: datetime
-    ) -> tuple[int, int]:
+    async def atomic_increment_and_get_counts(self, key_id: str, now: datetime) -> tuple[int, int]:
         """Atomically increment usage counters (resetting expired windows) and return
         (new_minute_count, new_hour_count).
 

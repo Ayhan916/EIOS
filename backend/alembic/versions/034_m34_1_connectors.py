@@ -12,6 +12,7 @@ Create Date: 2026-06-19
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "034"
@@ -61,12 +62,8 @@ def upgrade() -> None:
         sa.Column("validated_at", sa.DateTime(timezone=True), nullable=False),
         *_AUDIT_COLS,
     )
-    op.create_index(
-        "ix_validation_results_dataset", "dataset_validation_results", ["dataset_id"]
-    )
-    op.create_index(
-        "ix_validation_results_valid", "dataset_validation_results", ["is_valid"]
-    )
+    op.create_index("ix_validation_results_dataset", "dataset_validation_results", ["dataset_id"])
+    op.create_index("ix_validation_results_valid", "dataset_validation_results", ["is_valid"])
 
 
 def downgrade() -> None:

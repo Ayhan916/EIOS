@@ -8,6 +8,7 @@ Create Date: 2026-07-05
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "087"
@@ -47,7 +48,9 @@ def upgrade() -> None:
         sa.Column("parent_policy_id", sa.String(36), nullable=True),
     )
     op.create_index("ix_dd_policies_org", "dd_policies", ["organization_id"])
-    op.create_index("ix_dd_policies_org_status", "dd_policies", ["organization_id", "policy_status"])
+    op.create_index(
+        "ix_dd_policies_org_status", "dd_policies", ["organization_id", "policy_status"]
+    )
 
     op.create_table(
         "codes_of_conduct",

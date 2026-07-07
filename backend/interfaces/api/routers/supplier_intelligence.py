@@ -20,6 +20,7 @@ from datetime import UTC, datetime
 
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel as _BaseModel
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,16 +34,16 @@ from application.scoring import (
     calculate_trend,
     categorize_pillar,
 )
-from domain.enums import EntityStatus, RiskBand, SupplierStatus
+from domain.enums import EntityStatus, RiskBand
 from domain.supplier_score import SupplierScore
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
-from infrastructure.persistence.models.supplier_extensions import SupplierCertificationModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.models.risk import RiskModel
 from infrastructure.persistence.models.supplier import SupplierModel
+from infrastructure.persistence.models.supplier_extensions import SupplierCertificationModel
 from infrastructure.persistence.repositories import (
     SQLAuditEventRepository,
     SQLSupplierRepository,
@@ -55,7 +56,6 @@ from interfaces.api.deps import (
     get_supplier_repo,
     get_supplier_score_repo,
 )
-from pydantic import BaseModel as _BaseModel
 from interfaces.api.schemas.supplier_score import (
     ExecutiveRankingEntry,
     HeatmapCell,
@@ -68,8 +68,8 @@ from interfaces.api.schemas.supplier_score import (
     WatchlistEntry,
 )
 
-
 # ── GAP-22 Segmentation schemas ───────────────────────────────────────────────
+
 
 class SegmentedSupplierEntry(_BaseModel):
     supplier_id: str
@@ -96,13 +96,14 @@ class RiskSegment(_BaseModel):
 
 
 class SegmentationResponse(_BaseModel):
-    segments: list[RiskSegment]   # ordered Critical → Low
+    segments: list[RiskSegment]  # ordered Critical → Low
     unscored_count: int
     total_suppliers: int
     total_scored: int
 
 
 # ── GAP-23 Geo-Heatmap schemas ────────────────────────────────────────────────
+
 
 class GeoSupplierSummary(_BaseModel):
     supplier_id: str
@@ -120,7 +121,7 @@ class GeoCountryEntry(_BaseModel):
     supplier_count: int
     avg_risk_score: float
     avg_esg_score: float
-    worst_band: str         # worst risk_band among suppliers in this country
+    worst_band: str  # worst risk_band among suppliers in this country
     critical_count: int
     high_count: int
     improving: int
@@ -133,12 +134,13 @@ class GeoCountryEntry(_BaseModel):
 
 
 class GeoHeatmapResponse(_BaseModel):
-    countries: list[GeoCountryEntry]   # sorted by worst_band severity, then avg_risk_score desc
+    countries: list[GeoCountryEntry]  # sorted by worst_band severity, then avg_risk_score desc
     total_suppliers: int
     countries_count: int
 
 
 # ── GAP-24 Certificate Lifecycle schemas ──────────────────────────────────────
+
 
 class CertificateAlertEntry(_BaseModel):
     cert_id: str
@@ -147,9 +149,9 @@ class CertificateAlertEntry(_BaseModel):
     cert_type: str
     custom_cert_name: str | None
     issuing_body: str | None
-    valid_until: str | None      # ISO date string
+    valid_until: str | None  # ISO date string
     days_until_expiry: int | None  # negative = already expired
-    lifecycle_status: str        # EXPIRED | EXPIRING_SOON | EXPIRING_60D | EXPIRING_90D | ACTIVE
+    lifecycle_status: str  # EXPIRED | EXPIRING_SOON | EXPIRING_60D | EXPIRING_90D | ACTIVE
     is_verified: bool
 
 
@@ -163,13 +165,14 @@ class CertTypeCount(_BaseModel):
 class CertificateLifecycleResponse(_BaseModel):
     total: int
     active: int
-    expiring_soon: int       # ≤30 days
-    expiring_60d: int        # 31–60 days
-    expiring_90d: int        # 61–90 days
+    expiring_soon: int  # ≤30 days
+    expiring_60d: int  # 31–60 days
+    expiring_90d: int  # 61–90 days
     expired: int
     verified: int
-    alerts: list[CertificateAlertEntry]   # EXPIRED + EXPIRING_* sorted by days_until_expiry
+    alerts: list[CertificateAlertEntry]  # EXPIRED + EXPIRING_* sorted by days_until_expiry
     by_cert_type: list[CertTypeCount]
+
 
 logger = structlog.get_logger(__name__)
 
@@ -266,9 +269,9 @@ async def _gather_inputs(
         await session.execute(
             select(
                 func.count(AssessmentModel.id).label("total"),
-                func.sum(
-                    case((AssessmentModel.review_status == "Approved", 1), else_=0)
-                ).label("approved"),
+                func.sum(case((AssessmentModel.review_status == "Approved", 1), else_=0)).label(
+                    "approved"
+                ),
             ).where(
                 AssessmentModel.supplier_id == supplier_id,
                 AssessmentModel.status != "Deleted",
@@ -400,9 +403,11 @@ async def _compute_percentile(
 
     peer_scores_stmt = (
         select(SupplierScoreModel.risk_score)
-        .join(latest_subq,
-              (SupplierScoreModel.supplier_id == latest_subq.c.sid) &
-              (SupplierScoreModel.created_at == latest_subq.c.max_created))
+        .join(
+            latest_subq,
+            (SupplierScoreModel.supplier_id == latest_subq.c.sid)
+            & (SupplierScoreModel.created_at == latest_subq.c.max_created),
+        )
         .join(SupplierModel, SupplierScoreModel.supplier_id == SupplierModel.id)
         .where(
             SupplierModel.organization_id == organization_id,
@@ -615,8 +620,8 @@ async def get_supplier_benchmark(
             select(SupplierScoreModel.supplier_id, SupplierScoreModel.risk_score)
             .join(
                 latest_subq,
-                (SupplierScoreModel.supplier_id == latest_subq.c.sid) &
-                (SupplierScoreModel.created_at == latest_subq.c.max_created),
+                (SupplierScoreModel.supplier_id == latest_subq.c.sid)
+                & (SupplierScoreModel.created_at == latest_subq.c.max_created),
             )
             .join(SupplierModel, SupplierScoreModel.supplier_id == SupplierModel.id)
             .where(
@@ -691,6 +696,7 @@ async def get_supplier_segmentation(
 
     # Group by band
     from collections import defaultdict
+
     bands: dict[str, list[SegmentedSupplierEntry]] = defaultdict(list)
 
     for score in latest_scores:
@@ -703,7 +709,9 @@ async def get_supplier_segmentation(
                 name=sup.name,
                 country=sup.country,
                 industry=sup.industry,
-                supplier_tier=sup.supplier_tier.value if hasattr(sup.supplier_tier, "value") else str(sup.supplier_tier),
+                supplier_tier=sup.supplier_tier.value
+                if hasattr(sup.supplier_tier, "value")
+                else str(sup.supplier_tier),
                 risk_score=round(score.risk_score, 1),
                 risk_band=score.risk_band.value,
                 esg_score=round(score.esg_score, 1),
@@ -717,27 +725,37 @@ async def get_supplier_segmentation(
         entries = bands.get(band, [])
         if not entries:
             # Always include all tiers even if empty
-            segments.append(RiskSegment(
-                risk_band=band, count=0, avg_risk_score=0.0, avg_esg_score=0.0,
-                improving=0, deteriorating=0, stable=0, suppliers=[],
-            ))
+            segments.append(
+                RiskSegment(
+                    risk_band=band,
+                    count=0,
+                    avg_risk_score=0.0,
+                    avg_esg_score=0.0,
+                    improving=0,
+                    deteriorating=0,
+                    stable=0,
+                    suppliers=[],
+                )
+            )
             continue
         entries.sort(key=lambda e: e.risk_score, reverse=True)
         avg_risk = round(sum(e.risk_score for e in entries) / len(entries), 1)
-        avg_esg  = round(sum(e.esg_score  for e in entries) / len(entries), 1)
-        improving    = sum(1 for e in entries if e.trend == "Improving")
+        avg_esg = round(sum(e.esg_score for e in entries) / len(entries), 1)
+        improving = sum(1 for e in entries if e.trend == "Improving")
         deteriorating = sum(1 for e in entries if e.trend == "Deteriorating")
-        stable       = sum(1 for e in entries if e.trend == "Stable")
-        segments.append(RiskSegment(
-            risk_band=band,
-            count=len(entries),
-            avg_risk_score=avg_risk,
-            avg_esg_score=avg_esg,
-            improving=improving,
-            deteriorating=deteriorating,
-            stable=stable,
-            suppliers=entries,
-        ))
+        stable = sum(1 for e in entries if e.trend == "Stable")
+        segments.append(
+            RiskSegment(
+                risk_band=band,
+                count=len(entries),
+                avg_risk_score=avg_risk,
+                avg_esg_score=avg_esg,
+                improving=improving,
+                deteriorating=deteriorating,
+                stable=stable,
+                suppliers=entries,
+            )
+        )
 
     return SegmentationResponse(
         segments=segments,
@@ -766,32 +784,41 @@ async def get_geo_heatmap(
         return GeoHeatmapResponse(countries=[], total_suppliers=0, countries_count=0)
 
     all_suppliers, total_count = await supplier_repo.list_org_paged(
-        organization_id=current_user.organization_id, page=1, page_size=10_000,
+        organization_id=current_user.organization_id,
+        page=1,
+        page_size=10_000,
     )
-    supplier_map = {s.id: s for s in all_suppliers}
+    {s.id: s for s in all_suppliers}
 
     latest_scores = await score_repo.get_latest_for_org(current_user.organization_id)
     scored_by_sid = {s.supplier_id: s for s in latest_scores}
 
     # Group by country
     from collections import defaultdict
+
     by_country: dict[str, list[GeoSupplierSummary]] = defaultdict(list)
     for sup in all_suppliers:
         country = sup.country.strip() or "Unknown"
         score = scored_by_sid.get(sup.id)
         if score is None:
             continue
-        tier_val = sup.supplier_tier.value if hasattr(sup.supplier_tier, "value") else str(sup.supplier_tier)
-        by_country[country].append(GeoSupplierSummary(
-            supplier_id=sup.id,
-            name=sup.name,
-            industry=sup.industry,
-            supplier_tier=tier_val,
-            risk_score=round(score.risk_score, 1),
-            risk_band=score.risk_band.value,
-            esg_score=round(score.esg_score, 1),
-            trend=score.trend.value,
-        ))
+        tier_val = (
+            sup.supplier_tier.value
+            if hasattr(sup.supplier_tier, "value")
+            else str(sup.supplier_tier)
+        )
+        by_country[country].append(
+            GeoSupplierSummary(
+                supplier_id=sup.id,
+                name=sup.name,
+                industry=sup.industry,
+                supplier_tier=tier_val,
+                risk_score=round(score.risk_score, 1),
+                risk_band=score.risk_band.value,
+                esg_score=round(score.esg_score, 1),
+                trend=score.trend.value,
+            )
+        )
 
     # Fetch all CountryRiskProfiles in one query (platform-global, no org filter)
     stmt = select(CountryRiskProfileModel)
@@ -808,34 +835,34 @@ async def get_geo_heatmap(
         bands = [s.risk_band for s in sups]
         worst = max(bands, key=lambda b: _BAND_SEVERITY.get(b, 0))
         avg_risk = round(sum(s.risk_score for s in sups) / len(sups), 1)
-        avg_esg  = round(sum(s.esg_score  for s in sups) / len(sups), 1)
+        avg_esg = round(sum(s.esg_score for s in sups) / len(sups), 1)
         critical = sum(1 for s in sups if s.risk_band == "Critical")
-        high     = sum(1 for s in sups if s.risk_band == "High")
-        improving    = sum(1 for s in sups if s.trend == "Improving")
+        high = sum(1 for s in sups if s.risk_band == "High")
+        improving = sum(1 for s in sups if s.trend == "Improving")
         deteriorating = sum(1 for s in sups if s.trend == "Deteriorating")
 
         # Enrich: try country.upper() as ISO code lookup
         crp = crp_map.get(country.upper())
-        entries.append(GeoCountryEntry(
-            country=country,
-            supplier_count=len(sups),
-            avg_risk_score=avg_risk,
-            avg_esg_score=avg_esg,
-            worst_band=worst,
-            critical_count=critical,
-            high_count=high,
-            improving=improving,
-            deteriorating=deteriorating,
-            country_risk_score=round(crp.overall_risk_score, 1) if crp else None,
-            country_risk_level=crp.risk_level if crp else None,
-            sanctions_status=crp.sanctions_status if crp else None,
-            suppliers=sorted(sups, key=lambda s: s.risk_score, reverse=True),
-        ))
+        entries.append(
+            GeoCountryEntry(
+                country=country,
+                supplier_count=len(sups),
+                avg_risk_score=avg_risk,
+                avg_esg_score=avg_esg,
+                worst_band=worst,
+                critical_count=critical,
+                high_count=high,
+                improving=improving,
+                deteriorating=deteriorating,
+                country_risk_score=round(crp.overall_risk_score, 1) if crp else None,
+                country_risk_level=crp.risk_level if crp else None,
+                sanctions_status=crp.sanctions_status if crp else None,
+                suppliers=sorted(sups, key=lambda s: s.risk_score, reverse=True),
+            )
+        )
 
     # Sort: worst band first, then avg_risk_score descending
-    entries.sort(
-        key=lambda e: (_BAND_SEVERITY.get(e.worst_band, 0) * -1, -e.avg_risk_score)
-    )
+    entries.sort(key=lambda e: (_BAND_SEVERITY.get(e.worst_band, 0) * -1, -e.avg_risk_score))
 
     return GeoHeatmapResponse(
         countries=entries,
@@ -866,8 +893,15 @@ async def get_certificate_lifecycle(
     org_id = current_user.organization_id or ""
     if not org_id:
         return CertificateLifecycleResponse(
-            total=0, active=0, expiring_soon=0, expiring_60d=0,
-            expiring_90d=0, expired=0, verified=0, alerts=[], by_cert_type=[],
+            total=0,
+            active=0,
+            expiring_soon=0,
+            expiring_60d=0,
+            expiring_90d=0,
+            expired=0,
+            verified=0,
+            alerts=[],
+            by_cert_type=[],
         )
 
     # Load suppliers for name lookup
@@ -930,24 +964,28 @@ async def get_certificate_lifecycle(
 
         # Build alert entry for non-ACTIVE certs
         if lifecycle != "ACTIVE":
-            alerts.append(CertificateAlertEntry(
-                cert_id=row.id,
-                supplier_id=row.supplier_id,
-                supplier_name=supplier_map.get(row.supplier_id, "Unknown"),
-                cert_type=row.cert_type,
-                custom_cert_name=row.custom_cert_name,
-                issuing_body=row.issuing_body,
-                valid_until=row.valid_until.isoformat() if row.valid_until else None,
-                days_until_expiry=days_left,
-                lifecycle_status=lifecycle,
-                is_verified=row.is_verified,
-            ))
+            alerts.append(
+                CertificateAlertEntry(
+                    cert_id=row.id,
+                    supplier_id=row.supplier_id,
+                    supplier_name=supplier_map.get(row.supplier_id, "Unknown"),
+                    cert_type=row.cert_type,
+                    custom_cert_name=row.custom_cert_name,
+                    issuing_body=row.issuing_body,
+                    valid_until=row.valid_until.isoformat() if row.valid_until else None,
+                    days_until_expiry=days_left,
+                    lifecycle_status=lifecycle,
+                    is_verified=row.is_verified,
+                )
+            )
 
     # Sort alerts: expired first (most negative days_left), then by days ascending
-    alerts.sort(key=lambda a: (a.days_until_expiry if a.days_until_expiry is not None else -9999))
+    alerts.sort(key=lambda a: a.days_until_expiry if a.days_until_expiry is not None else -9999)
 
     by_cert_type = [
-        CertTypeCount(cert_type=k, total=v["total"], expired=v["expired"], expiring_soon=v["expiring_soon"])
+        CertTypeCount(
+            cert_type=k, total=v["total"], expired=v["expired"], expiring_soon=v["expiring_soon"]
+        )
         for k, v in sorted(by_type.items(), key=lambda x: x[1]["total"], reverse=True)
     ]
 
@@ -972,9 +1010,14 @@ async def get_portfolio_analytics(
 ) -> PortfolioAnalytics:
     if not current_user.organization_id:
         return PortfolioAnalytics(
-            total_suppliers=0, scored_suppliers=0, critical_risk_suppliers=0,
-            high_risk_suppliers=0, improving_suppliers=0, deteriorating_suppliers=0,
-            avg_esg_score=None, avg_risk_score=None,
+            total_suppliers=0,
+            scored_suppliers=0,
+            critical_risk_suppliers=0,
+            high_risk_suppliers=0,
+            improving_suppliers=0,
+            deteriorating_suppliers=0,
+            avg_esg_score=None,
+            avg_risk_score=None,
             risk_distribution={"Low": 0, "Moderate": 0, "High": 0, "Critical": 0},
         )
 
@@ -984,7 +1027,7 @@ async def get_portfolio_analytics(
         page_size=10000,
     )
     latest_scores = await score_repo.get_latest_for_org(current_user.organization_id)
-    scored_by_supplier = {s.supplier_id: s for s in latest_scores}
+    {s.supplier_id: s for s in latest_scores}
 
     distribution: dict[str, int] = {"Low": 0, "Moderate": 0, "High": 0, "Critical": 0}
     improving = deteriorating = critical_risk = high_risk = 0
@@ -1052,12 +1095,8 @@ async def get_intelligence_watchlist(
     supplier_map = {s.id: s for s in all_suppliers_raw}
 
     # Pull per-supplier counts for the watchlist display
-    crit_finding_counts = await _get_critical_finding_counts(
-        session, current_user.organization_id
-    )
-    overdue_counts = await _get_overdue_action_counts(
-        session, current_user.organization_id
-    )
+    crit_finding_counts = await _get_critical_finding_counts(session, current_user.organization_id)
+    overdue_counts = await _get_overdue_action_counts(session, current_user.organization_id)
 
     entries: list[WatchlistEntry] = []
     for score in latest_scores:
@@ -1090,7 +1129,9 @@ async def get_intelligence_watchlist(
                 supplier_name=sup.name,
                 country=sup.country,
                 industry=sup.industry,
-                supplier_tier=sup.supplier_tier.value if hasattr(sup.supplier_tier, "value") else str(sup.supplier_tier),
+                supplier_tier=sup.supplier_tier.value
+                if hasattr(sup.supplier_tier, "value")
+                else str(sup.supplier_tier),
                 risk_score=score.risk_score,
                 risk_band=score.risk_band.value,
                 trend=score.trend.value,
@@ -1142,12 +1183,8 @@ async def get_executive_rankings(
     )
     supplier_map = {s.id: s for s in all_suppliers_raw}
 
-    crit_finding_counts = await _get_critical_finding_counts(
-        session, current_user.organization_id
-    )
-    overdue_counts = await _get_overdue_action_counts(
-        session, current_user.organization_id
-    )
+    crit_finding_counts = await _get_critical_finding_counts(session, current_user.organization_id)
+    overdue_counts = await _get_overdue_action_counts(session, current_user.organization_id)
 
     entries: list[ExecutiveRankingEntry] = []
     for score in latest_scores:
@@ -1164,7 +1201,9 @@ async def get_executive_rankings(
                 supplier_name=sup.name,
                 country=sup.country,
                 industry=sup.industry,
-                supplier_tier=sup.supplier_tier.value if hasattr(sup.supplier_tier, "value") else str(sup.supplier_tier),
+                supplier_tier=sup.supplier_tier.value
+                if hasattr(sup.supplier_tier, "value")
+                else str(sup.supplier_tier),
                 risk_score=score.risk_score,
                 risk_band=score.risk_band.value,
                 esg_score=score.esg_score,
@@ -1249,9 +1288,7 @@ async def _get_critical_finding_counts(
     return {r.supplier_id: r.cnt for r in rows if r.supplier_id}
 
 
-async def _get_overdue_action_counts(
-    session: AsyncSession, organization_id: str
-) -> dict[str, int]:
+async def _get_overdue_action_counts(session: AsyncSession, organization_id: str) -> dict[str, int]:
     now = datetime.now(UTC)
     rows = (
         await session.execute(
@@ -1294,9 +1331,8 @@ async def _build_heatmap(
         where_clauses.append(AssessmentModel.supplier_id.isnot(None))
         where_clauses.append(SupplierModel.organization_id == organization_id)
 
-    stmt = (
-        select(FindingModel.severity, FindingModel.category, FindingModel.title)
-        .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
+    stmt = select(FindingModel.severity, FindingModel.category, FindingModel.title).join(
+        AssessmentModel, FindingModel.assessment_id == AssessmentModel.id
     )
     if not supplier_id:
         stmt = stmt.join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)

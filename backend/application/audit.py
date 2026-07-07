@@ -597,7 +597,7 @@ def board_report_downloaded(
         entity_type="BoardReport",
         entity_id=report_id,
         outcome="success",
-        detail=f"Board report PDF downloaded",
+        detail="Board report PDF downloaded",
         status=EntityStatus.ACTIVE,
         event_metadata={},
     )

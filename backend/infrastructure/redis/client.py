@@ -38,7 +38,9 @@ async def init_redis() -> None:
         _redis = client
         logger.info("redis_connected", url=settings.redis_url.split("@")[-1])
     except Exception as exc:
-        logger.warning("redis_unavailable", error=str(exc), detail="Falling back to in-memory state")
+        logger.warning(
+            "redis_unavailable", error=str(exc), detail="Falling back to in-memory state"
+        )
         _redis = None
 
 

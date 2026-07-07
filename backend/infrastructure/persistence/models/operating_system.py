@@ -22,14 +22,14 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, DateTime, Float, Index, Integer, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
 
-
 # ── 1. ESG Objectives ─────────────────────────────────────────────────────────
+
 
 class ESGObjectiveModel(BaseModel):
     """Organization-level ESG objective (OKR frame).
@@ -57,12 +57,11 @@ class ESGObjectiveModel(BaseModel):
     unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     # NOT_STARTED | ON_TRACK | AT_RISK | OFF_TRACK | COMPLETED
-    objective_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="NOT_STARTED"
-    )
+    objective_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_STARTED")
 
 
 # ── 2. ESG Key Results ────────────────────────────────────────────────────────
+
 
 class ESGKeyResultModel(BaseModel):
     """Measurable sub-target within an ESGObjective.
@@ -90,6 +89,7 @@ class ESGKeyResultModel(BaseModel):
 
 # ── 3. ESG Initiatives ────────────────────────────────────────────────────────
 
+
 class ESGInitiativeModel(BaseModel):
     """Structured program of work driving one or more ESGObjectives.
 
@@ -109,9 +109,7 @@ class ESGInitiativeModel(BaseModel):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     owner_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     # PLANNED | ACTIVE | BLOCKED | COMPLETED | CANCELLED
-    initiative_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="PLANNED"
-    )
+    initiative_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PLANNED")
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     linked_objectives: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     linked_suppliers: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
@@ -120,6 +118,7 @@ class ESGInitiativeModel(BaseModel):
 
 
 # ── 4. Governance Calendar Events ─────────────────────────────────────────────
+
 
 class GovernanceCalendarEventModel(BaseModel):
     """Scheduled governance event (board review, supplier review, reporting cycle, etc.)."""
@@ -149,6 +148,7 @@ class GovernanceCalendarEventModel(BaseModel):
 
 # ── 5. ESG Programs ───────────────────────────────────────────────────────────
 
+
 class ESGProgramModel(BaseModel):
     """Portfolio-level grouping of objectives, initiatives and supplier reviews."""
 
@@ -169,6 +169,7 @@ class ESGProgramModel(BaseModel):
 
 
 # ── 6. ESG Controls ───────────────────────────────────────────────────────────
+
 
 class ESGControlModel(BaseModel):
     """ESG control framework entry.
@@ -198,6 +199,7 @@ class ESGControlModel(BaseModel):
 
 # ── 7. Control Tests ──────────────────────────────────────────────────────────
 
+
 class ControlTestModel(BaseModel):
     """Point-in-time effectiveness test result for an ESGControl."""
 
@@ -220,6 +222,7 @@ class ControlTestModel(BaseModel):
 
 # ── 8. Compliance Operations ──────────────────────────────────────────────────
 
+
 class ComplianceOperationModel(BaseModel):
     """Continuous readiness operation for a specific regulatory framework.
 
@@ -240,16 +243,13 @@ class ComplianceOperationModel(BaseModel):
     gap_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     owner_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     # NOT_STARTED | IN_PROGRESS | COMPLETED
-    operation_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="NOT_STARTED"
-    )
+    operation_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_STARTED")
     actions: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    last_synced_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 # ── 9. ESG Actions ────────────────────────────────────────────────────────────
+
 
 class ESGActionModel(BaseModel):
     """Unified action object aggregating actions from all EIOS modules.
@@ -286,6 +286,7 @@ class ESGActionModel(BaseModel):
 
 # ── 10. Accountability Assignments ────────────────────────────────────────────
 
+
 class AccountabilityAssignmentModel(BaseModel):
     """Tracks who owns, reviews, approves, or sponsors an entity."""
 
@@ -306,12 +307,11 @@ class AccountabilityAssignmentModel(BaseModel):
     assigned_by_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     # ACTIVE | REMOVED
-    assignment_status: Mapped[str] = mapped_column(
-        String(10), nullable=False, default="ACTIVE"
-    )
+    assignment_status: Mapped[str] = mapped_column(String(10), nullable=False, default="ACTIVE")
 
 
 # ── 11. ESG Playbooks ─────────────────────────────────────────────────────────
+
 
 class ESGPlaybookModel(BaseModel):
     """Response playbook defining investigation/escalation steps.
@@ -342,6 +342,7 @@ class ESGPlaybookModel(BaseModel):
 
 # ── 12. Workflow Executions ───────────────────────────────────────────────────
 
+
 class WorkflowExecutionModel(BaseModel):
     """Live execution of a playbook or governance workflow.
 
@@ -363,9 +364,7 @@ class WorkflowExecutionModel(BaseModel):
     current_step: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     total_steps: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # PENDING | IN_PROGRESS | AWAITING_APPROVAL | COMPLETED | CANCELLED | REJECTED
-    execution_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="PENDING"
-    )
+    execution_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
     steps_completed: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     pending_approvals: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     initiated_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
@@ -374,6 +373,7 @@ class WorkflowExecutionModel(BaseModel):
 
 
 # ── 13. Governance Escalation Rules ──────────────────────────────────────────
+
 
 class GovernanceEscalationRuleModel(BaseModel):
     """Rule-based governance escalation matrix.
@@ -406,6 +406,7 @@ class GovernanceEscalationRuleModel(BaseModel):
 
 # ── 14. ESG Health Scores ─────────────────────────────────────────────────────
 
+
 class OrganizationESGHealthScoreModel(BaseModel):
     """Immutable snapshot of an organization's ESG health score.
 
@@ -434,6 +435,7 @@ class OrganizationESGHealthScoreModel(BaseModel):
 
 
 # ── 15. Strategic Risks ───────────────────────────────────────────────────────
+
 
 class StrategicRiskModel(BaseModel):
     """Organization-wide strategic ESG risk.

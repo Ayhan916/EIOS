@@ -32,45 +32,62 @@ async def get_supplier_dashboard(
     session=None,
 ) -> SupplierDashboard:
     """Load all dashboard widget data for a supplier in parallel queries."""
+    from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.assessment import AssessmentModel
+    from infrastructure.persistence.models.finding import FindingModel
+    from infrastructure.persistence.models.recommendation import RecommendationModel
     from infrastructure.persistence.models.supplier_portal import (
         EvidenceRequestModel,
         QuestionnaireAssignmentModel,
         RemediationPlanModel,
         SupplierActivityEventModel,
     )
-    from infrastructure.persistence.models.assessment import AssessmentModel
-    from infrastructure.persistence.models.finding import FindingModel
-    from infrastructure.persistence.models.recommendation import RecommendationModel
-    from sqlalchemy import func, select
 
     now = datetime.now(UTC)
 
     # Open evidence requests
-    ev_stmt = select(func.count()).select_from(EvidenceRequestModel).where(
-        EvidenceRequestModel.supplier_id == supplier_id,
-        EvidenceRequestModel.evidence_status.in_(["open", "in_progress"]),
+    ev_stmt = (
+        select(func.count())
+        .select_from(EvidenceRequestModel)
+        .where(
+            EvidenceRequestModel.supplier_id == supplier_id,
+            EvidenceRequestModel.evidence_status.in_(["open", "in_progress"]),
+        )
     )
     ev_count = (await session.execute(ev_stmt)).scalar_one()
 
     # Pending questionnaires (not yet submitted)
-    q_stmt = select(func.count()).select_from(QuestionnaireAssignmentModel).where(
-        QuestionnaireAssignmentModel.supplier_id == supplier_id,
-        QuestionnaireAssignmentModel.questionnaire_status.in_(["assigned", "in_progress"]),
+    q_stmt = (
+        select(func.count())
+        .select_from(QuestionnaireAssignmentModel)
+        .where(
+            QuestionnaireAssignmentModel.supplier_id == supplier_id,
+            QuestionnaireAssignmentModel.questionnaire_status.in_(["assigned", "in_progress"]),
+        )
     )
     q_count = (await session.execute(q_stmt)).scalar_one()
 
     # Open remediation plans
-    rem_stmt = select(func.count()).select_from(RemediationPlanModel).where(
-        RemediationPlanModel.supplier_id == supplier_id,
-        RemediationPlanModel.remediation_status.in_(["open", "in_progress"]),
+    rem_stmt = (
+        select(func.count())
+        .select_from(RemediationPlanModel)
+        .where(
+            RemediationPlanModel.supplier_id == supplier_id,
+            RemediationPlanModel.remediation_status.in_(["open", "in_progress"]),
+        )
     )
     rem_count = (await session.execute(rem_stmt)).scalar_one()
 
     # Overdue actions: remediation plans past due_date and not completed/verified
-    overdue_stmt = select(func.count()).select_from(RemediationPlanModel).where(
-        RemediationPlanModel.supplier_id == supplier_id,
-        RemediationPlanModel.due_date < now,
-        RemediationPlanModel.remediation_status.in_(["open", "in_progress"]),
+    overdue_stmt = (
+        select(func.count())
+        .select_from(RemediationPlanModel)
+        .where(
+            RemediationPlanModel.supplier_id == supplier_id,
+            RemediationPlanModel.due_date < now,
+            RemediationPlanModel.remediation_status.in_(["open", "in_progress"]),
+        )
     )
     overdue_count = (await session.execute(overdue_stmt)).scalar_one()
 
@@ -80,15 +97,23 @@ async def get_supplier_dashboard(
         .where(AssessmentModel.supplier_id == supplier_id)
         .scalar_subquery()
     )
-    findings_stmt = select(func.count()).select_from(FindingModel).where(
-        FindingModel.assessment_id.in_(findings_subq),
+    findings_stmt = (
+        select(func.count())
+        .select_from(FindingModel)
+        .where(
+            FindingModel.assessment_id.in_(findings_subq),
+        )
     )
     findings_count = (await session.execute(findings_stmt)).scalar_one()
 
     # F6: open recommendations from the same assessments
-    recs_stmt = select(func.count()).select_from(RecommendationModel).where(
-        RecommendationModel.assessment_id.in_(findings_subq),
-        RecommendationModel.action_status != "closed",
+    recs_stmt = (
+        select(func.count())
+        .select_from(RecommendationModel)
+        .where(
+            RecommendationModel.assessment_id.in_(findings_subq),
+            RecommendationModel.action_status != "closed",
+        )
     )
     recs_count = (await session.execute(recs_stmt)).scalar_one()
 

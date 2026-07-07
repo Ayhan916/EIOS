@@ -13,6 +13,7 @@ Create Date: 2026-06-19
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "026"
@@ -54,7 +55,5 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("compliance_gaps", "regulation_version_at_calculation")
-    op.drop_constraint(
-        "uq_req_mappings_entity_requirement", "requirement_mappings", type_="unique"
-    )
+    op.drop_constraint("uq_req_mappings_entity_requirement", "requirement_mappings", type_="unique")
     op.drop_column("requirement_mappings", "regulation_version_at_mapping")

@@ -9,8 +9,8 @@ from __future__ import annotations
 import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.notification import Notification
 from domain.enums import NotificationType
+from domain.notification import Notification
 from infrastructure.persistence.repositories.notification import SQLNotificationRepository
 from infrastructure.persistence.repositories.user import SQLUserRepository
 from shared.email import send_email

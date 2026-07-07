@@ -19,7 +19,7 @@ not just omit the indicator).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 
@@ -27,14 +27,14 @@ from typing import Any
 class PAIIndicator:
     """A single SFDR PAI entry."""
 
-    indicator_number: int          # 1–14 mandatory; 15–16 opt-in
-    category: str                  # Climate | Social | Governance | Additional
+    indicator_number: int  # 1–14 mandatory; 15–16 opt-in
+    category: str  # Climate | Social | Governance | Additional
     name: str
-    metric: str                    # What is measured
+    metric: str  # What is measured
     unit: str
-    value: float | None            # None = data not available
+    value: float | None  # None = data not available
     data_available: bool
-    explanation: str               # Methodology or reason for data gap
+    explanation: str  # Methodology or reason for data gap
     is_mandatory: bool = True
 
 
@@ -87,97 +87,210 @@ def calculate_pai(
     )
 
     mandatory: list[PAIIndicator] = [
-        PAIIndicator(1, "Climate", "GHG emissions",
-                     "Scope 1 + 2 + 3 GHG emissions of investee companies", "tCO2e",
-                     total_ghg, total_ghg is not None,
-                     "Calculated from GHG Protocol Scope 1/2/3 data." if total_ghg is not None
-                     else "Scope 3 data partially unavailable."),
-        PAIIndicator(2, "Climate", "Carbon footprint",
-                     "Carbon footprint relative to enterprise value (€M)", "tCO2e/€M",
-                     carbon_footprint, carbon_footprint is not None,
-                     "Calculated as total GHG / enterprise value * 1M." if carbon_footprint is not None
-                     else "Enterprise value not provided."),
-        PAIIndicator(3, "Climate", "GHG intensity of investee companies",
-                     "GHG per unit of revenue (€M)", "tCO2e/€M revenue",
-                     ghg_intensity, ghg_intensity is not None,
-                     "Calculated as total GHG / revenue * 1M." if ghg_intensity is not None
-                     else "Revenue data not provided."),
-        PAIIndicator(4, "Climate", "Exposure to companies in the fossil fuel sector",
-                     "Portfolio share invested in fossil fuel companies", "%",
-                     fossil_fuel_exposure_pct, fossil_fuel_exposure_pct is not None,
-                     "Measured against IEA/SBTi fossil fuel classification." if fossil_fuel_exposure_pct is not None
-                     else "Fossil fuel exposure screening not yet completed."),
-        PAIIndicator(5, "Climate", "Share of non-renewable energy consumption and production",
-                     "% of energy from non-renewable sources", "%",
-                     non_renewable_energy_pct, non_renewable_energy_pct is not None,
-                     "Derived from energy consumption data." if non_renewable_energy_pct is not None
-                     else "Energy mix data not yet collected."),
-        PAIIndicator(6, "Climate", "Energy consumption intensity per high-impact climate sector",
-                     "MWh per €M revenue in high-impact sectors", "MWh/€M",
-                     energy_intensity_mwh_per_meur, energy_intensity_mwh_per_meur is not None,
-                     "High-impact sectors per NACE Rev.2 classification." if energy_intensity_mwh_per_meur is not None
-                     else "Sector-level energy data not available."),
-        PAIIndicator(7, "Environment", "Activities negatively affecting biodiversity-sensitive areas",
-                     "Whether investee has operations in/near protected areas", "boolean",
-                     (1.0 if biodiversity_sensitive_exposure else 0.0) if biodiversity_sensitive_exposure is not None else None,
-                     biodiversity_sensitive_exposure is not None,
-                     "Assessed against WDPA/RAMSAR protected area databases." if biodiversity_sensitive_exposure is not None
-                     else "Biodiversity screening not yet completed."),
-        PAIIndicator(8, "Environment", "Emissions to water",
-                     "Tonnes of pollutants emitted to water bodies", "tonnes",
-                     water_emissions_tonnes, water_emissions_tonnes is not None,
-                     "Sum of reportable water pollutant emissions." if water_emissions_tonnes is not None
-                     else "Water emissions data not yet collected."),
-        PAIIndicator(9, "Social", "Violations of UN Global Compact principles and OECD Guidelines",
-                     "Number of investees with confirmed UNGC violations", "count",
-                     float(ungc_violations) if ungc_violations is not None else None,
-                     ungc_violations is not None,
-                     "Assessed via ESG controversy screening." if ungc_violations is not None
-                     else "UNGC screening not completed."),
-        PAIIndicator(10, "Social", "Lack of UNGC/OECD compliance processes",
-                     "% of investees without compliance policies", "%",
-                     (100.0 if no_ungc_compliance_process else 0.0) if no_ungc_compliance_process is not None else None,
-                     no_ungc_compliance_process is not None,
-                     "Based on supplier policy assessment." if no_ungc_compliance_process is not None
-                     else "Policy screening not completed."),
-        PAIIndicator(11, "Social", "Gender pay gap",
-                     "Difference in average gross hourly earnings women vs men", "%",
-                     gender_pay_gap_pct, gender_pay_gap_pct is not None,
-                     "Measured per EU Directive 2023/970 methodology." if gender_pay_gap_pct is not None
-                     else "Gender pay gap data not yet collected."),
-        PAIIndicator(12, "Social", "Board gender diversity",
-                     "% of board seats held by women", "%",
-                     board_female_pct, board_female_pct is not None,
-                     "Governance data from annual reporting." if board_female_pct is not None
-                     else "Board composition data not collected."),
-        PAIIndicator(13, "Social", "Exposure to controversial weapons",
-                     "Whether portfolio includes controversial weapons manufacturers", "boolean",
-                     (1.0 if controversial_weapons_exposure else 0.0) if controversial_weapons_exposure is not None else None,
-                     controversial_weapons_exposure is not None,
-                     "Screened against cluster munitions, landmines, bio/chem weapons exclusion lists." if controversial_weapons_exposure is not None
-                     else "Controversial weapons screening not completed."),
-        PAIIndicator(14, "Governance", "Exposure to companies with bribery/corruption convictions",
-                     "Number of investees with confirmed violations", "count",
-                     float(bribery_convictions) if bribery_convictions is not None else None,
-                     bribery_convictions is not None,
-                     "Sourced from public court records and ESG controversy data." if bribery_convictions is not None
-                     else "Anti-corruption screening not completed."),
+        PAIIndicator(
+            1,
+            "Climate",
+            "GHG emissions",
+            "Scope 1 + 2 + 3 GHG emissions of investee companies",
+            "tCO2e",
+            total_ghg,
+            total_ghg is not None,
+            "Calculated from GHG Protocol Scope 1/2/3 data."
+            if total_ghg is not None
+            else "Scope 3 data partially unavailable.",
+        ),
+        PAIIndicator(
+            2,
+            "Climate",
+            "Carbon footprint",
+            "Carbon footprint relative to enterprise value (€M)",
+            "tCO2e/€M",
+            carbon_footprint,
+            carbon_footprint is not None,
+            "Calculated as total GHG / enterprise value * 1M."
+            if carbon_footprint is not None
+            else "Enterprise value not provided.",
+        ),
+        PAIIndicator(
+            3,
+            "Climate",
+            "GHG intensity of investee companies",
+            "GHG per unit of revenue (€M)",
+            "tCO2e/€M revenue",
+            ghg_intensity,
+            ghg_intensity is not None,
+            "Calculated as total GHG / revenue * 1M."
+            if ghg_intensity is not None
+            else "Revenue data not provided.",
+        ),
+        PAIIndicator(
+            4,
+            "Climate",
+            "Exposure to companies in the fossil fuel sector",
+            "Portfolio share invested in fossil fuel companies",
+            "%",
+            fossil_fuel_exposure_pct,
+            fossil_fuel_exposure_pct is not None,
+            "Measured against IEA/SBTi fossil fuel classification."
+            if fossil_fuel_exposure_pct is not None
+            else "Fossil fuel exposure screening not yet completed.",
+        ),
+        PAIIndicator(
+            5,
+            "Climate",
+            "Share of non-renewable energy consumption and production",
+            "% of energy from non-renewable sources",
+            "%",
+            non_renewable_energy_pct,
+            non_renewable_energy_pct is not None,
+            "Derived from energy consumption data."
+            if non_renewable_energy_pct is not None
+            else "Energy mix data not yet collected.",
+        ),
+        PAIIndicator(
+            6,
+            "Climate",
+            "Energy consumption intensity per high-impact climate sector",
+            "MWh per €M revenue in high-impact sectors",
+            "MWh/€M",
+            energy_intensity_mwh_per_meur,
+            energy_intensity_mwh_per_meur is not None,
+            "High-impact sectors per NACE Rev.2 classification."
+            if energy_intensity_mwh_per_meur is not None
+            else "Sector-level energy data not available.",
+        ),
+        PAIIndicator(
+            7,
+            "Environment",
+            "Activities negatively affecting biodiversity-sensitive areas",
+            "Whether investee has operations in/near protected areas",
+            "boolean",
+            (1.0 if biodiversity_sensitive_exposure else 0.0)
+            if biodiversity_sensitive_exposure is not None
+            else None,
+            biodiversity_sensitive_exposure is not None,
+            "Assessed against WDPA/RAMSAR protected area databases."
+            if biodiversity_sensitive_exposure is not None
+            else "Biodiversity screening not yet completed.",
+        ),
+        PAIIndicator(
+            8,
+            "Environment",
+            "Emissions to water",
+            "Tonnes of pollutants emitted to water bodies",
+            "tonnes",
+            water_emissions_tonnes,
+            water_emissions_tonnes is not None,
+            "Sum of reportable water pollutant emissions."
+            if water_emissions_tonnes is not None
+            else "Water emissions data not yet collected.",
+        ),
+        PAIIndicator(
+            9,
+            "Social",
+            "Violations of UN Global Compact principles and OECD Guidelines",
+            "Number of investees with confirmed UNGC violations",
+            "count",
+            float(ungc_violations) if ungc_violations is not None else None,
+            ungc_violations is not None,
+            "Assessed via ESG controversy screening."
+            if ungc_violations is not None
+            else "UNGC screening not completed.",
+        ),
+        PAIIndicator(
+            10,
+            "Social",
+            "Lack of UNGC/OECD compliance processes",
+            "% of investees without compliance policies",
+            "%",
+            (100.0 if no_ungc_compliance_process else 0.0)
+            if no_ungc_compliance_process is not None
+            else None,
+            no_ungc_compliance_process is not None,
+            "Based on supplier policy assessment."
+            if no_ungc_compliance_process is not None
+            else "Policy screening not completed.",
+        ),
+        PAIIndicator(
+            11,
+            "Social",
+            "Gender pay gap",
+            "Difference in average gross hourly earnings women vs men",
+            "%",
+            gender_pay_gap_pct,
+            gender_pay_gap_pct is not None,
+            "Measured per EU Directive 2023/970 methodology."
+            if gender_pay_gap_pct is not None
+            else "Gender pay gap data not yet collected.",
+        ),
+        PAIIndicator(
+            12,
+            "Social",
+            "Board gender diversity",
+            "% of board seats held by women",
+            "%",
+            board_female_pct,
+            board_female_pct is not None,
+            "Governance data from annual reporting."
+            if board_female_pct is not None
+            else "Board composition data not collected.",
+        ),
+        PAIIndicator(
+            13,
+            "Social",
+            "Exposure to controversial weapons",
+            "Whether portfolio includes controversial weapons manufacturers",
+            "boolean",
+            (1.0 if controversial_weapons_exposure else 0.0)
+            if controversial_weapons_exposure is not None
+            else None,
+            controversial_weapons_exposure is not None,
+            "Screened against cluster munitions, landmines, bio/chem weapons exclusion lists."
+            if controversial_weapons_exposure is not None
+            else "Controversial weapons screening not completed.",
+        ),
+        PAIIndicator(
+            14,
+            "Governance",
+            "Exposure to companies with bribery/corruption convictions",
+            "Number of investees with confirmed violations",
+            "count",
+            float(bribery_convictions) if bribery_convictions is not None else None,
+            bribery_convictions is not None,
+            "Sourced from public court records and ESG controversy data."
+            if bribery_convictions is not None
+            else "Anti-corruption screening not completed.",
+        ),
     ]
 
     # ── Opt-in PAIs ───────────────────────────────────────────────────────────
     optional: list[PAIIndicator] = [
-        PAIIndicator(15, "Environment", "Water usage and recycling",
-                     "Total water withdrawn (m³)", "m³",
-                     water_usage_m3, water_usage_m3 is not None,
-                     "Water metering data from operations." if water_usage_m3 is not None
-                     else "Water metering not yet implemented.",
-                     is_mandatory=False),
-        PAIIndicator(16, "Environment", "Hazardous and radioactive waste",
-                     "Total waste generated (tonnes)", "tonnes",
-                     waste_tonnes, waste_tonnes is not None,
-                     "Waste disposal records from facility management." if waste_tonnes is not None
-                     else "Waste tracking not yet implemented.",
-                     is_mandatory=False),
+        PAIIndicator(
+            15,
+            "Environment",
+            "Water usage and recycling",
+            "Total water withdrawn (m³)",
+            "m³",
+            water_usage_m3,
+            water_usage_m3 is not None,
+            "Water metering data from operations."
+            if water_usage_m3 is not None
+            else "Water metering not yet implemented.",
+            is_mandatory=False,
+        ),
+        PAIIndicator(
+            16,
+            "Environment",
+            "Hazardous and radioactive waste",
+            "Total waste generated (tonnes)",
+            "tonnes",
+            waste_tonnes,
+            waste_tonnes is not None,
+            "Waste disposal records from facility management."
+            if waste_tonnes is not None
+            else "Waste tracking not yet implemented.",
+            is_mandatory=False,
+        ),
     ]
 
     def _pai_dict(p: PAIIndicator) -> dict:

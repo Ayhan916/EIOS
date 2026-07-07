@@ -31,6 +31,7 @@ def _reset_rate_limits() -> None:
     """Clear in-process rate-limit windows before every test."""
     reset_for_tests()
 
+
 AUTH = "/api/v1/auth"
 USERS = "/api/v1/users"
 
@@ -38,6 +39,7 @@ USERS = "/api/v1/users"
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 async def _register_admin(email: str, org: str) -> tuple[str, str]:
     """Register a fresh admin in a new org. Returns (token, user_id)."""
@@ -92,6 +94,7 @@ async def _patch(token: str, user_id: str, payload: dict) -> tuple[int, dict]:
 # Last-admin guard: demotion
 # ---------------------------------------------------------------------------
 
+
 async def test_two_admins_neither_can_demote_the_other(setup_test_schema: None) -> None:
     """
     Org has exactly 2 active admins (A, B).
@@ -131,6 +134,7 @@ async def test_three_admins_one_can_demote_another(setup_test_schema: None) -> N
 # Last-admin guard: deactivation
 # ---------------------------------------------------------------------------
 
+
 async def test_two_admins_neither_can_deactivate_the_other(setup_test_schema: None) -> None:
     """
     Org has exactly 2 active admins. Deactivating either one fires the guard.
@@ -167,6 +171,7 @@ async def test_three_admins_one_can_deactivate_another(setup_test_schema: None) 
 # Guard does not fire for non-admin targets
 # ---------------------------------------------------------------------------
 
+
 async def test_deactivating_non_admin_always_allowed(setup_test_schema: None) -> None:
     """
     Deactivating an analyst (not admin) never triggers the last-admin guard.
@@ -202,6 +207,7 @@ async def test_demoting_inactive_admin_always_allowed(setup_test_schema: None) -
 # Self-modification guard
 # ---------------------------------------------------------------------------
 
+
 async def test_admin_cannot_modify_own_account(setup_test_schema: None) -> None:
     """Self-modification is blocked regardless of admin count."""
     token_a, id_a = await _register_admin("self-mod-a@eios.dev", "Org SelfMod")
@@ -216,6 +222,7 @@ async def test_admin_cannot_modify_own_account(setup_test_schema: None) -> None:
 # ---------------------------------------------------------------------------
 # Tenant isolation
 # ---------------------------------------------------------------------------
+
 
 async def test_admin_cannot_modify_user_in_other_org(setup_test_schema: None) -> None:
     """Admin from Org X cannot PATCH a user in Org Y → 404."""
@@ -245,6 +252,7 @@ async def test_list_users_only_returns_own_org(setup_test_schema: None) -> None:
 # ---------------------------------------------------------------------------
 # Invite flow
 # ---------------------------------------------------------------------------
+
 
 async def test_invite_returns_usable_temp_password(setup_test_schema: None) -> None:
     """Invited user can log in with the temp_password returned once at invite time."""
@@ -294,9 +302,7 @@ async def test_non_admin_cannot_call_users_endpoints(setup_test_schema: None) ->
         headers={"Authorization": f"Bearer {token_b}"},
     ) as c:
         assert (await c.get(USERS + "/")).status_code == 403
-        assert (
-            await c.patch(USERS + f"/{id_b}", json={"role": "admin"})
-        ).status_code == 403
+        assert (await c.patch(USERS + f"/{id_b}", json={"role": "admin"})).status_code == 403
         assert (
             await c.post(
                 USERS + "/invite",

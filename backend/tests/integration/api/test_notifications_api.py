@@ -23,9 +23,9 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
-from infrastructure.persistence.database import AsyncSessionFactory
 from application.notification_service import notify
 from domain.enums import NotificationType
+from infrastructure.persistence.database import AsyncSessionFactory
 from shared.rate_limit import reset_for_tests
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio(loop_scope="session")]
@@ -48,6 +48,7 @@ def _reset_rl() -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 async def _register(email: str, org: str) -> tuple[str, str]:
     """Register a user in a fresh org. Returns (token, user_id)."""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
@@ -67,7 +68,8 @@ async def _register(email: str, org: str) -> tuple[str, str]:
 
 async def _get_me(token: str) -> dict:
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test",
+        transport=ASGITransport(app=app),
+        base_url="http://test",
         headers={"Authorization": f"Bearer {token}"},
     ) as c:
         r = await c.get(AUTH + "/me")
@@ -77,7 +79,8 @@ async def _get_me(token: str) -> dict:
 
 async def _patch_me(token: str, payload: dict) -> tuple[int, dict]:
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test",
+        transport=ASGITransport(app=app),
+        base_url="http://test",
         headers={"Authorization": f"Bearer {token}"},
     ) as c:
         r = await c.patch(AUTH + "/me", json=payload)
@@ -86,7 +89,8 @@ async def _patch_me(token: str, payload: dict) -> tuple[int, dict]:
 
 async def _list_notifs(token: str) -> tuple[int, dict]:
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test",
+        transport=ASGITransport(app=app),
+        base_url="http://test",
         headers={"Authorization": f"Bearer {token}"},
     ) as c:
         r = await c.get(NOTIF + "/")
@@ -95,7 +99,8 @@ async def _list_notifs(token: str) -> tuple[int, dict]:
 
 async def _mark_read(token: str, notif_id: str) -> int:
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test",
+        transport=ASGITransport(app=app),
+        base_url="http://test",
         headers={"Authorization": f"Bearer {token}"},
     ) as c:
         r = await c.patch(NOTIF + f"/{notif_id}/read")
@@ -104,7 +109,8 @@ async def _mark_read(token: str, notif_id: str) -> int:
 
 async def _mark_all(token: str) -> int:
     async with AsyncClient(
-        transport=ASGITransport(app=app), base_url="http://test",
+        transport=ASGITransport(app=app),
+        base_url="http://test",
         headers={"Authorization": f"Bearer {token}"},
     ) as c:
         r = await c.patch(NOTIF + "/read-all")
@@ -136,6 +142,7 @@ async def _create_notif_direct(
 # Test 1: List isolation
 # ---------------------------------------------------------------------------
 
+
 async def test_list_notifications_isolation(setup_test_schema: None) -> None:
     """User A and User B are in different orgs. Notification for A is invisible to B."""
     tok_a, id_a = await _register("notif-iso-a@eios.dev", "Org NotifIsoA")
@@ -153,6 +160,7 @@ async def test_list_notifications_isolation(setup_test_schema: None) -> None:
 # ---------------------------------------------------------------------------
 # Test 2: Mark-read authorization
 # ---------------------------------------------------------------------------
+
 
 async def test_mark_read_authorization(setup_test_schema: None) -> None:
     """User B cannot mark User A's notification as read — must get 404."""
@@ -175,6 +183,7 @@ async def test_mark_read_authorization(setup_test_schema: None) -> None:
 # ---------------------------------------------------------------------------
 # Test 3: Mark-all authorization
 # ---------------------------------------------------------------------------
+
 
 async def test_mark_all_authorization(setup_test_schema: None) -> None:
     """mark-all for user B does not affect user A's unread count."""
@@ -203,6 +212,7 @@ async def test_mark_all_authorization(setup_test_schema: None) -> None:
 # Test 4: Dedupe key prevents duplicate
 # ---------------------------------------------------------------------------
 
+
 async def test_dedupe_key_prevents_duplicate(setup_test_schema: None) -> None:
     """Calling notify() twice with the same dedupe_key creates exactly 1 notification."""
     tok, uid = await _register("notif-dedupe@eios.dev", "Org NotifDedupe")
@@ -224,6 +234,7 @@ async def test_dedupe_key_prevents_duplicate(setup_test_schema: None) -> None:
 # ---------------------------------------------------------------------------
 # Test 5: Email sent when preference is True
 # ---------------------------------------------------------------------------
+
 
 async def test_email_sent_when_preference_enabled(setup_test_schema: None) -> None:
     """send_email is called when the matching preference key is True."""
@@ -250,6 +261,7 @@ async def test_email_sent_when_preference_enabled(setup_test_schema: None) -> No
 # Test 6: Email skipped when preference is False
 # ---------------------------------------------------------------------------
 
+
 async def test_email_skipped_when_preference_disabled(setup_test_schema: None) -> None:
     """send_email is NOT called when the matching preference key is set to False."""
     tok, uid = await _register("notif-email-off@eios.dev", "Org NotifEmailOff")
@@ -257,7 +269,9 @@ async def test_email_skipped_when_preference_disabled(setup_test_schema: None) -
     org_id = me["organization_id"]
 
     # Disable the assessment_approved email preference
-    code, _ = await _patch_me(tok, {"notification_preferences": {"email_assessment_approved": False}})
+    code, _ = await _patch_me(
+        tok, {"notification_preferences": {"email_assessment_approved": False}}
+    )
     assert code == 200
 
     with patch("application.notification_service.send_email", new_callable=AsyncMock) as mock_mail:
@@ -279,9 +293,11 @@ async def test_email_skipped_when_preference_disabled(setup_test_schema: None) -
 # Test 7: Overdue daily dedupe
 # ---------------------------------------------------------------------------
 
+
 async def test_overdue_notification_daily_dedupe(setup_test_schema: None) -> None:
     """Same rec_id + same date → second notify() call is blocked; only 1 notification exists."""
     from datetime import date
+
     tok, uid = await _register("notif-overdue@eios.dev", "Org NotifOverdue")
     me = await _get_me(tok)
     org_id = me["organization_id"]
@@ -326,16 +342,20 @@ async def test_overdue_notification_daily_dedupe(setup_test_schema: None) -> Non
 # Test 8: PATCH /auth/me saves and returns preferences
 # ---------------------------------------------------------------------------
 
+
 async def test_patch_me_saves_notification_preferences(setup_test_schema: None) -> None:
     """PATCH /auth/me with valid keys updates and returns the correct preferences."""
     tok, _ = await _register("notif-pref-save@eios.dev", "Org NotifPrefSave")
 
-    code, body = await _patch_me(tok, {
-        "notification_preferences": {
-            "email_workflow_completed": False,
-            "email_action_overdue": False,
-        }
-    })
+    code, body = await _patch_me(
+        tok,
+        {
+            "notification_preferences": {
+                "email_workflow_completed": False,
+                "email_action_overdue": False,
+            }
+        },
+    )
     assert code == 200
 
     me = await _get_me(tok)
@@ -351,19 +371,19 @@ async def test_patch_me_saves_notification_preferences(setup_test_schema: None) 
 # Test 9: Unknown preference key is rejected
 # ---------------------------------------------------------------------------
 
+
 async def test_patch_me_unknown_preference_key_rejected(setup_test_schema: None) -> None:
     """Sending an unknown key in notification_preferences must return 422."""
     tok, _ = await _register("notif-pref-unk@eios.dev", "Org NotifPrefUnk")
 
-    code, body = await _patch_me(tok, {
-        "notification_preferences": {"email_unknown_event": True}
-    })
+    code, body = await _patch_me(tok, {"notification_preferences": {"email_unknown_event": True}})
     assert code == 422, body
 
 
 # ---------------------------------------------------------------------------
 # Test 10: Unauthenticated requests are rejected
 # ---------------------------------------------------------------------------
+
 
 async def test_notifications_require_auth(setup_test_schema: None) -> None:
     """All /notifications/ endpoints require a valid Bearer token."""

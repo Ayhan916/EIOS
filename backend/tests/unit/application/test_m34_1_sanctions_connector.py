@@ -12,15 +12,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from application.external_intelligence.connectors.un_sanctions import (
-    UNSanctionsConnector,
-    _parse_sanctions_xml,
-)
 from application.external_intelligence.connectors.eu_sanctions import (
     EUSanctionsConnector,
     _parse_eu_sanctions_xml,
 )
-
+from application.external_intelligence.connectors.un_sanctions import (
+    UNSanctionsConnector,
+    _parse_sanctions_xml,
+)
 
 _UN_XML_TEXT = """<?xml version="1.0" encoding="UTF-8"?>
 <CONSOLIDATED_LIST>

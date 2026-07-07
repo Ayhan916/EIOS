@@ -1,4 +1,5 @@
 """Pydantic schemas — M7 Supply Chain Compliance Extensions."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -26,7 +27,7 @@ class ProductComplianceScanResponse(BaseModel):
     scanned_by: str | None
 
     @classmethod
-    def from_model(cls, m: ProductComplianceScanModel) -> "ProductComplianceScanResponse":
+    def from_model(cls, m: ProductComplianceScanModel) -> ProductComplianceScanResponse:
         return cls.model_validate(m)
 
 

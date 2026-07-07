@@ -44,10 +44,7 @@ def build_action_advisor_payload(
     )[:10]
 
     # Open recommendations by combined priority + overdue score
-    open_recs = [
-        r for r in recommendations
-        if r.get("action_status") in ("open", "in_progress")
-    ]
+    open_recs = [r for r in recommendations if r.get("action_status") in ("open", "in_progress")]
     scored_recs = sorted(open_recs, key=_action_score, reverse=True)
 
     highest_impact = scored_recs[:5]
@@ -59,10 +56,7 @@ def build_action_advisor_payload(
     )[:5]
 
     # Risk reduction priorities = critical risks with open mitigations
-    critical_risks = [
-        r for r in risks
-        if r.get("risk_level") in ("Critical", "High")
-    ][:5]
+    critical_risks = [r for r in risks if r.get("risk_level") in ("Critical", "High")][:5]
 
     return {
         "highest_impact_actions": [
@@ -72,7 +66,7 @@ def build_action_advisor_payload(
                 "priority": r.get("priority", ""),
                 "overdue": r.get("overdue", False),
                 "rationale": (
-                    f"Priority {r.get('priority','?')} action"
+                    f"Priority {r.get('priority', '?')} action"
                     + (" — OVERDUE" if r.get("overdue") else "")
                 ),
             }

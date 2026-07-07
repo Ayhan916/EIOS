@@ -13,15 +13,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def _log_audit(session, action: str, entity_id: str, organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()), status="Active", version=1,
-        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
-        action=action, entity_type="ControlTest", entity_id=entity_id,
-        actor_id=None, outcome="success", detail=detail,
-        event_metadata={"organization_id": organization_id},
-    ))
+
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type="ControlTest",
+            entity_id=entity_id,
+            actor_id=None,
+            outcome="success",
+            detail=detail,
+            event_metadata={"organization_id": organization_id},
+        )
+    )
 
 
 def _result_to_effectiveness(test_result: str) -> str:
@@ -42,12 +54,20 @@ async def create_test(
     findings: str = "",
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ControlTestModel, ESGControlModel
+
     now = datetime.now(UTC)
     test = ControlTestModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, control_id=control_id,
-        performed_by=performed_by, test_result=test_result,
-        findings=findings, tested_at=tested_at,
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        control_id=control_id,
+        performed_by=performed_by,
+        test_result=test_result,
+        findings=findings,
+        tested_at=tested_at,
     )
     session.add(test)
     await session.flush()
@@ -61,18 +81,27 @@ async def create_test(
         ctrl.effectiveness_status = _result_to_effectiveness(test_result)
         ctrl.updated_at = now
 
-    await _log_audit(session, "control.tested", test.id, organization_id,
-                     detail=f"control={control_id} result={test_result}")
+    await _log_audit(
+        session,
+        "control.tested",
+        test.id,
+        organization_id,
+        detail=f"control={control_id} result={test_result}",
+    )
     from application.operating_system.metrics import os_counters
+
     os_counters.record_control_test_created()
     return _to_dict(test)
 
 
 async def list_tests(
-    organization_id: str, session: AsyncSession,
-    control_id: str | None = None, limit: int = 100,
+    organization_id: str,
+    session: AsyncSession,
+    control_id: str | None = None,
+    limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ControlTestModel
+
     stmt = select(ControlTestModel).where(ControlTestModel.organization_id == organization_id)
     if control_id:
         stmt = stmt.where(ControlTestModel.control_id == control_id)
@@ -85,6 +114,7 @@ async def update_test(
     organization_id: str, test_id: str, session: AsyncSession, **fields
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ControlTestModel
+
     stmt = select(ControlTestModel).where(
         ControlTestModel.organization_id == organization_id,
         ControlTestModel.id == test_id,
@@ -101,10 +131,9 @@ async def update_test(
     return _to_dict(row)
 
 
-async def delete_test(
-    organization_id: str, test_id: str, session: AsyncSession
-) -> bool:
+async def delete_test(organization_id: str, test_id: str, session: AsyncSession) -> bool:
     from infrastructure.persistence.models.operating_system import ControlTestModel
+
     stmt = select(ControlTestModel).where(
         ControlTestModel.organization_id == organization_id,
         ControlTestModel.id == test_id,

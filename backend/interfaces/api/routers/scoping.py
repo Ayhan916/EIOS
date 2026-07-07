@@ -25,10 +25,10 @@ Security:
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -94,11 +94,11 @@ class ScopingStudyResponse(BaseModel):
     status: str
     results_snapshot: list[dict]
     methodology_notes: str
-    submitted_at: Optional[Any]
-    submitted_by: Optional[str]
-    approved_at: Optional[Any]
-    approved_by: Optional[str]
-    next_review_due: Optional[Any]
+    submitted_at: Any | None
+    submitted_by: str | None
+    approved_at: Any | None
+    approved_by: str | None
+    next_review_due: Any | None
     created_at: Any
     updated_at: Any
 
@@ -107,6 +107,7 @@ class ScopingStudyResponse(BaseModel):
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _cfg_repo(db: Session = Depends(get_sync_db)) -> SQLScopingConfigRepository:
     return SQLScopingConfigRepository(db)
@@ -154,6 +155,7 @@ def _study(s: Any) -> dict:
 
 # ── Config Endpoints ──────────────────────────────────────────────────────────
 
+
 @router.get("/config/", response_model=ScopingConfigResponse)
 def get_latest_config(
     user: User = Depends(get_current_user),
@@ -198,6 +200,7 @@ def create_default_config(
 
 # ── Analyze ───────────────────────────────────────────────────────────────────
 
+
 @router.post("/analyze")
 def run_analysis(
     config_id: UUID,
@@ -214,7 +217,10 @@ def run_analysis(
     supplier_data = loader.load(user.organization_id)
 
     if not supplier_data:
-        return {"results": [], "summary": {"total": 0, "priority_1": 0, "priority_2": 0, "priority_3": 0}}
+        return {
+            "results": [],
+            "summary": {"total": 0, "priority_1": 0, "priority_2": 0, "priority_3": 0},
+        }
 
     inputs = [SupplierInput(**s) for s in supplier_data]
     results = analyze(cfg, inputs)
@@ -249,6 +255,7 @@ def run_analysis(
 
 # ── Studies ───────────────────────────────────────────────────────────────────
 
+
 @router.post("/studies/", response_model=ScopingStudyResponse, status_code=201)
 def create_study(
     body: ScopingStudyCreate,
@@ -256,7 +263,9 @@ def create_study(
     repo: SQLScopingStudyRepository = Depends(_study_repo),
     db: Session = Depends(get_sync_db),
 ):
-    study = repo.create(user.organization_id, body.model_dump(exclude={"results"}), results=body.results)
+    study = repo.create(
+        user.organization_id, body.model_dump(exclude={"results"}), results=body.results
+    )
     db.commit()
     return _study(study)
 

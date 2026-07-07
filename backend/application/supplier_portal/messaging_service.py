@@ -71,8 +71,9 @@ async def get_conversation(
     session=None,
 ) -> object | None:
     """Load a conversation scoped to a supplier (isolation guard)."""
-    from infrastructure.persistence.models.supplier_portal import ConversationModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import ConversationModel
 
     stmt = select(ConversationModel).where(
         ConversationModel.id == conversation_id,
@@ -90,13 +91,15 @@ async def send_message(
     session=None,
 ) -> object:
     """Post a message. Validates that the conversation belongs to supplier_id. F5: logs activity."""
+    import json
+
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         ConversationModel,
         MessageModel,
         SupplierActivityEventModel,
     )
-    from sqlalchemy import select
-    import json
 
     # Isolation: verify conversation belongs to this supplier
     conv_stmt = select(ConversationModel).where(
@@ -149,12 +152,11 @@ async def list_conversations(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.supplier_portal import ConversationModel
     from sqlalchemy import select
 
-    stmt = select(ConversationModel).where(
-        ConversationModel.supplier_id == supplier_id
-    )
+    from infrastructure.persistence.models.supplier_portal import ConversationModel
+
+    stmt = select(ConversationModel).where(ConversationModel.supplier_id == supplier_id)
     if organization_id:
         stmt = stmt.where(ConversationModel.organization_id == organization_id)
     stmt = stmt.order_by(ConversationModel.updated_at.desc()).limit(limit)
@@ -169,11 +171,12 @@ async def get_conversation_messages(
     session=None,
 ) -> list:
     """Paginated message list.  Verifies conversation belongs to supplier_id."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         ConversationModel,
         MessageModel,
     )
-    from sqlalchemy import select
 
     conv_stmt = select(ConversationModel).where(
         ConversationModel.id == conversation_id,
@@ -200,11 +203,12 @@ async def add_participant(
     supplier_id: str,
     session=None,
 ) -> object:
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         ConversationModel,
         ConversationParticipantModel,
     )
-    from sqlalchemy import select
 
     conv_stmt = select(ConversationModel).where(
         ConversationModel.id == conversation_id,

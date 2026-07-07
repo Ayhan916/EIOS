@@ -20,7 +20,7 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.ports.llm import LLMProvider, Message
-from domain.copilot import CopilotConversation, CopilotMessage
+from domain.copilot import CopilotMessage
 from domain.enums import CopilotIntentType, CopilotMessageRole, EntityStatus
 
 from .citation_extractor import extract_citations, format_citations_for_prompt
@@ -163,8 +163,8 @@ async def ask(
     }
 
     freshness_summary = freshness_summary_dict(freshness)
-    budget_report = budget_dict(budget)
-    contradiction_dicts = contradictions_to_dicts(contradictions)
+    budget_dict(budget)
+    contradictions_to_dicts(contradictions)
 
     user_msg = CopilotMessage(
         conversation_id=conv_id,

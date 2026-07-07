@@ -75,7 +75,9 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
         row = result.scalar_one_or_none()
         return self._to_domain(row) if row else None
 
-    async def get_archived_by_name_and_org(self, name: str, organization_id: str) -> Supplier | None:
+    async def get_archived_by_name_and_org(
+        self, name: str, organization_id: str
+    ) -> Supplier | None:
         stmt = (
             select(SupplierModel)
             .where(

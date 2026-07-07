@@ -41,7 +41,9 @@ class SQLStakeholderRepository(BaseRepository[Stakeholder, StakeholderModel]):
             id=e.id,
             organization_id=e.organization_id,
             name=e.name,
-            stakeholder_type=e.stakeholder_type.value if hasattr(e.stakeholder_type, "value") else e.stakeholder_type,
+            stakeholder_type=e.stakeholder_type.value
+            if hasattr(e.stakeholder_type, "value")
+            else e.stakeholder_type,
             contact_email=e.contact_email,
             language=e.language,
             activity_chain_ids=_dumps(e.activity_chain_ids),
@@ -165,10 +167,12 @@ class SQLStakeholderConsultationRepository(
             StakeholderConsultationModel.organization_id == organization_id
         )
         if stakeholder_id:
-            stmt = stmt.where(
-                StakeholderConsultationModel.stakeholder_ids.contains(stakeholder_id)
-            )
-        stmt = stmt.order_by(StakeholderConsultationModel.consultation_date.desc()).limit(limit).offset(offset)
+            stmt = stmt.where(StakeholderConsultationModel.stakeholder_ids.contains(stakeholder_id))
+        stmt = (
+            stmt.order_by(StakeholderConsultationModel.consultation_date.desc())
+            .limit(limit)
+            .offset(offset)
+        )
         result = await self._session.execute(stmt)
         return [self._to_domain(row) for row in result.scalars().all()]
 

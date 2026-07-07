@@ -62,16 +62,29 @@ class TestExtractCitations:
     def test_all_valid_citation_types(self):
         # All 9 types accepted when their IDs are present in citation_map
         cmap = {
-            "s1": "Supplier", "f1": "Finding", "r1": "Risk",
-            "rec1": "Recommendation", "e1": "Evidence", "a1": "Assessment",
-            "g1": "ComplianceGap", "d1": "Disclosure", "rpt1": "Report",
+            "s1": "Supplier",
+            "f1": "Finding",
+            "r1": "Risk",
+            "rec1": "Recommendation",
+            "e1": "Evidence",
+            "a1": "Assessment",
+            "g1": "ComplianceGap",
+            "d1": "Disclosure",
+            "rpt1": "Report",
         }
-        content = " ".join([
-            "[Supplier:s1]", "[Finding:f1]", "[Risk:r1]",
-            "[Recommendation:rec1]", "[Evidence:e1]",
-            "[Assessment:a1]", "[ComplianceGap:g1]",
-            "[Disclosure:d1]", "[Report:rpt1]",
-        ])
+        content = " ".join(
+            [
+                "[Supplier:s1]",
+                "[Finding:f1]",
+                "[Risk:r1]",
+                "[Recommendation:rec1]",
+                "[Evidence:e1]",
+                "[Assessment:a1]",
+                "[ComplianceGap:g1]",
+                "[Disclosure:d1]",
+                "[Report:rpt1]",
+            ]
+        )
         citations = extract_citations(content, cmap)
         types = {c["citation_type"] for c in citations}
         assert len(types) == 9

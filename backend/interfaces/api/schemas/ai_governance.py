@@ -7,8 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── AI Model ──────────────────────────────────────────────────────────────────
+
 
 class AIModelCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -26,9 +26,7 @@ class AIModelCreate(BaseModel):
 
 
 class AIModelStatusUpdate(BaseModel):
-    ai_status: str = Field(
-        ..., pattern="^(DRAFT|ACTIVE|RETIRED|SUSPENDED)$"
-    )
+    ai_status: str = Field(..., pattern="^(DRAFT|ACTIVE|RETIRED|SUSPENDED)$")
 
 
 class AIModelResponse(BaseModel):
@@ -52,6 +50,7 @@ class AIModelResponse(BaseModel):
 
 # ── Approval Workflow ─────────────────────────────────────────────────────────
 
+
 class WorkflowStageAdvance(BaseModel):
     stage: str
     approved: bool = True
@@ -74,6 +73,7 @@ class WorkflowStageResponse(BaseModel):
 
 
 # ── Use Case ──────────────────────────────────────────────────────────────────
+
 
 class AIUseCaseCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
@@ -100,6 +100,7 @@ class AIUseCaseResponse(BaseModel):
 
 
 # ── Risk Assessment ───────────────────────────────────────────────────────────
+
 
 class RiskAssessmentCreate(BaseModel):
     use_case_id: str | None = None
@@ -133,6 +134,7 @@ class RiskAssessmentResponse(BaseModel):
 
 
 # ── Controls ──────────────────────────────────────────────────────────────────
+
 
 class AIControlCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -178,6 +180,7 @@ class ControlTestResponse(BaseModel):
 
 
 # ── Prompt Templates ──────────────────────────────────────────────────────────
+
 
 class PromptTemplateCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
@@ -226,6 +229,7 @@ class PromptChangeResponse(BaseModel):
 
 
 # ── Decision Logging ──────────────────────────────────────────────────────────
+
 
 class DecisionLogCreate(BaseModel):
     # Caller provides pre-computed SHA-256 hashes (64-char hex). Raw data must
@@ -301,6 +305,7 @@ class HumanReviewResponse(BaseModel):
 
 # ── Monitoring ────────────────────────────────────────────────────────────────
 
+
 class MonitoringSnapshotCreate(BaseModel):
     period_start: datetime
     period_end: datetime
@@ -346,6 +351,7 @@ class DriftAlertResponse(BaseModel):
 
 # ── Incidents ─────────────────────────────────────────────────────────────────
 
+
 class AIIncidentCreate(BaseModel):
     incident_type: str = Field(
         ...,
@@ -383,6 +389,7 @@ class AIIncidentResponse(BaseModel):
 
 # ── Policies ──────────────────────────────────────────────────────────────────
 
+
 class AIPolicyCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     policy_type: str = Field(
@@ -411,10 +418,9 @@ class AIPolicyResponse(BaseModel):
 
 # ── Regulation Mappings ───────────────────────────────────────────────────────
 
+
 class RegulationMappingCreate(BaseModel):
-    framework: str = Field(
-        ..., pattern="^(EU_AI_ACT|NIST_AI_RMF|ISO_42001|OTHER)$"
-    )
+    framework: str = Field(..., pattern="^(EU_AI_ACT|NIST_AI_RMF|ISO_42001|OTHER)$")
     use_case_id: str | None = None
     risk_assessment_id: str | None = None
     control_id: str | None = None
@@ -428,9 +434,7 @@ class RegulationMappingCreate(BaseModel):
 
 
 class RegulationMappingStatusUpdate(BaseModel):
-    compliance_status: str = Field(
-        ..., pattern="^(COMPLIANT|PARTIAL|NON_COMPLIANT|NOT_ASSESSED)$"
-    )
+    compliance_status: str = Field(..., pattern="^(COMPLIANT|PARTIAL|NON_COMPLIANT|NOT_ASSESSED)$")
 
 
 class RegulationMappingResponse(BaseModel):
@@ -465,6 +469,7 @@ class RegulationMappingHistoryResponse(BaseModel):
 
 # ── Assurance Reports ─────────────────────────────────────────────────────────
 
+
 class AssuranceReportCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=500)
     period_start: datetime
@@ -492,6 +497,7 @@ class AssuranceReportResponse(BaseModel):
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
+
 
 class AIGovernanceDashboard(BaseModel):
     organization_id: str

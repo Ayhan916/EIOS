@@ -7,8 +7,6 @@ is org-agnostic. Signals and enrichments are tenant-scoped by org_id.
 
 from __future__ import annotations
 
-from typing import Sequence
-
 import structlog
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,12 +25,14 @@ logger = structlog.get_logger(__name__)
 
 # ── External Datasets ─────────────────────────────────────────────────────────
 
+
 class SQLExternalDatasetRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def save(self, dataset: ExternalDataset) -> ExternalDataset:
         from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
+
         model = ExternalDatasetModel(
             id=dataset.id,
             status=dataset.status.value if hasattr(dataset.status, "value") else dataset.status,
@@ -42,12 +42,16 @@ class SQLExternalDatasetRepository:
             updated_by=dataset.updated_by,
             created_at=dataset.created_at,
             updated_at=dataset.updated_at,
-            source_name=dataset.source_name.value if hasattr(dataset.source_name, "value") else dataset.source_name,
+            source_name=dataset.source_name.value
+            if hasattr(dataset.source_name, "value")
+            else dataset.source_name,
             source_version=dataset.source_version,
             dataset_hash=dataset.dataset_hash,
             imported_at=dataset.imported_at,
             row_count=dataset.row_count,
-            dataset_status=dataset.dataset_status.value if hasattr(dataset.dataset_status, "value") else dataset.dataset_status,
+            dataset_status=dataset.dataset_status.value
+            if hasattr(dataset.dataset_status, "value")
+            else dataset.dataset_status,
             description=dataset.description,
         )
         self._session.add(model)
@@ -56,11 +60,13 @@ class SQLExternalDatasetRepository:
 
     async def get_by_id(self, dataset_id: str) -> ExternalDataset | None:
         from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
+
         row = await self._session.get(ExternalDatasetModel, dataset_id)
         return _dataset_to_domain(row) if row else None
 
     async def get_active_by_source(self, source_name: str) -> ExternalDataset | None:
         from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
+
         stmt = (
             select(ExternalDatasetModel)
             .where(
@@ -75,6 +81,7 @@ class SQLExternalDatasetRepository:
     async def supersede_active(self, source_name: str) -> int:
         """Mark any ACTIVE dataset for source_name as SUPERSEDED. Returns count updated."""
         from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
+
         stmt = (
             update(ExternalDatasetModel)
             .where(
@@ -93,6 +100,7 @@ class SQLExternalDatasetRepository:
         limit: int = 50,
     ) -> list[ExternalDataset]:
         from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
+
         stmt = select(ExternalDatasetModel).limit(limit)
         if source_name:
             stmt = stmt.where(ExternalDatasetModel.source_name == source_name)
@@ -104,12 +112,14 @@ class SQLExternalDatasetRepository:
 
 # ── Country Risk Profiles ─────────────────────────────────────────────────────
 
+
 class SQLCountryRiskProfileRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def save(self, profile: CountryRiskProfile) -> CountryRiskProfile:
         from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
+
         model = CountryRiskProfileModel(
             id=profile.id,
             status=profile.status.value if hasattr(profile.status, "value") else profile.status,
@@ -129,8 +139,12 @@ class SQLCountryRiskProfileRepository:
             human_rights_score=profile.human_rights_score,
             sanctions_status=profile.sanctions_status,
             overall_risk_score=profile.overall_risk_score,
-            risk_level=profile.risk_level.value if hasattr(profile.risk_level, "value") else profile.risk_level,
-            source_name=profile.source_name.value if hasattr(profile.source_name, "value") else profile.source_name,
+            risk_level=profile.risk_level.value
+            if hasattr(profile.risk_level, "value")
+            else profile.risk_level,
+            source_name=profile.source_name.value
+            if hasattr(profile.source_name, "value")
+            else profile.source_name,
             source_version=profile.source_version,
             data_date=profile.data_date,
         )
@@ -140,6 +154,7 @@ class SQLCountryRiskProfileRepository:
 
     async def get_by_country_code(self, country_code: str) -> CountryRiskProfile | None:
         from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
+
         stmt = (
             select(CountryRiskProfileModel)
             .where(CountryRiskProfileModel.country_code == country_code)
@@ -153,6 +168,7 @@ class SQLCountryRiskProfileRepository:
         self, country_code: str, dataset_id: str
     ) -> CountryRiskProfile | None:
         from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
+
         stmt = select(CountryRiskProfileModel).where(
             CountryRiskProfileModel.country_code == country_code,
             CountryRiskProfileModel.dataset_id == dataset_id,
@@ -166,6 +182,7 @@ class SQLCountryRiskProfileRepository:
         limit: int = 50,
     ) -> list[CountryRiskProfile]:
         from infrastructure.persistence.models.external_intelligence import CountryRiskProfileModel
+
         stmt = (
             select(CountryRiskProfileModel)
             .order_by(CountryRiskProfileModel.overall_risk_score.desc())
@@ -179,15 +196,19 @@ class SQLCountryRiskProfileRepository:
 
 # ── Sector Benchmarks ─────────────────────────────────────────────────────────
 
+
 class SQLSectorBenchmarkRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
     async def save(self, benchmark: SectorBenchmark) -> SectorBenchmark:
         from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
+
         model = SectorBenchmarkModel(
             id=benchmark.id,
-            status=benchmark.status.value if hasattr(benchmark.status, "value") else benchmark.status,
+            status=benchmark.status.value
+            if hasattr(benchmark.status, "value")
+            else benchmark.status,
             version=benchmark.version,
             owner=benchmark.owner,
             created_by=benchmark.created_by,
@@ -208,7 +229,9 @@ class SQLSectorBenchmarkRepository:
             p50_esg_score=benchmark.p50_esg_score,
             p75_esg_score=benchmark.p75_esg_score,
             p90_esg_score=benchmark.p90_esg_score,
-            source_name=benchmark.source_name.value if hasattr(benchmark.source_name, "value") else benchmark.source_name,
+            source_name=benchmark.source_name.value
+            if hasattr(benchmark.source_name, "value")
+            else benchmark.source_name,
             source_version=benchmark.source_version,
             benchmark_date=benchmark.benchmark_date,
         )
@@ -218,6 +241,7 @@ class SQLSectorBenchmarkRepository:
 
     async def get_by_sector_id(self, sector_id: str) -> SectorBenchmark | None:
         from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
+
         stmt = (
             select(SectorBenchmarkModel)
             .where(SectorBenchmarkModel.sector_id == sector_id)
@@ -229,6 +253,7 @@ class SQLSectorBenchmarkRepository:
 
     async def get_by_nace(self, nace_code: str) -> SectorBenchmark | None:
         from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
+
         stmt = (
             select(SectorBenchmarkModel)
             .where(SectorBenchmarkModel.nace_code == nace_code)
@@ -242,6 +267,7 @@ class SQLSectorBenchmarkRepository:
         self, sector_id: str, dataset_id: str
     ) -> SectorBenchmark | None:
         from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
+
         stmt = select(SectorBenchmarkModel).where(
             SectorBenchmarkModel.sector_id == sector_id,
             SectorBenchmarkModel.dataset_id == dataset_id,
@@ -251,17 +277,23 @@ class SQLSectorBenchmarkRepository:
 
     async def list(self, limit: int = 50) -> list[SectorBenchmark]:
         from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
+
         rows = (
-            await self._session.execute(
-                select(SectorBenchmarkModel)
-                .order_by(SectorBenchmarkModel.sector_name.asc())
-                .limit(limit)
+            (
+                await self._session.execute(
+                    select(SectorBenchmarkModel)
+                    .order_by(SectorBenchmarkModel.sector_name.asc())
+                    .limit(limit)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [_sector_benchmark_to_domain(r) for r in rows]
 
 
 # ── External Risk Signals ─────────────────────────────────────────────────────
+
 
 class SQLExternalRiskSignalRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -269,6 +301,7 @@ class SQLExternalRiskSignalRepository:
 
     async def save(self, signal: ExternalRiskSignal) -> ExternalRiskSignal:
         from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+
         model = ExternalRiskSignalModel(
             id=signal.id,
             status=signal.status.value if hasattr(signal.status, "value") else signal.status,
@@ -278,10 +311,16 @@ class SQLExternalRiskSignalRepository:
             updated_by=signal.updated_by,
             created_at=signal.created_at,
             updated_at=signal.updated_at,
-            signal_type=signal.signal_type.value if hasattr(signal.signal_type, "value") else signal.signal_type,
-            severity=signal.severity.value if hasattr(signal.severity, "value") else signal.severity,
+            signal_type=signal.signal_type.value
+            if hasattr(signal.signal_type, "value")
+            else signal.signal_type,
+            severity=signal.severity.value
+            if hasattr(signal.severity, "value")
+            else signal.severity,
             description=signal.description,
-            source_name=signal.source_name.value if hasattr(signal.source_name, "value") else signal.source_name,
+            source_name=signal.source_name.value
+            if hasattr(signal.source_name, "value")
+            else signal.source_name,
             source_version=signal.source_version,
             observed_at=signal.observed_at,
             dataset_id=signal.dataset_id or None,
@@ -303,6 +342,7 @@ class SQLExternalRiskSignalRepository:
         limit: int = 50,
     ) -> list[ExternalRiskSignal]:
         from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+
         stmt = (
             select(ExternalRiskSignalModel)
             .where(
@@ -324,6 +364,7 @@ class SQLExternalRiskSignalRepository:
         limit: int = 50,
     ) -> list[ExternalRiskSignal]:
         from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+
         stmt = (
             select(ExternalRiskSignalModel)
             .where(ExternalRiskSignalModel.country_code == country_code)
@@ -341,21 +382,27 @@ class SQLExternalRiskSignalRepository:
         limit: int = 100,
     ) -> list[ExternalRiskSignal]:
         from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+
         rows = (
-            await self._session.execute(
-                select(ExternalRiskSignalModel)
-                .where(
-                    ExternalRiskSignalModel.organization_id == organization_id,
-                    ExternalRiskSignalModel.is_active.is_(True),
+            (
+                await self._session.execute(
+                    select(ExternalRiskSignalModel)
+                    .where(
+                        ExternalRiskSignalModel.organization_id == organization_id,
+                        ExternalRiskSignalModel.is_active.is_(True),
+                    )
+                    .order_by(ExternalRiskSignalModel.observed_at.desc())
+                    .limit(limit)
                 )
-                .order_by(ExternalRiskSignalModel.observed_at.desc())
-                .limit(limit)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [_signal_to_domain(r) for r in rows]
 
 
 # ── Supplier Enrichments ──────────────────────────────────────────────────────
+
 
 class SQLSupplierEnrichmentRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -363,9 +410,12 @@ class SQLSupplierEnrichmentRepository:
 
     async def save(self, enrichment: SupplierEnrichment) -> SupplierEnrichment:
         from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
+
         model = SupplierEnrichmentModel(
             id=enrichment.id,
-            status=enrichment.status.value if hasattr(enrichment.status, "value") else enrichment.status,
+            status=enrichment.status.value
+            if hasattr(enrichment.status, "value")
+            else enrichment.status,
             version=enrichment.version,
             owner=enrichment.owner,
             created_by=enrichment.created_by,
@@ -376,12 +426,18 @@ class SQLSupplierEnrichmentRepository:
             organization_id=enrichment.organization_id,
             country_code=enrichment.country_code,
             country_risk_id=enrichment.country_risk_id or None,
-            country_risk_level=enrichment.country_risk_level.value if hasattr(enrichment.country_risk_level, "value") else enrichment.country_risk_level,
+            country_risk_level=enrichment.country_risk_level.value
+            if hasattr(enrichment.country_risk_level, "value")
+            else enrichment.country_risk_level,
             country_risk_score=enrichment.country_risk_score,
-            sanctions_exposure=enrichment.sanctions_exposure.value if hasattr(enrichment.sanctions_exposure, "value") else enrichment.sanctions_exposure,
+            sanctions_exposure=enrichment.sanctions_exposure.value
+            if hasattr(enrichment.sanctions_exposure, "value")
+            else enrichment.sanctions_exposure,
             sector_benchmark_id=enrichment.sector_benchmark_id or None,
             sector_percentile=enrichment.sector_percentile,
-            percentile_rank=enrichment.percentile_rank.value if hasattr(enrichment.percentile_rank, "value") else enrichment.percentile_rank,
+            percentile_rank=enrichment.percentile_rank.value
+            if hasattr(enrichment.percentile_rank, "value")
+            else enrichment.percentile_rank,
             benchmark_score=enrichment.benchmark_score,
             benchmark_explanation=enrichment.benchmark_explanation,
             external_risk_score=enrichment.external_risk_score,
@@ -400,6 +456,7 @@ class SQLSupplierEnrichmentRepository:
         organization_id: str,
     ) -> SupplierEnrichment | None:
         from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
+
         stmt = select(SupplierEnrichmentModel).where(
             SupplierEnrichmentModel.supplier_id == supplier_id,
             SupplierEnrichmentModel.organization_id == organization_id,
@@ -414,21 +471,27 @@ class SQLSupplierEnrichmentRepository:
         limit: int = 50,
     ) -> list[SupplierEnrichment]:
         from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
+
         rows = (
-            await self._session.execute(
-                select(SupplierEnrichmentModel)
-                .where(
-                    SupplierEnrichmentModel.organization_id == organization_id,
-                    SupplierEnrichmentModel.combined_risk_score >= min_combined_risk,
+            (
+                await self._session.execute(
+                    select(SupplierEnrichmentModel)
+                    .where(
+                        SupplierEnrichmentModel.organization_id == organization_id,
+                        SupplierEnrichmentModel.combined_risk_score >= min_combined_risk,
+                    )
+                    .order_by(SupplierEnrichmentModel.combined_risk_score.desc())
+                    .limit(limit)
                 )
-                .order_by(SupplierEnrichmentModel.combined_risk_score.desc())
-                .limit(limit)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [_enrichment_to_domain(r) for r in rows]
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _dataset_to_domain(m) -> ExternalDataset:
     return ExternalDataset(
@@ -534,6 +597,7 @@ def _signal_to_domain(m) -> ExternalRiskSignal:
 
 def _enrichment_to_domain(m) -> SupplierEnrichment:
     from domain.enums import CountryRiskLevel, PercentileRank, SanctionsExposure
+
     return SupplierEnrichment(
         id=m.id,
         status=m.status,

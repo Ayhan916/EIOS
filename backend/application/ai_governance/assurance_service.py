@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlalchemy import func, case
+from sqlalchemy import case, func
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
 from infrastructure.persistence.models.ai_governance import (
-    ASSURANCE_STATUSES,
     AIAssuranceReportModel,
     AIControlModel,
     AIIncidentModel,
@@ -19,21 +18,23 @@ from infrastructure.persistence.models.ai_governance import (
     ModelApprovalWorkflowModel,
 )
 
-from .inventory_service import AIGovernanceError
-
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def get_dashboard_stats(organization_id: str, session: Session) -> dict:
     """Return all dashboard counts in as few queries as possible."""
     # Single query for all three AI model status counts
-    model_row = session.query(
-        func.count().label("total"),
-        func.sum(case((AIModelModel.ai_status == "ACTIVE", 1), else_=0)).label("active"),
-        func.sum(case((AIModelModel.ai_status == "DRAFT", 1), else_=0)).label("draft"),
-    ).filter(AIModelModel.organization_id == organization_id).one()
+    model_row = (
+        session.query(
+            func.count().label("total"),
+            func.sum(case((AIModelModel.ai_status == "ACTIVE", 1), else_=0)).label("active"),
+            func.sum(case((AIModelModel.ai_status == "DRAFT", 1), else_=0)).label("draft"),
+        )
+        .filter(AIModelModel.organization_id == organization_id)
+        .one()
+    )
 
     total_use_cases = (
         session.query(AIUseCaseModel)

@@ -7,7 +7,7 @@ never from live database state, ensuring reproducibility.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fpdf import FPDF
@@ -31,11 +31,19 @@ _STATUS_COLOURS: dict[str, tuple[int, int, int]] = {
     "Blocked": _RED,
 }
 
-_UNICODE_MAP = str.maketrans({
-    "—": " - ", "–": "-", "'": "'", "'": "'",
-    "“": '"', "”": '"', "…": "...", "•": "*",
-    " ": " ", "→": "->",
-})
+_UNICODE_MAP = str.maketrans(
+    {
+        "—": " - ",
+        "–": "-",
+        "'": "'",
+        "“": '"',
+        "”": '"',
+        "…": "...",
+        "•": "*",
+        " ": " ",
+        "→": "->",
+    }
+)
 
 
 def _latin1(text: str) -> str:
@@ -76,7 +84,8 @@ class _PackagePDF(FPDF):
         self.set_font("Helvetica", "", 7)
         self.set_text_color(*_MID)
         self.cell(
-            0, 5,
+            0,
+            5,
             f"Page {self.page_no()}  |  EIOS Reporting Package  |  CONFIDENTIAL",
             align="C",
         )
@@ -97,7 +106,9 @@ class _PackagePDF(FPDF):
         self.cell(0, 7, _safe(self._org), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.set_font("Helvetica", "", 9)
         self.set_text_color(*_MID)
-        self.cell(0, 6, f"Generated: {generated_at}", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.cell(
+            0, 6, f"Generated: {generated_at}", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        )
 
     def section_heading(self, title: str) -> None:
         self.ln(4)
@@ -120,7 +131,9 @@ class _PackagePDF(FPDF):
         val_w = max(self.w - self.r_margin - self.x, 1)
         self.multi_cell(val_w, 6, _safe(value, 160), new_x=XPos.LMARGIN, new_y=YPos.NEXT)
 
-    def disclosure_item(self, ref: str, title: str, status: str, narrative: str, coverage: float) -> None:
+    def disclosure_item(
+        self, ref: str, title: str, status: str, narrative: str, coverage: float
+    ) -> None:
         self.ln(2)
         colour = _STATUS_COLOURS.get(status, _MID)
         # Reference + status badge
@@ -159,7 +172,7 @@ class _PackagePDF(FPDF):
         self.set_font("Helvetica", "B", 8)
         self.set_fill_color(*_DARK)
         self.set_text_color(*_WHITE)
-        for h, w in zip(headers, col_widths[:3]):
+        for h, w in zip(headers, col_widths[:3], strict=False):
             self.cell(w, 7, h, fill=True, border=1)
         self.ln()
         self.set_font("Helvetica", "", 8)
@@ -239,4 +252,4 @@ def render_reporting_package(
 
 
 def _now_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")

@@ -76,9 +76,7 @@ class SQLCopilotConversationRepository(
         return [self._to_domain(r) for r in rows]
 
 
-class SQLCopilotMessageRepository(
-    BaseRepository[CopilotMessage, CopilotMessageModel]
-):
+class SQLCopilotMessageRepository(BaseRepository[CopilotMessage, CopilotMessageModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, CopilotMessageModel)
 

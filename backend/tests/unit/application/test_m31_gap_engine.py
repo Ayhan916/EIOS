@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
-from application.compliance.gap_engine import compute_gaps, _is_disclosure_framework, _max_severity
+from application.compliance.gap_engine import _is_disclosure_framework, _max_severity, compute_gaps
 from domain.enums import EntityStatus
 from domain.regulation import RegulationRequirement
 

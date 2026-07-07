@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
 from application.external_intelligence.connectors.world_bank import WorldBankConnector
-
 
 _WGI_TEMPLATE = {
     "countryiso3code": "DEU",

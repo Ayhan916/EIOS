@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_session(scalar_one_or_none=None, scalars_all=None):
     session = AsyncMock()
@@ -60,6 +60,7 @@ def _make_draft(draft_id="d-1", status="PENDING", finding_id="f-1"):
 
 # ── create_alert ───────────────────────────────────────────────────────────────
 
+
 class TestCreateAlert:
     async def test_creates_alert_record(self) -> None:
         from application.agent_monitoring.alert_service import create_alert
@@ -90,6 +91,7 @@ class TestCreateAlert:
 
     async def test_alert_id_is_uuid(self) -> None:
         import re
+
         from application.agent_monitoring.alert_service import create_alert
 
         no_dup_result = MagicMock()
@@ -113,6 +115,7 @@ class TestCreateAlert:
 
 
 # ── Auto escalation logic ──────────────────────────────────────────────────────
+
 
 class TestAutoEscalation:
     async def test_critical_finding_creates_critical_alert(self) -> None:
@@ -187,6 +190,7 @@ class TestAutoEscalation:
 
 # ── _matches_rule ──────────────────────────────────────────────────────────────
 
+
 class TestMatchesRule:
     def test_severity_match(self) -> None:
         from application.agent_monitoring.alert_service import _matches_rule
@@ -199,8 +203,12 @@ class TestMatchesRule:
         from application.agent_monitoring.alert_service import _matches_rule
 
         finding = _make_finding(confidence_score=0.85)
-        assert _matches_rule(finding, {"metric": "confidence_score", "operator": "gt", "threshold": 0.8})
-        assert not _matches_rule(finding, {"metric": "confidence_score", "operator": "gt", "threshold": 0.9})
+        assert _matches_rule(
+            finding, {"metric": "confidence_score", "operator": "gt", "threshold": 0.8}
+        )
+        assert not _matches_rule(
+            finding, {"metric": "confidence_score", "operator": "gt", "threshold": 0.9}
+        )
 
     def test_category_match(self) -> None:
         from application.agent_monitoring.alert_service import _matches_rule
@@ -222,8 +230,12 @@ class TestMatchesRule:
         from application.agent_monitoring.alert_service import _matches_rule
 
         finding = _make_finding(source_data={"risk_score_delta": -15.0})
-        assert _matches_rule(finding, {"metric": "risk_score_delta", "operator": "lt", "threshold": -10.0})
-        assert not _matches_rule(finding, {"metric": "risk_score_delta", "operator": "lt", "threshold": -20.0})
+        assert _matches_rule(
+            finding, {"metric": "risk_score_delta", "operator": "lt", "threshold": -10.0}
+        )
+        assert not _matches_rule(
+            finding, {"metric": "risk_score_delta", "operator": "lt", "threshold": -20.0}
+        )
 
     def test_unknown_metric_returns_false(self) -> None:
         from application.agent_monitoring.alert_service import _matches_rule
@@ -233,6 +245,7 @@ class TestMatchesRule:
 
 
 # ── User-defined escalation rules ──────────────────────────────────────────────
+
 
 class TestUserDefinedEscalationRules:
     async def test_user_rule_creates_additional_alert(self) -> None:
@@ -263,6 +276,7 @@ class TestUserDefinedEscalationRules:
 
 # ── create_escalation_rule ─────────────────────────────────────────────────────
 
+
 class TestCreateEscalationRule:
     async def test_creates_rule_record(self) -> None:
         from application.agent_monitoring.alert_service import create_escalation_rule
@@ -288,6 +302,7 @@ class TestCreateEscalationRule:
 
 
 # ── Draft approval ─────────────────────────────────────────────────────────────
+
 
 class TestDraftApproval:
     async def test_approve_pending_draft(self) -> None:
@@ -363,6 +378,7 @@ class TestDraftApproval:
 
 # ── create_recommendation_draft ────────────────────────────────────────────────
 
+
 class TestCreateRecommendationDraft:
     async def test_creates_pending_draft(self) -> None:
         from application.agent_monitoring.alert_service import create_recommendation_draft
@@ -408,6 +424,7 @@ class TestCreateRecommendationDraft:
 
 
 # ── acknowledge_alert ──────────────────────────────────────────────────────────
+
 
 class TestAcknowledgeAlert:
     async def test_acknowledge_sets_timestamp(self) -> None:

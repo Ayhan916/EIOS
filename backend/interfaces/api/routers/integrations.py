@@ -10,24 +10,22 @@ G-059: CDP report export
 
 from __future__ import annotations
 
-import json
-import uuid
 from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field, HttpUrl
-from sqlalchemy import select, update
+from pydantic import BaseModel, Field
+from sqlalchemy import select
 
 from infrastructure.persistence.database import AsyncSessionFactory
-from interfaces.api.deps import get_current_user, require_admin, require_analyst, require_role
+from interfaces.api.deps import get_current_user, require_admin, require_analyst
 from interfaces.api.schemas import UserResponse
 
 router = APIRouter(tags=["integrations"])
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class TestWebhookRequest(BaseModel):
     channel: Literal["teams", "slack"]
@@ -77,6 +75,7 @@ class CDPReportRequest(BaseModel):
 
 # ── G-022: Teams/Slack webhook test ──────────────────────────────────────────
 
+
 @router.post(
     "/integrations/notifications/test",
     summary="G-022: Test Teams or Slack notification",
@@ -87,6 +86,7 @@ async def test_notification_webhook(
 ):
     if body.channel == "teams":
         from application.notifications.teams_adapter import send_teams_notification
+
         ok = await send_teams_notification(
             webhook_url=body.webhook_url,
             title="EIOS Test Notification",
@@ -95,6 +95,7 @@ async def test_notification_webhook(
         )
     else:
         from application.notifications.slack_adapter import send_slack_notification
+
         ok = await send_slack_notification(
             webhook_url=body.webhook_url,
             title="EIOS Test Notification",
@@ -103,11 +104,14 @@ async def test_notification_webhook(
         )
 
     if not ok:
-        raise HTTPException(status_code=502, detail="Webhook delivery failed — check URL and network access")
+        raise HTTPException(
+            status_code=502, detail="Webhook delivery failed — check URL and network access"
+        )
     return {"status": "delivered", "channel": body.channel}
 
 
 # ── G-047: JIRA/ServiceNow ticket ────────────────────────────────────────────
+
 
 @router.post(
     "/findings/{finding_id}/create-ticket",
@@ -141,9 +145,15 @@ async def create_finding_ticket(
         )
 
         if body.system == "jira":
-            if not all([body.jira_base_url, body.jira_email, body.jira_api_token, body.project_key]):
-                raise HTTPException(status_code=422, detail="jira_base_url, jira_email, jira_api_token, project_key required")
+            if not all(
+                [body.jira_base_url, body.jira_email, body.jira_api_token, body.project_key]
+            ):
+                raise HTTPException(
+                    status_code=422,
+                    detail="jira_base_url, jira_email, jira_api_token, project_key required",
+                )
             from application.integrations.jira_connector import create_jira_ticket
+
             result = await create_jira_ticket(
                 base_url=body.jira_base_url,
                 email=body.jira_email,
@@ -156,9 +166,12 @@ async def create_finding_ticket(
                 labels=["eios", "finding"],
             )
         else:
-            if not all([body.servicenow_instance_url, body.servicenow_username, body.servicenow_password]):
+            if not all(
+                [body.servicenow_instance_url, body.servicenow_username, body.servicenow_password]
+            ):
                 raise HTTPException(status_code=422, detail="ServiceNow credentials required")
             from application.integrations.jira_connector import create_servicenow_ticket
+
             result = await create_servicenow_ticket(
                 instance_url=body.servicenow_instance_url,
                 username=body.servicenow_username,
@@ -182,6 +195,7 @@ async def create_finding_ticket(
 
 # ── G-042: OFAC scan ─────────────────────────────────────────────────────────
 
+
 @router.post(
     "/integrations/sanctions/ofac/scan",
     summary="G-042: Scan all suppliers against OFAC SDN list",
@@ -198,9 +212,8 @@ async def trigger_ofac_scan(
     """
     from application.external_intelligence.connectors.ofac import (
         fetch_sdn_xml,
-        parse_sdn_entries,
         match_supplier_against_sdn,
-        sdn_entry_to_signal,
+        parse_sdn_entries,
     )
     from infrastructure.persistence.models.supplier import SupplierModel
 
@@ -209,10 +222,12 @@ async def trigger_ofac_scan(
 
     async with AsyncSessionFactory() as session:
         result = await session.execute(
-            select(SupplierModel).where(
+            select(SupplierModel)
+            .where(
                 SupplierModel.owner == current_user.organization_id,
                 SupplierModel.status == "Active",
-            ).limit(500)
+            )
+            .limit(500)
         )
         suppliers = result.scalars().all()
 
@@ -220,14 +235,16 @@ async def trigger_ofac_scan(
     for supplier in suppliers:
         hits = match_supplier_against_sdn(supplier.name, sdn_entries, fuzzy=fuzzy)
         for hit in hits:
-            matches.append({
-                "supplier_id": supplier.id,
-                "supplier_name": supplier.name,
-                "sdn_uid": hit["uid"],
-                "sdn_name": hit["name"],
-                "sdn_type": hit["type"],
-                "programs": hit["programs"][:3],
-            })
+            matches.append(
+                {
+                    "supplier_id": supplier.id,
+                    "supplier_name": supplier.name,
+                    "sdn_uid": hit["uid"],
+                    "sdn_name": hit["name"],
+                    "sdn_type": hit["type"],
+                    "programs": hit["programs"][:3],
+                }
+            )
 
     return {
         "scan_timestamp": datetime.now(UTC).isoformat(),
@@ -241,6 +258,7 @@ async def trigger_ofac_scan(
 
 # ── G-042b: Per-supplier OFAC scan ───────────────────────────────────────────
 
+
 @router.post(
     "/integrations/sanctions/ofac/scan/supplier/{supplier_id}",
     summary="G-042b: Scan a single supplier against OFAC SDN list",
@@ -253,16 +271,19 @@ async def scan_single_supplier_ofac(
 ):
     from application.external_intelligence.connectors.ofac import (
         fetch_sdn_xml,
-        parse_sdn_entries,
         match_supplier_against_sdn,
+        parse_sdn_entries,
     )
+    from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
     from infrastructure.persistence.models.supplier import SupplierModel
+
+    org_id = current_user.organization_id
 
     async with AsyncSessionFactory() as session:
         result = await session.execute(
             select(SupplierModel).where(
                 SupplierModel.id == supplier_id,
-                SupplierModel.owner == current_user.organization_id,
+                SupplierModel.organization_id == org_id,
             )
         )
         supplier = result.scalar_one_or_none()
@@ -270,19 +291,53 @@ async def scan_single_supplier_ofac(
     if supplier is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
-    xml_bytes = await fetch_sdn_xml()
-    sdn_entries = parse_sdn_entries(xml_bytes)
-    hits = match_supplier_against_sdn(supplier.name, sdn_entries, fuzzy=fuzzy)
+    # Download SDN list — gracefully handle network unavailability
+    sdn_entries: list = []
+    network_error: str | None = None
+    try:
+        xml_bytes = await fetch_sdn_xml()
+        sdn_entries = parse_sdn_entries(xml_bytes)
+    except Exception as exc:
+        network_error = str(exc)
 
-    matches = [
-        {
-            "sdn_uid": h["uid"],
-            "sdn_name": h["name"],
-            "sdn_type": h["type"],
-            "programs": h["programs"][:3],
-        }
-        for h in hits
-    ]
+    if network_error:
+        sanctions_exposure = "unavailable"
+        matches: list = []
+    else:
+        hits = match_supplier_against_sdn(supplier.name, sdn_entries, fuzzy=fuzzy)
+        matches = [
+            {
+                "sdn_uid": h["uid"],
+                "sdn_name": h["name"],
+                "sdn_type": h["type"],
+                "programs": h["programs"][:3],
+            }
+            for h in hits
+        ]
+        sanctions_exposure = "high" if matches else "none"
+
+    # Persist result so the supplier list shows the OFAC status
+    async with AsyncSessionFactory() as session:
+        enrichment_result = await session.execute(
+            select(SupplierEnrichmentModel).where(
+                SupplierEnrichmentModel.supplier_id == supplier_id,
+                SupplierEnrichmentModel.organization_id == org_id,
+            )
+        )
+        enrichment = enrichment_result.scalar_one_or_none()
+        if enrichment:
+            enrichment.sanctions_exposure = sanctions_exposure
+            enrichment.enriched_at = datetime.now(UTC)
+        else:
+            session.add(
+                SupplierEnrichmentModel(
+                    supplier_id=supplier_id,
+                    organization_id=org_id,
+                    sanctions_exposure=sanctions_exposure,
+                    enriched_at=datetime.now(UTC),
+                )
+            )
+        await session.commit()
 
     return {
         "scan_timestamp": datetime.now(UTC).isoformat(),
@@ -290,12 +345,14 @@ async def scan_single_supplier_ofac(
         "supplier_name": supplier.name,
         "sdn_entries_checked": len(sdn_entries),
         "matches_found": len(matches),
+        "sanctions_exposure": sanctions_exposure,
         "matches": matches[:20],
         "fuzzy": fuzzy,
     }
 
 
 # ── G-049: SharePoint OAuth2 ─────────────────────────────────────────────────
+
 
 @router.get(
     "/integrations/sharepoint/auth",
@@ -307,10 +364,14 @@ async def sharepoint_auth_initiate(
 ):
     from application.integrations.sharepoint_connector import build_auth_url
     from shared.config import settings
+
     client_id = settings.sharepoint_client_id if hasattr(settings, "sharepoint_client_id") else ""
     tenant_id = settings.sharepoint_tenant_id if hasattr(settings, "sharepoint_tenant_id") else ""
     if not client_id or not tenant_id:
-        raise HTTPException(status_code=503, detail="SharePoint integration not configured — set SHAREPOINT_CLIENT_ID and SHAREPOINT_TENANT_ID")
+        raise HTTPException(
+            status_code=503,
+            detail="SharePoint integration not configured — set SHAREPOINT_CLIENT_ID and SHAREPOINT_TENANT_ID",
+        )
     auth_url = build_auth_url(
         client_id=client_id,
         tenant_id=tenant_id,
@@ -331,9 +392,12 @@ async def sharepoint_auth_callback(
 ):
     from application.integrations.sharepoint_connector import exchange_code_for_tokens
     from shared.config import settings
+
     client_id = settings.sharepoint_client_id if hasattr(settings, "sharepoint_client_id") else ""
     tenant_id = settings.sharepoint_tenant_id if hasattr(settings, "sharepoint_tenant_id") else ""
-    client_secret = settings.sharepoint_client_secret if hasattr(settings, "sharepoint_client_secret") else ""
+    client_secret = (
+        settings.sharepoint_client_secret if hasattr(settings, "sharepoint_client_secret") else ""
+    )
     if not all([client_id, tenant_id, client_secret]):
         raise HTTPException(status_code=503, detail="SharePoint credentials not configured")
     tokens = await exchange_code_for_tokens(
@@ -362,6 +426,7 @@ async def sharepoint_list_files(
     current_user: Annotated[UserResponse, Depends(get_current_user)] = None,
 ):
     from application.integrations.sharepoint_connector import list_sharepoint_files
+
     files = await list_sharepoint_files(
         access_token=access_token,
         site_id=site_id,
@@ -372,6 +437,7 @@ async def sharepoint_list_files(
 
 # ── G-058: SBTi validation ───────────────────────────────────────────────────
 
+
 @router.post(
     "/integrations/sbti/validate",
     summary="G-058: Validate emissions target against SBTi 1.5°C criteria",
@@ -381,6 +447,7 @@ async def validate_sbti_target(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
     from application.integrations.sbti_service import validate_sbti_target as _validate
+
     result = _validate(
         target_id=body.target_id,
         organization_name=current_user.organization_id,
@@ -398,6 +465,7 @@ async def validate_sbti_target(
 
 # ── G-059: CDP report ─────────────────────────────────────────────────────────
 
+
 @router.post(
     "/integrations/cdp/report",
     summary="G-059: Generate CDP Climate Change questionnaire response package",
@@ -407,6 +475,7 @@ async def generate_cdp_report(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
     from application.integrations.cdp_service import build_cdp_climate_report
+
     return build_cdp_climate_report(
         organization_name=current_user.organization_id,
         reporting_year=body.reporting_year,

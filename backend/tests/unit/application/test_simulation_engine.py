@@ -13,8 +13,8 @@ from __future__ import annotations
 import pytest
 
 from application.sector_intelligence.simulation_engine import (
-    ScenarioSimulationEngine,
     _SCENARIO_TEMPLATES,
+    ScenarioSimulationEngine,
 )
 from domain.enums import CSDDDRight, ScenarioType
 from domain.sector_risk_register import SimulationResult
@@ -77,9 +77,7 @@ class TestScoreClamping:
 
 
 class TestFactorDirection:
-    def test_factors_above_1_never_decrease_score(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_factors_above_1_never_decrease_score(self, engine: ScenarioSimulationEngine) -> None:
         for scenario in ScenarioType:
             template = _SCENARIO_TEMPLATES[scenario]
             result = engine.simulate("29", scenario)
@@ -89,9 +87,7 @@ class TestFactorDirection:
                         f"{scenario.value} / {right.value}: factor {factor} but delta is negative"
                     )
 
-    def test_unaffected_rights_have_zero_delta(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_unaffected_rights_have_zero_delta(self, engine: ScenarioSimulationEngine) -> None:
         template = _SCENARIO_TEMPLATES[ScenarioType.GEOPOLITICAL_CONFLICT]
         result = engine.simulate("29", ScenarioType.GEOPOLITICAL_CONFLICT)
         for right in CSDDDRight:
@@ -104,6 +100,7 @@ class TestFactorDirection:
         result = engine.simulate("29", ScenarioType.SANCTIONS_ESCALATION)
         template = _SCENARIO_TEMPLATES[ScenarioType.SANCTIONS_ESCALATION]
         from application.sector_intelligence.base_matrix import get_scores
+
         baseline = get_scores("29")
         for right in CSDDDRight:
             if right not in template.factors:
@@ -118,9 +115,7 @@ class TestResultStructure:
         assert len(result.delta) == 21
         assert len(result.explanation) == 21
 
-    def test_delta_is_scenario_minus_baseline(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_delta_is_scenario_minus_baseline(self, engine: ScenarioSimulationEngine) -> None:
         result = engine.simulate("29", ScenarioType.NATURAL_DISASTER)
         for right in CSDDDRight:
             expected_delta = result.scenario_scores[right] - result.baseline_scores[right]
@@ -143,21 +138,21 @@ class TestResultStructure:
     def test_simulated_at_is_iso_string(self, engine: ScenarioSimulationEngine) -> None:
         result = engine.simulate("29", ScenarioType.GEOPOLITICAL_CONFLICT)
         assert "T" in result.simulated_at  # ISO 8601 format
-        assert "+" in result.simulated_at or "Z" in result.simulated_at or "UTC" in result.simulated_at
+        assert (
+            "+" in result.simulated_at or "Z" in result.simulated_at or "UTC" in result.simulated_at
+        )
 
-    def test_calibration_version_passed_through(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_calibration_version_passed_through(self, engine: ScenarioSimulationEngine) -> None:
         from application.sector_intelligence.base_matrix import CALIBRATION_VERSION
+
         result = engine.simulate("29", ScenarioType.REGULATORY_CHANGE)
         assert result.calibration_version == CALIBRATION_VERSION
 
 
 class TestBaseMatrixIsolation:
-    def test_simulation_does_not_mutate_base_matrix(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_simulation_does_not_mutate_base_matrix(self, engine: ScenarioSimulationEngine) -> None:
         from application.sector_intelligence.base_matrix import get_score
+
         before = get_score("29", CSDDDRight.FORCED_LABOUR)
         engine.simulate("29", ScenarioType.GEOPOLITICAL_CONFLICT)
         after = get_score("29", CSDDDRight.FORCED_LABOUR)
@@ -181,25 +176,19 @@ class TestAllScenarios:
 
 
 class TestHelperMethods:
-    def test_highest_risk_rights_returns_top_n(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_highest_risk_rights_returns_top_n(self, engine: ScenarioSimulationEngine) -> None:
         result = engine.simulate("13", ScenarioType.SUPPLY_SHORTAGE)
         top = engine.highest_risk_rights(result, top_n=3)
         assert len(top) == 3
         scores = [s for _, s in top]
         assert scores == sorted(scores, reverse=True)
 
-    def test_highest_risk_rights_default_top_5(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_highest_risk_rights_default_top_5(self, engine: ScenarioSimulationEngine) -> None:
         result = engine.simulate("13", ScenarioType.GEOPOLITICAL_CONFLICT)
         top = engine.highest_risk_rights(result)
         assert len(top) == 5
 
-    def test_rights_above_threshold_correct(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_rights_above_threshold_correct(self, engine: ScenarioSimulationEngine) -> None:
         result = engine.simulate("13", ScenarioType.SUPPLY_SHORTAGE)
         above = engine.rights_above_threshold(result, threshold=8)
         for _, score in above:
@@ -208,17 +197,13 @@ class TestHelperMethods:
         expected = [r for r, s in result.scenario_scores.items() if s >= 8]
         assert len(above) == len(expected)
 
-    def test_simulate_all_scenarios_returns_6(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_simulate_all_scenarios_returns_6(self, engine: ScenarioSimulationEngine) -> None:
         all_results = engine.simulate_all_scenarios("29")
         assert len(all_results) == 6
         for scenario in ScenarioType:
             assert scenario in all_results
 
-    def test_available_templates_returns_6(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_available_templates_returns_6(self, engine: ScenarioSimulationEngine) -> None:
         templates = engine.available_templates()
         assert len(templates) == 6
 
@@ -226,22 +211,17 @@ class TestHelperMethods:
 class TestM43Compliance:
     """Explicit M43 compliance tests: no LLM in simulate path."""
 
-    def test_simulate_does_not_import_groq(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_simulate_does_not_import_groq(self, engine: ScenarioSimulationEngine) -> None:
         import sys
-        groq_loaded_before = "groq" in sys.modules or any(
-            "groq" in k for k in sys.modules
-        )
+
+        groq_loaded_before = "groq" in sys.modules or any("groq" in k for k in sys.modules)
         engine.simulate("29", ScenarioType.GEOPOLITICAL_CONFLICT)
         # If Groq was not loaded before, it must not be loaded after
         if not groq_loaded_before:
             groq_loaded_after = any("groq" in k for k in sys.modules)
             assert not groq_loaded_after, "simulate() must not invoke Groq LLM"
 
-    def test_simulate_result_is_fully_explainable(
-        self, engine: ScenarioSimulationEngine
-    ) -> None:
+    def test_simulate_result_is_fully_explainable(self, engine: ScenarioSimulationEngine) -> None:
         result = engine.simulate("29", ScenarioType.GEOPOLITICAL_CONFLICT)
         for right, text in result.explanation.items():
             assert isinstance(text, str)

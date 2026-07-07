@@ -4,9 +4,10 @@ Verifies that supplier enrichments and risk signals cannot leak
 across tenant (organization) boundaries.
 """
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 def _now():
@@ -70,6 +71,7 @@ def _make_signal_model(supplier_id, organization_id):
 
 # ── Enrichment isolation ──────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_get_enrichment_returns_none_for_wrong_org():
     """get_enrichment for (supplier, wrong_org) must return None."""
@@ -80,6 +82,7 @@ async def test_get_enrichment_returns_none_for_wrong_org():
     session.execute = AsyncMock(return_value=result)
 
     from application.external_intelligence.enrichment_service import get_enrichment
+
     enrichment = await get_enrichment("sup-001", "org-other", session)
     assert enrichment is None
 
@@ -93,6 +96,7 @@ async def test_get_enrichment_returns_record_for_correct_org():
     session.execute = AsyncMock(return_value=result)
 
     from application.external_intelligence.enrichment_service import get_enrichment
+
     enrichment = await get_enrichment("sup-001", "org-001", session)
     assert enrichment is not None
     assert enrichment.organization_id == "org-001"
@@ -109,6 +113,7 @@ async def test_list_high_risk_restricted_to_org():
     session.execute = AsyncMock(return_value=result)
 
     from application.external_intelligence.enrichment_service import list_high_risk_suppliers
+
     enrichments = await list_high_risk_suppliers("org-001", session)
     # All returned enrichments must belong to org-001
     for e in enrichments:
@@ -116,6 +121,7 @@ async def test_list_high_risk_restricted_to_org():
 
 
 # ── Signal isolation ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_list_signals_for_supplier_restricted_to_org():
@@ -126,6 +132,7 @@ async def test_list_signals_for_supplier_restricted_to_org():
     session.execute = AsyncMock(return_value=result)
 
     from application.external_intelligence.signal_service import list_signals_for_supplier
+
     signals = await list_signals_for_supplier("sup-001", "org-002", session)
     assert signals == []
 
@@ -139,6 +146,7 @@ async def test_list_signals_for_supplier_returns_correct_org():
     session.execute = AsyncMock(return_value=result)
 
     from application.external_intelligence.signal_service import list_signals_for_supplier
+
     signals = await list_signals_for_supplier("sup-001", "org-001", session)
     assert len(signals) == 1
     assert signals[0].organization_id == "org-001"
@@ -146,10 +154,12 @@ async def test_list_signals_for_supplier_returns_correct_org():
 
 # ── Country risk is global (no org) ──────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_country_risk_is_platform_global():
     """Country risk profiles have no org filter — same data for all tenants."""
     from domain.external_intelligence import CountryRiskProfile
+
     profile = CountryRiskProfile(
         country_code="DE",
         country_name="Germany",
@@ -168,8 +178,9 @@ async def test_country_risk_is_platform_global():
 @pytest.mark.asyncio
 async def test_sector_benchmark_is_platform_global():
     """Sector benchmarks have no org filter — same data for all tenants."""
-    from domain.external_intelligence import SectorBenchmark
     from domain.enums import ExternalSourceName
+    from domain.external_intelligence import SectorBenchmark
+
     benchmark = SectorBenchmark(
         sector_id="sec-001",
         sector_name="Manufacturing",
@@ -184,10 +195,12 @@ async def test_sector_benchmark_is_platform_global():
 
 # ── External dataset is platform-global ──────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_external_dataset_has_no_org():
+    from domain.enums import DatasetStatus, ExternalSourceName
     from domain.external_intelligence import ExternalDataset
-    from domain.enums import ExternalSourceName, DatasetStatus
+
     ds = ExternalDataset(
         source_name=ExternalSourceName.WORLD_BANK,
         source_version="2025",

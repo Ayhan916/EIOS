@@ -5,9 +5,10 @@ Uses MagicMock / AsyncMock — no real database or Kafka needed.
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+
+import pytest
 
 from application.product.service import ProductBOMService, ProductService
 from domain.product import ProductStatus, ProductType, TargetMarket
@@ -60,6 +61,7 @@ def _make_product_model(org_id: str, product_id: str | None = None):
 
 
 # ── ProductService ────────────────────────────────────────────────────────────
+
 
 class TestProductService:
     @pytest.mark.asyncio
@@ -135,7 +137,8 @@ class TestProductService:
 
         svc = ProductService(db, kafka)
         result = await svc.update(
-            org_id, model.id,
+            org_id,
+            model.id,
             name="Battery Pack B2",
             product_status=ProductStatus.ACTIVE,
             actor_id=_uid(),
@@ -192,6 +195,7 @@ class TestProductService:
 
 
 # ── ProductBOMService ─────────────────────────────────────────────────────────
+
 
 class TestProductBOMService:
     def _make_bom_item(self, org_id: str, product_id: str, material_id: str):

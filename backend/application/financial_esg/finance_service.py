@@ -3,17 +3,19 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.financial_esg.kpi_service import FinancialESGError, FinancialESGConflict, _assert_org, _now
+from application.financial_esg.kpi_service import (
+    FinancialESGError,
+    _assert_org,
+    _now,
+)
 from application.financial_esg.metrics import financial_esg_counters
 from infrastructure.persistence.models.financial_esg import (
-    COVENANT_STATUSES,
     INSTRUMENT_TYPES,
-    PLAN_STATUSES,
     THRESHOLD_DIRECTIONS,
     FinanceLinkedKPIModel,
     SustainableFinanceInstrumentModel,
@@ -21,8 +23,8 @@ from infrastructure.persistence.models.financial_esg import (
     TransitionPlanModel,
 )
 
-
 # ── Sustainable Finance Instruments ──────────────────────────────────────────
+
 
 def create_finance_instrument(
     organization_id: str,
@@ -87,10 +89,16 @@ def list_finance_instruments(
     )
     if instrument_type:
         q = q.filter(SustainableFinanceInstrumentModel.instrument_type == instrument_type)
-    return q.order_by(SustainableFinanceInstrumentModel.created_at.desc()).limit(limit).offset(offset).all()
+    return (
+        q.order_by(SustainableFinanceInstrumentModel.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
 
 
 # ── Sustainability Linked KPIs ────────────────────────────────────────────────
+
 
 def create_linked_kpi(
     organization_id: str,
@@ -181,12 +189,17 @@ def monitor_covenant(
         actor_id=actor_id,
         resource_type="finance_linked_kpi",
         resource_id=linked_kpi_id,
-        details={"current_value": current_value, "covenant_status": new_status, "previous_status": old_status},
+        details={
+            "current_value": current_value,
+            "covenant_status": new_status,
+            "previous_status": old_status,
+        },
     )
     return rec
 
 
 # ── Transition Plans ──────────────────────────────────────────────────────────
+
 
 def create_transition_plan(
     organization_id: str,

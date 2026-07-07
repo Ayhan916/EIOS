@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import csv
 import io
+
 import structlog
 
 from infrastructure.celery.app import celery_app
@@ -64,11 +65,13 @@ async def _run_bulk_import(
     actor_id: str,
     dry_run: bool,
 ) -> dict[str, object]:
-    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
-    from infrastructure.persistence.models.supplier import SupplierModel  # noqa: PLC0415
-    from sqlalchemy import select  # noqa: PLC0415
     import uuid  # noqa: PLC0415
     from datetime import UTC, datetime  # noqa: PLC0415
+
+    from sqlalchemy import select  # noqa: PLC0415
+
+    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier import SupplierModel  # noqa: PLC0415
 
     rows = _parse_csv(csv_content)
     imported = 0
@@ -86,16 +89,20 @@ async def _run_bulk_import(
 
                 supplier_tier = row.get("supplier_tier", "Tier 1").strip() or "Tier 1"
                 if supplier_tier not in _VALID_TIERS:
-                    errors.append({"row": row_num, "error": f"invalid supplier_tier: {supplier_tier!r}"})
+                    errors.append(
+                        {"row": row_num, "error": f"invalid supplier_tier: {supplier_tier!r}"}
+                    )
                     continue
 
                 # Check for existing supplier with same name in org
                 existing = await session.execute(
-                    select(SupplierModel).where(
+                    select(SupplierModel)
+                    .where(
                         SupplierModel.organization_id == organization_id,
                         SupplierModel.name == name,
                         SupplierModel.status != "Deleted",
-                    ).limit(1)
+                    )
+                    .limit(1)
                 )
                 if existing.scalar_one_or_none() is not None:
                     skipped += 1

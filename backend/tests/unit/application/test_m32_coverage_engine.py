@@ -5,14 +5,14 @@ from __future__ import annotations
 import pytest
 
 from application.disclosure.coverage_engine import (
-    CoverageResult,
-    compute_coverage,
-    _categorise,
+    _CONFIDENCE_WEIGHT,
+    _DIVERSITY_WEIGHT,
+    _QUALITY_WEIGHT,
     _QUANTITY_SATURATION,
     _QUANTITY_WEIGHT,
-    _QUALITY_WEIGHT,
-    _DIVERSITY_WEIGHT,
-    _CONFIDENCE_WEIGHT,
+    CoverageResult,
+    _categorise,
+    compute_coverage,
 )
 
 

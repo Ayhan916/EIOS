@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from dataclasses import dataclass
+from datetime import date, datetime
 
 from .base_entity import BaseEntity
 from .enums import DDPolicyStatus
@@ -13,6 +13,7 @@ from .enums import DDPolicyStatus
 @dataclass(slots=True, kw_only=True)
 class DDPolicy(BaseEntity):
     """Due-Diligence-Politik — Art. 7 CSDDD."""
+
     organization_id: str
     title: str
     policy_status: DDPolicyStatus = DDPolicyStatus.DRAFT
@@ -33,6 +34,7 @@ class DDPolicy(BaseEntity):
 
     def activate(self) -> None:
         from datetime import UTC
+
         self.policy_status = DDPolicyStatus.ACTIVE
         if self.valid_from is None:
             self.valid_from = datetime.now(UTC).date()
@@ -46,6 +48,7 @@ class DDPolicy(BaseEntity):
     @property
     def review_status(self) -> str:
         from datetime import UTC
+
         if self.policy_status != DDPolicyStatus.ACTIVE:
             return "inactive"
         if self.next_review_due is None:
@@ -64,6 +67,7 @@ class DDPolicy(BaseEntity):
 @dataclass(slots=True, kw_only=True)
 class CodeOfConduct(BaseEntity):
     """Verhaltenskodex — Art. 7 Abs. 2 CSDDD (Lieferanten + Mitarbeiter)."""
+
     organization_id: str
     title: str
     content_text: str = ""
@@ -79,6 +83,7 @@ class CodeOfConduct(BaseEntity):
 @dataclass(slots=True, kw_only=True)
 class CoCAcceptance(BaseEntity):
     """Unveränderliche Bestätigung eines Lieferanten — DSGVO-konform."""
+
     organization_id: str
     coc_id: str
     supplier_id: str

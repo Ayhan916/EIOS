@@ -15,7 +15,10 @@ or complete initiatives — human approval is enforced at the service layer.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from interfaces.api.deps import get_current_user, get_db, require_analyst, require_admin
@@ -175,7 +178,7 @@ async def list_key_results(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[ESGKeyResultResponse]:
-    from application.operating_system.objective_service import list_key_results, get_objective
+    from application.operating_system.objective_service import get_objective, list_key_results
     if await get_objective(current_user.organization_id, objective_id, session) is None:
         raise HTTPException(status_code=404, detail="Objective not found")
     rows = await list_key_results(current_user.organization_id, objective_id, session)
@@ -727,15 +730,16 @@ async def get_dashboard(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> OperatingSystemDashboard:
-    from sqlalchemy import func, select
-    from datetime import UTC, datetime
-    from infrastructure.persistence.models.operating_system import (
-        ESGObjectiveModel, ESGInitiativeModel, ESGActionModel, StrategicRiskModel,
-    )
     from application.operating_system.action_service import list_actions
-    from application.operating_system.strategic_risk_service import list_strategic_risks
-    from application.operating_system.health_score_service import get_latest_health_score
     from application.operating_system.escalation_service import evaluate_escalations
+    from application.operating_system.health_score_service import get_latest_health_score
+    from application.operating_system.strategic_risk_service import list_strategic_risks
+    from infrastructure.persistence.models.operating_system import (
+        ESGActionModel,
+        ESGInitiativeModel,
+        ESGObjectiveModel,
+        StrategicRiskModel,
+    )
 
     org = current_user.organization_id
     now = datetime.now(UTC)
@@ -815,8 +819,10 @@ async def get_dashboard(
     escalations = await evaluate_escalations(org, session)
 
     from infrastructure.persistence.models.operating_system import (
-        ComplianceOperationModel, GovernanceCalendarEventModel,
-        ESGProgramModel, ESGControlModel,
+        ComplianceOperationModel,
+        ESGControlModel,
+        ESGProgramModel,
+        GovernanceCalendarEventModel,
     )
 
     compliance_ops_count = (await session.execute(

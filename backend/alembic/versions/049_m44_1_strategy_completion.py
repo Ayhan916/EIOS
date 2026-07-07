@@ -7,6 +7,7 @@ Revises: 048
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "049"
@@ -100,35 +101,51 @@ def upgrade() -> None:
         sa.Column("min_window", sa.Integer, nullable=False),
         sa.Column("max_window", sa.Integer, nullable=False),
         sa.Column("default_window", sa.Integer, nullable=False),
-        sa.Column("applicable_methodology", sa.String(40), nullable=False,
-                  server_default="WEIGHTED_MOVING_AVERAGE"),
+        sa.Column(
+            "applicable_methodology",
+            sa.String(40),
+            nullable=False,
+            server_default="WEIGHTED_MOVING_AVERAGE",
+        ),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
     )
-    op.create_index("ix_forecast_window_policies_org", "forecast_window_policies", ["organization_id"])
+    op.create_index(
+        "ix_forecast_window_policies_org", "forecast_window_policies", ["organization_id"]
+    )
 
     # ── ALTER: transition_pathways — add milestone_frequency ─────────────────
-    op.add_column("transition_pathways",
-        sa.Column("milestone_frequency", sa.String(20), nullable=False, server_default="ANNUAL"))
+    op.add_column(
+        "transition_pathways",
+        sa.Column("milestone_frequency", sa.String(20), nullable=False, server_default="ANNUAL"),
+    )
 
     # ── ALTER: strategic_forecast_summaries — add trend/delta/progress cols ──
-    op.add_column("strategic_forecast_summaries",
-        sa.Column("trend_direction", sa.String(20), nullable=True))
-    op.add_column("strategic_forecast_summaries",
-        sa.Column("forecast_delta", sa.Float, nullable=True))
-    op.add_column("strategic_forecast_summaries",
-        sa.Column("pathway_progress_pct", sa.Float, nullable=True))
-    op.add_column("strategic_forecast_summaries",
-        sa.Column("scenario_confidence", sa.Float, nullable=True))
+    op.add_column(
+        "strategic_forecast_summaries", sa.Column("trend_direction", sa.String(20), nullable=True)
+    )
+    op.add_column(
+        "strategic_forecast_summaries", sa.Column("forecast_delta", sa.Float, nullable=True)
+    )
+    op.add_column(
+        "strategic_forecast_summaries", sa.Column("pathway_progress_pct", sa.Float, nullable=True)
+    )
+    op.add_column(
+        "strategic_forecast_summaries", sa.Column("scenario_confidence", sa.Float, nullable=True)
+    )
 
     # ── ALTER: strategic_scenario_reports — add appendix/sensitivity cols ────
-    op.add_column("strategic_scenario_reports",
-        sa.Column("methodology_appendix", sa.JSON, nullable=True))
-    op.add_column("strategic_scenario_reports",
-        sa.Column("assumption_appendix", sa.JSON, nullable=True))
-    op.add_column("strategic_scenario_reports",
-        sa.Column("sensitivity_analysis", sa.JSON, nullable=True))
-    op.add_column("strategic_scenario_reports",
-        sa.Column("comparison_summary", sa.JSON, nullable=True))
+    op.add_column(
+        "strategic_scenario_reports", sa.Column("methodology_appendix", sa.JSON, nullable=True)
+    )
+    op.add_column(
+        "strategic_scenario_reports", sa.Column("assumption_appendix", sa.JSON, nullable=True)
+    )
+    op.add_column(
+        "strategic_scenario_reports", sa.Column("sensitivity_analysis", sa.JSON, nullable=True)
+    )
+    op.add_column(
+        "strategic_scenario_reports", sa.Column("comparison_summary", sa.JSON, nullable=True)
+    )
 
 
 def downgrade() -> None:

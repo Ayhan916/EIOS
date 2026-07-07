@@ -24,7 +24,11 @@ from application.material.service import (
     MaterialSourcingService,
     MaterialSustainabilityService,
 )
-from domain.material import ComplianceRegulation, ComplianceStatus, MaterialStatus, MaterialType, SourcingRisk
+from domain.material import (
+    MaterialStatus,
+    MaterialType,
+)
+from domain.user import User
 from infrastructure.kafka.producer import KafkaEventProducer, get_kafka_producer
 from interfaces.api.deps import (
     get_current_user,
@@ -32,12 +36,11 @@ from interfaces.api.deps import (
     require_analyst,
     scope_gate,
 )
-from domain.user import User
 from interfaces.api.schemas.material import (
-    MaterialCompositionCreate,
-    MaterialCompositionResponse,
     MaterialComplianceResponse,
     MaterialComplianceUpsert,
+    MaterialCompositionCreate,
+    MaterialCompositionResponse,
     MaterialCreate,
     MaterialListResponse,
     MaterialResponse,
@@ -59,6 +62,7 @@ router = APIRouter(
 
 
 # ── Material Core ─────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=MaterialListResponse)
 async def list_materials(
@@ -188,6 +192,7 @@ async def archive_material(
 
 # ── Composition / BOM ─────────────────────────────────────────────────────────
 
+
 @router.get("/{material_id}/composition", response_model=list[MaterialCompositionResponse])
 async def list_composition(
     material_id: str,
@@ -248,6 +253,7 @@ async def delete_composition(
 
 
 # ── Sourcing ──────────────────────────────────────────────────────────────────
+
 
 @router.get("/{material_id}/sourcing", response_model=list[MaterialSourcingResponse])
 async def list_sourcing(
@@ -315,6 +321,7 @@ async def delete_sourcing(
 
 # ── Compliance Flags ──────────────────────────────────────────────────────────
 
+
 @router.get("/{material_id}/compliance", response_model=list[MaterialComplianceResponse])
 async def list_compliance(
     material_id: str,
@@ -378,6 +385,7 @@ async def delete_compliance_flag(
 
 
 # ── Sustainability Metrics ────────────────────────────────────────────────────
+
 
 @router.get("/{material_id}/sustainability", response_model=list[MaterialSustainabilityResponse])
 async def list_sustainability(

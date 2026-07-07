@@ -18,34 +18,47 @@ from __future__ import annotations
 from datetime import date
 from unittest.mock import MagicMock
 
-
 # ── Model tests ───────────────────────────────────────────────────────────────
 
 
 class TestRegulatoryDeadlineModel:
     def test_tablename(self) -> None:
         from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel
+
         assert RegulatoryDeadlineModel.__tablename__ == "regulatory_deadlines"
 
     def test_required_columns(self) -> None:
         from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel
+
         cols = {c.key for c in RegulatoryDeadlineModel.__table__.columns}
-        assert {"id", "framework_code", "deadline_name", "deadline_date",
-                "description", "jurisdiction", "entity_size", "is_mandatory",
-                "reporting_year", "organization_id"}.issubset(cols)
+        assert {
+            "id",
+            "framework_code",
+            "deadline_name",
+            "deadline_date",
+            "description",
+            "jurisdiction",
+            "entity_size",
+            "is_mandatory",
+            "reporting_year",
+            "organization_id",
+        }.issubset(cols)
 
     def test_organization_id_nullable(self) -> None:
         from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel
+
         col = RegulatoryDeadlineModel.__table__.columns["organization_id"]
         assert col.nullable is True
 
     def test_is_mandatory_not_nullable(self) -> None:
         from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel
+
         col = RegulatoryDeadlineModel.__table__.columns["is_mandatory"]
         assert col.nullable is False
 
     def test_three_indexes_defined(self) -> None:
         from infrastructure.persistence.models.regulatory_calendar import RegulatoryDeadlineModel
+
         index_names = {idx.name for idx in RegulatoryDeadlineModel.__table__.indexes}
         assert "ix_reg_deadline_jurisdiction" in index_names
         assert "ix_reg_deadline_framework" in index_names
@@ -55,18 +68,30 @@ class TestRegulatoryDeadlineModel:
 class TestControlFrameworkMappingModel:
     def test_tablename(self) -> None:
         from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
+
         assert ControlFrameworkMappingModel.__tablename__ == "control_framework_mappings"
 
     def test_required_columns(self) -> None:
         from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
+
         cols = {c.key for c in ControlFrameworkMappingModel.__table__.columns}
-        assert {"id", "control_id", "framework_code", "framework_control_id",
-                "framework_control_name", "mapping_type", "notes",
-                "organization_id", "created_by"}.issubset(cols)
+        assert {
+            "id",
+            "control_id",
+            "framework_code",
+            "framework_control_id",
+            "framework_control_name",
+            "mapping_type",
+            "notes",
+            "organization_id",
+            "created_by",
+        }.issubset(cols)
 
     def test_unique_constraint_name(self) -> None:
-        from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
         from sqlalchemy import UniqueConstraint
+
+        from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
+
         constraints = {
             c.name
             for c in ControlFrameworkMappingModel.__table__.constraints
@@ -75,10 +100,13 @@ class TestControlFrameworkMappingModel:
         assert "uq_ctrl_fw_mapping" in constraints
 
     def test_unique_constraint_columns(self) -> None:
-        from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
         from sqlalchemy import UniqueConstraint
+
+        from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
+
         uq = next(
-            c for c in ControlFrameworkMappingModel.__table__.constraints
+            c
+            for c in ControlFrameworkMappingModel.__table__.constraints
             if isinstance(c, UniqueConstraint) and c.name == "uq_ctrl_fw_mapping"
         )
         col_names = {col.name for col in uq.columns}
@@ -86,11 +114,13 @@ class TestControlFrameworkMappingModel:
 
     def test_notes_nullable(self) -> None:
         from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
+
         col = ControlFrameworkMappingModel.__table__.columns["notes"]
         assert col.nullable is True
 
     def test_mapping_type_not_nullable(self) -> None:
         from infrastructure.persistence.models.framework_mapping import ControlFrameworkMappingModel
+
         col = ControlFrameworkMappingModel.__table__.columns["mapping_type"]
         assert col.nullable is False
 
@@ -101,6 +131,7 @@ class TestControlFrameworkMappingModel:
 class TestBuildIxbrl:
     def _build(self, **kwargs):
         from application.reporting.xbrl_exporter import build_ixbrl
+
         defaults = dict(
             organization_name="Test Corp",
             organization_id="org-001",
@@ -157,6 +188,7 @@ class TestBuildIxbrl:
 
     def test_compute_document_hash_returns_hex(self) -> None:
         from application.reporting.xbrl_exporter import compute_document_hash
+
         content = b"test content"
         h = compute_document_hash(content)
         assert len(h) == 64
@@ -164,6 +196,7 @@ class TestBuildIxbrl:
 
     def test_compute_document_hash_deterministic(self) -> None:
         from application.reporting.xbrl_exporter import compute_document_hash
+
         content = b"same content"
         assert compute_document_hash(content) == compute_document_hash(content)
 
@@ -174,6 +207,7 @@ class TestBuildIxbrl:
 class TestBuildGriReport:
     def _report(self, **kwargs):
         from application.reporting.gri_exporter import build_gri_report
+
         defaults = dict(
             organization_name="Test Corp",
             reporting_year=2024,
@@ -219,22 +253,26 @@ class TestBuildGriReport:
     def test_summary_counts(self) -> None:
         r = self._report(emissions={"scope1": 100.0})
         summary = r["summary"]
-        assert summary["total_disclosures"] == summary["reported"] + summary["partial"] + summary["omitted"]
+        assert (
+            summary["total_disclosures"]
+            == summary["reported"] + summary["partial"] + summary["omitted"]
+        )
 
 
 class TestBuildGriCsv:
     def test_csv_has_header(self) -> None:
-        from application.reporting.gri_exporter import build_gri_report, build_gri_csv
-        report = build_gri_report(
-            organization_name="Corp", reporting_year=2024, disclosures=[]
-        )
+        from application.reporting.gri_exporter import build_gri_csv, build_gri_report
+
+        report = build_gri_report(organization_name="Corp", reporting_year=2024, disclosures=[])
         csv_str = build_gri_csv(report)
         assert csv_str.startswith("standard_code,")
 
     def test_csv_contains_gri_code(self) -> None:
-        from application.reporting.gri_exporter import build_gri_report, build_gri_csv
+        from application.reporting.gri_exporter import build_gri_csv, build_gri_report
+
         report = build_gri_report(
-            organization_name="Corp", reporting_year=2024,
+            organization_name="Corp",
+            reporting_year=2024,
             disclosures=[],
             emissions={"scope1": 500.0},
         )
@@ -245,22 +283,27 @@ class TestBuildGriCsv:
 class TestGriStatusMapping:
     def test_completed_maps_to_reported(self) -> None:
         from application.reporting.gri_exporter import _map_status
+
         assert _map_status("Completed") == "reported"
 
     def test_in_progress_maps_to_partial(self) -> None:
         from application.reporting.gri_exporter import _map_status
+
         assert _map_status("In Progress") == "partial"
 
     def test_not_started_maps_to_omitted(self) -> None:
         from application.reporting.gri_exporter import _map_status
+
         assert _map_status("Not Started") == "omitted"
 
     def test_unknown_maps_to_omitted(self) -> None:
         from application.reporting.gri_exporter import _map_status
+
         assert _map_status("Unknown Status") == "omitted"
 
     def test_approved_maps_to_reported(self) -> None:
         from application.reporting.gri_exporter import _map_status
+
         assert _map_status("Approved") == "reported"
 
 
@@ -270,6 +313,7 @@ class TestGriStatusMapping:
 class TestBuildTcfdReport:
     def _report(self, **kwargs):
         from application.reporting.tcfd_exporter import build_tcfd_report
+
         defaults = dict(organization_name="Test Corp", reporting_year=2024)
         defaults.update(kwargs)
         return build_tcfd_report(**defaults)
@@ -295,8 +339,14 @@ class TestBuildTcfdReport:
 
     def test_strategy_pillar_with_risks(self) -> None:
         r = self._report(
-            climate_risks=[{"title": "Flood risk", "type": "physical",
-                            "time_horizon": "medium", "description": "..."}]
+            climate_risks=[
+                {
+                    "title": "Flood risk",
+                    "type": "physical",
+                    "time_horizon": "medium",
+                    "description": "...",
+                }
+            ]
         )
         strat = next(p for p in r["pillars"] if p["code"] == "strategy")
         assert strat is not None
@@ -328,6 +378,7 @@ class TestBuildTcfdReport:
 class TestCalculatePai:
     def _pai(self, **kwargs):
         from application.reporting.sfdr_pai import calculate_pai
+
         defaults = dict(
             organization_name="Test Corp",
             reference_period_start="2024-01-01",
@@ -365,7 +416,9 @@ class TestCalculatePai:
 
     def test_carbon_footprint_calculated(self) -> None:
         r = self._pai(
-            scope1_tco2e=1000.0, scope2_tco2e=0.0, scope3_tco2e=0.0,
+            scope1_tco2e=1000.0,
+            scope2_tco2e=0.0,
+            scope3_tco2e=0.0,
             enterprise_value_eur=10_000_000.0,
         )
         footprint_pai = r["mandatory_pais"][1]
@@ -404,18 +457,22 @@ class TestCalculatePai:
 class TestSumOptional:
     def test_all_none_returns_none(self) -> None:
         from application.reporting.sfdr_pai import _sum_optional
+
         assert _sum_optional(None, None, None) is None
 
     def test_some_none_sums_available(self) -> None:
         from application.reporting.sfdr_pai import _sum_optional
+
         assert _sum_optional(100.0, None, 50.0) == 150.0
 
     def test_all_values_sums_all(self) -> None:
         from application.reporting.sfdr_pai import _sum_optional
+
         assert _sum_optional(10.0, 20.0, 30.0) == 60.0
 
     def test_single_value(self) -> None:
         from application.reporting.sfdr_pai import _sum_optional
+
         assert _sum_optional(42.0) == 42.0
 
 
@@ -425,6 +482,7 @@ class TestSumOptional:
 class TestStreamAuditCsv:
     def test_header_columns(self) -> None:
         from application.reporting.audit_exporter import stream_audit_csv
+
         csv_str = stream_audit_csv([])
         header = csv_str.strip().split("\n")[0]
         assert "timestamp" in header
@@ -435,16 +493,19 @@ class TestStreamAuditCsv:
 
     def test_single_event_row(self) -> None:
         from application.reporting.audit_exporter import stream_audit_csv
-        events = [{
-            "created_at": "2024-01-15T10:00:00",
-            "action": "RISK_CREATED",
-            "actor_email": "user@example.com",
-            "actor_id": "user-001",
-            "entity_type": "risk",
-            "entity_id": "risk-001",
-            "outcome": "success",
-            "detail": "Created risk",
-        }]
+
+        events = [
+            {
+                "created_at": "2024-01-15T10:00:00",
+                "action": "RISK_CREATED",
+                "actor_email": "user@example.com",
+                "actor_id": "user-001",
+                "entity_type": "risk",
+                "entity_id": "risk-001",
+                "outcome": "success",
+                "detail": "Created risk",
+            }
+        ]
         csv_str = stream_audit_csv(events)
         lines = csv_str.strip().split("\n")
         assert len(lines) == 2
@@ -452,6 +513,7 @@ class TestStreamAuditCsv:
 
     def test_detail_truncated_at_1000_chars(self) -> None:
         from application.reporting.audit_exporter import stream_audit_csv
+
         long_detail = "x" * 1200
         events = [{"detail": long_detail, "created_at": None}]
         csv_str = stream_audit_csv(events)
@@ -460,6 +522,7 @@ class TestStreamAuditCsv:
 
     def test_detail_not_truncated_when_short(self) -> None:
         from application.reporting.audit_exporter import stream_audit_csv
+
         short_detail = "short detail"
         events = [{"detail": short_detail, "created_at": None}]
         csv_str = stream_audit_csv(events)
@@ -467,13 +530,16 @@ class TestStreamAuditCsv:
 
     def test_empty_events_returns_header_only(self) -> None:
         from application.reporting.audit_exporter import stream_audit_csv
+
         csv_str = stream_audit_csv([])
         lines = [l for l in csv_str.strip().split("\n") if l]
         assert len(lines) == 1
 
     def test_datetime_object_converted_to_iso(self) -> None:
         from datetime import datetime
+
         from application.reporting.audit_exporter import stream_audit_csv
+
         dt = datetime(2024, 6, 15, 12, 0, 0)
         events = [{"created_at": dt, "action": "TEST"}]
         csv_str = stream_audit_csv(events)
@@ -481,6 +547,7 @@ class TestStreamAuditCsv:
 
     def test_missing_detail_defaults_to_empty(self) -> None:
         from application.reporting.audit_exporter import stream_audit_csv
+
         events = [{"created_at": None, "action": "ACT"}]
         csv_str = stream_audit_csv(events)
         assert "ACT" in csv_str
@@ -489,26 +556,31 @@ class TestStreamAuditCsv:
 class TestMakeCsvFilename:
     def test_basic_filename(self) -> None:
         from application.reporting.audit_exporter import make_csv_filename
+
         fn = make_csv_filename("2024-01-01", "2024-12-31", "risk")
         assert fn == "eios_audit_trail_risk_2024-01-01_2024-12-31.csv"
 
     def test_no_entity_type(self) -> None:
         from application.reporting.audit_exporter import make_csv_filename
+
         fn = make_csv_filename("2024-01-01", "2024-12-31", None)
         assert fn == "eios_audit_trail_2024-01-01_2024-12-31.csv"
 
     def test_no_dates(self) -> None:
         from application.reporting.audit_exporter import make_csv_filename
+
         fn = make_csv_filename(None, None, None)
         assert fn == "eios_audit_trail.csv"
 
     def test_entity_type_lowercased(self) -> None:
         from application.reporting.audit_exporter import make_csv_filename
+
         fn = make_csv_filename(None, None, "Risk")
         assert "risk" in fn
 
     def test_ends_with_csv(self) -> None:
         from application.reporting.audit_exporter import make_csv_filename
+
         fn = make_csv_filename("2024-01-01", "2024-12-31", "finding")
         assert fn.endswith(".csv")
 
@@ -519,7 +591,6 @@ class TestMakeCsvFilename:
 def _load_migration(path: str, mod_name: str):
     import importlib.util
     import sys
-    from unittest.mock import MagicMock
 
     if mod_name in sys.modules:
         return sys.modules[mod_name]
@@ -529,7 +600,9 @@ def _load_migration(path: str, mod_name: str):
     fake_alembic = MagicMock()
     fake_alembic.op = fake_op
 
-    with _patch_dict(sys.modules, {"alembic": fake_alembic, "alembic.op": fake_op, "sqlalchemy": fake_sa}):
+    with _patch_dict(
+        sys.modules, {"alembic": fake_alembic, "alembic.op": fake_op, "sqlalchemy": fake_sa}
+    ):
         spec = importlib.util.spec_from_file_location(mod_name, path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

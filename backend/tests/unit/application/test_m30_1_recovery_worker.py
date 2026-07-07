@@ -12,10 +12,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from domain.enums import EntityStatus, WebhookDeliveryStatus
 from domain.webhook_delivery import WebhookDelivery
 from domain.webhook_subscription import WebhookSubscription
-from domain.enums import EntityStatus, WebhookDeliveryStatus
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -93,9 +92,7 @@ class TestRecoverPending:
         mock_delivery_repo.list_pending_retries = AsyncMock(return_value=deliveries)
 
         mock_sub_repo = MagicMock()
-        mock_sub_repo.get_by_id = AsyncMock(
-            side_effect=lambda sid: subscriptions_by_id.get(sid)
-        )
+        mock_sub_repo.get_by_id = AsyncMock(side_effect=lambda sid: subscriptions_by_id.get(sid))
 
         mock_factory = _make_session_ctx()
 
@@ -118,6 +115,7 @@ class TestRecoverPending:
             patch("asyncio.create_task") as mock_create_task,
         ):
             from application.api_platform import recovery_worker
+
             await recovery_worker._recover_pending()
             mock_create_task.assert_not_called()
 
@@ -142,6 +140,7 @@ class TestRecoverPending:
             patch("asyncio.create_task") as mock_create_task,
         ):
             from application.api_platform import recovery_worker
+
             await recovery_worker._recover_pending()
             mock_create_task.assert_not_called()
 
@@ -166,6 +165,7 @@ class TestRecoverPending:
             patch("asyncio.create_task") as mock_create_task,
         ):
             from application.api_platform import recovery_worker
+
             await recovery_worker._recover_pending()
             mock_create_task.assert_not_called()
 
@@ -173,7 +173,8 @@ class TestRecoverPending:
     async def test_missing_subscription_skips_delivery(self) -> None:
         delivery = _make_delivery(payload={"event": "test"})
         mock_factory, mock_delivery_repo, mock_sub_repo = self._build_mocks(
-            [delivery], {}  # no subscription
+            [delivery],
+            {},  # no subscription
         )
 
         with (
@@ -189,6 +190,7 @@ class TestRecoverPending:
             patch("asyncio.create_task") as mock_create_task,
         ):
             from application.api_platform import recovery_worker
+
             await recovery_worker._recover_pending()
             mock_create_task.assert_not_called()
 
@@ -211,20 +213,18 @@ class TestRecoverPending:
                 "infrastructure.persistence.repositories.webhook.SQLWebhookSubscriptionRepository",
                 return_value=mock_sub_repo,
             ),
-            patch("application.api_platform.webhook_service.attempt_delivery") as mock_attempt,
+            patch("application.api_platform.webhook_service.attempt_delivery"),
             patch("asyncio.create_task") as mock_create_task,
         ):
             from application.api_platform import recovery_worker
+
             await recovery_worker._recover_pending()
             assert mock_create_task.call_count == 1
 
     @pytest.mark.asyncio
     async def test_multiple_deliveries_fires_one_task_each(self) -> None:
         payload = {"event": "test"}
-        deliveries = [
-            _make_delivery(delivery_id=f"del-00{i}", payload=payload)
-            for i in range(3)
-        ]
+        deliveries = [_make_delivery(delivery_id=f"del-00{i}", payload=payload) for i in range(3)]
         sub = _make_subscription()
         mock_factory, mock_delivery_repo, mock_sub_repo = self._build_mocks(
             deliveries, {"sub-001": sub}
@@ -243,6 +243,7 @@ class TestRecoverPending:
             patch("asyncio.create_task") as mock_create_task,
         ):
             from application.api_platform import recovery_worker
+
             await recovery_worker._recover_pending()
             assert mock_create_task.call_count == 3
 
@@ -291,6 +292,7 @@ class TestAttemptDeliveryIdempotency:
             ),
         ):
             from application.api_platform.webhook_service import attempt_delivery
+
             await attempt_delivery(
                 target_url="https://example.com/hook",
                 secret="s3cr3t",
@@ -329,6 +331,7 @@ class TestAttemptDeliveryIdempotency:
             ),
         ):
             from application.api_platform.webhook_service import attempt_delivery
+
             await attempt_delivery(
                 target_url="https://example.com/hook",
                 secret="s3cr3t",

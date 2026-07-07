@@ -33,7 +33,10 @@ from interfaces.api.schemas.recommendation import (
 router = APIRouter(
     prefix="/recommendations",
     tags=["recommendations"],
-    dependencies=[Depends(get_current_user), Depends(scope_gate("recommendations:read", "assessments:write"))],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(scope_gate("recommendations:read", "assessments:write")),
+    ],
 )
 
 
@@ -121,7 +124,7 @@ async def list_decisions(
     if not current_user.organization_id:
         return []
     results = []
-    for status in (
+    for rec_status in (
         "in_progress",
         "resolved",
         "verified",
@@ -130,7 +133,7 @@ async def list_decisions(
 
         recs = await repo.list_by_org_and_status(
             current_user.organization_id,
-            _AS(status),
+            _AS(rec_status),
         )
         results.extend(recs)
     results = results[:limit]

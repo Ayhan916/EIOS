@@ -12,6 +12,7 @@ Create Date: 2026-07-03
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "079"
@@ -76,9 +77,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_regchgimp_org", "regulatory_change_impacts", ["organization_id"])
     op.create_index("ix_regchgimp_change", "regulatory_change_impacts", ["change_id"])
-    op.create_index(
-        "ix_regchgimp_assessment", "regulatory_change_impacts", ["assessment_id"]
-    )
+    op.create_index("ix_regchgimp_assessment", "regulatory_change_impacts", ["assessment_id"])
 
 
 def downgrade() -> None:

@@ -518,7 +518,7 @@ async def test_org_heatmap_returns_matrix(setup_test_schema: None) -> None:
     sup = await _create_supplier(tok, "Heatmap Supplier")
     assess = await _create_assessment(tok, sup["id"])
     await _add_finding(tok, assess["id"], "Critical", "Climate Change")  # Environmental
-    await _add_finding(tok, assess["id"], "High", "Labor Rights")        # Social
+    await _add_finding(tok, assess["id"], "High", "Labor Rights")  # Social
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

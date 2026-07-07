@@ -10,7 +10,6 @@ from __future__ import annotations
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import EntityStatus
 from domain.external_intelligence import SectorBenchmark
 
 
@@ -79,9 +78,7 @@ async def list_sector_benchmarks(
     from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
 
     stmt = (
-        select(SectorBenchmarkModel)
-        .order_by(SectorBenchmarkModel.sector_name.asc())
-        .limit(limit)
+        select(SectorBenchmarkModel).order_by(SectorBenchmarkModel.sector_name.asc()).limit(limit)
     )
     rows = (await session.execute(stmt)).scalars().all()
     return [_model_to_domain(r) for r in rows]
@@ -89,6 +86,7 @@ async def list_sector_benchmarks(
 
 def _domain_to_model(b: SectorBenchmark):
     from infrastructure.persistence.models.external_intelligence import SectorBenchmarkModel
+
     return SectorBenchmarkModel(
         id=b.id,
         status=b.status.value if hasattr(b.status, "value") else b.status,

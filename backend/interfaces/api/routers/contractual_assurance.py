@@ -24,10 +24,11 @@ Security:
   - accept / update_status / confirm_cascade → analyst/admin only; KI-Agenten DÜRFEN diese
     Endpunkte NICHT aufrufen (Art. 10 requires human accountability)
 """
+
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -57,13 +58,13 @@ class ClauseCreate(BaseModel):
 
 
 class ClauseUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=255)
-    clause_text: Optional[str] = Field(default=None, max_length=10000)
-    category: Optional[str] = None
-    cascade_required: Optional[bool] = None
-    is_mandatory: Optional[bool] = None
-    version: Optional[str] = Field(default=None, max_length=20)
-    is_active: Optional[bool] = None
+    title: str | None = Field(default=None, max_length=255)
+    clause_text: str | None = Field(default=None, max_length=10000)
+    category: str | None = None
+    cascade_required: bool | None = None
+    is_mandatory: bool | None = None
+    version: str | None = Field(default=None, max_length=20)
+    is_active: bool | None = None
 
 
 class ClauseResponse(BaseModel):
@@ -87,18 +88,18 @@ class ClauseResponse(BaseModel):
 class AssuranceCreate(BaseModel):
     supplier_id: UUID
     clause_id: UUID
-    document_ref: Optional[str] = Field(default=None, max_length=500)
-    notes: Optional[str] = Field(default=None, max_length=5000)
-    valid_until: Optional[datetime] = None
+    document_ref: str | None = Field(default=None, max_length=500)
+    notes: str | None = Field(default=None, max_length=5000)
+    valid_until: datetime | None = None
 
 
 class AssuranceAccept(BaseModel):
-    document_ref: Optional[str] = Field(default=None, max_length=500)
+    document_ref: str | None = Field(default=None, max_length=500)
 
 
 class AssuranceStatusUpdate(BaseModel):
     status: str = Field(description="pending | accepted | rejected | expired | waived")
-    note: Optional[str] = Field(default=None, max_length=1000)
+    note: str | None = Field(default=None, max_length=1000)
 
 
 class AssuranceResponse(BaseModel):
@@ -107,13 +108,13 @@ class AssuranceResponse(BaseModel):
     supplier_id: UUID
     clause_id: UUID
     status: str
-    accepted_at: Optional[Any]
-    accepted_by: Optional[str]
-    document_ref: Optional[str]
-    notes: Optional[str]
+    accepted_at: Any | None
+    accepted_by: str | None
+    document_ref: str | None
+    notes: str | None
     cascade_confirmed: bool
-    cascade_confirmed_at: Optional[Any]
-    valid_until: Optional[Any]
+    cascade_confirmed_at: Any | None
+    valid_until: Any | None
     created_at: Any
     updated_at: Any
 
@@ -125,9 +126,9 @@ class AuditLogResponse(BaseModel):
     id: UUID
     assurance_id: UUID
     changed_by: str
-    from_status: Optional[str]
+    from_status: str | None
     to_status: str
-    note: Optional[str]
+    note: str | None
     created_at: Any
 
     class Config:
@@ -209,7 +210,9 @@ def update_clause(
     user: User = Depends(get_current_user),
 ):
     repo = SQLContractClauseRepository(db)
-    updated = repo.update(str(clause_id), user.organization_id, **body.model_dump(exclude_none=True))
+    updated = repo.update(
+        str(clause_id), user.organization_id, **body.model_dump(exclude_none=True)
+    )
     if not updated:
         raise HTTPException(status_code=404, detail="Clause not found")
     db.commit()
@@ -221,9 +224,9 @@ def update_clause(
 
 @router.get("/assurances/", response_model=list[AssuranceResponse])
 def list_assurances(
-    supplier_id: Optional[UUID] = Query(default=None),
-    clause_id: Optional[UUID] = Query(default=None),
-    status: Optional[str] = Query(default=None),
+    supplier_id: UUID | None = Query(default=None),
+    clause_id: UUID | None = Query(default=None),
+    status: str | None = Query(default=None),
     db: Session = Depends(get_sync_db),
     user: User = Depends(get_current_user),
 ):

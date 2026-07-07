@@ -14,7 +14,7 @@ import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.persistence.models.audit_event import AuditEventModel
@@ -60,20 +60,22 @@ async def _audit(
     metadata: dict | None = None,
 ) -> None:
     now = datetime.now(UTC)
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=now,
-        updated_at=now,
-        action=action,
-        entity_type="SCIMToken",
-        entity_id=entity_id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=detail,
-        event_metadata=metadata or {},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action=action,
+            entity_type="SCIMToken",
+            entity_id=entity_id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=detail,
+            event_metadata=metadata or {},
+        )
+    )
 
 
 async def create_scim_token(
@@ -135,9 +137,7 @@ async def revoke_scim_token(
     actor_id: str,
     session: AsyncSession,
 ) -> bool:
-    result = await session.execute(
-        select(SCIMTokenModel).where(SCIMTokenModel.id == token_id)
-    )
+    result = await session.execute(select(SCIMTokenModel).where(SCIMTokenModel.id == token_id))
     token = result.scalar_one_or_none()
     if not token:
         return False
@@ -166,9 +166,7 @@ async def rotate_scim_token(
     Emits scim.token.rotated (distinct from scim.token.revoked).
     The new token inherits idp_id and scope from the old token.
     """
-    result = await session.execute(
-        select(SCIMTokenModel).where(SCIMTokenModel.id == token_id)
-    )
+    result = await session.execute(select(SCIMTokenModel).where(SCIMTokenModel.id == token_id))
     old = result.scalar_one_or_none()
     if not old:
         return None
@@ -258,10 +256,7 @@ async def get_scim_usage(
     all_tokens = await list_scim_tokens(enterprise_id, session)
     active = [t for t in all_tokens if t.is_active]
     now = datetime.now(UTC)
-    not_expired = [
-        t for t in active
-        if t.expires_at is None or t.expires_at > now
-    ]
+    not_expired = [t for t in active if t.expires_at is None or t.expires_at > now]
 
     last_provisioning = None
     last_sync = None
@@ -276,12 +271,15 @@ async def get_scim_usage(
     per_idp: dict[str, dict] = {}
     for t in all_tokens:
         key = t.idp_id or "__enterprise__"
-        entry = per_idp.setdefault(key, {
-            "idp_id": t.idp_id,
-            "token_count": 0,
-            "active_count": 0,
-            "last_used_at": None,
-        })
+        entry = per_idp.setdefault(
+            key,
+            {
+                "idp_id": t.idp_id,
+                "token_count": 0,
+                "active_count": 0,
+                "last_used_at": None,
+            },
+        )
         entry["token_count"] += 1
         if t.is_active:
             entry["active_count"] += 1

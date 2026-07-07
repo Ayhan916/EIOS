@@ -12,7 +12,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Sequence
 
 import structlog
 
@@ -109,8 +108,9 @@ async def get_freshness_dashboard(session) -> list[DatasetFreshness]:
 
     M5: Uses a single GROUP BY query instead of N sequential queries.
     """
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
-    from sqlalchemy import select, func
 
     source_names = [s.value for s in ExternalSourceName]
 
@@ -125,10 +125,7 @@ async def get_freshness_dashboard(session) -> list[DatasetFreshness]:
     rows = (await session.execute(stmt)).all()
     last_refresh_by_source = {r.source_name: r.last_imported for r in rows}
 
-    return [
-        assess_freshness(name, last_refresh_by_source.get(name))
-        for name in source_names
-    ]
+    return [assess_freshness(name, last_refresh_by_source.get(name)) for name in source_names]
 
 
 def needs_refresh(freshness: DatasetFreshness) -> bool:

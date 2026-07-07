@@ -11,6 +11,7 @@ Create Date: 2026-06-12
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "066"
@@ -50,8 +51,18 @@ def upgrade() -> None:
         sa.Column("evidence_id", sa.String(36), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
         # Audit columns
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("created_by", sa.String(36), nullable=True),
     )
 

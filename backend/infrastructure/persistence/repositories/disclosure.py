@@ -15,7 +15,9 @@ from infrastructure.persistence.models.disclosure import (
 from infrastructure.persistence.repositories.base import BaseRepository
 
 
-class SQLDisclosureFrameworkRepository(BaseRepository[DisclosureFramework, DisclosureFrameworkModel]):
+class SQLDisclosureFrameworkRepository(
+    BaseRepository[DisclosureFramework, DisclosureFrameworkModel]
+):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, DisclosureFrameworkModel)
 
@@ -65,12 +67,16 @@ class SQLDisclosureFrameworkRepository(BaseRepository[DisclosureFramework, Discl
 
     async def list_active(self) -> list[DisclosureFramework]:
         rows = (
-            await self._session.execute(
-                select(DisclosureFrameworkModel)
-                .where(DisclosureFrameworkModel.status == EntityStatus.ACTIVE.value)
-                .order_by(DisclosureFrameworkModel.code)
+            (
+                await self._session.execute(
+                    select(DisclosureFrameworkModel)
+                    .where(DisclosureFrameworkModel.status == EntityStatus.ACTIVE.value)
+                    .order_by(DisclosureFrameworkModel.code)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
 
@@ -116,12 +122,16 @@ class SQLDisclosureRequirementRepository(
 
     async def list_for_framework(self, framework_id: str) -> list[DisclosureRequirement]:
         rows = (
-            await self._session.execute(
-                select(DisclosureRequirementModel)
-                .where(DisclosureRequirementModel.framework_id == framework_id)
-                .order_by(DisclosureRequirementModel.reference)
+            (
+                await self._session.execute(
+                    select(DisclosureRequirementModel)
+                    .where(DisclosureRequirementModel.framework_id == framework_id)
+                    .order_by(DisclosureRequirementModel.reference)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
     async def get_by_reference(self, reference: str) -> DisclosureRequirement | None:
@@ -135,9 +145,7 @@ class SQLDisclosureRequirementRepository(
         return self._to_domain(row) if row else None
 
 
-class SQLDisclosureResponseRepository(
-    BaseRepository[DisclosureResponse, DisclosureResponseModel]
-):
+class SQLDisclosureResponseRepository(BaseRepository[DisclosureResponse, DisclosureResponseModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, DisclosureResponseModel)
 
@@ -228,6 +236,7 @@ class SQLDisclosureResponseRepository(
 
     async def count_by_status(self, organization_id: str) -> dict[str, int]:
         from sqlalchemy import func  # noqa: PLC0415
+
         rows = (
             await self._session.execute(
                 select(

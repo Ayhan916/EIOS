@@ -28,7 +28,7 @@ def _classify_control(control: dict) -> str:
 
 def _assign_effectiveness(control: dict) -> str:
     effectiveness = control.get("effectiveness")
-    status = (control.get("status") or "").lower()
+    (control.get("status") or "").lower()
 
     if effectiveness is None:
         return "Unknown"
@@ -78,22 +78,24 @@ def build_preventive_measures_report(
         for c in items:
             eff = _assign_effectiveness(c)
             eff_breakdown[eff] += 1
-        category_summaries.append({
-            "category": category,
-            "display_name": category.replace("_", " ").title(),
-            "total": len(items),
-            "by_effectiveness": eff_breakdown,
-            "items": [
-                {
-                    "id": c.get("id", ""),
-                    "title": c.get("title", ""),
-                    "control_type": c.get("control_type", ""),
-                    "effectiveness_score": c.get("effectiveness"),
-                    "effectiveness_status": _assign_effectiveness(c),
-                }
-                for c in items
-            ],
-        })
+        category_summaries.append(
+            {
+                "category": category,
+                "display_name": category.replace("_", " ").title(),
+                "total": len(items),
+                "by_effectiveness": eff_breakdown,
+                "items": [
+                    {
+                        "id": c.get("id", ""),
+                        "title": c.get("title", ""),
+                        "control_type": c.get("control_type", ""),
+                        "effectiveness_score": c.get("effectiveness"),
+                        "effectiveness_status": _assign_effectiveness(c),
+                    }
+                    for c in items
+                ],
+            }
+        )
 
     return {
         "meta": {

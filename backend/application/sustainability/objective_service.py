@@ -3,20 +3,20 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
+from application.sustainability.metrics import sustainability_counters
+from infrastructure.persistence.models.operating_system import ESGProgramModel
 from infrastructure.persistence.models.sustainability import (
     ESG_CATEGORIES,
-    OBJECTIVE_STATUSES,
     MEASUREMENT_FREQUENCIES,
-    SustainabilityObjectiveModel,
+    OBJECTIVE_STATUSES,
     ESGTargetModel,
+    SustainabilityObjectiveModel,
 )
-from infrastructure.persistence.models.operating_system import ESGProgramModel
-from application.sustainability.metrics import sustainability_counters
 
 
 class SustainabilityError(Exception):
@@ -28,7 +28,7 @@ class SustainabilityConflict(SustainabilityError):
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -37,6 +37,7 @@ def _assert_org(record, organization_id: str, label: str = "resource") -> None:
 
 
 # ── ESG Objectives ─────────────────────────────────────────────────────────────
+
 
 def validate_program_assignment(
     program_id: str,
@@ -153,10 +154,13 @@ def list_objectives(
         q = q.filter(SustainabilityObjectiveModel.category == category)
     if status:
         q = q.filter(SustainabilityObjectiveModel.objective_status == status)
-    return q.order_by(SustainabilityObjectiveModel.created_at.desc()).limit(limit).offset(offset).all()
+    return (
+        q.order_by(SustainabilityObjectiveModel.created_at.desc()).limit(limit).offset(offset).all()
+    )
 
 
 # ── ESG Targets ───────────────────────────────────────────────────────────────
+
 
 def compute_progress(baseline: float, target: float, current: float | None) -> float:
     """Deterministic progress calculation: 0-100 percent."""
@@ -260,8 +264,7 @@ def list_targets(
         .all()
     )
     return [
-        (t, compute_progress(t.baseline_value, t.target_value, t.current_value))
-        for t in targets
+        (t, compute_progress(t.baseline_value, t.target_value, t.current_value)) for t in targets
     ]
 
 
@@ -282,6 +285,5 @@ def list_all_targets(
         .all()
     )
     return [
-        (t, compute_progress(t.baseline_value, t.target_value, t.current_value))
-        for t in targets
+        (t, compute_progress(t.baseline_value, t.target_value, t.current_value)) for t in targets
     ]

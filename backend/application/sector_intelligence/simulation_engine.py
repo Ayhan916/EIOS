@@ -11,13 +11,11 @@ Usage:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from application.sector_intelligence.base_matrix import (
     CALIBRATION_VERSION,
     get_scores,
-    is_calibrated,
 )
 from application.sector_intelligence.nace_taxonomy import (
     NACE_2DIGIT,
@@ -25,7 +23,6 @@ from application.sector_intelligence.nace_taxonomy import (
 )
 from domain.enums import CSDDDRight, ScenarioType
 from domain.sector_risk_register import ScenarioTemplate, SimulationResult
-
 
 # ---------------------------------------------------------------------------
 # Scenario Templates — all factors are static, human-curated, auditable
@@ -48,7 +45,6 @@ _R = CSDDDRight
 # ---------------------------------------------------------------------------
 
 _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
-
     ScenarioType.GEOPOLITICAL_CONFLICT: {
         _R.FORCED_LABOUR: "In Konfliktgebieten werden Arbeitskräfte häufig unter Androhung von Gewalt zur Arbeit gezwungen. Staatliche Kontrollen brechen zusammen, Unternehmen verlieren den Überblick über ihre Lieferkette.",
         _R.MODERN_SLAVERY: "Krieg und Vertreibung machen Menschen besonders anfällig für Menschenhandel und moderne Sklaverei. Geflüchtete ohne Dokumente werden gezielt ausgebeutet.",
@@ -62,7 +58,6 @@ _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
         _R.HUMAN_DIGNITY: "Kriegsverbrechen, Folter und erniedrigende Behandlung von Zivilisten und Arbeitern sind in bewaffneten Konflikten dokumentierte Realität.",
         _R.WATER_RIGHTS: "Zerstörte Wasserinfrastruktur und strategische Blockaden gefährden den Zugang zu sauberem Wasser für Produktionsstandorte und Anwohner.",
     },
-
     ScenarioType.SANCTIONS_ESCALATION: {
         _R.FORCED_LABOUR: "Sanktionierter Druck zwingt Unternehmen, auf informelle Lieferketten auszuweichen — dort sind Arbeitnehmerrechte kaum kontrolliert und Zwangsarbeit verbreitet.",
         _R.MODERN_SLAVERY: "Wirtschaftssanktionen treiben Produktion in den Untergrund, wo Ausbeutung ohne staatliche Kontrolle möglich ist.",
@@ -71,7 +66,6 @@ _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
         _R.COLLECTIVE_BARGAINING: "Unter starkem wirtschaftlichem Druck durch Sanktionen werden Tarifverhandlungen ausgesetzt oder von Behörden blockiert.",
         _R.COMMUNITY_RIGHTS: "Sanktionierte Unternehmen umgehen Gemeinschaftskonsultationen, um Genehmigungsprozesse zu beschleunigen.",
     },
-
     ScenarioType.NATURAL_DISASTER: {
         _R.OCCUPATIONAL_SAFETY: "Katastrophen zerstören Sicherheitsinfrastruktur sofort — Schutzausrüstung fehlt, Notfallsysteme fallen aus, Arbeitnehmer sind erhöhten physischen Risiken ausgesetzt.",
         _R.ENVIRONMENTAL_DESTRUCTION: "Naturkatastrophen verursachen direkte, großflächige Umweltzerstörung. Dies ist der stärkste Faktor im Register (×2.0), da der Schaden nahezu unvermeidlich ist.",
@@ -84,7 +78,6 @@ _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
         _R.HARMFUL_CHEMICALS: "Zerstörte Industrieanlagen und Lager setzen Chemikalien unkontrolliert frei — in Boden, Wasser und Luft.",
         _R.HAZARDOUS_WASTE: "Beschädigte Deponien und Lagerstätten lassen gefährliche Abfälle in die Umwelt gelangen, oft ohne dass es zeitnah bemerkt wird.",
     },
-
     ScenarioType.REGULATORY_CHANGE: {
         _R.CHILD_LABOUR: "CSDDD und LkSG erzwingen tiefere Lieferkettenprüfungen — bisher verborgene Kinderarbeit bei Unterlieferanten wird jetzt erstmals sichtbar.",
         _R.FORCED_LABOUR: "Neue Sorgfaltspflichtgesetze verlangen Nachweise auf tieferen Lieferkettenstufen, wo Zwangsarbeit bisher nicht geprüft wurde.",
@@ -96,7 +89,6 @@ _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
         _R.DISCRIMINATION: "Erweiterte ESG-Berichtsstandards schließen nun Diskriminierungsdaten (Lohngleichheit, Diversität) verpflichtend ein.",
         _R.FREEDOM_OF_ASSOCIATION: "Neue Due-Diligence-Anforderungen umfassen erstmals systematische Prüfungen der Gewerkschaftsfreiheit bei Lieferanten.",
     },
-
     ScenarioType.LABOUR_UNREST: {
         _R.FREEDOM_OF_ASSOCIATION: "Streiks und Arbeitskämpfe sind das deutlichste Signal dafür, dass Gewerkschaftsrechte unterdrückt werden oder es in Kürze sein werden.",
         _R.COLLECTIVE_BARGAINING: "Arbeitskämpfe entstehen fast immer, weil Tarifverhandlungen scheitern oder vom Arbeitgeber verweigert werden — direkter Kausalzusammenhang.",
@@ -107,7 +99,6 @@ _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
         _R.HUMAN_DIGNITY: "Erniedrigende Behandlung am Arbeitsplatz (Demütigungen, Schikanierung) ist ein dokumentierter Konflikttreiber in der Industrie.",
         _R.FORCED_LABOUR: "In Regionen mit aktiven Arbeitskämpfen reagieren manche Arbeitgeber mit Einschüchterung oder Zwang — das Risiko eskaliert.",
     },
-
     ScenarioType.SUPPLY_SHORTAGE: {
         _R.CHILD_LABOUR: "Engpässe zwingen Einkäufer zu Notlieferanten in wenig regulierten Regionen, wo Kinderarbeit nicht kontrolliert wird.",
         _R.FORCED_LABOUR: "Extremer Preisdruck durch Materialknappheit fördert Ausbeutung in alternativen, unkontrollierten Lieferketten.",
@@ -123,7 +114,6 @@ _EXPLANATIONS: dict[ScenarioType, dict[CSDDDRight, str]] = {
 
 
 _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
-
     ScenarioType.GEOPOLITICAL_CONFLICT: ScenarioTemplate(
         scenario_type=ScenarioType.GEOPOLITICAL_CONFLICT,
         name="Geopolitischer Konflikt / Kriegsgebiet",
@@ -148,7 +138,6 @@ _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
         affected_nace_sections=["A", "B", "C", "H", "F"],
         sources=["ILO 2024 World Employment and Social Outlook", "OECD HRDD Guidance 2023"],
     ),
-
     ScenarioType.SANCTIONS_ESCALATION: ScenarioTemplate(
         scenario_type=ScenarioType.SANCTIONS_ESCALATION,
         name="Sanktionsverschärfung",
@@ -168,7 +157,6 @@ _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
         affected_nace_sections=["B", "C", "G", "H", "K"],
         sources=["OFAC Compliance Framework 2024", "EU Sanctions Implementation Guide"],
     ),
-
     ScenarioType.NATURAL_DISASTER: ScenarioTemplate(
         scenario_type=ScenarioType.NATURAL_DISASTER,
         name="Naturkatastrophe",
@@ -192,7 +180,6 @@ _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
         affected_nace_sections=["A", "B", "C", "D", "E", "F"],
         sources=["UNDRR Global Assessment Report 2023", "ILO Climate Resilience 2024"],
     ),
-
     ScenarioType.REGULATORY_CHANGE: ScenarioTemplate(
         scenario_type=ScenarioType.REGULATORY_CHANGE,
         name="Regulatorische Verschärfung (CSDDD / LkSG)",
@@ -215,7 +202,6 @@ _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
         affected_nace_sections=["A", "B", "C", "G", "H"],
         sources=["CSDDD Directive 2024/1760/EU", "LkSG 2023 Implementation Reports"],
     ),
-
     ScenarioType.LABOUR_UNREST: ScenarioTemplate(
         scenario_type=ScenarioType.LABOUR_UNREST,
         name="Arbeitskampf / Streik",
@@ -237,7 +223,6 @@ _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
         affected_nace_sections=["C", "H", "F", "G", "N"],
         sources=["ILO NORMLEX Database 2024", "ITUC Global Rights Index 2023"],
     ),
-
     ScenarioType.SUPPLY_SHORTAGE: ScenarioTemplate(
         scenario_type=ScenarioType.SUPPLY_SHORTAGE,
         name="Rohstoff- / Lieferengpass",
@@ -266,6 +251,7 @@ _SCENARIO_TEMPLATES: dict[ScenarioType, ScenarioTemplate] = {
 # ---------------------------------------------------------------------------
 # Simulation Engine
 # ---------------------------------------------------------------------------
+
 
 class ScenarioSimulationEngine:
     """Deterministic scenario simulation over the CSDDD base risk matrix.
@@ -305,9 +291,13 @@ class ScenarioSimulationEngine:
 
             if factor > 1.0:
                 custom = _EXPLANATIONS.get(scenario_type, {}).get(right)
-                explanation[right] = custom if custom else (
-                    f"Erhoeht um Faktor {factor:.1f} unter Szenario '{template.name}'. "
-                    f"Baseline: {base}/10, Szenario: {adjusted}/10. Quelle: {template.sources[0]}."
+                explanation[right] = (
+                    custom
+                    if custom
+                    else (
+                        f"Erhoeht um Faktor {factor:.1f} unter Szenario '{template.name}'. "
+                        f"Baseline: {base}/10, Szenario: {adjusted}/10. Quelle: {template.sources[0]}."
+                    )
                 )
             else:
                 explanation[right] = (
@@ -315,7 +305,7 @@ class ScenarioSimulationEngine:
                     f"Baseline-Wert {base}/10 bleibt unveraendert."
                 )
 
-        section_info = NACE_2DIGIT.get(code)
+        NACE_2DIGIT.get(code)
         sector_name = get_division_name(code)
 
         return SimulationResult(
@@ -327,7 +317,7 @@ class ScenarioSimulationEngine:
             scenario_scores=scenario_scores,
             delta=delta,
             explanation=explanation,
-            simulated_at=datetime.now(timezone.utc).isoformat(),
+            simulated_at=datetime.now(UTC).isoformat(),
             calibration_version=CALIBRATION_VERSION,
         )
 
@@ -357,7 +347,5 @@ class ScenarioSimulationEngine:
     ) -> list[tuple[CSDDDRight, int]]:
         """Return all rights with scenario probability >= threshold."""
         return [
-            (right, score)
-            for right, score in result.scenario_scores.items()
-            if score >= threshold
+            (right, score) for right, score in result.scenario_scores.items() if score >= threshold
         ]

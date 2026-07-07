@@ -9,7 +9,7 @@ Endpoints:
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.intelligence_engine.collector_orchestrator import run_collection_for_org
@@ -19,7 +19,7 @@ from application.intelligence_engine.timeline_service import (
     list_org_intelligence_feed,
     list_timeline,
 )
-from application.intelligence_engine.twin_service import get_or_create_twin, get_twin
+from application.intelligence_engine.twin_service import get_or_create_twin
 from domain.user import User
 from interfaces.api.deps import get_current_user, get_db
 from interfaces.api.schemas.supplier_twin import (
@@ -156,6 +156,7 @@ def _health_status(score: float) -> str:
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/suppliers/{supplier_id}/twin",
     response_model=SupplierDigitalTwinResponse,
@@ -257,8 +258,95 @@ async def collect_intelligence(
         message=(
             f"Collection complete: {summary.signals_created} new signals, "
             f"{summary.twins_updated} twins updated, {summary.events_created} events created."
-            if not summary.errors else
-            f"Partial: {summary.signals_created} signals, errors: {'; '.join(summary.errors[:2])}"
+            if not summary.errors
+            else f"Partial: {summary.signals_created} signals, errors: {'; '.join(summary.errors[:2])}"
+        ),
+    )
+
+
+@router.post(
+    "/intelligence/collect/batch",
+    response_model=CollectIntelligenceResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def collect_intelligence_batch(
+    supplier_ids: list[str],
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> CollectIntelligenceResponse:
+    """Fetch external intelligence for a specific list of suppliers."""
+    from application.intelligence_engine.collector_orchestrator import CollectionSummary
+    from datetime import UTC, datetime
+
+    combined = CollectionSummary(org_id=current_user.organization_id, started_at=datetime.now(UTC))
+    for sid in supplier_ids:
+        s = await run_collection_for_org(
+            org_id=current_user.organization_id,
+            session=session,
+            supplier_id=sid,
+        )
+        combined.sources_attempted = max(combined.sources_attempted, s.sources_attempted)
+        combined.sources_ok = max(combined.sources_ok, s.sources_ok)
+        combined.entities_checked += s.entities_checked
+        combined.suppliers_matched += s.suppliers_matched
+        combined.signals_created += s.signals_created
+        combined.twins_updated += s.twins_updated
+        combined.events_created += s.events_created
+        combined.errors.extend(s.errors)
+
+    await session.commit()
+    combined.completed_at = datetime.now(UTC)
+    return CollectIntelligenceResponse(
+        sources_attempted=combined.sources_attempted,
+        sources_ok=combined.sources_ok,
+        entities_checked=combined.entities_checked,
+        suppliers_matched=combined.suppliers_matched,
+        signals_created=combined.signals_created,
+        twins_updated=combined.twins_updated,
+        events_created=combined.events_created,
+        duration_seconds=combined.duration_seconds(),
+        errors=combined.errors,
+        message=(
+            f"Collection complete: {combined.signals_created} new signals, "
+            f"{combined.twins_updated} twins updated, {combined.events_created} events created."
+            if not combined.errors
+            else f"Partial: {combined.signals_created} signals, errors: {'; '.join(combined.errors[:2])}"
+        ),
+    )
+
+
+@router.post(
+    "/suppliers/{supplier_id}/intelligence/collect",
+    response_model=CollectIntelligenceResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def collect_intelligence_for_supplier(
+    supplier_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> CollectIntelligenceResponse:
+    """Fetch external intelligence for a single supplier only."""
+    summary = await run_collection_for_org(
+        org_id=current_user.organization_id,
+        session=session,
+        supplier_id=supplier_id,
+    )
+    await session.commit()
+    return CollectIntelligenceResponse(
+        sources_attempted=summary.sources_attempted,
+        sources_ok=summary.sources_ok,
+        entities_checked=summary.entities_checked,
+        suppliers_matched=summary.suppliers_matched,
+        signals_created=summary.signals_created,
+        twins_updated=summary.twins_updated,
+        events_created=summary.events_created,
+        duration_seconds=summary.duration_seconds(),
+        errors=summary.errors,
+        message=(
+            f"Collection complete: {summary.signals_created} new signals, "
+            f"{summary.twins_updated} twins updated, {summary.events_created} events created."
+            if not summary.errors
+            else f"Partial: {summary.signals_created} signals, errors: {'; '.join(summary.errors[:2])}"
         ),
     )
 

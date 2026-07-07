@@ -14,6 +14,7 @@ Create Date: 2026-06-21
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "044"
@@ -78,9 +79,7 @@ def upgrade() -> None:
         sa.Column("business_owner", sa.String(255), nullable=True),
         sa.Column("technical_owner", sa.String(255), nullable=True),
         sa.Column("risk_level", sa.String(20), nullable=False, server_default="MEDIUM"),
-        sa.Column(
-            "approval_status", sa.String(20), nullable=False, server_default="PENDING"
-        ),
+        sa.Column("approval_status", sa.String(20), nullable=False, server_default="PENDING"),
     )
     op.create_index("ix_ai_use_cases_model", "ai_use_cases", ["model_id"])
 
@@ -88,9 +87,7 @@ def upgrade() -> None:
     op.create_table(
         "ai_risk_assessments",
         *_BASE_COLS,
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column(
             "use_case_id",
             sa.String(36),
@@ -123,9 +120,7 @@ def upgrade() -> None:
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("control_type", sa.String(20), nullable=False),
         sa.Column("examples", sa.JSON, nullable=True),
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=True
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=True),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
     )
     op.create_index("ix_ai_controls_org", "ai_controls", ["organization_id"])
@@ -140,9 +135,7 @@ def upgrade() -> None:
             sa.ForeignKey("ai_controls.id"),
             nullable=False,
         ),
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=True
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=True),
         sa.Column("test_result", sa.String(20), nullable=False),
         sa.Column("tested_by", sa.String(36), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
@@ -154,21 +147,15 @@ def upgrade() -> None:
     op.create_table(
         "model_approval_workflows",
         *_BASE_COLS,
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column("stage", sa.String(50), nullable=False),
-        sa.Column(
-            "stage_status", sa.String(20), nullable=False, server_default="PENDING"
-        ),
+        sa.Column("stage_status", sa.String(20), nullable=False, server_default="PENDING"),
         sa.Column("approver_user_id", sa.String(36), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
         sa.Column("completed_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("stage_order", sa.Integer, nullable=False, server_default="0"),
     )
-    op.create_index(
-        "ix_model_approval_model", "model_approval_workflows", ["model_id"]
-    )
+    op.create_index("ix_model_approval_model", "model_approval_workflows", ["model_id"])
 
     # ── prompt_templates ──────────────────────────────────────────────────────
     op.create_table(
@@ -180,9 +167,7 @@ def upgrade() -> None:
             sa.ForeignKey("organizations.id"),
             nullable=False,
         ),
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=True
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=True),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("prompt_version", sa.Integer, nullable=False, server_default="1"),
         sa.Column("prompt_text", sa.Text, nullable=False),
@@ -216,9 +201,7 @@ def upgrade() -> None:
     op.create_table(
         "ai_decision_logs",
         *_BASE_COLS,
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column(
             "prompt_id",
             sa.String(36),
@@ -274,9 +257,7 @@ def upgrade() -> None:
             sa.ForeignKey("ai_decision_logs.id"),
             nullable=True,
         ),
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column("reviewer_user_id", sa.String(36), nullable=False),
         sa.Column("decision", sa.String(20), nullable=False),
         sa.Column("override_reason", sa.Text, nullable=True),
@@ -289,9 +270,7 @@ def upgrade() -> None:
     op.create_table(
         "model_monitoring_records",
         *_BASE_COLS,
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column(
             "organization_id",
             sa.String(36),
@@ -307,17 +286,13 @@ def upgrade() -> None:
         sa.Column("drift_score", sa.Float, nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index(
-        "ix_model_monitoring_model", "model_monitoring_records", ["model_id"]
-    )
+    op.create_index("ix_model_monitoring_model", "model_monitoring_records", ["model_id"])
 
     # ── model_drift_alerts ────────────────────────────────────────────────────
     op.create_table(
         "model_drift_alerts",
         *_BASE_COLS,
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column("alert_type", sa.String(50), nullable=False),
         sa.Column("severity", sa.String(20), nullable=False, server_default="MEDIUM"),
         sa.Column("description", sa.Text, nullable=False),
@@ -331,9 +306,7 @@ def upgrade() -> None:
     op.create_table(
         "ai_incidents",
         *_BASE_COLS,
-        sa.Column(
-            "model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False
-        ),
+        sa.Column("model_id", sa.String(36), sa.ForeignKey("ai_models.id"), nullable=False),
         sa.Column(
             "organization_id",
             sa.String(36),
@@ -437,9 +410,7 @@ def upgrade() -> None:
         ),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index(
-        "ix_ai_reg_mappings_framework", "ai_regulation_mappings", ["framework"]
-    )
+    op.create_index("ix_ai_reg_mappings_framework", "ai_regulation_mappings", ["framework"])
 
 
 def downgrade() -> None:

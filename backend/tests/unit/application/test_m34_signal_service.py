@@ -1,8 +1,9 @@
 """M34 signal service tests."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from application.external_intelligence.signal_service import (
     create_signal,

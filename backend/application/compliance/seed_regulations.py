@@ -11,10 +11,10 @@ import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.compliance.frameworks import (
-    CSRD,
     CSDDD,
-    EU_TAXONOMY,
+    CSRD,
     ESRS,
+    EU_TAXONOMY,
     GRI,
     ISSB,
     LKSG,

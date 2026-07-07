@@ -645,8 +645,15 @@ def _evidence_support_section(pdf: _EIOSReport, findings: list) -> None:
         pdf.cell(usable_w - 30, 7, pdf._safe(f.get("title", ""), 80), fill=True)
         pdf.set_fill_color(*strength_col)
         pdf.set_text_color(*_WHITE)
-        pdf.cell(30, 7, _latin1(strength or "N/A"), fill=True, align="C",
-                 new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        pdf.cell(
+            30,
+            7,
+            _latin1(strength or "N/A"),
+            fill=True,
+            align="C",
+            new_x=XPos.LMARGIN,
+            new_y=YPos.NEXT,
+        )
         pdf.set_text_color(*_DARK)
         pdf.set_fill_color(*_WHITE)
 
@@ -681,7 +688,9 @@ def _evidence_support_section(pdf: _EIOSReport, findings: list) -> None:
 def _governance_section(pdf: _EIOSReport, assessment: dict, review_actions: list) -> None:
     """Render governance accountability section — reviewer, approval, review history."""
     review_status = assessment.get("review_status") or "Draft"
-    assigned_reviewer = assessment.get("assigned_reviewer_name") or assessment.get("assigned_reviewer_id") or "-"
+    assigned_reviewer = (
+        assessment.get("assigned_reviewer_name") or assessment.get("assigned_reviewer_id") or "-"
+    )
     approval_date = assessment.get("approval_date")
     approved_by = assessment.get("approved_by_name") or assessment.get("approved_by") or "-"
     review_due_date = assessment.get("review_due_date")
@@ -732,8 +741,14 @@ def _governance_section(pdf: _EIOSReport, assessment: dict, review_actions: list
             pdf.set_font("Helvetica", "", 8)
             actor_str = ra.get("actor_email") or ra.get("actor_id") or "-"
             ts_str = str(ra.get("created_at") or "")[:16]
-            pdf.cell(usable_w - 32, 6, f"  {_latin1(actor_str)}  |  {_latin1(ts_str)}", fill=True,
-                     new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+            pdf.cell(
+                usable_w - 32,
+                6,
+                f"  {_latin1(actor_str)}  |  {_latin1(ts_str)}",
+                fill=True,
+                new_x=XPos.LMARGIN,
+                new_y=YPos.NEXT,
+            )
 
             if ra.get("comment"):
                 pdf.set_font("Helvetica", "I", 7)

@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field, HttpUrl
-
+from pydantic import BaseModel, Field
 
 # ── Service Accounts ──────────────────────────────────────────────────────────
+
 
 class ServiceAccountCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
@@ -28,6 +28,7 @@ class ServiceAccountResponse(BaseModel):
 
 # ── API Keys ──────────────────────────────────────────────────────────────────
 
+
 class ApiKeyCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     description: str = ""
@@ -39,6 +40,7 @@ class ApiKeyCreate(BaseModel):
 
 class ApiKeyCreatedResponse(BaseModel):
     """Returned ONCE at creation — raw_key is never stored and never returned again."""
+
     id: str
     name: str
     key_prefix: str
@@ -71,6 +73,7 @@ class ApiKeyResponse(BaseModel):
 
 # ── Webhook Subscriptions ─────────────────────────────────────────────────────
 
+
 class WebhookCreate(BaseModel):
     name: str = Field(min_length=1, max_length=200)
     target_url: str = Field(min_length=8)
@@ -100,6 +103,7 @@ class WebhookResponse(BaseModel):
 
 # ── Webhook Deliveries ────────────────────────────────────────────────────────
 
+
 class WebhookDeliveryResponse(BaseModel):
     id: str
     subscription_id: str
@@ -116,6 +120,7 @@ class WebhookDeliveryResponse(BaseModel):
 
 
 # ── Usage Analytics ───────────────────────────────────────────────────────────
+
 
 class ApiKeyUsageSummary(BaseModel):
     id: str

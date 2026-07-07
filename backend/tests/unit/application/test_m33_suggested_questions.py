@@ -20,7 +20,10 @@ class TestSuggestedQuestions:
     def test_compliance_context(self):
         qs = get_suggested_questions(CopilotContextType.COMPLIANCE)
         assert len(qs) >= 1
-        assert any("compliance" in q.lower() or "gap" in q.lower() or "requirement" in q.lower() for q in qs)
+        assert any(
+            "compliance" in q.lower() or "gap" in q.lower() or "requirement" in q.lower()
+            for q in qs
+        )
 
     def test_disclosure_context(self):
         qs = get_suggested_questions(CopilotContextType.DISCLOSURE)
@@ -34,7 +37,14 @@ class TestSuggestedQuestions:
     def test_executive_context(self):
         qs = get_suggested_questions(CopilotContextType.EXECUTIVE)
         assert len(qs) >= 1
-        assert any("board" in q.lower() or "executive" in q.lower() or "changed" in q.lower() or "brief" in q.lower() or "summary" in q.lower() for q in qs)
+        assert any(
+            "board" in q.lower()
+            or "executive" in q.lower()
+            or "changed" in q.lower()
+            or "brief" in q.lower()
+            or "summary" in q.lower()
+            for q in qs
+        )
 
     def test_limit_respected(self):
         qs = get_suggested_questions(CopilotContextType.GENERAL, limit=3)

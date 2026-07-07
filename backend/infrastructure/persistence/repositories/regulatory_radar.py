@@ -1,39 +1,109 @@
 """Repository — Regulatory Change Radar (CSDDD-014)."""
+
 from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from domain.enums import RegulatoryChangeStatus
-from domain.regulatory_radar import RegulatoryChange, RegulatoryFeedEntry, RegulatorySource
+from domain.regulatory_radar import RegulatoryChange, RegulatorySource
 from infrastructure.persistence.models.regulatory_radar import (
     RegulatoryChangeModel,
-    RegulatoryFeedEntryModel,
     RegulatorySourceModel,
 )
 
 # ── 10 seed sources ───────────────────────────────────────────────────────────
 SEED_SOURCES = [
-    {"name": "EUR-Lex CSDDD", "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1760", "description": "CSDDD primary legislation (EU) 2024/1760", "relevance_score": 5, "country_code": None, "rss_feed_url": "https://eur-lex.europa.eu/legal-content/rss/CELEX:32024L1760"},
-    {"name": "BAFA LkSG Guidance", "url": "https://www.bafa.de/DE/Lieferketten/lieferketten_node.html", "description": "German Federal Office guidance on Supply Chain Act (LkSG)", "relevance_score": 4, "country_code": "DE", "rss_feed_url": None},
-    {"name": "EU Commission CSDDD FAQ", "url": "https://ec.europa.eu/commission/presscorner/detail/en/ip_24_3121", "description": "European Commission guidance and FAQ on CSDDD implementation", "relevance_score": 5, "country_code": None, "rss_feed_url": None},
-    {"name": "EFRAG ESRS Standards", "url": "https://efrag.org/activities/esg-standards", "description": "European Financial Reporting Advisory Group — ESRS sustainability reporting standards", "relevance_score": 4, "country_code": None, "rss_feed_url": None},
-    {"name": "ILO Core Conventions", "url": "https://www.ilo.org/international-labour-standards/introduction-to-international-labour-standards", "description": "ILO fundamental labour rights conventions referenced in CSDDD Annex I", "relevance_score": 3, "country_code": None, "rss_feed_url": None},
-    {"name": "OECD Due Diligence Guidance", "url": "https://www.oecd.org/investment/due-diligence-guidance-for-responsible-business-conduct.htm", "description": "OECD RBC Due Diligence Guidance — methodology basis for CSDDD", "relevance_score": 4, "country_code": None, "rss_feed_url": None},
-    {"name": "ESMA ESAP Regulation", "url": "https://www.esma.europa.eu/esap", "description": "European Single Access Point — reporting portal (EU) 2023/2859", "relevance_score": 3, "country_code": None, "rss_feed_url": None},
-    {"name": "UN Guiding Principles (UNGPs)", "url": "https://www.ohchr.org/en/publications-and-resources/reports/2011/guiding-principles-business-and-human-rights", "description": "UN Guiding Principles on Business and Human Rights — CSDDD reference framework", "relevance_score": 3, "country_code": None, "rss_feed_url": None},
-    {"name": "Lieferkettensorgfaltspflichtengesetz (LkSG)", "url": "https://www.gesetze-im-internet.de/lksg/", "description": "German Supply Chain Due Diligence Act — national CSDDD predecessor law", "relevance_score": 4, "country_code": "DE", "rss_feed_url": None},
-    {"name": "French Loi de Vigilance", "url": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000034290626", "description": "French corporate duty of vigilance law — CSDDD inspiration", "relevance_score": 3, "country_code": "FR", "rss_feed_url": None},
+    {
+        "name": "EUR-Lex CSDDD",
+        "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32024L1760",
+        "description": "CSDDD primary legislation (EU) 2024/1760",
+        "relevance_score": 5,
+        "country_code": None,
+        "rss_feed_url": "https://eur-lex.europa.eu/legal-content/rss/CELEX:32024L1760",
+    },
+    {
+        "name": "BAFA LkSG Guidance",
+        "url": "https://www.bafa.de/DE/Lieferketten/lieferketten_node.html",
+        "description": "German Federal Office guidance on Supply Chain Act (LkSG)",
+        "relevance_score": 4,
+        "country_code": "DE",
+        "rss_feed_url": None,
+    },
+    {
+        "name": "EU Commission CSDDD FAQ",
+        "url": "https://ec.europa.eu/commission/presscorner/detail/en/ip_24_3121",
+        "description": "European Commission guidance and FAQ on CSDDD implementation",
+        "relevance_score": 5,
+        "country_code": None,
+        "rss_feed_url": None,
+    },
+    {
+        "name": "EFRAG ESRS Standards",
+        "url": "https://efrag.org/activities/esg-standards",
+        "description": "European Financial Reporting Advisory Group — ESRS sustainability reporting standards",
+        "relevance_score": 4,
+        "country_code": None,
+        "rss_feed_url": None,
+    },
+    {
+        "name": "ILO Core Conventions",
+        "url": "https://www.ilo.org/international-labour-standards/introduction-to-international-labour-standards",
+        "description": "ILO fundamental labour rights conventions referenced in CSDDD Annex I",
+        "relevance_score": 3,
+        "country_code": None,
+        "rss_feed_url": None,
+    },
+    {
+        "name": "OECD Due Diligence Guidance",
+        "url": "https://www.oecd.org/investment/due-diligence-guidance-for-responsible-business-conduct.htm",
+        "description": "OECD RBC Due Diligence Guidance — methodology basis for CSDDD",
+        "relevance_score": 4,
+        "country_code": None,
+        "rss_feed_url": None,
+    },
+    {
+        "name": "ESMA ESAP Regulation",
+        "url": "https://www.esma.europa.eu/esap",
+        "description": "European Single Access Point — reporting portal (EU) 2023/2859",
+        "relevance_score": 3,
+        "country_code": None,
+        "rss_feed_url": None,
+    },
+    {
+        "name": "UN Guiding Principles (UNGPs)",
+        "url": "https://www.ohchr.org/en/publications-and-resources/reports/2011/guiding-principles-business-and-human-rights",
+        "description": "UN Guiding Principles on Business and Human Rights — CSDDD reference framework",
+        "relevance_score": 3,
+        "country_code": None,
+        "rss_feed_url": None,
+    },
+    {
+        "name": "Lieferkettensorgfaltspflichtengesetz (LkSG)",
+        "url": "https://www.gesetze-im-internet.de/lksg/",
+        "description": "German Supply Chain Due Diligence Act — national CSDDD predecessor law",
+        "relevance_score": 4,
+        "country_code": "DE",
+        "rss_feed_url": None,
+    },
+    {
+        "name": "French Loi de Vigilance",
+        "url": "https://www.legifrance.gouv.fr/jorf/id/JORFTEXT000034290626",
+        "description": "French corporate duty of vigilance law — CSDDD inspiration",
+        "relevance_score": 3,
+        "country_code": "FR",
+        "rss_feed_url": None,
+    },
 ]
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _url_hash(url: str) -> str:
@@ -42,10 +112,18 @@ def _url_hash(url: str) -> str:
 
 def _source_to_domain(m: RegulatorySourceModel) -> RegulatorySource:
     return RegulatorySource(
-        id=m.id, organization_id=m.organization_id, name=m.name, url=m.url,
-        description=m.description, relevance_score=m.relevance_score,
-        country_code=m.country_code, sector=m.sector, rss_feed_url=m.rss_feed_url,
-        is_active=m.is_active, last_fetched_at=m.last_fetched_at, created_at=m.created_at,
+        id=m.id,
+        organization_id=m.organization_id,
+        name=m.name,
+        url=m.url,
+        description=m.description,
+        relevance_score=m.relevance_score,
+        country_code=m.country_code,
+        sector=m.sector,
+        rss_feed_url=m.rss_feed_url,
+        is_active=m.is_active,
+        last_fetched_at=m.last_fetched_at,
+        created_at=m.created_at,
     )
 
 
@@ -59,14 +137,25 @@ def _change_to_domain(m: RegulatoryChangeModel) -> RegulatoryChange:
     except Exception:
         modules = []
     return RegulatoryChange(
-        id=m.id, organization_id=m.organization_id, source_id=m.source_id,
-        title=m.title, source_name=m.source_name, url=m.url,
-        effective_date=m.effective_date, summary=m.summary,
-        affected_articles=articles, status=m.status,
-        action_required=m.action_required, action_description=m.action_description,
-        impact_modules=modules, estimated_effort_days=m.estimated_effort_days,
-        due_date=m.due_date, created_by=m.created_by,
-        created_at=m.created_at, updated_at=m.updated_at, url_hash=m.url_hash,
+        id=m.id,
+        organization_id=m.organization_id,
+        source_id=m.source_id,
+        title=m.title,
+        source_name=m.source_name,
+        url=m.url,
+        effective_date=m.effective_date,
+        summary=m.summary,
+        affected_articles=articles,
+        status=m.status,
+        action_required=m.action_required,
+        action_description=m.action_description,
+        impact_modules=modules,
+        estimated_effort_days=m.estimated_effort_days,
+        due_date=m.due_date,
+        created_by=m.created_by,
+        created_at=m.created_at,
+        updated_at=m.updated_at,
+        url_hash=m.url_hash,
     )
 
 
@@ -77,7 +166,7 @@ class SQLRegulatorySourceRepository:
     def seed_global(self) -> list[RegulatorySource]:
         """Seed global (org-independent) regulatory sources if not present."""
         existing_stmt = select(RegulatorySourceModel).where(
-            RegulatorySourceModel.organization_id == None
+            RegulatorySourceModel.organization_id is None
         )
         existing_names = {m.name for m in self._s.execute(existing_stmt).scalars().all()}
         created = []
@@ -103,11 +192,14 @@ class SQLRegulatorySourceRepository:
         return [_source_to_domain(m) for m in created]
 
     def list_for_org(self, organization_id: str) -> list[RegulatorySource]:
-        stmt = select(RegulatorySourceModel).where(
-            (RegulatorySourceModel.organization_id == None) |
-            (RegulatorySourceModel.organization_id == organization_id)
-        ).where(RegulatorySourceModel.is_active == True).order_by(
-            RegulatorySourceModel.relevance_score.desc()
+        stmt = (
+            select(RegulatorySourceModel)
+            .where(
+                (RegulatorySourceModel.organization_id is None)
+                | (RegulatorySourceModel.organization_id == organization_id)
+            )
+            .where(RegulatorySourceModel.is_active)
+            .order_by(RegulatorySourceModel.relevance_score.desc())
         )
         return [_source_to_domain(m) for m in self._s.execute(stmt).scalars().all()]
 
@@ -217,6 +309,10 @@ class SQLRegulatoryChangeRepository:
             "total": len(all_changes),
             "new": new,
             "action_required": action_yes,
-            "implemented": sum(1 for c in all_changes if c.status == RegulatoryChangeStatus.IMPLEMENTED.value),
-            "not_relevant": sum(1 for c in all_changes if c.status == RegulatoryChangeStatus.NOT_RELEVANT.value),
+            "implemented": sum(
+                1 for c in all_changes if c.status == RegulatoryChangeStatus.IMPLEMENTED.value
+            ),
+            "not_relevant": sum(
+                1 for c in all_changes if c.status == RegulatoryChangeStatus.NOT_RELEVANT.value
+            ),
         }

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -21,7 +21,7 @@ from infrastructure.persistence.models.strategy import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -30,6 +30,7 @@ def _assert_org(record, organization_id: str, label: str = "resource") -> None:
 
 
 # ── Scenario Templates ────────────────────────────────────────────────────────
+
 
 def create_scenario_template(
     organization_id: str,
@@ -131,9 +132,7 @@ def instantiate_from_template(
     return scenario
 
 
-def list_scenario_templates(
-    organization_id: str, session: Session
-) -> list[ScenarioTemplateModel]:
+def list_scenario_templates(organization_id: str, session: Session) -> list[ScenarioTemplateModel]:
     return (
         session.query(ScenarioTemplateModel)
         .filter(ScenarioTemplateModel.organization_id == organization_id)
@@ -143,6 +142,7 @@ def list_scenario_templates(
 
 
 # ── Stress Test Templates ─────────────────────────────────────────────────────
+
 
 def create_stress_test_template(
     organization_id: str,

@@ -57,9 +57,8 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
 # Falls back to the primary engine when not configured.
 _readonly_url = (
     settings.database_readonly_url.replace("postgresql://", "postgresql+asyncpg://")
-    if settings.database_readonly_url and not settings.database_readonly_url.startswith(
-        "postgresql+asyncpg://"
-    )
+    if settings.database_readonly_url
+    and not settings.database_readonly_url.startswith("postgresql+asyncpg://")
     else settings.database_readonly_url
 ) or settings.database_url
 
@@ -92,6 +91,7 @@ async def get_readonly_session() -> AsyncGenerator[AsyncSession, None]:
 
 # ── M47 — Regional session factory ────────────────────────────────────────────
 
+
 def get_regional_session_factory(region: str | None) -> async_sessionmaker[AsyncSession]:
     """Return the session factory for the given data-residency region.
 
@@ -100,4 +100,5 @@ def get_regional_session_factory(region: str | None) -> async_sessionmaker[Async
     which itself imports shared.config.
     """
     from infrastructure.routing.region_router import region_router  # noqa: PLC0415
+
     return region_router.get_session_factory(region)

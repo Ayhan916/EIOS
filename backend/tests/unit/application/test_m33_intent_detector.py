@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.copilot.intent_detector import detect_intent
 from domain.enums import CopilotIntentType
 
@@ -16,20 +14,30 @@ class TestIntentDetector:
         assert detect_intent("Which suppliers are deteriorating?") == CopilotIntentType.RISK
 
     def test_compliance_question(self):
-        assert detect_intent("Which CSRD requirements are uncovered?") == CopilotIntentType.COMPLIANCE
+        assert (
+            detect_intent("Which CSRD requirements are uncovered?") == CopilotIntentType.COMPLIANCE
+        )
 
     def test_compliance_gap(self):
-        assert detect_intent("What compliance gaps are most severe?") == CopilotIntentType.COMPLIANCE
+        assert (
+            detect_intent("What compliance gaps are most severe?") == CopilotIntentType.COMPLIANCE
+        )
 
     def test_disclosure_question(self):
         intent = detect_intent("Which disclosures are weakest?")
         assert intent == CopilotIntentType.DISCLOSURE
 
     def test_due_diligence_lksgg(self):
-        assert detect_intent("Which suppliers create LkSG exposure?") == CopilotIntentType.DUE_DILIGENCE
+        assert (
+            detect_intent("Which suppliers create LkSG exposure?")
+            == CopilotIntentType.DUE_DILIGENCE
+        )
 
     def test_due_diligence_csddd(self):
-        assert detect_intent("What CSDDD requirements are we missing?") == CopilotIntentType.DUE_DILIGENCE
+        assert (
+            detect_intent("What CSDDD requirements are we missing?")
+            == CopilotIntentType.DUE_DILIGENCE
+        )
 
     def test_due_diligence_supply_chain(self):
         assert detect_intent("Explain our supply chain risks") == CopilotIntentType.DUE_DILIGENCE

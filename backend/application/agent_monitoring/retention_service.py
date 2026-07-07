@@ -33,12 +33,13 @@ async def run_retention_cleanup(session) -> dict[str, int]:
     - AgentFinding: only DISMISSED or CONVERTED findings older than 730 days
     - RecommendationDraft: never deleted
     """
+    from sqlalchemy import delete
+
     from infrastructure.persistence.models.agent_monitoring import (
         AgentAlertModel,
         AgentFindingModel,
         MonitoringAgentRunModel,
     )
-    from sqlalchemy import delete
 
     now = datetime.now(UTC)
     counts: dict[str, int] = {}
@@ -87,12 +88,13 @@ async def run_retention_cleanup(session) -> dict[str, int]:
 
 async def get_retention_stats(session) -> dict[str, int]:
     """Return count of records eligible for deletion (dry-run view)."""
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.agent_monitoring import (
         AgentAlertModel,
         AgentFindingModel,
         MonitoringAgentRunModel,
     )
-    from sqlalchemy import func, select
 
     now = datetime.now(UTC)
 
@@ -103,26 +105,38 @@ async def get_retention_stats(session) -> dict[str, int]:
     def _count(q):
         return select(func.count()).select_from(q.subquery())
 
-    eligible_runs = (await session.execute(
-        select(func.count()).select_from(MonitoringAgentRunModel).where(
-            MonitoringAgentRunModel.run_status.in_(["COMPLETED", "FAILED"]),
-            MonitoringAgentRunModel.completed_at < run_cutoff,
+    eligible_runs = (
+        await session.execute(
+            select(func.count())
+            .select_from(MonitoringAgentRunModel)
+            .where(
+                MonitoringAgentRunModel.run_status.in_(["COMPLETED", "FAILED"]),
+                MonitoringAgentRunModel.completed_at < run_cutoff,
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    eligible_alerts = (await session.execute(
-        select(func.count()).select_from(AgentAlertModel).where(
-            AgentAlertModel.acknowledged_at.is_not(None),
-            AgentAlertModel.acknowledged_at < alert_cutoff,
+    eligible_alerts = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentAlertModel)
+            .where(
+                AgentAlertModel.acknowledged_at.is_not(None),
+                AgentAlertModel.acknowledged_at < alert_cutoff,
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    eligible_findings = (await session.execute(
-        select(func.count()).select_from(AgentFindingModel).where(
-            AgentFindingModel.finding_status.in_(["DISMISSED", "CONVERTED"]),
-            AgentFindingModel.detected_at < finding_cutoff,
+    eligible_findings = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentFindingModel)
+            .where(
+                AgentFindingModel.finding_status.in_(["DISMISSED", "CONVERTED"]),
+                AgentFindingModel.detected_at < finding_cutoff,
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
     return {
         "eligible_runs": eligible_runs,

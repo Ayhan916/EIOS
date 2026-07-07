@@ -1,4 +1,5 @@
 """Demo mode seed — idempotent creation of isolated demo org + data."""
+
 from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -176,21 +177,36 @@ async def _seed(session: AsyncSession) -> User:
 
     # ── Findings ──────────────────────────────────────────────────────────────
     findings_raw = [
-        ("Kinderarbeit in Tier-3-Lieferkette",
-         "Hinweise auf Beschäftigung Minderjähriger in Zulieferbetrieben von Atlas Mining Co.",
-         "Social", saved_a1.id),
-        ("CO₂-Emissionen überschreiten Zielwert um 23 %",
-         "Scope-3-Emissionen liegen deutlich über dem Science-Based-Target-Pfad.",
-         "Environmental", saved_a1.id),
-        ("Fehlende Umweltzertifizierungen",
-         "ISO 14001-Zertifizierung bei 3 von 5 Lieferanten abgelaufen.",
-         "Environmental", saved_a1.id),
-        ("Lohnverstöße bei Atlas Mining Co.",
-         "Berichte über Löhne unterhalb des gesetzlichen Mindestlohns.",
-         "Social", saved_a2.id),
-        ("Wasserverbrauch überschreitet Grenzwert",
-         "Wasserentnahme überschreitet lokale Regulierungsobergrenzen.",
-         "Environmental", saved_a2.id),
+        (
+            "Kinderarbeit in Tier-3-Lieferkette",
+            "Hinweise auf Beschäftigung Minderjähriger in Zulieferbetrieben von Atlas Mining Co.",
+            "Social",
+            saved_a1.id,
+        ),
+        (
+            "CO₂-Emissionen überschreiten Zielwert um 23 %",
+            "Scope-3-Emissionen liegen deutlich über dem Science-Based-Target-Pfad.",
+            "Environmental",
+            saved_a1.id,
+        ),
+        (
+            "Fehlende Umweltzertifizierungen",
+            "ISO 14001-Zertifizierung bei 3 von 5 Lieferanten abgelaufen.",
+            "Environmental",
+            saved_a1.id,
+        ),
+        (
+            "Lohnverstöße bei Atlas Mining Co.",
+            "Berichte über Löhne unterhalb des gesetzlichen Mindestlohns.",
+            "Social",
+            saved_a2.id,
+        ),
+        (
+            "Wasserverbrauch überschreitet Grenzwert",
+            "Wasserentnahme überschreitet lokale Regulierungsobergrenzen.",
+            "Environmental",
+            saved_a2.id,
+        ),
     ]
     for title, desc, category, aid in findings_raw:
         f = Finding(
@@ -205,18 +221,34 @@ async def _seed(session: AsyncSession) -> User:
 
     # ── Risks ─────────────────────────────────────────────────────────────────
     risks_raw = [
-        ("Lieferkettenunterbrechung",
-         "Ausfall eines Tier-2-Lieferanten könnte Produktion für 6–8 Wochen stoppen.",
-         RiskLevel.HIGH, 0.6, 0.8),
-        ("Regulatorische Non-Compliance (CSDDD)",
-         "Unzureichende Due-Diligence-Dokumentation für bevorstehende Prüfung.",
-         RiskLevel.CRITICAL, 0.4, 0.95),
-        ("Reputationsrisiko durch Lieferanten-Audit",
-         "Negative Medienberichterstattung bei Audit-Veröffentlichung.",
-         RiskLevel.MEDIUM, 0.3, 0.7),
-        ("Datenschutzverletzung",
-         "Lieferanten-Portal ohne ausreichende Datenverschlüsselung.",
-         RiskLevel.MEDIUM, 0.25, 0.65),
+        (
+            "Lieferkettenunterbrechung",
+            "Ausfall eines Tier-2-Lieferanten könnte Produktion für 6–8 Wochen stoppen.",
+            RiskLevel.HIGH,
+            0.6,
+            0.8,
+        ),
+        (
+            "Regulatorische Non-Compliance (CSDDD)",
+            "Unzureichende Due-Diligence-Dokumentation für bevorstehende Prüfung.",
+            RiskLevel.CRITICAL,
+            0.4,
+            0.95,
+        ),
+        (
+            "Reputationsrisiko durch Lieferanten-Audit",
+            "Negative Medienberichterstattung bei Audit-Veröffentlichung.",
+            RiskLevel.MEDIUM,
+            0.3,
+            0.7,
+        ),
+        (
+            "Datenschutzverletzung",
+            "Lieferanten-Portal ohne ausreichende Datenverschlüsselung.",
+            RiskLevel.MEDIUM,
+            0.25,
+            0.65,
+        ),
     ]
     for title, desc, level, prob, impact in risks_raw:
         r = Risk(
@@ -232,15 +264,21 @@ async def _seed(session: AsyncSession) -> User:
 
     # ── Recommendations ───────────────────────────────────────────────────────
     recs_raw = [
-        ("Lieferanten-Code of Conduct einführen",
-         "Verbindlichen Verhaltenskodex für alle Tier-1-Lieferanten mit Unterschriftspflicht.",
-         saved_a1.id),
-        ("Vor-Ort-Audit — Atlas Mining Co.",
-         "Unabhängiges Audit zur Überprüfung der Arbeitsbedingungen bis Q2 2025.",
-         saved_a2.id),
-        ("Carbon-Offset-Programm für Scope-3-Emissionen",
-         "Zertifizierte Kompensationsprojekte zur Erreichung des 1,5°C-Pfads.",
-         saved_a1.id),
+        (
+            "Lieferanten-Code of Conduct einführen",
+            "Verbindlichen Verhaltenskodex für alle Tier-1-Lieferanten mit Unterschriftspflicht.",
+            saved_a1.id,
+        ),
+        (
+            "Vor-Ort-Audit — Atlas Mining Co.",
+            "Unabhängiges Audit zur Überprüfung der Arbeitsbedingungen bis Q2 2025.",
+            saved_a2.id,
+        ),
+        (
+            "Carbon-Offset-Programm für Scope-3-Emissionen",
+            "Zertifizierte Kompensationsprojekte zur Erreichung des 1,5°C-Pfads.",
+            saved_a1.id,
+        ),
     ]
     for title, desc, aid in recs_raw:
         rec = Recommendation(

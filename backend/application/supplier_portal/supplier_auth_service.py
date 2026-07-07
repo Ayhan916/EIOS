@@ -86,6 +86,8 @@ async def activate_supplier_user(
 
     Returns (access_token, refresh_token).
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         SupplierInvitationModel,
         SupplierUserModel,
@@ -95,7 +97,6 @@ async def activate_supplier_user(
         create_supplier_refresh_token,
         hash_password,
     )
-    from sqlalchemy import select
 
     hashed = _token_hash(invite_token)
     now = datetime.now(UTC)
@@ -169,13 +170,14 @@ async def login_supplier_user(
 
     M35.1 F7: Locks the account for 15 minutes after 5 consecutive failures.
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import SupplierUserModel
     from shared.security import (
         create_supplier_access_token,
         create_supplier_refresh_token,
         verify_password,
     )
-    from sqlalchemy import select
 
     stmt = select(SupplierUserModel).where(
         SupplierUserModel.email == email,
@@ -249,11 +251,12 @@ async def generate_password_reset_token(
     Previous stateless JWT approach allowed token reuse. This implementation
     stores a SHA-256 hash and marks tokens used_at on consumption.
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         SupplierPasswordResetTokenModel,
         SupplierUserModel,
     )
-    from sqlalchemy import select
 
     stmt = select(SupplierUserModel).where(
         SupplierUserModel.email == email,
@@ -293,12 +296,13 @@ async def reset_password(
     Token is single-use: used_at is set on first consumption.
     Expired or already-used tokens are rejected.
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         SupplierPasswordResetTokenModel,
         SupplierUserModel,
     )
     from shared.security import hash_password
-    from sqlalchemy import select
 
     hashed = _token_hash(token)
     now = datetime.now(UTC)
@@ -353,6 +357,7 @@ async def _log_activity(
 ) -> None:
     """Append an immutable activity event to supplier_activity_events."""
     import json
+
     from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
 
     now = datetime.now(UTC)

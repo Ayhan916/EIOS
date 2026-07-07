@@ -5,9 +5,10 @@ GET  /threshold/profiles         list company profiles (history)
 POST /threshold/profiles         upsert company profile for a fiscal year
 GET  /threshold/info             static info about CSDDD thresholds + deadlines
 """
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -25,13 +26,26 @@ _STATIC_INFO = {
         "employees": 5000,
         "revenue_eur_millions": 1500,
         "deadline": "2027-07-26",
-        "obligations": ["Art. 7 DD Policy", "Art. 10 Prevention", "Art. 11 Remediation", "Art. 13 Stakeholder", "Art. 14 Grievance", "Art. 16 Annual Report", "Art. 22 Board Oversight"],
+        "obligations": [
+            "Art. 7 DD Policy",
+            "Art. 10 Prevention",
+            "Art. 11 Remediation",
+            "Art. 13 Stakeholder",
+            "Art. 14 Grievance",
+            "Art. 16 Annual Report",
+            "Art. 22 Board Oversight",
+        ],
     },
     "tier_2": {
         "employees": 1000,
         "revenue_eur_millions": 450,
         "deadline": "2028-07-26",
-        "obligations": ["Art. 7 DD Policy", "Art. 10 Prevention", "Art. 14 Grievance", "Art. 16 Annual Report"],
+        "obligations": [
+            "Art. 7 DD Policy",
+            "Art. 10 Prevention",
+            "Art. 14 Grievance",
+            "Art. 16 Annual Report",
+        ],
     },
     "borderline_pct": 20,
     "source": "EU Directive 2024/1760 (CSDDD), Art. 2",
@@ -81,7 +95,7 @@ def get_status(
     if not profile:
         raise HTTPException(
             status_code=404,
-            detail="No company profile found. Please add your company profile first via POST /threshold/profiles."
+            detail="No company profile found. Please add your company profile first via POST /threshold/profiles.",
         )
     result = calculate(profile)
     return {
@@ -89,8 +103,16 @@ def get_status(
         "level": result.level,
         "employee_count": result.employee_count,
         "net_revenue_eur_millions": result.net_revenue_eur_millions,
-        "tier1": {"employee_met": result.tier1_employee_met, "revenue_met": result.tier1_revenue_met, "deadline": result.tier1_deadline},
-        "tier2": {"employee_met": result.tier2_employee_met, "revenue_met": result.tier2_revenue_met, "deadline": result.tier2_deadline},
+        "tier1": {
+            "employee_met": result.tier1_employee_met,
+            "revenue_met": result.tier1_revenue_met,
+            "deadline": result.tier1_deadline,
+        },
+        "tier2": {
+            "employee_met": result.tier2_employee_met,
+            "revenue_met": result.tier2_revenue_met,
+            "deadline": result.tier2_deadline,
+        },
         "is_borderline": result.is_borderline,
         "borderline_message": result.borderline_message,
         "recommendation": result.recommendation,

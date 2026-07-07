@@ -7,13 +7,13 @@ No ML or LLM involved.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.strategy.metrics import strategy_counters
 from application.strategy.digital_twin_service import StrategyError
+from application.strategy.metrics import strategy_counters
 from infrastructure.persistence.models.strategy import (
     CLIMATE_STRESS_TYPES,
     FINANCIAL_STRESS_TYPES,
@@ -26,10 +26,11 @@ from infrastructure.persistence.models.strategy import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # ── Deterministic stress calculation formulas ─────────────────────────────────
+
 
 def _compute_climate_impacts(
     stress_type: str,
@@ -116,10 +117,7 @@ def _compute_supplier_impacts(
     disruption_pct = round(sev * 100, 4)
     esg_impact = round(sev * 3.0, 4)
 
-    if propagation_model == "NETWORK":
-        fin_pct = round(sev * 15.0 * 1.5, 4)
-    else:
-        fin_pct = round(sev * 15.0, 4)
+    fin_pct = round(sev * 15.0 * 1.5, 4) if propagation_model == "NETWORK" else round(sev * 15.0, 4)
 
     supply_chain_impact = {
         "supply_disruption_pct": disruption_pct,
@@ -187,6 +185,7 @@ def _compute_financial_stress_impacts(
 
 
 # ── Climate Stress Test ───────────────────────────────────────────────────────
+
 
 def create_climate_stress_test(
     organization_id: str,
@@ -261,6 +260,7 @@ def list_climate_stress_tests(
 
 # ── Supplier Shock Scenario ───────────────────────────────────────────────────
 
+
 def create_supplier_shock(
     organization_id: str,
     scenario_name: str,
@@ -329,6 +329,7 @@ def list_supplier_shocks(
 
 
 # ── Financial Stress Test ─────────────────────────────────────────────────────
+
 
 def create_financial_stress_test(
     organization_id: str,

@@ -37,7 +37,11 @@ def transition_disclosure(
             f"{[s.value for s in DisclosureStatus if is_valid_disclosure_transition(from_st, s)]}"
         )
 
-    updates: dict = {"disclosure_status": to_status, "reviewed_by": reviewed_by, "approved_by": approved_by}
+    updates: dict = {
+        "disclosure_status": to_status,
+        "reviewed_by": reviewed_by,
+        "approved_by": approved_by,
+    }
 
     if to_st == DisclosureStatus.IN_REVIEW:
         if not narrative_text.strip():

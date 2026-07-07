@@ -6,7 +6,7 @@ DB-level analytics is integration-tested via the mock session pattern.
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -145,9 +145,7 @@ class TestGetAnalytics:
 
     @pytest.mark.asyncio
     async def test_empty_org_returns_zero_analytics(self):
-        session = _make_session_side_effect(
-            conv_count=0, user_rows=[], asst_rows=[], fb_rows=[]
-        )
+        session = _make_session_side_effect(conv_count=0, user_rows=[], asst_rows=[], fb_rows=[])
         result = await get_analytics("empty-org", session)
         assert result.total_questions == 0
         assert result.total_conversations == 0

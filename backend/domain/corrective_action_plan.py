@@ -17,8 +17,8 @@ Security:
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from dataclasses import dataclass
+from datetime import date, datetime
 
 from .base_entity import BaseEntity
 
@@ -47,7 +47,7 @@ class CorrectiveActionPlan(BaseEntity):
     verification_note: str = ""
     verified_by_user_id: str | None = None
     verified_at: datetime | None = None
-    insufficient_reason: str = ""   # set when analyst marks evidence insufficient
+    insufficient_reason: str = ""  # set when analyst marks evidence insufficient
 
     closed_at: datetime | None = None
     closed_by_user_id: str | None = None

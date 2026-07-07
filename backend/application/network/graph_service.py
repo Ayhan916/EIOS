@@ -27,8 +27,9 @@ async def get_relationships(
     limit: int = 200,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     stmt = select(SupplierRelationshipModel).where(
         SupplierRelationshipModel.organization_id == organization_id,
@@ -36,6 +37,7 @@ async def get_relationships(
     )
     if supplier_id:
         from sqlalchemy import or_
+
         stmt = stmt.where(
             or_(
                 SupplierRelationshipModel.supplier_id == supplier_id,
@@ -43,17 +45,16 @@ async def get_relationships(
             )
         )
     if relationship_type:
-        stmt = stmt.where(
-            SupplierRelationshipModel.relationship_type == relationship_type.upper()
-        )
+        stmt = stmt.where(SupplierRelationshipModel.relationship_type == relationship_type.upper())
     stmt = stmt.order_by(SupplierRelationshipModel.created_at.desc()).limit(limit)
     return list((await session.execute(stmt)).scalars().all())
 
 
 async def _load_adjacency(organization_id: str, session) -> dict[str, list[str]]:
     """Load all ACTIVE relationships into an adjacency list (directed, both dirs)."""
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     stmt = select(
         SupplierRelationshipModel.supplier_id,
@@ -160,8 +161,9 @@ async def compute_degree_stats(
 
     Returns {supplier_id: {"inbound": n, "outbound": m}}.
     """
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     out_stmt = (
         select(

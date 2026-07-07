@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+# Pre-import to ensure copilot_audit repo module is in sys.modules before patching
 from application.copilot.audit_package_service import compute_package_hash
 from application.copilot.reproducibility_verifier import (
     VerificationCheck,
@@ -21,11 +22,10 @@ from application.copilot.reproducibility_verifier import (
     verify_audit_package,
 )
 
-# Pre-import to ensure copilot_audit repo module is in sys.modules before patching
-import infrastructure.persistence.repositories.copilot_audit as _copilot_audit_repo_module  # noqa: E402
-
-_PKG_REPO_PATH = "infrastructure.persistence.repositories.copilot_audit.SQLCopilotAuditPackageRepository"
-_MSG_REPO_PATH = "infrastructure.persistence.repositories.copilot_audit.SQLCopilotMessageRepository"
+_PKG_REPO_PATH = (
+    "infrastructure.persistence.repositories.copilot_audit.SQLCopilotAuditPackageRepository"
+)
+_MSG_REPO_PATH = "infrastructure.persistence.repositories.copilot.SQLCopilotMessageRepository"
 
 
 def _make_payload(answer: str = "Test answer", prompt: str = "System prompt") -> dict:

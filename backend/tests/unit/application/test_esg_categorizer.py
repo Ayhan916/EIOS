@@ -1,7 +1,5 @@
 """Unit tests for ESG pillar classifier (M28)."""
 
-import pytest
-
 from application.scoring.esg_categorizer import categorize_pillar
 
 

@@ -20,8 +20,9 @@ Create Date: 2026-06-19
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "032"
 down_revision = "031"
@@ -43,11 +44,15 @@ _BASE_COLS = [
 def upgrade() -> None:
     # ── Extend copilot_messages ──────────────────────────────────────────────
     op.add_column("copilot_messages", sa.Column("confidence_level", sa.String(20), nullable=True))
-    op.add_column("copilot_messages", sa.Column("confidence_factors", postgresql.JSON, nullable=True))
+    op.add_column(
+        "copilot_messages", sa.Column("confidence_factors", postgresql.JSON, nullable=True)
+    )
     op.add_column("copilot_messages", sa.Column("contradiction_count", sa.Integer, nullable=True))
     op.add_column("copilot_messages", sa.Column("context_budget_used", sa.Integer, nullable=True))
     op.add_column("copilot_messages", sa.Column("context_truncated", sa.Boolean, nullable=True))
-    op.add_column("copilot_messages", sa.Column("freshness_summary", postgresql.JSON, nullable=True))
+    op.add_column(
+        "copilot_messages", sa.Column("freshness_summary", postgresql.JSON, nullable=True)
+    )
 
     # ── copilot_contradictions ───────────────────────────────────────────────
     op.create_table(
@@ -77,8 +82,12 @@ def upgrade() -> None:
         sa.Column("citation_snapshot", postgresql.JSON, nullable=False, server_default="{}"),
         sa.Column("verified_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_copilot_citation_integrity_msg", "copilot_citation_integrity", ["message_id"])
-    op.create_index("ix_copilot_citation_integrity_org", "copilot_citation_integrity", ["organization_id"])
+    op.create_index(
+        "ix_copilot_citation_integrity_msg", "copilot_citation_integrity", ["message_id"]
+    )
+    op.create_index(
+        "ix_copilot_citation_integrity_org", "copilot_citation_integrity", ["organization_id"]
+    )
 
     # ── copilot_feedback ─────────────────────────────────────────────────────
     op.create_table(

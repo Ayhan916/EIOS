@@ -6,8 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # ── Relationships ─────────────────────────────────────────────────────────────
+
 
 class CreateRelationshipRequest(BaseModel):
     supplier_id: str
@@ -37,6 +37,7 @@ class SupplierRelationshipResponse(BaseModel):
 
 # ── Suggested Relationships ───────────────────────────────────────────────────
 
+
 class SuggestedRelationshipResponse(BaseModel):
     id: str
     organization_id: str
@@ -62,6 +63,7 @@ class ReviewSuggestionRequest(BaseModel):
 
 # ── Exposure Signals ──────────────────────────────────────────────────────────
 
+
 class NetworkExposureSignalResponse(BaseModel):
     id: str
     organization_id: str
@@ -85,6 +87,7 @@ class NetworkExposureSignalResponse(BaseModel):
 
 
 # ── Criticality ───────────────────────────────────────────────────────────────
+
 
 class SupplierCriticalityResponse(BaseModel):
     id: str
@@ -110,6 +113,7 @@ class SupplierCriticalityResponse(BaseModel):
 
 # ── Dependency Analysis ───────────────────────────────────────────────────────
 
+
 class DependencyAnalysisResponse(BaseModel):
     id: str
     organization_id: str
@@ -129,6 +133,7 @@ class DependencyAnalysisResponse(BaseModel):
 
 # ── Resilience ────────────────────────────────────────────────────────────────
 
+
 class ResilienceAssessmentResponse(BaseModel):
     id: str
     organization_id: str
@@ -146,6 +151,7 @@ class ResilienceAssessmentResponse(BaseModel):
 
 
 # ── Incident Clusters ─────────────────────────────────────────────────────────
+
 
 class IncidentClusterResponse(BaseModel):
     id: str
@@ -169,6 +175,7 @@ class IncidentClusterResponse(BaseModel):
 
 # ── Centrality ────────────────────────────────────────────────────────────────
 
+
 class CentralityRecord(BaseModel):
     supplier_id: str
     inbound_degree: int
@@ -178,6 +185,7 @@ class CentralityRecord(BaseModel):
 
 
 # ── Neighborhood / Graph ─────────────────────────────────────────────────────
+
 
 class NeighborhoodResponse(BaseModel):
     supplier_id: str
@@ -192,6 +200,7 @@ class ShortestPathResponse(BaseModel):
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
+
 
 class NetworkDashboard(BaseModel):
     total_relationships: int
@@ -208,6 +217,7 @@ class NetworkDashboard(BaseModel):
 
 # ── Discovery ─────────────────────────────────────────────────────────────────
 
+
 class DiscoveryResult(BaseModel):
     shared_country: int
     shared_sector: int
@@ -217,6 +227,7 @@ class DiscoveryResult(BaseModel):
 
 
 # ── Network Watchlist (M38.1) ─────────────────────────────────────────────────
+
 
 class NetworkWatchlistEntryResponse(BaseModel):
     id: str

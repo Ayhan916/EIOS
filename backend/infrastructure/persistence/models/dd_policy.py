@@ -38,7 +38,9 @@ class CodeOfConductModel(BaseModel):
     file_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     coc_version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     valid_from: Mapped[date | None] = mapped_column(Date, nullable=True)
-    acceptance_validity_months: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=24)
+    acceptance_validity_months: Mapped[int] = mapped_column(
+        SmallInteger, nullable=False, default=24
+    )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     linked_policy_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 

@@ -60,8 +60,9 @@ async def list_activity(
     session=None,
 ) -> list:
     """Paginated timeline for a supplier (newest first)."""
-    from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
 
     stmt = select(SupplierActivityEventModel).where(
         SupplierActivityEventModel.supplier_id == supplier_id
@@ -78,8 +79,9 @@ async def list_activity_by_user(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
 
     stmt = (
         select(SupplierActivityEventModel)

@@ -51,26 +51,26 @@ class DigitalProductPassport:
 
     id: str
     organization_id: str
-    product_id: str                     # link to ProductModel
+    product_id: str  # link to ProductModel
     format: DPPFormat
     status: DPPStatus
 
     # Digital identity
-    passport_uid: str                   # public-facing UUID (stable, referenced in QR)
-    qr_payload: str | None              # URL / JSON embedded in QR code
+    passport_uid: str  # public-facing UUID (stable, referenced in QR)
+    qr_payload: str | None  # URL / JSON embedded in QR code
 
     # Product category context
-    product_category: str | None        # free-text, e.g. "LFP battery cell"
+    product_category: str | None  # free-text, e.g. "LFP battery cell"
 
     # Battery-Regulation-specific (nullable for other formats)
-    battery_chemistry: str | None       # LFP, NMC, NCA, LCO, …
+    battery_chemistry: str | None  # LFP, NMC, NCA, LCO, …
     capacity_wh: float | None
     nominal_voltage_v: float | None
     declared_capacity_cycles: int | None
 
     # Declared sustainability values
-    carbon_footprint_kg_co2e: float | None   # product-level PCF (can be overridden)
-    carbon_footprint_source: str | None      # "computed" | "declared" | "third-party"
+    carbon_footprint_kg_co2e: float | None  # product-level PCF (can be overridden)
+    carbon_footprint_source: str | None  # "computed" | "declared" | "third-party"
     recycled_content_pct: float | None
     renewable_content_pct: float | None
 
@@ -86,7 +86,7 @@ class DigitalProductPassport:
     # Lifecycle / publication
     valid_from: date | None
     valid_until: date | None
-    disclosed_at: datetime | None       # when first published (not null = public)
+    disclosed_at: datetime | None  # when first published (not null = public)
 
     # Evidence
     evidence_id: str | None

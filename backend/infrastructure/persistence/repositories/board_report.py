@@ -56,9 +56,7 @@ class SQLBoardReportRepository(BaseRepository[BoardReport, BoardReportModel]):
             supplier_snapshot=model.supplier_snapshot,
         )
 
-    async def list_for_org(
-        self, organization_id: str, limit: int = 20
-    ) -> list[BoardReport]:
+    async def list_for_org(self, organization_id: str, limit: int = 20) -> list[BoardReport]:
         stmt = (
             select(BoardReportModel)
             .where(

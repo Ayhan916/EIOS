@@ -409,7 +409,13 @@ CSRD = [
         title="Double materiality assessment",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social", "Governance"),
-        keywords=("double materiality", "materiality assessment", "CSRD materiality", "impact materiality", "financial materiality"),
+        keywords=(
+            "double materiality",
+            "materiality assessment",
+            "CSRD materiality",
+            "impact materiality",
+            "financial materiality",
+        ),
     ),
     FrameworkArticle(
         code="CSRD-Art-8",
@@ -418,7 +424,12 @@ CSRD = [
         title="Non-financial information — value chain",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social"),
-        keywords=("CSRD Art. 8", "value chain disclosure", "supply chain reporting", "value chain sustainability"),
+        keywords=(
+            "CSRD Art. 8",
+            "value chain disclosure",
+            "supply chain reporting",
+            "value chain sustainability",
+        ),
     ),
     FrameworkArticle(
         code="CSRD-Taxonomy",
@@ -427,7 +438,13 @@ CSRD = [
         title="EU Taxonomy alignment disclosure",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("taxonomy alignment", "eligible activities", "taxonomy turnover", "taxonomy capex", "taxonomy opex"),
+        keywords=(
+            "taxonomy alignment",
+            "eligible activities",
+            "taxonomy turnover",
+            "taxonomy capex",
+            "taxonomy opex",
+        ),
     ),
     FrameworkArticle(
         code="CSRD-Audit",
@@ -436,7 +453,12 @@ CSRD = [
         title="Assurance of sustainability reporting",
         obligation_type="mandatory",
         esg_categories=("Governance",),
-        keywords=("CSRD assurance", "limited assurance", "sustainability audit", "third-party assurance"),
+        keywords=(
+            "CSRD assurance",
+            "limited assurance",
+            "sustainability audit",
+            "third-party assurance",
+        ),
     ),
 ]
 
@@ -452,7 +474,13 @@ EU_TAXONOMY = [
         title="Climate change mitigation — technical screening",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("climate change mitigation", "CCM", "EU taxonomy mitigation", "net-zero transition", "Scope 1 Scope 2"),
+        keywords=(
+            "climate change mitigation",
+            "CCM",
+            "EU taxonomy mitigation",
+            "net-zero transition",
+            "Scope 1 Scope 2",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-CCA",
@@ -461,7 +489,13 @@ EU_TAXONOMY = [
         title="Climate change adaptation — technical screening",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("climate change adaptation", "CCA", "EU taxonomy adaptation", "physical risk", "climate resilience"),
+        keywords=(
+            "climate change adaptation",
+            "CCA",
+            "EU taxonomy adaptation",
+            "physical risk",
+            "climate resilience",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-WMR",
@@ -470,7 +504,12 @@ EU_TAXONOMY = [
         title="Sustainable use of water and marine resources",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("water taxonomy", "marine resources taxonomy", "sustainable water", "water stewardship"),
+        keywords=(
+            "water taxonomy",
+            "marine resources taxonomy",
+            "sustainable water",
+            "water stewardship",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-CE",
@@ -479,7 +518,12 @@ EU_TAXONOMY = [
         title="Circular economy",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("circular economy taxonomy", "waste prevention", "product lifecycle", "repair reuse recycle taxonomy"),
+        keywords=(
+            "circular economy taxonomy",
+            "waste prevention",
+            "product lifecycle",
+            "repair reuse recycle taxonomy",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-PPC",
@@ -488,7 +532,11 @@ EU_TAXONOMY = [
         title="Pollution prevention and control",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("pollution prevention taxonomy", "hazardous substances taxonomy", "DNSH pollution"),
+        keywords=(
+            "pollution prevention taxonomy",
+            "hazardous substances taxonomy",
+            "DNSH pollution",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-BIO",
@@ -497,7 +545,12 @@ EU_TAXONOMY = [
         title="Protection and restoration of biodiversity and ecosystems",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("biodiversity taxonomy", "ecosystem taxonomy", "nature-positive", "DNSH biodiversity"),
+        keywords=(
+            "biodiversity taxonomy",
+            "ecosystem taxonomy",
+            "nature-positive",
+            "DNSH biodiversity",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-MSC",
@@ -506,7 +559,12 @@ EU_TAXONOMY = [
         title="Minimum social safeguards (MSC)",
         obligation_type="mandatory",
         esg_categories=("Social", "Governance"),
-        keywords=("minimum social safeguards", "MSC", "OECD guidelines taxonomy", "UN guiding principles taxonomy"),
+        keywords=(
+            "minimum social safeguards",
+            "MSC",
+            "OECD guidelines taxonomy",
+            "UN guiding principles taxonomy",
+        ),
     ),
     FrameworkArticle(
         code="EUTAX-DNSH",
@@ -531,7 +589,12 @@ ISSB = [
         title="General sustainability-related financial disclosures",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social", "Governance"),
-        keywords=("IFRS S1", "ISSB S1", "sustainability-related financial", "general sustainability disclosures"),
+        keywords=(
+            "IFRS S1",
+            "ISSB S1",
+            "sustainability-related financial",
+            "general sustainability disclosures",
+        ),
     ),
     FrameworkArticle(
         code="ISSB-S1-Gov",
@@ -540,7 +603,12 @@ ISSB = [
         title="Governance of sustainability risks and opportunities",
         obligation_type="mandatory",
         esg_categories=("Governance",),
-        keywords=("ISSB governance", "S1 governance", "board sustainability oversight", "sustainability governance body"),
+        keywords=(
+            "ISSB governance",
+            "S1 governance",
+            "board sustainability oversight",
+            "sustainability governance body",
+        ),
     ),
     FrameworkArticle(
         code="ISSB-S1-Strategy",
@@ -549,7 +617,12 @@ ISSB = [
         title="Strategy for sustainability risks and opportunities",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social", "Governance"),
-        keywords=("ISSB strategy", "S1 strategy", "sustainability strategy", "business model sustainability"),
+        keywords=(
+            "ISSB strategy",
+            "S1 strategy",
+            "sustainability strategy",
+            "business model sustainability",
+        ),
     ),
     FrameworkArticle(
         code="ISSB-S1-Risk",
@@ -558,7 +631,12 @@ ISSB = [
         title="Risk management for sustainability risks",
         obligation_type="mandatory",
         esg_categories=("Environmental", "Social", "Governance"),
-        keywords=("ISSB risk management", "S1 risk", "sustainability risk management process", "integrated risk management"),
+        keywords=(
+            "ISSB risk management",
+            "S1 risk",
+            "sustainability risk management process",
+            "integrated risk management",
+        ),
     ),
     FrameworkArticle(
         code="ISSB-S1-Metrics",
@@ -585,7 +663,12 @@ ISSB = [
         title="Climate transition plan",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("ISSB transition plan", "S2 transition", "climate transition plan", "net zero plan"),
+        keywords=(
+            "ISSB transition plan",
+            "S2 transition",
+            "climate transition plan",
+            "net zero plan",
+        ),
     ),
     FrameworkArticle(
         code="ISSB-S2-Scenario",
@@ -594,7 +677,13 @@ ISSB = [
         title="Climate scenario analysis",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("ISSB scenario", "S2 scenario", "climate scenario analysis", "1.5C scenario", "2C scenario"),
+        keywords=(
+            "ISSB scenario",
+            "S2 scenario",
+            "climate scenario analysis",
+            "1.5C scenario",
+            "2C scenario",
+        ),
     ),
     FrameworkArticle(
         code="ISSB-S2-GHG",
@@ -603,7 +692,13 @@ ISSB = [
         title="GHG emissions disclosure (Scope 1, 2, 3)",
         obligation_type="mandatory",
         esg_categories=("Environmental",),
-        keywords=("ISSB GHG", "S2 emissions", "Scope 1 2 3 ISSB", "greenhouse gas S2", "carbon footprint ISSB"),
+        keywords=(
+            "ISSB GHG",
+            "S2 emissions",
+            "Scope 1 2 3 ISSB",
+            "greenhouse gas S2",
+            "carbon footprint ISSB",
+        ),
     ),
 ]
 
@@ -619,7 +714,12 @@ TCFD = [
         title="Board oversight of climate-related risks and opportunities",
         obligation_type="recommended",
         esg_categories=("Governance",),
-        keywords=("TCFD governance", "board climate oversight", "management role climate", "climate governance"),
+        keywords=(
+            "TCFD governance",
+            "board climate oversight",
+            "management role climate",
+            "climate governance",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Strategy-A",
@@ -628,7 +728,13 @@ TCFD = [
         title="Climate-related risks and opportunities identified",
         obligation_type="recommended",
         esg_categories=("Environmental",),
-        keywords=("TCFD strategy", "climate risks identified", "climate opportunities", "transition risk", "physical risk"),
+        keywords=(
+            "TCFD strategy",
+            "climate risks identified",
+            "climate opportunities",
+            "transition risk",
+            "physical risk",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Strategy-B",
@@ -637,7 +743,12 @@ TCFD = [
         title="Impact of climate risks on business, strategy and financial planning",
         obligation_type="recommended",
         esg_categories=("Environmental",),
-        keywords=("TCFD financial impact", "climate financial planning", "climate business strategy", "strategic climate"),
+        keywords=(
+            "TCFD financial impact",
+            "climate financial planning",
+            "climate business strategy",
+            "strategic climate",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Strategy-C",
@@ -646,7 +757,13 @@ TCFD = [
         title="Climate resilience of strategy and business model",
         obligation_type="recommended",
         esg_categories=("Environmental",),
-        keywords=("TCFD resilience", "climate resilience", "2 degree scenario", "well below 2C", "scenario analysis TCFD"),
+        keywords=(
+            "TCFD resilience",
+            "climate resilience",
+            "2 degree scenario",
+            "well below 2C",
+            "scenario analysis TCFD",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Risk-A",
@@ -655,7 +772,12 @@ TCFD = [
         title="Process for identifying and assessing climate-related risks",
         obligation_type="recommended",
         esg_categories=("Environmental", "Governance"),
-        keywords=("TCFD risk identification", "TCFD risk assessment", "climate risk process", "climate risk management"),
+        keywords=(
+            "TCFD risk identification",
+            "TCFD risk assessment",
+            "climate risk process",
+            "climate risk management",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Risk-B",
@@ -664,7 +786,12 @@ TCFD = [
         title="Process for managing climate-related risks",
         obligation_type="recommended",
         esg_categories=("Environmental", "Governance"),
-        keywords=("TCFD risk management", "managing climate risk", "climate risk mitigation", "TCFD risk response"),
+        keywords=(
+            "TCFD risk management",
+            "managing climate risk",
+            "climate risk mitigation",
+            "TCFD risk response",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Risk-C",
@@ -691,7 +818,13 @@ TCFD = [
         title="Scope 1, 2 and 3 GHG emissions",
         obligation_type="recommended",
         esg_categories=("Environmental",),
-        keywords=("TCFD Scope 1", "TCFD Scope 2", "TCFD Scope 3", "GHG emissions TCFD", "carbon footprint TCFD"),
+        keywords=(
+            "TCFD Scope 1",
+            "TCFD Scope 2",
+            "TCFD Scope 3",
+            "GHG emissions TCFD",
+            "carbon footprint TCFD",
+        ),
     ),
     FrameworkArticle(
         code="TCFD-Metrics-C",
@@ -700,7 +833,13 @@ TCFD = [
         title="Climate-related targets",
         obligation_type="recommended",
         esg_categories=("Environmental",),
-        keywords=("TCFD targets", "climate targets", "net zero target", "science based targets", "SBTi"),
+        keywords=(
+            "TCFD targets",
+            "climate targets",
+            "net zero target",
+            "science based targets",
+            "SBTi",
+        ),
     ),
 ]
 

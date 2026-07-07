@@ -35,6 +35,7 @@ Migration integrity:
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "047"
@@ -103,7 +104,9 @@ def upgrade() -> None:
         sa.Column("calculated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index("ix_fin_kpi_measurements_org", "financial_kpi_measurements", ["organization_id"])
+    op.create_index(
+        "ix_fin_kpi_measurements_org", "financial_kpi_measurements", ["organization_id"]
+    )
     op.create_index("ix_fin_kpi_measurements_kpi", "financial_kpi_measurements", ["kpi_id"])
 
     # ── carbon_cost_models ────────────────────────────────────────────────────
@@ -147,7 +150,9 @@ def upgrade() -> None:
         sa.Column("currency", sa.String(10), nullable=False, server_default="USD"),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index("ix_cost_of_risk_assessments_org", "cost_of_risk_assessments", ["organization_id"])
+    op.create_index(
+        "ix_cost_of_risk_assessments_org", "cost_of_risk_assessments", ["organization_id"]
+    )
 
     # ── value_creation_initiatives ────────────────────────────────────────────
     op.create_table(
@@ -167,7 +172,9 @@ def upgrade() -> None:
         sa.Column("currency", sa.String(10), nullable=False, server_default="USD"),
         sa.Column("category", sa.String(50), nullable=True),
     )
-    op.create_index("ix_value_creation_initiatives_org", "value_creation_initiatives", ["organization_id"])
+    op.create_index(
+        "ix_value_creation_initiatives_org", "value_creation_initiatives", ["organization_id"]
+    )
 
     # ── sustainable_finance_instruments ──────────────────────────────────────
     op.create_table(
@@ -185,14 +192,20 @@ def upgrade() -> None:
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("kpi_linkage", sa.JSON, nullable=True),
     )
-    op.create_index("ix_sustainable_finance_instruments_org", "sustainable_finance_instruments", ["organization_id"])
+    op.create_index(
+        "ix_sustainable_finance_instruments_org",
+        "sustainable_finance_instruments",
+        ["organization_id"],
+    )
 
     # ── taxonomy_alignment_assessments ────────────────────────────────────────
     op.create_table(
         "taxonomy_alignment_assessments",
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
-        sa.Column("taxonomy_framework", sa.String(50), nullable=False, server_default="EU_TAXONOMY"),
+        sa.Column(
+            "taxonomy_framework", sa.String(50), nullable=False, server_default="EU_TAXONOMY"
+        ),
         sa.Column("assessment_year", sa.Integer, nullable=False),
         sa.Column("eligible_activities", sa.JSON, nullable=True),
         sa.Column("aligned_activities", sa.JSON, nullable=True),
@@ -204,7 +217,11 @@ def upgrade() -> None:
         sa.Column("total_capex", sa.Float, nullable=True),
         sa.Column("total_opex", sa.Float, nullable=True),
     )
-    op.create_index("ix_taxonomy_alignment_assessments_org", "taxonomy_alignment_assessments", ["organization_id"])
+    op.create_index(
+        "ix_taxonomy_alignment_assessments_org",
+        "taxonomy_alignment_assessments",
+        ["organization_id"],
+    )
 
     # ── green_revenue_records ─────────────────────────────────────────────────
     op.create_table(
@@ -287,7 +304,9 @@ def upgrade() -> None:
         sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("milestone_status", sa.String(20), nullable=False, server_default="PENDING"),
     )
-    op.create_index("ix_transition_plan_milestones_org", "transition_plan_milestones", ["organization_id"])
+    op.create_index(
+        "ix_transition_plan_milestones_org", "transition_plan_milestones", ["organization_id"]
+    )
     op.create_index("ix_transition_plan_milestones_plan", "transition_plan_milestones", ["plan_id"])
 
     # ── finance_linked_kpis ───────────────────────────────────────────────────
@@ -318,7 +337,9 @@ def upgrade() -> None:
         "capital_markets_assessments",
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
-        sa.Column("disclosure_readiness", sa.String(20), nullable=False, server_default="NOT_READY"),
+        sa.Column(
+            "disclosure_readiness", sa.String(20), nullable=False, server_default="NOT_READY"
+        ),
         sa.Column("assurance_readiness", sa.String(20), nullable=False, server_default="NOT_READY"),
         sa.Column("taxonomy_readiness", sa.String(20), nullable=False, server_default="NOT_READY"),
         sa.Column("kpi_readiness", sa.String(20), nullable=False, server_default="NOT_READY"),
@@ -326,7 +347,9 @@ def upgrade() -> None:
         sa.Column("assessment_notes", sa.JSON, nullable=True),
         sa.Column("assessed_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_capital_markets_assessments_org", "capital_markets_assessments", ["organization_id"])
+    op.create_index(
+        "ix_capital_markets_assessments_org", "capital_markets_assessments", ["organization_id"]
+    )
 
     # ── investor_disclosure_packages ──────────────────────────────────────────
     op.create_table(
@@ -346,7 +369,9 @@ def upgrade() -> None:
         sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("finalized_by", sa.String(36), nullable=True),
     )
-    op.create_index("ix_investor_disclosure_packages_org", "investor_disclosure_packages", ["organization_id"])
+    op.create_index(
+        "ix_investor_disclosure_packages_org", "investor_disclosure_packages", ["organization_id"]
+    )
 
     # ── climate_finance_analyses ──────────────────────────────────────────────
     op.create_table(
@@ -363,7 +388,9 @@ def upgrade() -> None:
         sa.Column("currency", sa.String(10), nullable=False, server_default="USD"),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index("ix_climate_finance_analyses_org", "climate_finance_analyses", ["organization_id"])
+    op.create_index(
+        "ix_climate_finance_analyses_org", "climate_finance_analyses", ["organization_id"]
+    )
 
     # ── sustainability_valuation_models ───────────────────────────────────────
     op.create_table(
@@ -380,7 +407,11 @@ def upgrade() -> None:
         sa.Column("currency", sa.String(10), nullable=False, server_default="USD"),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index("ix_sustainability_valuation_models_org", "sustainability_valuation_models", ["organization_id"])
+    op.create_index(
+        "ix_sustainability_valuation_models_org",
+        "sustainability_valuation_models",
+        ["organization_id"],
+    )
 
     # ── esg_financial_correlations ────────────────────────────────────────────
     op.create_table(
@@ -397,7 +428,9 @@ def upgrade() -> None:
         sa.Column("methodology", sa.Text, nullable=True),
         sa.Column("assumptions", sa.JSON, nullable=True),
     )
-    op.create_index("ix_esg_financial_correlations_org", "esg_financial_correlations", ["organization_id"])
+    op.create_index(
+        "ix_esg_financial_correlations_org", "esg_financial_correlations", ["organization_id"]
+    )
 
     # ── financial_scenario_analyses ───────────────────────────────────────────
     op.create_table(
@@ -411,7 +444,9 @@ def upgrade() -> None:
         sa.Column("outputs", sa.JSON, nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
     )
-    op.create_index("ix_financial_scenario_analyses_org", "financial_scenario_analyses", ["organization_id"])
+    op.create_index(
+        "ix_financial_scenario_analyses_org", "financial_scenario_analyses", ["organization_id"]
+    )
 
     # ── financial_esg_reports ─────────────────────────────────────────────────
     op.create_table(
@@ -446,7 +481,9 @@ def downgrade() -> None:
     op.drop_index("ix_esg_financial_correlations_org", table_name="esg_financial_correlations")
     op.drop_table("esg_financial_correlations")
 
-    op.drop_index("ix_sustainability_valuation_models_org", table_name="sustainability_valuation_models")
+    op.drop_index(
+        "ix_sustainability_valuation_models_org", table_name="sustainability_valuation_models"
+    )
     op.drop_table("sustainability_valuation_models")
 
     op.drop_index("ix_climate_finance_analyses_org", table_name="climate_finance_analyses")
@@ -480,11 +517,15 @@ def downgrade() -> None:
     op.drop_index("ix_green_revenue_records_org", table_name="green_revenue_records")
     op.drop_table("green_revenue_records")
 
-    op.drop_index("ix_taxonomy_alignment_assessments_org", table_name="taxonomy_alignment_assessments")
+    op.drop_index(
+        "ix_taxonomy_alignment_assessments_org", table_name="taxonomy_alignment_assessments"
+    )
     op.drop_table("taxonomy_alignment_assessments")
 
     # sustainable_finance_instruments: child finance_linked_kpis already dropped
-    op.drop_index("ix_sustainable_finance_instruments_org", table_name="sustainable_finance_instruments")
+    op.drop_index(
+        "ix_sustainable_finance_instruments_org", table_name="sustainable_finance_instruments"
+    )
     op.drop_table("sustainable_finance_instruments")
 
     op.drop_index("ix_value_creation_initiatives_org", table_name="value_creation_initiatives")

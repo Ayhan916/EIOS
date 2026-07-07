@@ -3,24 +3,23 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
+from application.strategy.digital_twin_service import StrategyError
 from application.strategy.metrics import strategy_counters
 from infrastructure.persistence.models.strategy import (
     OBJECTIVE_TYPES,
     PLANNING_HORIZONS,
-    PLAN_STATUSES,
     StrategicObjectiveModel,
     StrategicPlanModel,
 )
-from application.strategy.digital_twin_service import StrategyError
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:

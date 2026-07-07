@@ -109,9 +109,7 @@ async def list_datasets(
     """List all datasets, optionally filtered by source or status."""
     from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
 
-    stmt = select(ExternalDatasetModel).order_by(
-        ExternalDatasetModel.imported_at.desc()
-    )
+    stmt = select(ExternalDatasetModel).order_by(ExternalDatasetModel.imported_at.desc())
     if source_name:
         stmt = stmt.where(ExternalDatasetModel.source_name == source_name)
     if status:
@@ -123,6 +121,7 @@ async def list_datasets(
 
 def _domain_to_model(d: ExternalDataset):
     from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
+
     return ExternalDatasetModel(
         id=d.id,
         status=d.status.value if hasattr(d.status, "value") else d.status,
@@ -137,7 +136,9 @@ def _domain_to_model(d: ExternalDataset):
         dataset_hash=d.dataset_hash,
         imported_at=d.imported_at,
         row_count=d.row_count,
-        dataset_status=d.dataset_status.value if hasattr(d.dataset_status, "value") else d.dataset_status,
+        dataset_status=d.dataset_status.value
+        if hasattr(d.dataset_status, "value")
+        else d.dataset_status,
         description=d.description,
     )
 

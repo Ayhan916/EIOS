@@ -153,7 +153,7 @@ async def get_metrics_prometheus() -> str:
       - Copilot metrics (M33)
       - Module-level counter blobs (M34/M36/M37/M38/M39/M42)
     """
-    from prometheus_client import generate_latest, CONTENT_TYPE_LATEST, REGISTRY  # noqa: PLC0415
+    from prometheus_client import REGISTRY, generate_latest  # noqa: PLC0415
 
     # All prometheus_client-registered metrics (histograms, counters, gauges from M46 + M33)
     prom_bytes = generate_latest(REGISTRY)
@@ -214,26 +214,32 @@ async def get_metrics_prometheus() -> str:
     ]
     # Append M34.1 external intelligence metrics
     from application.external_intelligence.metrics import ext_counters
+
     lines.extend(ext_counters.to_prometheus_lines(env))
 
     # Append M36.2 agent monitoring metrics
     from application.agent_monitoring.metrics import agent_counters
+
     lines.extend(agent_counters.to_prometheus_lines(env))
 
     # Append M37 surveillance metrics
     from application.surveillance.metrics import surveillance_counters
+
     lines.extend(surveillance_counters.to_prometheus_lines(env))
 
     # Append M38 network intelligence metrics
     from application.network.metrics import network_counters
+
     lines.extend(network_counters.to_prometheus_lines(env))
 
     # Append M39 operating system metrics
     from application.operating_system.metrics import os_counters
+
     lines.extend(os_counters.to_prometheus_lines(env))
 
     # Append M42 sustainability metrics
     from application.sustainability.metrics import sustainability_counters
+
     lines.extend(sustainability_counters.to_prometheus_lines(env))
 
     # Prepend prometheus_client registry output (M46 histograms + copilot metrics)

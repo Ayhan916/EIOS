@@ -11,12 +11,19 @@ Traffic light per section:
 
 Overall: worst section traffic light.
 """
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from domain.enums import GapSeverity, TrafficLight
-from domain.supplier_assessment import AssessmentQuestion, AssessmentResponse, GapItem, GapReport, SectionScore
+from domain.supplier_assessment import (
+    AssessmentQuestion,
+    AssessmentResponse,
+    GapItem,
+    GapReport,
+    SectionScore,
+)
 
 # Recommendations by (section, csddd_article) key — deterministic, config-driven
 _RECOMMENDATIONS: dict[str, str] = {
@@ -82,17 +89,21 @@ def analyze(
             if answer in ("no", "0", "false", "nein"):
                 severity = _WEIGHT_TO_SEVERITY.get(q.weight, GapSeverity.MEDIUM.value)
                 section_data[sec]["gap_severities"].append(severity)
-                recommendation = _RECOMMENDATIONS.get(sec, "Review CSDDD requirements and implement appropriate measures.")
-                gaps.append(GapItem(
-                    question_id=q.id,
-                    section=sec,
-                    csddd_article=q.csddd_article,
-                    question_text=q.question_text,
-                    answer_given=answer or "(no answer)",
-                    expected_answer=expected,
-                    severity=severity,
-                    recommendation=recommendation,
-                ))
+                recommendation = _RECOMMENDATIONS.get(
+                    sec, "Review CSDDD requirements and implement appropriate measures."
+                )
+                gaps.append(
+                    GapItem(
+                        question_id=q.id,
+                        section=sec,
+                        csddd_article=q.csddd_article,
+                        question_text=q.question_text,
+                        answer_given=answer or "(no answer)",
+                        expected_answer=expected,
+                        severity=severity,
+                        recommendation=recommendation,
+                    )
+                )
         # Scale questions: score < 3 on 1-5 scale for required questions = gap
         elif q.question_type == "scale_1_5" and q.is_required and answer:
             try:
@@ -100,17 +111,21 @@ def analyze(
                 if score < 3:
                     severity = _WEIGHT_TO_SEVERITY.get(q.weight, GapSeverity.MEDIUM.value)
                     section_data[sec]["gap_severities"].append(severity)
-                    recommendation = _RECOMMENDATIONS.get(sec, "Improve maturity level to at least 3/5.")
-                    gaps.append(GapItem(
-                        question_id=q.id,
-                        section=sec,
-                        csddd_article=q.csddd_article,
-                        question_text=q.question_text,
-                        answer_given=answer,
-                        expected_answer="≥3",
-                        severity=severity,
-                        recommendation=recommendation,
-                    ))
+                    recommendation = _RECOMMENDATIONS.get(
+                        sec, "Improve maturity level to at least 3/5."
+                    )
+                    gaps.append(
+                        GapItem(
+                            question_id=q.id,
+                            section=sec,
+                            csddd_article=q.csddd_article,
+                            question_text=q.question_text,
+                            answer_given=answer,
+                            expected_answer="≥3",
+                            severity=severity,
+                            recommendation=recommendation,
+                        )
+                    )
             except ValueError:
                 pass
 
@@ -119,19 +134,19 @@ def analyze(
         severities = data["gap_severities"]
         if any(s in (GapSeverity.CRITICAL.value,) for s in severities):
             tl = TrafficLight.RED.value
-        elif any(s == GapSeverity.HIGH.value for s in severities):
-            tl = TrafficLight.YELLOW.value
-        elif severities:
+        elif any(s == GapSeverity.HIGH.value for s in severities) or severities:
             tl = TrafficLight.YELLOW.value
         else:
             tl = TrafficLight.GREEN.value
-        section_scores.append(SectionScore(
-            section=sec,
-            total_questions=data["total"],
-            answered=data["answered"],
-            gaps=len(severities),
-            traffic_light=tl,
-        ))
+        section_scores.append(
+            SectionScore(
+                section=sec,
+                total_questions=data["total"],
+                answered=data["answered"],
+                gaps=len(severities),
+                traffic_light=tl,
+            )
+        )
 
     overall = _worst([s.traffic_light for s in section_scores])
     critical_count = sum(1 for g in gaps if g.severity == GapSeverity.CRITICAL.value)
@@ -144,5 +159,5 @@ def analyze(
         overall_traffic_light=overall,
         total_gaps=len(gaps),
         critical_gaps=critical_count,
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
     )

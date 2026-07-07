@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.copilot.change_summary_engine import build_change_summary
 
 

@@ -9,8 +9,8 @@ at runtime via the SecretProvider service. Tests inject a mock httpx client.
 
 from __future__ import annotations
 
-import structlog
 import httpx
+import structlog
 
 from .base import BaseERPAdapter, ERPBOMRecord, ERPDPPRecord, ERPMaterialRecord
 
@@ -79,7 +79,9 @@ class RestERPAdapter(BaseERPAdapter):
             async with self._get_client() as c:
                 resp = await c.get("/API_MATERIAL_DOCUMENT_SRV/A_MaterialDocHeader")
                 resp.raise_for_status()
-                items = resp.json().get("value", resp.json() if isinstance(resp.json(), list) else [])
+                items = resp.json().get(
+                    "value", resp.json() if isinstance(resp.json(), list) else []
+                )
         except Exception as exc:
             logger.error("erp_rest_fetch_materials_failed", error=str(exc))
             return []
@@ -88,14 +90,16 @@ class RestERPAdapter(BaseERPAdapter):
             extracted = _extract(raw, paths)
             if not extracted.get("external_ref"):
                 continue
-            records.append(ERPMaterialRecord(
-                external_ref=str(extracted["external_ref"]),
-                name=str(extracted.get("name") or extracted["external_ref"]),
-                material_type=str(extracted.get("material_type") or "RAW_MATERIAL"),
-                unit_of_measure=extracted.get("unit_of_measure"),
-                description=extracted.get("description"),
-                raw=raw,
-            ))
+            records.append(
+                ERPMaterialRecord(
+                    external_ref=str(extracted["external_ref"]),
+                    name=str(extracted.get("name") or extracted["external_ref"]),
+                    material_type=str(extracted.get("material_type") or "RAW_MATERIAL"),
+                    unit_of_measure=extracted.get("unit_of_measure"),
+                    description=extracted.get("description"),
+                    raw=raw,
+                )
+            )
         return records
 
     async def fetch_bom(self) -> list[ERPBOMRecord]:
@@ -105,26 +109,32 @@ class RestERPAdapter(BaseERPAdapter):
             async with self._get_client() as c:
                 resp = await c.get("/API_BILL_OF_MATERIAL_SRV/A_BillOfMaterialItem")
                 resp.raise_for_status()
-                items = resp.json().get("value", resp.json() if isinstance(resp.json(), list) else [])
+                items = resp.json().get(
+                    "value", resp.json() if isinstance(resp.json(), list) else []
+                )
         except Exception as exc:
             logger.error("erp_rest_fetch_bom_failed", error=str(exc))
             return []
 
         for raw in items:
             extracted = _extract(raw, paths)
-            if not extracted.get("product_external_ref") or not extracted.get("material_external_ref"):
+            if not extracted.get("product_external_ref") or not extracted.get(
+                "material_external_ref"
+            ):
                 continue
             try:
                 qty = float(extracted.get("quantity") or 1.0)
             except (TypeError, ValueError):
                 qty = 1.0
-            records.append(ERPBOMRecord(
-                product_external_ref=str(extracted["product_external_ref"]),
-                material_external_ref=str(extracted["material_external_ref"]),
-                quantity=qty,
-                unit_of_measure=extracted.get("unit_of_measure"),
-                raw=raw,
-            ))
+            records.append(
+                ERPBOMRecord(
+                    product_external_ref=str(extracted["product_external_ref"]),
+                    material_external_ref=str(extracted["material_external_ref"]),
+                    quantity=qty,
+                    unit_of_measure=extracted.get("unit_of_measure"),
+                    raw=raw,
+                )
+            )
         return records
 
     async def push_dpp(self, records: list[ERPDPPRecord]) -> dict:

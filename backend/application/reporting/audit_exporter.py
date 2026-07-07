@@ -17,7 +17,6 @@ import io
 from datetime import datetime
 from typing import Any
 
-
 _CSV_COLUMNS = [
     "timestamp",
     "action",
@@ -56,16 +55,18 @@ def stream_audit_csv(events: list[dict[str, Any]]) -> str:
         if len(detail) > _MAX_DETAIL_CHARS:
             detail = detail[:_MAX_DETAIL_CHARS] + "…"
 
-        writer.writerow({
-            "timestamp": ts or "",
-            "action": event.get("action", ""),
-            "actor_email": event.get("actor_email", ""),
-            "actor_id": event.get("actor_id", ""),
-            "entity_type": event.get("entity_type", ""),
-            "entity_id": event.get("entity_id", ""),
-            "outcome": event.get("outcome", ""),
-            "detail": detail,
-        })
+        writer.writerow(
+            {
+                "timestamp": ts or "",
+                "action": event.get("action", ""),
+                "actor_email": event.get("actor_email", ""),
+                "actor_id": event.get("actor_id", ""),
+                "entity_type": event.get("entity_type", ""),
+                "entity_id": event.get("entity_id", ""),
+                "outcome": event.get("outcome", ""),
+                "detail": detail,
+            }
+        )
 
     return output.getvalue()
 

@@ -6,9 +6,10 @@ Routes:
   GET  /compliance/supply-chain/non-compliant        — products with NON_COMPLIANT scans
   GET  /compliance/supply-chain/summary              — org-wide supply chain summary
 """
+
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.compliance.product_scan import ProductComplianceScanService

@@ -20,9 +20,9 @@ See health_engine.py for the full deterministic mapping table.
 from __future__ import annotations
 
 import json
-import structlog
 from datetime import UTC, datetime
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
@@ -44,15 +44,16 @@ _RECOMMENDATION_THRESHOLD = {"CRITICAL", "HIGH"}
 
 # Source name normalisation
 _SOURCE_DISPLAY: dict[str, str] = {
-    "ofac": "OFAC Sanctions List",
-    "eu_sanctions": "EU Consolidated Sanctions List",
-    "un_sanctions": "UN Security Council Sanctions",
-    "gdelt_news": "GDELT Global News Intelligence",
+    "ofac": "OFAC Sanktionsliste",
+    "eu_sanctions": "EU Konsolidierte Sanktionsliste",
+    "un_sanctions": "UN Sicherheitsrat Sanktionen",
+    "gdelt_news": "GDELT Globale Nachrichtenintelligenz",
+    "gnews": "GNews Nachrichtenintelligenz",
     "transparency_international": "Transparency International CPI",
-    "world_bank": "World Bank Governance Indicators",
-    "ilo": "ILO Labour Rights Index",
-    "unicef": "UNICEF Child Risk Assessment",
-    "manual": "Manual Intelligence Entry",
+    "world_bank": "Weltbank Governance-Indikatoren",
+    "ilo": "ILO Arbeitnehmerrechtsindex",
+    "unicef": "UNICEF Kinderrechts-Risikobewertung",
+    "manual": "Manuelle Eingabe",
 }
 
 _SOURCE_URL: dict[str, str] = {
@@ -94,6 +95,7 @@ async def process_signal(
     if source_key == "gdelt_news" and signal.description:
         # Description format: "News signal: "...". Published: ... Source URL: https://..."
         import re as _re
+
         _m = _re.search(r"Source URL:\s*(https?://\S+)", signal.description)
         if _m:
             source_url = _m.group(1)
@@ -109,7 +111,7 @@ async def process_signal(
         event_category=category,
         severity=severity,
         title=_build_title(signal_type, severity, signal.description),
-        summary=signal.description or f"{signal_type} signal detected from {source_display}",
+        summary=signal.description or f"{signal_type}-Signal erkannt von {source_display}",
         why_important=reasoning["why_important"],
         regulatory_impact=reasoning["regulatory_impact"],
         recommended_action=reasoning["recommended_action"],
@@ -165,9 +167,12 @@ async def process_signals_for_supplier(
     session: AsyncSession,
 ) -> list[IntelligenceTimelineEvent]:
     """Process all unprocessed signals for a supplier through the pipeline."""
-    from application.external_intelligence.signal_service import list_signals_for_supplier
-    from infrastructure.persistence.models.supplier_digital_twin import IntelligenceTimelineEventModel
     from sqlalchemy import select
+
+    from application.external_intelligence.signal_service import list_signals_for_supplier
+    from infrastructure.persistence.models.supplier_digital_twin import (
+        IntelligenceTimelineEventModel,
+    )
 
     # Get signals already processed (to avoid re-processing)
     existing_stmt = select(IntelligenceTimelineEventModel.signal_id).where(
@@ -175,9 +180,7 @@ async def process_signals_for_supplier(
         IntelligenceTimelineEventModel.organization_id == organization_id,
         IntelligenceTimelineEventModel.signal_id != "",
     )
-    existing_signal_ids = {
-        row for row in (await session.execute(existing_stmt)).scalars().all()
-    }
+    existing_signal_ids = {row for row in (await session.execute(existing_stmt)).scalars().all()}
 
     signals = await list_signals_for_supplier(
         supplier_id=supplier_id,
@@ -199,24 +202,25 @@ async def process_signals_for_supplier(
 
 # ── Private helpers ───────────────────────────────────────────────────────────
 
+
 def _build_title(signal_type: str, severity: str, description: str) -> str:
     """Build a concise event title from signal metadata."""
     type_labels = {
-        "SANCTIONS": "Sanctions Listing Detected",
-        "HUMAN_RIGHTS_VIOLATION": "Human Rights Violation Reported",
-        "ENVIRONMENTAL_VIOLATION": "Environmental Violation Identified",
-        "CORRUPTION": "Corruption Allegation Detected",
-        "LABOUR_RIGHTS": "Labour Rights Issue Flagged",
-        "FINANCIAL_DISTRESS": "Financial Distress Signal",
-        "REGULATORY_BREACH": "Regulatory Breach Identified",
-        "CYBER_INCIDENT": "Cyber Security Incident",
-        "COUNTRY_RISK": "Country Risk Elevation",
-        "GEOPOLITICAL": "Geopolitical Risk Event",
-        "SUPPLY_CHAIN_DISRUPTION": "Supply Chain Disruption",
-        "ESG_CONTROVERSY": "ESG Controversy Detected",
-        "CREDIT_DOWNGRADE": "Credit Rating Downgrade",
-        "DATA_BREACH": "Data Breach Reported",
-        "REGULATORY_INVESTIGATION": "Regulatory Investigation Opened",
+        "SANCTIONS": "Sanktionseintrag erkannt",
+        "HUMAN_RIGHTS_VIOLATION": "Menschenrechtsverletzung gemeldet",
+        "ENVIRONMENTAL_VIOLATION": "Umweltverstoss identifiziert",
+        "CORRUPTION": "Korruptionsverdacht erkannt",
+        "LABOUR_RIGHTS": "Arbeitnehmerrechtsproblem gemeldet",
+        "FINANCIAL_DISTRESS": "Finanzielles Risikosignal",
+        "REGULATORY_BREACH": "Regulatorischer Verstoss identifiziert",
+        "CYBER_INCIDENT": "Cybersicherheitsvorfall",
+        "COUNTRY_RISK": "Länderrisiko erhöht",
+        "GEOPOLITICAL": "Geopolitisches Risikoereignis",
+        "SUPPLY_CHAIN_DISRUPTION": "Lieferkettenstörung",
+        "ESG_CONTROVERSY": "ESG-Kontroverse erkannt",
+        "CREDIT_DOWNGRADE": "Kreditrating herabgestuft",
+        "DATA_BREACH": "Datenschutzverletzung gemeldet",
+        "REGULATORY_INVESTIGATION": "Behördliche Untersuchung eingeleitet",
     }
     label = type_labels.get(signal_type, signal_type.replace("_", " ").title())
     if len(description) <= 60:
@@ -227,111 +231,127 @@ def _build_title(signal_type: str, severity: str, description: str) -> str:
 _REASONING_TEMPLATES: dict[str, dict[str, str]] = {
     "SANCTIONS": {
         "why_important": (
-            "Sanctions exposure creates direct legal and financial obligations. "
-            "Continued business with a sanctioned entity may violate national and "
-            "international law, expose the organisation to fines, and trigger "
-            "mandatory disclosure requirements under CSDDD and LkSG."
+            "Ein Sanktionseintrag begründet direkte rechtliche und finanzielle Verpflichtungen. "
+            "Die Fortführung von Geschäftsbeziehungen mit einer sanktionierten Partei kann gegen "
+            "nationales und internationales Recht verstossen, Bussgelder auslösen und "
+            "Offenlegungspflichten nach CSDDD und LkSG aktivieren."
         ),
         "regulatory_impact": (
-            "Affected: EU Dual-Use Regulation, OFAC SDN compliance, "
-            "LkSG §10 (Germany Supply Chain Act), CSDDD Article 10. "
-            "Immediate reporting to legal and compliance teams required."
+            "Betroffen: EU-Dual-Use-Verordnung, OFAC SDN-Compliance, "
+            "LkSG §10 (Lieferkettensorgfaltspflichtengesetz), CSDDD Artikel 10. "
+            "Sofortige Meldung an Rechts- und Compliance-Teams erforderlich."
         ),
         "recommended_action": (
-            "1. Freeze all pending transactions with this supplier. "
-            "2. Initiate emergency legal review within 24 hours. "
-            "3. Notify Compliance, Legal, and Procurement leadership. "
-            "4. Document the decision in the EIOS audit trail."
+            "1. Alle laufenden Transaktionen mit diesem Lieferanten einfrieren. "
+            "2. Notfall-Rechtsprüfung innerhalb von 24 Stunden einleiten. "
+            "3. Compliance-, Rechts- und Einkaufsleitung benachrichtigen. "
+            "4. Entscheidung im EIOS-Prüfpfad dokumentieren."
         ),
     },
     "HUMAN_RIGHTS_VIOLATION": {
         "why_important": (
-            "Human rights violations in the supply chain create direct liability "
-            "under the German Supply Chain Act (LkSG) and the forthcoming EU CSDDD. "
-            "BMW AG as a large enterprise faces mandatory due diligence obligations."
+            "Menschenrechtsverletzungen in der Lieferkette begründen direkte Haftung "
+            "nach dem Lieferkettensorgfaltspflichtengesetz (LkSG) und der EU CSDDD. "
+            "Als grosses Unternehmen unterliegt die Organisation verpflichtenden Sorgfaltspflichten."
         ),
         "regulatory_impact": (
-            "Affected: LkSG §3 (due diligence obligations), "
-            "CSDDD Article 8 (preventive action), "
-            "UN Guiding Principles on Business and Human Rights. "
-            "Failure to act may result in BaFa fines up to 2% of global turnover."
+            "Betroffen: LkSG §3 (Sorgfaltspflichten), "
+            "CSDDD Artikel 8 (Präventivmassnahmen), "
+            "UN-Leitprinzipien für Wirtschaft und Menschenrechte. "
+            "Bei Untätigkeit drohen BAFA-Bussgelder von bis zu 2 % des weltweiten Jahresumsatzes."
         ),
         "recommended_action": (
-            "1. Initiate enhanced due diligence assessment within 30 days. "
-            "2. Request corrective action plan from the supplier. "
-            "3. Consider suspension of new purchase orders pending review. "
-            "4. Escalate to Chief Compliance Officer."
+            "1. Erweiterte Sorgfaltsprüfung innerhalb von 30 Tagen einleiten. "
+            "2. Korrekturmassnahmenplan vom Lieferanten anfordern. "
+            "3. Aussetzung neuer Bestellungen bis zur Klärung prüfen. "
+            "4. An den Chief Compliance Officer eskalieren."
         ),
     },
     "ENVIRONMENTAL_VIOLATION": {
         "why_important": (
-            "Environmental violations expose the organisation to reputational damage, "
-            "regulatory fines, and potential liability for scope 3 emissions reporting "
-            "under CSRD. This may affect sustainability KPIs and ESG ratings."
+            "Umweltverstösse gefährden die Reputation und können zu Bussgeldern sowie "
+            "Haftung bei der Scope-3-Emissionsberichterstattung nach CSRD führen. "
+            "Dies kann Nachhaltigkeits-KPIs und ESG-Ratings beeinträchtigen."
         ),
         "regulatory_impact": (
-            "Affected: CSRD Article 29b (environmental disclosures), "
-            "EU Taxonomy Regulation, LkSG §2 (environmental due diligence), "
-            "CSDDD Chapter III."
+            "Betroffen: CSRD Artikel 29b (Umweltoffenlegungen), "
+            "EU-Taxonomie-Verordnung, LkSG §2 (Umwelt-Sorgfaltspflicht), "
+            "CSDDD Kapitel III."
         ),
         "recommended_action": (
-            "1. Request environmental audit documentation from supplier. "
-            "2. Update ESG assessment to reflect new information. "
-            "3. Review supplier's environmental management system (ISO 14001). "
-            "4. Notify Sustainability team."
+            "1. Umweltaudit-Dokumentation beim Lieferanten anfordern. "
+            "2. ESG-Bewertung mit neuen Informationen aktualisieren. "
+            "3. Umweltmanagementsystem des Lieferanten überprüfen (ISO 14001). "
+            "4. Nachhaltigkeitsteam benachrichtigen."
         ),
     },
     "CORRUPTION": {
         "why_important": (
-            "Corruption allegations trigger governance risk and potential violation "
-            "of anti-bribery laws applicable to the organisation."
+            "Korruptionsvorwürfe begründen Governance-Risiken und mögliche Verstösse "
+            "gegen Antikorruptionsgesetze, die für die Organisation gelten."
         ),
         "regulatory_impact": (
-            "Affected: German Anti-Corruption Law, "
-            "UK Bribery Act (if applicable), "
-            "FCPA (if US operations involved), "
-            "ISO 37001 Anti-bribery management."
+            "Betroffen: Deutsches Antikorruptionsrecht, "
+            "UK Bribery Act (sofern anwendbar), "
+            "FCPA (bei US-Geschäftstätigkeit), "
+            "ISO 37001 Antikorruptions-Managementsystem."
         ),
         "recommended_action": (
-            "1. Initiate anti-corruption due diligence review. "
-            "2. Suspend new contract awards pending investigation. "
-            "3. Review existing contractual anti-corruption clauses. "
-            "4. Notify Legal and Internal Audit."
+            "1. Antikorruptions-Sorgfaltsprüfung einleiten. "
+            "2. Neue Auftragsvergaben bis zur Untersuchung aussetzen. "
+            "3. Bestehende Antikorruptionsklauseln in Verträgen überprüfen. "
+            "4. Rechts- und Interne-Revision-Abteilung benachrichtigen."
         ),
     },
     "FINANCIAL_DISTRESS": {
         "why_important": (
-            "Financial distress signals indicate potential supply chain disruption "
-            "risk. Supplier insolvency could halt production and trigger penalty "
-            "clauses in existing contracts."
+            "Finanzkrisensignale weisen auf potenzielle Lieferkettenunterbrechungsrisiken hin. "
+            "Eine Insolvenz des Lieferanten könnte die Produktion stoppen und "
+            "Vertragsstrafen in bestehenden Vereinbarungen auslösen."
         ),
         "regulatory_impact": (
-            "No direct regulatory breach, but operational continuity obligations "
-            "apply under ISO 31000 and internal risk management frameworks."
+            "Kein direkter Regelungsverstoss, aber Betriebskontinuitätspflichten "
+            "gelten nach ISO 31000 und internen Risikomanagement-Rahmenwerken."
         ),
         "recommended_action": (
-            "1. Request latest audited financial statements. "
-            "2. Identify alternative suppliers for critical components. "
-            "3. Review and activate supply chain contingency plans. "
-            "4. Notify Procurement and Operations leadership."
+            "1. Aktuelle geprüfte Jahresabschlüsse anfordern. "
+            "2. Alternativlieferanten für kritische Komponenten identifizieren. "
+            "3. Lieferketten-Notfallpläne prüfen und aktivieren. "
+            "4. Einkaufs- und Betriebsleitung benachrichtigen."
+        ),
+    },
+    "SUPPLY_CHAIN_DISRUPTION": {
+        "why_important": (
+            "Lieferkettenstörungen können die Produktionskontinuität gefährden "
+            "und erfordern sofortige Massnahmen zur Risikominimierung."
+        ),
+        "regulatory_impact": (
+            "Betroffen: LkSG §4 (Präventionsmassnahmen), "
+            "ISO 31000 Risikomanagement, interne Business-Continuity-Vorgaben."
+        ),
+        "recommended_action": (
+            "1. Betroffene Liefermengen und Auswirkungen auf die Produktion bewerten. "
+            "2. Alternativlieferanten aktivieren und Lagerbestände prüfen. "
+            "3. Kunden und interne Stakeholder über mögliche Verzögerungen informieren. "
+            "4. Business-Continuity-Plan aktivieren."
         ),
     },
 }
 
 _DEFAULT_REASONING = {
     "why_important": (
-        "This external intelligence signal indicates a potential risk factor for "
-        "this supplier that may affect BMW AG's supply chain integrity, compliance "
-        "posture, or ESG performance."
+        "Dieses externe Intelligenzsignal deutet auf einen potenziellen Risikofaktor "
+        "für diesen Lieferanten hin, der die Lieferkettenintegrität, "
+        "Compliance-Stellung oder ESG-Performance der Organisation beeinträchtigen könnte."
     ),
     "regulatory_impact": (
-        "Review relevant LkSG, CSDDD, and CSRD obligations to determine "
-        "whether formal due diligence steps are required."
+        "Relevante LkSG-, CSDDD- und CSRD-Verpflichtungen prüfen, um festzustellen, "
+        "ob formelle Sorgfaltsprüfungsschritte erforderlich sind."
     ),
     "recommended_action": (
-        "1. Review the full signal details in the intelligence timeline. "
-        "2. Assign to the responsible team for assessment. "
-        "3. Document response in EIOS for audit trail purposes."
+        "1. Vollständige Signaldetails in der Intelligence-Timeline prüfen. "
+        "2. Dem verantwortlichen Team zur Bewertung zuweisen. "
+        "3. Reaktion im EIOS für Prüfzwecke dokumentieren."
     ),
 }
 
@@ -353,19 +373,20 @@ async def _generate_reasoning(
     # Try to enrich with LLM if available (non-blocking)
     try:
         from infrastructure.llm.deps import get_llm_provider
+
         provider = get_llm_provider()
         if provider is None:
             return template
 
         prompt = (
-            f"You are an enterprise risk intelligence analyst at BMW AG.\n"
-            f"Signal: {signal_type}, Severity: {severity}\n"
-            f"Description: {signal.description}\n"
-            f"Source: {source_display}\n"
-            f"Country: {signal.country_code or 'Unknown'}\n\n"
-            f"Provide a JSON with keys: why_important, regulatory_impact, recommended_action.\n"
-            f"Each value is 1-3 sentences. Focus on EU/German regulatory context (LkSG, CSDDD, CSRD).\n"
-            f"Be specific and actionable. Return ONLY the JSON object."
+            f"Du bist ein Enterprise-Risikointelligenz-Analyst.\n"
+            f"Signal: {signal_type}, Schweregrad: {severity}\n"
+            f"Beschreibung: {signal.description}\n"
+            f"Quelle: {source_display}\n"
+            f"Land: {signal.country_code or 'Unbekannt'}\n\n"
+            f"Erstelle ein JSON mit den Schlüsseln: why_important, regulatory_impact, recommended_action.\n"
+            f"Jeder Wert ist 1-3 Sätze auf Deutsch. Fokus auf EU/deutschen Regulierungskontext (LkSG, CSDDD, CSRD).\n"
+            f"Sei spezifisch und handlungsorientiert. Gib NUR das JSON-Objekt zurück."
         )
 
         result = await provider.complete(
@@ -389,19 +410,21 @@ async def _create_recommendation(
     """Create a Recommendation from an intelligence event (if service available)."""
     try:
         from sqlalchemy import select
+
         from infrastructure.persistence.models.recommendation import RecommendationModel
 
         # Avoid duplicate recommendations for the same signal
-        existing = (await session.execute(
-            select(RecommendationModel).where(
-                RecommendationModel.description.contains(event.signal_id)
-            ).limit(1)
-        )).scalar_one_or_none()
+        existing = (
+            await session.execute(
+                select(RecommendationModel)
+                .where(RecommendationModel.description.contains(event.signal_id))
+                .limit(1)
+            )
+        ).scalar_one_or_none()
         if existing:
             return
 
         from uuid import uuid4
-        from datetime import date
 
         rec = RecommendationModel(
             id=str(uuid4()),

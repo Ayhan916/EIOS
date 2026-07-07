@@ -32,6 +32,7 @@ async def _log_activity(
     metadata: dict | None = None,
 ) -> None:
     import json
+
     from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
 
     now = datetime.now(UTC)
@@ -99,12 +100,11 @@ async def get_my_plans(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
     from sqlalchemy import select
 
-    stmt = select(RemediationPlanModel).where(
-        RemediationPlanModel.supplier_id == supplier_id
-    )
+    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
+
+    stmt = select(RemediationPlanModel).where(RemediationPlanModel.supplier_id == supplier_id)
     if status:
         stmt = stmt.where(RemediationPlanModel.remediation_status == status)
     stmt = stmt.order_by(RemediationPlanModel.created_at.desc()).limit(limit)
@@ -116,8 +116,9 @@ async def get_plan(
     supplier_id: str,
     session=None,
 ) -> object | None:
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
 
     stmt = select(RemediationPlanModel).where(
         RemediationPlanModel.id == plan_id,
@@ -133,8 +134,9 @@ async def update_progress(
     new_status: str | None = None,
     session=None,
 ) -> object:
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
 
     if not (0 <= completion_percentage <= 100):
         raise ValueError("completion_percentage must be between 0 and 100")
@@ -176,7 +178,10 @@ async def update_progress(
         event_type="remediation_progress_updated",
         entity_type="remediation_plan",
         entity_id=plan_id,
-        metadata={"completion_percentage": completion_percentage, "status": plan.remediation_status},
+        metadata={
+            "completion_percentage": completion_percentage,
+            "status": plan.remediation_status,
+        },
         session=session,
     )
     return plan
@@ -189,8 +194,9 @@ async def verify_plan(
     session=None,
 ) -> object:
     """Internal user verifies a completed remediation plan."""
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
 
     # F3: SELECT FOR UPDATE to serialize concurrent verifiers
     stmt = (
@@ -233,8 +239,9 @@ async def list_plans_for_org(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
 
     stmt = select(RemediationPlanModel).where(
         RemediationPlanModel.organization_id == organization_id

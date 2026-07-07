@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -13,8 +23,13 @@ from .base import BaseModel
 
 AI_MODEL_STATUSES = ("DRAFT", "ACTIVE", "RETIRED", "SUSPENDED")
 AI_MODEL_TYPES = (
-    "LLM", "CLASSIFICATION", "RISK_SCORING", "EMBEDDING",
-    "RANKING", "FORECASTING", "OTHER",
+    "LLM",
+    "CLASSIFICATION",
+    "RISK_SCORING",
+    "EMBEDDING",
+    "RANKING",
+    "FORECASTING",
+    "OTHER",
 )
 RISK_LEVELS = ("LOW", "MEDIUM", "HIGH", "CRITICAL")
 APPROVAL_STATUSES = ("PENDING", "APPROVED", "REJECTED")
@@ -25,15 +40,24 @@ WORKFLOW_STAGE_STATUSES = ("PENDING", "IN_PROGRESS", "APPROVED", "REJECTED", "SK
 # Terminal states that cannot be transitioned out of
 TERMINAL_WORKFLOW_STATUSES = frozenset({"APPROVED", "REJECTED", "SKIPPED"})
 DRIFT_ALERT_TYPES = (
-    "CONFIDENCE_DEGRADATION", "DISTRIBUTION_SHIFT", "ABNORMAL_USAGE",
+    "CONFIDENCE_DEGRADATION",
+    "DISTRIBUTION_SHIFT",
+    "ABNORMAL_USAGE",
 )
 INCIDENT_TYPES = (
-    "HALLUCINATION", "POLICY_VIOLATION", "PRIVACY_CONCERN",
-    "BIAS_CONCERN", "UNSAFE_OUTPUT", "OTHER",
+    "HALLUCINATION",
+    "POLICY_VIOLATION",
+    "PRIVACY_CONCERN",
+    "BIAS_CONCERN",
+    "UNSAFE_OUTPUT",
+    "OTHER",
 )
 AI_POLICY_TYPES = (
-    "APPROVED_PROVIDERS", "PROHIBITED_USE_CASES",
-    "RETENTION", "REVIEW_REQUIREMENTS", "OTHER",
+    "APPROVED_PROVIDERS",
+    "PROHIBITED_USE_CASES",
+    "RETENTION",
+    "REVIEW_REQUIREMENTS",
+    "OTHER",
 )
 ASSURANCE_STATUSES = ("COMPLIANT", "PARTIALLY_COMPLIANT", "NON_COMPLIANT")
 REGULATION_FRAMEWORKS = ("EU_AI_ACT", "NIST_AI_RMF", "ISO_42001", "OTHER")
@@ -66,9 +90,7 @@ class AIUseCaseModel(BaseModel):
 
     __tablename__ = "ai_use_cases"
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
@@ -85,9 +107,7 @@ class AIRiskAssessmentModel(BaseModel):
 
     __tablename__ = "ai_risk_assessments"
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     use_case_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("ai_use_cases.id"), nullable=True
     )
@@ -141,13 +161,9 @@ class ModelApprovalWorkflowModel(BaseModel):
     """One stage in a model approval workflow."""
 
     __tablename__ = "model_approval_workflows"
-    __table_args__ = (
-        UniqueConstraint("model_id", "stage", name="uq_workflow_model_stage"),
-    )
+    __table_args__ = (UniqueConstraint("model_id", "stage", name="uq_workflow_model_stage"),)
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     stage: Mapped[str] = mapped_column(String(50), nullable=False)
     stage_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
     approver_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
@@ -200,9 +216,7 @@ class AIDecisionLogModel(BaseModel):
 
     __tablename__ = "ai_decision_logs"
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     prompt_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("prompt_templates.id"), nullable=True
     )
@@ -248,9 +262,7 @@ class HumanReviewModel(BaseModel):
     incident_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("ai_incidents.id"), nullable=True
     )
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     reviewer_user_id: Mapped[str] = mapped_column(String(36), nullable=False)
     decision: Mapped[str] = mapped_column(String(20), nullable=False)
     override_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -263,9 +275,7 @@ class ModelMonitoringRecordModel(BaseModel):
 
     __tablename__ = "model_monitoring_records"
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
@@ -284,9 +294,7 @@ class ModelDriftAlertModel(BaseModel):
 
     __tablename__ = "model_drift_alerts"
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     alert_type: Mapped[str] = mapped_column(String(50), nullable=False)
     severity: Mapped[str] = mapped_column(String(20), nullable=False, default="MEDIUM")
     description: Mapped[str] = mapped_column(Text, nullable=False)
@@ -300,9 +308,7 @@ class AIIncidentModel(BaseModel):
 
     __tablename__ = "ai_incidents"
 
-    model_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ai_models.id"), nullable=False
-    )
+    model_id: Mapped[str] = mapped_column(String(36), ForeignKey("ai_models.id"), nullable=False)
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
@@ -350,9 +356,7 @@ class AIAssuranceReportModel(BaseModel):
     control_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     incident_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     approval_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    overall_status: Mapped[str] = mapped_column(
-        String(30), nullable=False, default="NOT_ASSESSED"
-    )
+    overall_status: Mapped[str] = mapped_column(String(30), nullable=False, default="NOT_ASSESSED")
     generated_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     report_data: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 

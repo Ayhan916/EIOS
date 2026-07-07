@@ -1,7 +1,5 @@
 """M34 benchmark engine — pure function tests."""
 
-import pytest
-
 from application.external_intelligence.benchmark_engine import (
     BenchmarkResult,
     benchmark_supplier,
@@ -38,6 +36,7 @@ def _make_benchmark(**kwargs):
 
 
 # ── calculate_percentile ───────────────────────────────────────────────────────
+
 
 class TestCalculatePercentile:
     def test_score_at_p50_returns_50(self):
@@ -86,6 +85,7 @@ class TestCalculatePercentile:
 
 # ── classify_percentile_rank ───────────────────────────────────────────────────
 
+
 class TestClassifyPercentileRank:
     def test_90_is_top_10(self):
         assert classify_percentile_rank(90.0) == PercentileRank.TOP_10
@@ -121,6 +121,7 @@ class TestClassifyPercentileRank:
 
 # ── explain_benchmark ──────────────────────────────────────────────────────────
 
+
 class TestExplainBenchmark:
     def test_contains_score(self):
         b = _make_benchmark()
@@ -139,6 +140,7 @@ class TestExplainBenchmark:
 
 
 # ── benchmark_supplier ─────────────────────────────────────────────────────────
+
 
 class TestBenchmarkSupplier:
     def test_returns_benchmark_result(self):

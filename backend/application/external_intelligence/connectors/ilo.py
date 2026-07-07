@@ -72,14 +72,16 @@ class ILOConnector(BaseLiveConnector):
             forced = min(entry.get("forced_labour_rate", 0.0) * 10.0, 100.0) * 0.4
             fatal = min(entry.get("workplace_fatal_rate", 0.0) * 5.0, 100.0) * 0.2
             labour_rights_score = round(min(100.0, child + forced + fatal), 2)
-            records.append({
-                "country_code": entry["country_code"],
-                "labour_rights_score": labour_rights_score,
-                "child_labour_rate": entry.get("child_labour_rate", 0.0),
-                "forced_labour_rate": entry.get("forced_labour_rate", 0.0),
-                "workplace_fatal_rate": entry.get("workplace_fatal_rate", 0.0),
-                "source": ExternalSourceName.ILO.value,
-            })
+            records.append(
+                {
+                    "country_code": entry["country_code"],
+                    "labour_rights_score": labour_rights_score,
+                    "child_labour_rate": entry.get("child_labour_rate", 0.0),
+                    "forced_labour_rate": entry.get("forced_labour_rate", 0.0),
+                    "workplace_fatal_rate": entry.get("workplace_fatal_rate", 0.0),
+                    "source": ExternalSourceName.ILO.value,
+                }
+            )
         return RawDataset(
             source_name=ExternalSourceName.ILO.value,
             source_version=self.connector_version,

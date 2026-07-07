@@ -29,16 +29,51 @@ _MAX_LINKS_PER_FINDING = 5
 _SCORE_THRESHOLD = 0.04  # minimum combined score to create a link
 
 _STOP_WORDS = frozenset(
-    "a an the is are was were in on at to of for with by and or but not this that "
-    "it as its be been has have had will would could should may might from".split()
+    [
+        "a",
+        "an",
+        "the",
+        "is",
+        "are",
+        "was",
+        "were",
+        "in",
+        "on",
+        "at",
+        "to",
+        "of",
+        "for",
+        "with",
+        "by",
+        "and",
+        "or",
+        "but",
+        "not",
+        "this",
+        "that",
+        "it",
+        "as",
+        "its",
+        "be",
+        "been",
+        "has",
+        "have",
+        "had",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "from",
+    ]
 )
 
 
 def _tokenize(text: str) -> frozenset[str]:
     words = text.lower().split()
     return frozenset(
-        w.strip(".,;:!?\"'()[]{}") for w in words
-        if len(w) > 2 and w not in _STOP_WORDS
+        w.strip(".,;:!?\"'()[]{}") for w in words if len(w) > 2 and w not in _STOP_WORDS
     )
 
 
@@ -78,9 +113,7 @@ def create_finding_evidence_links(
     links: list[FindingEvidenceLink] = []
 
     for finding in findings:
-        finding_text = (
-            f"{finding.title} {finding.description} {finding.reasoning or ''}"
-        )
+        finding_text = f"{finding.title} {finding.description} {finding.reasoning or ''}"
         finding_tokens = _tokenize(finding_text)
 
         scored: list[tuple[float, int]] = []

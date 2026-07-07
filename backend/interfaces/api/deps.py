@@ -13,6 +13,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from application.api_platform.key_service import hash_api_key, is_api_key_token
 from domain.enums import UserRole, has_min_role
 from domain.user import User
 from infrastructure.persistence.database import AsyncSessionFactory, SyncSessionFactory
@@ -44,7 +45,6 @@ from infrastructure.persistence.repositories import (
 )
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
 from infrastructure.persistence.repositories.report import SQLReportRepository
-from application.api_platform.key_service import hash_api_key, is_api_key_token
 from shared.rls import async_set_rls_context
 from shared.security import decode_external_audit_token, decode_token, is_token_blacklisted
 
@@ -226,6 +226,7 @@ async def get_current_user(
         # values against limits. This is fully atomic at the DB level via a single
         # UPDATE…RETURNING. The counter reflects this request — reject if it exceeded.
         from datetime import UTC, datetime  # noqa: PLC0415
+
         now = datetime.now(UTC)
         new_min, new_hr = await api_key_repo.atomic_increment_and_get_counts(api_key.id, now)
         if new_min > api_key.rate_limit_per_minute:
@@ -244,6 +245,7 @@ async def get_current_user(
         # Emit process-level metric
         try:
             from interfaces.api.routers.metrics import counters as _m  # noqa: PLC0415
+
             _m.record_api_key_request()
         except Exception:  # noqa: BLE001
             pass
@@ -256,6 +258,7 @@ async def get_current_user(
         # organization_id and is_active are the fields existing endpoints care about
         from domain.enums import EntityStatus, UserRole  # noqa: PLC0415
         from domain.user import User as DomainUser  # noqa: PLC0415
+
         synthetic = DomainUser(
             id=api_key.service_account_id or api_key.id,
             status=EntityStatus.ACTIVE,
@@ -333,10 +336,18 @@ async def _fetch_data_residency(session: AsyncSession, organization_id: str | No
         return None
     try:
         from sqlalchemy import select  # noqa: PLC0415
-        from infrastructure.persistence.models.organization import OrganizationModel  # noqa: PLC0415
-        org = (await session.execute(
-            select(OrganizationModel.data_residency).where(OrganizationModel.id == organization_id)
-        )).scalar_one_or_none()
+
+        from infrastructure.persistence.models.organization import (
+            OrganizationModel,  # noqa: PLC0415
+        )
+
+        org = (
+            await session.execute(
+                select(OrganizationModel.data_residency).where(
+                    OrganizationModel.id == organization_id
+                )
+            )
+        ).scalar_one_or_none()
         return org  # scalar is the data_residency string or None
     except Exception:
         return None
@@ -440,9 +451,7 @@ def require_external_auditor_or_internal(min_internal_role: UserRole = UserRole.
         if not has_min_role(current_user.role, min_internal_role):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=(
-                    f"Role '{min_internal_role.value}' or 'external_auditor' is required"
-                ),
+                detail=(f"Role '{min_internal_role.value}' or 'external_auditor' is required"),
             )
         return current_user
 
@@ -462,6 +471,7 @@ async def get_report_schedule_repo(
 
 
 # ── M30 API Platform repos ────────────────────────────────────────────────────
+
 
 async def get_service_account_repo(
     session: AsyncSession = Depends(get_db),
@@ -519,7 +529,7 @@ def scope_gate(read_scope: str, write_scope: str | None = None) -> Callable:
         if api_scopes is None:
             return  # JWT user — RBAC already handled by require_role
         method = request.method.upper()
-        required = (write_scope if write_scope and method in _WRITE_METHODS else read_scope)
+        required = write_scope if write_scope and method in _WRITE_METHODS else read_scope
         if required not in api_scopes:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -551,6 +561,7 @@ async def require_scim_token(
         raise _unauth
 
     from application.enterprise.scim_token_service import verify_scim_token  # noqa: PLC0415
+
     token = await verify_scim_token(credentials.credentials, session)
     if token is None:
         raise _unauth

@@ -66,7 +66,7 @@ SEVERITY_DELTA: dict[str, float] = {
 # ── Event type → category mapping ────────────────────────────────────────────
 
 EVENT_TYPE_TO_CATEGORY: dict[str, str] = {
-    "EXTERNAL_SIGNAL": "ESG",           # overridden by signal type
+    "EXTERNAL_SIGNAL": "ESG",  # overridden by signal type
     "ASSESSMENT_COMPLETED": "COMPLIANCE",
     "FINDING_CREATED": "COMPLIANCE",
     "CERTIFICATE_EXPIRED": "COMPLIANCE",

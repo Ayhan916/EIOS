@@ -82,11 +82,7 @@ class ProductionOIDCValidator:
         if not sub:
             raise SSOValidationError("OIDC token missing required 'sub' claim")
 
-        email: str = (
-            claims.get("email")
-            or claims.get("preferred_username")
-            or sub
-        )
+        email: str = claims.get("email") or claims.get("preferred_username") or sub
         display_name: str | None = claims.get("name")
         raw_groups = claims.get(group_claim, [])
         groups: list[str] = [raw_groups] if isinstance(raw_groups, str) else list(raw_groups)

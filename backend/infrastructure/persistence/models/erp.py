@@ -34,7 +34,9 @@ class ERPConnectorModel(Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     # Adapter type drives which client class is used
-    adapter_type: Mapped[str] = mapped_column(String(30), nullable=False)  # SAP_ODATA | ORACLE_REST | REST | CSV
+    adapter_type: Mapped[str] = mapped_column(
+        String(30), nullable=False
+    )  # SAP_ODATA | ORACLE_REST | REST | CSV
     # Connection target
     base_url: Mapped[str | None] = mapped_column(Text, nullable=True)
     # ID of a SecretReferenceModel row that holds the auth credentials
@@ -103,7 +105,9 @@ class ERPFieldMappingModel(Base):
     __table_args__ = (
         Index("ix_erp_field_mappings_connector", "connector_id"),
         UniqueConstraint(
-            "connector_id", "entity_type", "erp_field",
+            "connector_id",
+            "entity_type",
+            "erp_field",
             name="uq_erp_field_mapping_connector_entity_field",
         ),
     )
@@ -116,7 +120,9 @@ class ERPFieldMappingModel(Base):
     eios_field: Mapped[str] = mapped_column(String(300), nullable=False)
     # Optional transform: trim | uppercase | lowercase | date_iso | float_parse | skip
     transform_fn: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    is_required: Mapped[bool] = mapped_column(String(5), nullable=False, default=False)  # stored as "True"/"False"
+    is_required: Mapped[bool] = mapped_column(
+        String(5), nullable=False, default=False
+    )  # stored as "True"/"False"
     default_value: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -18,4 +18,4 @@ class ReviewAction(BaseEntity):
     actor_id: str
     actor_email: str
     action_type: ReviewActionType  # approve | reject | request_changes
-    comment: str | None = None     # Optional rationale stored with the decision
+    comment: str | None = None  # Optional rationale stored with the decision

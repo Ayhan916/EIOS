@@ -6,6 +6,7 @@ Scope3InventoryModel representing GHG Protocol Scope 3 Category 1
 
 Recalculation is idempotent: existing record for (org, year) is overwritten.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -66,11 +67,13 @@ class Scope3InventoryService:
 
             if val is not None:
                 total_kg += val
-                contributors.append({
-                    "product_id": pcf.product_id,
-                    "pcf_kg_co2e": val,
-                    "weight_coverage_pct": cov,
-                })
+                contributors.append(
+                    {
+                        "product_id": pcf.product_id,
+                        "pcf_kg_co2e": val,
+                        "weight_coverage_pct": cov,
+                    }
+                )
                 if cov is not None and cov >= 95.0:
                     full_lca += 1
                 else:

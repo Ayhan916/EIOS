@@ -9,25 +9,26 @@ Security rules enforced here:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, EmailStr, Field
-
+from pydantic import BaseModel, Field
 
 # ── Public submit (no auth required) ──────────────────────────────────────────
+
 
 class GrievanceSubmitRequest(BaseModel):
     """Public submission — submitted by external party via /grievance page."""
 
-    organization_id: str = Field(..., description="Target organization ID (embedded in public page URL)")
+    organization_id: str = Field(
+        ..., description="Target organization ID (embedded in public page URL)"
+    )
     title: str = Field(..., min_length=5, max_length=500)
     description: str = Field(..., min_length=20, max_length=10000)
     category: str = Field(default="other")
 
     # Voluntary contact — if provided, stored confidentially for blind reply
-    submitted_by_email: Optional[str] = Field(default=None, max_length=320)
-    submitted_by_name: Optional[str] = Field(default=None, max_length=255)
-    related_supplier_name: Optional[str] = Field(default=None, max_length=500)
+    submitted_by_email: str | None = Field(default=None, max_length=320)
+    submitted_by_name: str | None = Field(default=None, max_length=255)
+    related_supplier_name: str | None = Field(default=None, max_length=500)
 
 
 class GrievanceSubmitResponse(BaseModel):
@@ -53,6 +54,7 @@ class GrievanceStatusCheckResponse(BaseModel):
 
 # ── Internal management (analyst+ auth required) ───────────────────────────────
 
+
 class GrievanceReportResponse(BaseModel):
     """Internal view — reporter identity intentionally omitted."""
 
@@ -66,13 +68,13 @@ class GrievanceReportResponse(BaseModel):
     is_anonymous: bool
     anonymized_reference_code: str
 
-    related_supplier_id: Optional[str]
-    assigned_to_user_id: Optional[str]
-    reviewer_notes: Optional[str]
-    resolution_notes: Optional[str]
-    resolved_at: Optional[datetime]
+    related_supplier_id: str | None
+    assigned_to_user_id: str | None
+    reviewer_notes: str | None
+    resolution_notes: str | None
+    resolved_at: datetime | None
     regulation_refs: str
-    linked_finding_id: Optional[str]
+    linked_finding_id: str | None
 
     created_at: datetime
     updated_at: datetime
@@ -84,9 +86,9 @@ class GrievanceStatusUpdate(BaseModel):
     """Analyst updates status + optional notes."""
 
     grievance_status: str
-    reviewer_notes: Optional[str] = None
-    resolution_notes: Optional[str] = None
-    assigned_to_user_id: Optional[str] = None
+    reviewer_notes: str | None = None
+    resolution_notes: str | None = None
+    assigned_to_user_id: str | None = None
 
 
 class GrievanceSummary(BaseModel):

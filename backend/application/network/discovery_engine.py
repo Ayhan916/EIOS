@@ -66,8 +66,9 @@ async def _create_suggestion(
     session,
 ) -> object | None:
     """Create a SuggestedRelationshipModel if no duplicate PENDING suggestion exists."""
-    from infrastructure.persistence.models.network import SuggestedRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SuggestedRelationshipModel
 
     # De-duplicate: skip if a PENDING suggestion for this pair already exists
     dedup_stmt = select(SuggestedRelationshipModel).where(
@@ -109,8 +110,9 @@ async def discover_shared_country(
     session,
 ) -> list[object]:
     """Suggest SHARED_COUNTRY relationships for supplier pairs in the same country."""
-    from infrastructure.persistence.models.supplier import SupplierModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     stmt = select(SupplierModel.id, SupplierModel.country).where(
         SupplierModel.organization_id == organization_id,
@@ -157,8 +159,9 @@ async def discover_shared_sector(
     session,
 ) -> list[object]:
     """Suggest SHARED_SECTOR relationships for supplier pairs in the same industry."""
-    from infrastructure.persistence.models.supplier import SupplierModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     stmt = select(SupplierModel.id, SupplierModel.industry).where(
         SupplierModel.organization_id == organization_id,
@@ -209,10 +212,11 @@ async def discover_shared_sanctions(
     Only active, validated datasets.
     """
     try:
+        from sqlalchemy import select
+
         from infrastructure.persistence.models.external_intelligence import (
             ExternalIntelligenceDatasetModel,
         )
-        from sqlalchemy import select
 
         stmt = select(
             ExternalIntelligenceDatasetModel.supplier_id,
@@ -262,8 +266,9 @@ async def discover_shared_regulatory_exposure(
 ) -> list[object]:
     """Suggest SHARED_REGULATORY_EXPOSURE for suppliers with the same framework failures."""
     try:
-        from infrastructure.persistence.models.regulatory import ComplianceGapModel
         from sqlalchemy import select
+
+        from infrastructure.persistence.models.regulatory import ComplianceGapModel
 
         stmt = select(
             ComplianceGapModel.supplier_id,
@@ -330,16 +335,15 @@ async def list_suggestions(
     limit: int = 100,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.network import SuggestedRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SuggestedRelationshipModel
 
     stmt = select(SuggestedRelationshipModel).where(
         SuggestedRelationshipModel.organization_id == organization_id
     )
     if suggestion_status:
-        stmt = stmt.where(
-            SuggestedRelationshipModel.suggestion_status == suggestion_status.upper()
-        )
+        stmt = stmt.where(SuggestedRelationshipModel.suggestion_status == suggestion_status.upper())
     stmt = stmt.order_by(SuggestedRelationshipModel.created_at.desc()).limit(limit)
     return list((await session.execute(stmt)).scalars().all())
 
@@ -354,11 +358,11 @@ async def approve_suggestion(
 
     Creates a SupplierRelationshipModel from the suggestion and marks it APPROVED.
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.network import (
-        SupplierRelationshipModel,
         SuggestedRelationshipModel,
     )
-    from sqlalchemy import select
 
     stmt = select(SuggestedRelationshipModel).where(
         SuggestedRelationshipModel.id == suggestion_id,
@@ -378,7 +382,8 @@ async def approve_suggestion(
     await session.flush()
 
     from application.network.relationship_service import create_relationship
-    rel = await create_relationship(
+
+    await create_relationship(
         organization_id=organization_id,
         supplier_id=suggestion.supplier_id,
         related_supplier_id=suggestion.related_supplier_id,
@@ -407,8 +412,9 @@ async def reject_suggestion(
     review_note: str = "",
     session=None,
 ) -> object:
-    from infrastructure.persistence.models.network import SuggestedRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SuggestedRelationshipModel
 
     stmt = select(SuggestedRelationshipModel).where(
         SuggestedRelationshipModel.id == suggestion_id,

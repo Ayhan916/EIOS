@@ -30,7 +30,7 @@ from datetime import UTC, datetime
 from io import BytesIO
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -121,9 +121,7 @@ def _req_to_resp(req: object) -> RegulationRequirementResponse:
     )
 
 
-def _mapping_to_resp(
-    mapping: object, req_by_id: dict | None = None
-) -> RequirementMappingResponse:
+def _mapping_to_resp(mapping: object, req_by_id: dict | None = None) -> RequirementMappingResponse:
     req_by_id = req_by_id or {}
     req = req_by_id.get(mapping.regulation_requirement_id)
     return RequirementMappingResponse(
@@ -574,9 +572,7 @@ async def recalculate_gaps(
     finding_mappings = await mapping_repo.list_for_org(
         organization_id=org_id, entity_type="finding"
     )
-    risk_mappings = await mapping_repo.list_for_org(
-        organization_id=org_id, entity_type="risk"
-    )
+    risk_mappings = await mapping_repo.list_for_org(organization_id=org_id, entity_type="risk")
 
     # Group entity_ids by requirement
     req_to_finding_ids: dict[str, list[str]] = {}
@@ -592,24 +588,30 @@ async def recalculate_gaps(
     all_finding_ids = {fid for ids in req_to_finding_ids.values() for fid in ids}
     if all_finding_ids:
         finding_rows = (
-            await session.execute(
-                select(FindingModel).where(
-                    FindingModel.id.in_(all_finding_ids),
-                    FindingModel.status.notin_(list(_CLOSED_STATUSES)),
+            (
+                await session.execute(
+                    select(FindingModel).where(
+                        FindingModel.id.in_(all_finding_ids),
+                        FindingModel.status.notin_(list(_CLOSED_STATUSES)),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         open_by_id = {f.id: f for f in finding_rows}
         for req_id, fids in req_to_finding_ids.items():
             entries = []
             for fid in fids:
                 f = open_by_id.get(fid)
                 if f:
-                    entries.append({
-                        "id": f.id,
-                        "severity": f.severity,
-                        "description": (f.description or "")[:200],
-                    })
+                    entries.append(
+                        {
+                            "id": f.id,
+                            "severity": f.severity,
+                            "description": (f.description or "")[:200],
+                        }
+                    )
             if entries:
                 open_finding_by_requirement[req_id] = entries
 
@@ -618,24 +620,30 @@ async def recalculate_gaps(
     all_risk_ids = {rid for ids in req_to_risk_ids.values() for rid in ids}
     if all_risk_ids:
         risk_rows = (
-            await session.execute(
-                select(RiskModel).where(
-                    RiskModel.id.in_(all_risk_ids),
-                    RiskModel.status.notin_(list(_CLOSED_STATUSES)),
+            (
+                await session.execute(
+                    select(RiskModel).where(
+                        RiskModel.id.in_(all_risk_ids),
+                        RiskModel.status.notin_(list(_CLOSED_STATUSES)),
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         open_risks_by_id = {r.id: r for r in risk_rows}
         for req_id, rids in req_to_risk_ids.items():
             entries = []
             for rid in rids:
                 r = open_risks_by_id.get(rid)
                 if r:
-                    entries.append({
-                        "id": r.id,
-                        "severity": r.risk_level,
-                        "description": (r.description or "")[:200],
-                    })
+                    entries.append(
+                        {
+                            "id": r.id,
+                            "severity": r.risk_level,
+                            "description": (r.description or "")[:200],
+                        }
+                    )
             if entries:
                 open_risk_by_requirement[req_id] = entries
 
@@ -663,10 +671,13 @@ async def recalculate_gaps(
 
     # M39 cross-module: sync gap summary per framework into ComplianceOperations
     try:
-        from application.operating_system.compliance_operation_service import (
-            sync_from_m31, resolve_framework_name,
-        )
         from collections import defaultdict
+
+        from application.operating_system.compliance_operation_service import (
+            resolve_framework_name,
+            sync_from_m31,
+        )
+
         # Build requirement_id → regulation.code lookup for deterministic resolution
         req_to_reg_code: dict[str, str] = {}
         if regulations and requirements:
@@ -786,9 +797,7 @@ async def get_supplier_compliance(
     mapping_repo = SQLRequirementMappingRepository(session)
     gap_repo = SQLComplianceGapRepository(session)
 
-    mappings = await mapping_repo.list_for_org(
-        organization_id=org_id, supplier_id=supplier_id
-    )
+    mappings = await mapping_repo.list_for_org(organization_id=org_id, supplier_id=supplier_id)
     gaps = await gap_repo.list_for_org(
         organization_id=org_id, supplier_id=supplier_id, include_resolved=False
     )
@@ -844,9 +853,7 @@ async def get_assessment_compliance_detail(
     req_repo = SQLRegulationRequirementRepository(session)
     mapping_repo = SQLRequirementMappingRepository(session)
 
-    mappings = await mapping_repo.list_for_org(
-        organization_id=org_id, assessment_id=assessment_id
-    )
+    mappings = await mapping_repo.list_for_org(organization_id=org_id, assessment_id=assessment_id)
 
     req_ids = {m.regulation_requirement_id for m in mappings}
     req_by_id: dict = {}
@@ -867,12 +874,14 @@ async def get_assessment_compliance_detail(
             continue
         req_id_set = {r.id for r in reqs}
         covered_in_fw = len(req_id_set & covered_ids)
-        fw_coverage.append({
-            "framework": reg.code,
-            "total": len(reqs),
-            "covered": covered_in_fw,
-            "ratio": covered_in_fw / len(reqs),
-        })
+        fw_coverage.append(
+            {
+                "framework": reg.code,
+                "total": len(reqs),
+                "covered": covered_in_fw,
+                "ratio": covered_in_fw / len(reqs),
+            }
+        )
 
     return AssessmentComplianceDetailResponse(
         assessment_id=assessment_id,
@@ -918,28 +927,32 @@ async def _build_report_snapshot(
             covered_ids=covered_ids,
             open_gaps=fw_gaps,
         )
-        fw_dicts.append({
-            "regulation_code": fs.regulation_code,
-            "regulation_name": fs.regulation_name,
-            "status": fs.status,
-            "total_requirements": fs.total_requirements,
-            "covered_requirements": fs.covered_requirements,
-            "coverage_ratio": fs.coverage_ratio,
-            "open_gap_count": fs.open_gap_count,
-            "critical_gap_count": fs.critical_gap_count,
-        })
+        fw_dicts.append(
+            {
+                "regulation_code": fs.regulation_code,
+                "regulation_name": fs.regulation_name,
+                "status": fs.status,
+                "total_requirements": fs.total_requirements,
+                "covered_requirements": fs.covered_requirements,
+                "coverage_ratio": fs.coverage_ratio,
+                "open_gap_count": fs.open_gap_count,
+                "critical_gap_count": fs.critical_gap_count,
+            }
+        )
         framework_versions[reg.code] = reg.reg_version
 
     gap_dicts: list[dict] = []
     for g in open_gaps:
         req = req_by_id.get(g.regulation_requirement_id)
-        gap_dicts.append({
-            "requirement_code": req.code if req else "",
-            "requirement_title": req.title if req else "",
-            "gap_type": g.gap_type,
-            "severity": g.severity,
-            "description": g.description,
-        })
+        gap_dicts.append(
+            {
+                "requirement_code": req.code if req else "",
+                "requirement_title": req.title if req else "",
+                "gap_type": g.gap_type,
+                "severity": g.severity,
+                "description": g.description,
+            }
+        )
 
     return fw_dicts, gap_dicts, framework_versions
 
@@ -1102,7 +1115,9 @@ async def download_csrd_gap_report(
         pdf_bytes=pdf_bytes,
         generated_by=current_user.id,
     )
-    log.info("compliance_report_generated", report_id=saved.id, report_type="csrd_gap", org_id=org_id)
+    log.info(
+        "compliance_report_generated", report_id=saved.id, report_type="csrd_gap", org_id=org_id
+    )
 
     return StreamingResponse(
         BytesIO(pdf_bytes),
@@ -1139,7 +1154,12 @@ async def download_esrs_readiness_report(
         pdf_bytes=pdf_bytes,
         generated_by=current_user.id,
     )
-    log.info("compliance_report_generated", report_id=saved.id, report_type="esrs_readiness", org_id=org_id)
+    log.info(
+        "compliance_report_generated",
+        report_id=saved.id,
+        report_type="esrs_readiness",
+        org_id=org_id,
+    )
 
     return StreamingResponse(
         BytesIO(pdf_bytes),
@@ -1176,7 +1196,12 @@ async def download_csddd_report(
         pdf_bytes=pdf_bytes,
         generated_by=current_user.id,
     )
-    log.info("compliance_report_generated", report_id=saved.id, report_type="csddd_due_diligence", org_id=org_id)
+    log.info(
+        "compliance_report_generated",
+        report_id=saved.id,
+        report_type="csddd_due_diligence",
+        org_id=org_id,
+    )
 
     return StreamingResponse(
         BytesIO(pdf_bytes),

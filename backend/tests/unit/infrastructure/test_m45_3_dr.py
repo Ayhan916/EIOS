@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import asyncio
 import os
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Settings — M45.3 read-replica default
@@ -18,16 +16,19 @@ import pytest
 class TestSettingsM453:
     def test_database_readonly_url_default_is_empty(self) -> None:
         from shared.config import Settings
+
         s = Settings()
         assert s.database_readonly_url == ""
 
     def test_database_readonly_url_can_be_set(self) -> None:
         from shared.config import Settings
+
         s = Settings(database_readonly_url="postgresql+asyncpg://eios:pw@replica:5432/eios_db")
         assert "replica" in s.database_readonly_url
 
     def test_production_validation_passes_with_readonly_url(self) -> None:
         from shared.config import Settings
+
         s = Settings(
             environment="production",
             secret_key="a-very-long-and-secure-secret-key-for-testing-purposes",
@@ -46,25 +47,30 @@ class TestSettingsM453:
 
 class TestReadOnlySessionFactory:
     def test_get_readonly_session_is_async_generator(self) -> None:
-        from infrastructure.persistence.database import get_readonly_session
         import inspect
+
+        from infrastructure.persistence.database import get_readonly_session
+
         assert inspect.isasyncgenfunction(get_readonly_session)
 
     def test_readonly_session_factory_exists(self) -> None:
         from infrastructure.persistence.database import ReadOnlyAsyncSessionFactory
+
         assert ReadOnlyAsyncSessionFactory is not None
 
     def test_falls_back_to_primary_when_readonly_url_not_set(self) -> None:
         """When DATABASE_READONLY_URL is empty, readonly engine == primary engine."""
-        from infrastructure.persistence.database import engine, _readonly_engine
+        from infrastructure.persistence.database import _readonly_engine, engine
         from shared.config import settings
+
         if not settings.database_readonly_url:
             assert _readonly_engine is engine
 
     @pytest.mark.asyncio
     async def test_get_readonly_session_yields_async_session(self) -> None:
-        from infrastructure.persistence.database import get_readonly_session
         from sqlalchemy.ext.asyncio import AsyncSession
+
+        from infrastructure.persistence.database import get_readonly_session
 
         # Patch the readonly session factory to avoid actual DB connection
         mock_session = AsyncMock(spec=AsyncSession)
@@ -89,28 +95,34 @@ class TestMaintenanceTasksRegistered:
     def test_backup_health_task_registered(self) -> None:
         import infrastructure.celery.tasks.maintenance  # noqa: F401
         from infrastructure.celery.app import celery_app
+
         assert "eios.maintenance.check_backup_health" in celery_app.tasks
 
     def test_replication_lag_task_registered(self) -> None:
         import infrastructure.celery.tasks.maintenance  # noqa: F401
         from infrastructure.celery.app import celery_app
+
         assert "eios.maintenance.check_replication_lag" in celery_app.tasks
 
     def test_beat_schedule_contains_backup_check(self) -> None:
         from infrastructure.celery.app import celery_app
+
         assert "check-backup-health-daily" in celery_app.conf.beat_schedule
 
     def test_beat_schedule_contains_replication_check(self) -> None:
         from infrastructure.celery.app import celery_app
+
         assert "check-replication-lag-hourly" in celery_app.conf.beat_schedule
 
     def test_backup_check_runs_daily(self) -> None:
         from infrastructure.celery.app import celery_app
+
         schedule = celery_app.conf.beat_schedule["check-backup-health-daily"]
         assert schedule["schedule"] == 86400
 
     def test_replication_check_runs_hourly(self) -> None:
         from infrastructure.celery.app import celery_app
+
         schedule = celery_app.conf.beat_schedule["check-replication-lag-hourly"]
         assert schedule["schedule"] == 3600
 
@@ -172,8 +184,9 @@ class TestCheckReplicationLag:
 
     @pytest.mark.asyncio
     async def test_skipped_when_no_readonly_url(self) -> None:
-        from infrastructure.celery.tasks.maintenance import _check_replication_lag_async
         import shared.config as _cfg_mod
+        from infrastructure.celery.tasks.maintenance import _check_replication_lag_async
+
         original_url = _cfg_mod.settings.database_readonly_url
         _cfg_mod.settings.database_readonly_url = ""
         try:
@@ -208,11 +221,14 @@ class TestCheckReplicationLag:
         mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_cm.__aexit__ = AsyncMock(return_value=False)
 
-        import shared.config as _cfg_mod
         import infrastructure.persistence.database as _db_mod
+        import shared.config as _cfg_mod
+
         original_url = _cfg_mod.settings.database_readonly_url
         original_factory = _db_mod.AsyncSessionFactory
-        _cfg_mod.settings.database_readonly_url = "postgresql+asyncpg://eios:pw@replica:5432/eios_db"
+        _cfg_mod.settings.database_readonly_url = (
+            "postgresql+asyncpg://eios:pw@replica:5432/eios_db"
+        )
         _db_mod.AsyncSessionFactory = MagicMock(return_value=mock_session_cm)
         try:
             result = await _check_replication_lag_async()
@@ -227,8 +243,8 @@ class TestCheckReplicationLag:
     @pytest.mark.asyncio
     async def test_lag_warning_when_lag_exceeds_threshold(self) -> None:
         from infrastructure.celery.tasks.maintenance import (
-            _check_replication_lag_async,
             _REPLICATION_LAG_WARN_BYTES,
+            _check_replication_lag_async,
         )
 
         mock_row = {
@@ -252,11 +268,14 @@ class TestCheckReplicationLag:
         mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_cm.__aexit__ = AsyncMock(return_value=False)
 
-        import shared.config as _cfg_mod
         import infrastructure.persistence.database as _db_mod
+        import shared.config as _cfg_mod
+
         original_url = _cfg_mod.settings.database_readonly_url
         original_factory = _db_mod.AsyncSessionFactory
-        _cfg_mod.settings.database_readonly_url = "postgresql+asyncpg://eios:pw@replica:5432/eios_db"
+        _cfg_mod.settings.database_readonly_url = (
+            "postgresql+asyncpg://eios:pw@replica:5432/eios_db"
+        )
         _db_mod.AsyncSessionFactory = MagicMock(return_value=mock_session_cm)
         try:
             result = await _check_replication_lag_async()
@@ -278,11 +297,14 @@ class TestCheckReplicationLag:
         mock_session_cm.__aenter__ = AsyncMock(return_value=mock_session)
         mock_session_cm.__aexit__ = AsyncMock(return_value=False)
 
-        import shared.config as _cfg_mod
         import infrastructure.persistence.database as _db_mod
+        import shared.config as _cfg_mod
+
         original_url = _cfg_mod.settings.database_readonly_url
         original_factory = _db_mod.AsyncSessionFactory
-        _cfg_mod.settings.database_readonly_url = "postgresql+asyncpg://eios:pw@replica:5432/eios_db"
+        _cfg_mod.settings.database_readonly_url = (
+            "postgresql+asyncpg://eios:pw@replica:5432/eios_db"
+        )
         _db_mod.AsyncSessionFactory = MagicMock(return_value=mock_session_cm)
         try:
             result = await _check_replication_lag_async()

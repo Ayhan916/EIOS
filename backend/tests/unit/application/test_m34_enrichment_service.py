@@ -1,10 +1,11 @@
 """M34 enrichment service tests."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from domain.enums import CountryRiskLevel, PercentileRank, SanctionsExposure
+import pytest
+
+from domain.enums import SanctionsExposure
 
 
 def _now():
@@ -17,6 +18,7 @@ def _make_country_profile(
     sanctions_status="none",
 ):
     from domain.external_intelligence import CountryRiskProfile
+
     return CountryRiskProfile(
         id="cr-001",
         country_code="CN",
@@ -32,8 +34,9 @@ def _make_country_profile(
 
 
 def _make_benchmark():
-    from domain.external_intelligence import SectorBenchmark
     from domain.enums import ExternalSourceName
+    from domain.external_intelligence import SectorBenchmark
+
     return SectorBenchmark(
         sector_id="sec-001",
         sector_name="Manufacturing",
@@ -59,9 +62,7 @@ def _make_benchmark():
 @patch("application.external_intelligence.enrichment_service.get_country_risk")
 @patch("application.external_intelligence.enrichment_service.get_benchmark_by_nace")
 @patch("application.external_intelligence.enrichment_service.list_signals_for_supplier")
-async def test_enrich_supplier_returns_enrichment(
-    mock_signals, mock_bench, mock_country
-):
+async def test_enrich_supplier_returns_enrichment(mock_signals, mock_bench, mock_country):
     mock_country.return_value = _make_country_profile()
     mock_bench.return_value = _make_benchmark()
     mock_signals.return_value = []
@@ -73,6 +74,7 @@ async def test_enrich_supplier_returns_enrichment(
     session.flush = AsyncMock()
 
     from application.external_intelligence.enrichment_service import enrich_supplier
+
     enrichment = await enrich_supplier(
         supplier_id="sup-001",
         organization_id="org-001",
@@ -95,7 +97,9 @@ async def test_enrich_supplier_returns_enrichment(
 async def test_enrich_high_risk_country_raises_combined_risk(
     mock_signals, mock_bench, mock_country
 ):
-    mock_country.return_value = _make_country_profile(overall_risk_score=90.0, risk_level="critical")
+    mock_country.return_value = _make_country_profile(
+        overall_risk_score=90.0, risk_level="critical"
+    )
     mock_bench.return_value = None
     mock_signals.return_value = []
 
@@ -106,6 +110,7 @@ async def test_enrich_high_risk_country_raises_combined_risk(
     session.flush = AsyncMock()
 
     from application.external_intelligence.enrichment_service import enrich_supplier
+
     enrichment = await enrich_supplier(
         supplier_id="sup-002",
         organization_id="org-001",
@@ -126,10 +131,12 @@ async def test_enrich_high_risk_country_raises_combined_risk(
 @patch("application.external_intelligence.enrichment_service.list_signals_for_supplier")
 async def test_enrich_signals_increase_risk(mock_signals, mock_bench, mock_country):
     """5 active signals should add penalty to combined risk."""
+    from domain.enums import ExternalSourceName, RiskSignalType, SignalSeverity
     from domain.external_intelligence import ExternalRiskSignal
-    from domain.enums import RiskSignalType, SignalSeverity, ExternalSourceName
 
-    mock_country.return_value = _make_country_profile(overall_risk_score=30.0, risk_level="moderate")
+    mock_country.return_value = _make_country_profile(
+        overall_risk_score=30.0, risk_level="moderate"
+    )
     mock_bench.return_value = _make_benchmark()
     # 5 signals → 5 * 5 = 25 penalty
     mock_signals.return_value = [
@@ -173,7 +180,6 @@ async def test_enrich_signals_increase_risk(mock_signals, mock_bench, mock_count
 @patch("application.external_intelligence.enrichment_service.list_signals_for_supplier")
 async def test_enrich_upserts_existing_record(mock_signals, mock_bench, mock_country):
     """Re-running enrichment on existing record updates in-place."""
-    from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
 
     mock_country.return_value = _make_country_profile()
     mock_bench.return_value = _make_benchmark()
@@ -189,7 +195,8 @@ async def test_enrich_upserts_existing_record(mock_signals, mock_bench, mock_cou
     session.flush = AsyncMock()
 
     from application.external_intelligence.enrichment_service import enrich_supplier
-    enrichment = await enrich_supplier(
+
+    await enrich_supplier(
         supplier_id="sup-001",
         organization_id="org-001",
         country_code="CN",
@@ -218,6 +225,7 @@ async def test_enrich_sanctions_status_confirmed(mock_signals, mock_bench, mock_
     session.flush = AsyncMock()
 
     from application.external_intelligence.enrichment_service import enrich_supplier
+
     enrichment = await enrich_supplier(
         supplier_id="sup-001",
         organization_id="org-001",

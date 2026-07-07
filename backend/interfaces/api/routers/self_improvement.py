@@ -26,13 +26,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.evaluation.weakness_detector import detect_weaknesses
 from domain.improvement import ImprovementProposal
+from domain.user import User
 from infrastructure.persistence.repositories.evaluation import (
     SQLBenchmarkResultRepository,
     SQLEvaluationRunRepository,
 )
 from infrastructure.persistence.repositories.improvement import SQLImprovementRepository
 from interfaces.api.deps import get_current_user, get_db, require_admin, require_analyst
-from domain.user import User
 
 router = APIRouter(prefix="/self-improvement", tags=["self-improvement"])
 

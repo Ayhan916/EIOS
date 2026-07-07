@@ -20,7 +20,10 @@ import structlog
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.persistence.models.news_feed import NewsArticleModel, NewsSupplierAssignmentModel
+from infrastructure.persistence.models.news_feed import (
+    NewsArticleModel,
+    NewsSupplierAssignmentModel,
+)
 from infrastructure.persistence.models.supplier import SupplierModel
 from shared.config import settings
 
@@ -28,10 +31,31 @@ logger = structlog.get_logger(__name__)
 
 # Legal form suffixes to strip for cleaner search queries
 _LEGAL_SUFFIXES = [
-    "aktiengesellschaft", "gesellschaft mit beschränkter haftung", "gmbh & co. kg",
-    "gmbh & co kg", "gmbh", "ag & co kgaa", "kgaa", "ag", "se", "inc.", "inc",
-    "corp.", "corp", "ltd.", "ltd", "llc", "plc", "s.a.", "s.a", "s.r.l", "s.r.l.",
-    "group ag", "group", "holding", "holdings",
+    "aktiengesellschaft",
+    "gesellschaft mit beschränkter haftung",
+    "gmbh & co. kg",
+    "gmbh & co kg",
+    "gmbh",
+    "ag & co kgaa",
+    "kgaa",
+    "ag",
+    "se",
+    "inc.",
+    "inc",
+    "corp.",
+    "corp",
+    "ltd.",
+    "ltd",
+    "llc",
+    "plc",
+    "s.a.",
+    "s.a",
+    "s.r.l",
+    "s.r.l.",
+    "group ag",
+    "group",
+    "holding",
+    "holdings",
 ]
 
 _STRIP_PREFIXES = ["dr. ing. h.c. f.", "dr. ing.", "h.c.", "prof.", "dr."]
@@ -60,25 +84,104 @@ _GDELT_MAX = 5
 # sports, entertainment, lifestyle, and personal news about unrelated people.
 _BUSINESS_KEYWORDS: set[str] = {
     # ESG / supply chain
-    "sustainability", "esg", "compliance", "supply chain", "environment",
-    "labor", "labour", "sanctions", "recall", "fraud", "bribery",
-    "human rights", "regulation", "penalty", "investigation", "carbon",
-    "emissions", "forced labor", "forced labour", "corruption", "governance",
-    "ethics", "audit", "violation", "fine", "lawsuit", "controversy",
-    "factory", "workers", "wage", "pollution", "climate", "deforestation",
-    "child labor", "child labour", "modern slavery", "human trafficking",
-    "whistleblower", "certification", "due diligence",
+    "sustainability",
+    "esg",
+    "compliance",
+    "supply chain",
+    "environment",
+    "labor",
+    "labour",
+    "sanctions",
+    "recall",
+    "fraud",
+    "bribery",
+    "human rights",
+    "regulation",
+    "penalty",
+    "investigation",
+    "carbon",
+    "emissions",
+    "forced labor",
+    "forced labour",
+    "corruption",
+    "governance",
+    "ethics",
+    "audit",
+    "violation",
+    "fine",
+    "lawsuit",
+    "controversy",
+    "factory",
+    "workers",
+    "wage",
+    "pollution",
+    "climate",
+    "deforestation",
+    "child labor",
+    "child labour",
+    "modern slavery",
+    "human trafficking",
+    "whistleblower",
+    "certification",
+    "due diligence",
     # Business / financial
-    "earnings", "revenue", "profit", "loss", "shares", "stock", "quarterly",
-    "annual", "ceo", "executive", "acquisition", "merger", "bankruptcy",
-    "investment", "investor", "market", "delivery", "deliveries", "production",
-    "manufacturing", "plant", "layoff", "layoffs", "restructuring", "expansion",
-    "partnership", "contract", "deal", "settlement", "charges", "court",
-    "tariff", "import", "export", "trade", "electric", "vehicle", "ev",
+    "earnings",
+    "revenue",
+    "profit",
+    "loss",
+    "shares",
+    "stock",
+    "quarterly",
+    "annual",
+    "ceo",
+    "executive",
+    "acquisition",
+    "merger",
+    "bankruptcy",
+    "investment",
+    "investor",
+    "market",
+    "delivery",
+    "deliveries",
+    "production",
+    "manufacturing",
+    "plant",
+    "layoff",
+    "layoffs",
+    "restructuring",
+    "expansion",
+    "partnership",
+    "contract",
+    "deal",
+    "settlement",
+    "charges",
+    "court",
+    "tariff",
+    "import",
+    "export",
+    "trade",
+    "electric",
+    "vehicle",
+    "ev",
     # German equivalents
-    "nachhaltigkeit", "umwelt", "verstoß", "verstoß", "lieferkette", "sanktion",
-    "betrug", "korruption", "strafe", "klage", "gewinn", "verlust", "umsatz",
-    "quartal", "produktion", "werk", "stellenabbau", "übernahme", "fusion",
+    "nachhaltigkeit",
+    "umwelt",
+    "verstoß",
+    "lieferkette",
+    "sanktion",
+    "betrug",
+    "korruption",
+    "strafe",
+    "klage",
+    "gewinn",
+    "verlust",
+    "umsatz",
+    "quartal",
+    "produktion",
+    "werk",
+    "stellenabbau",
+    "übernahme",
+    "fusion",
 }
 
 # Country-level ESG search terms — appended to make country queries more targeted
@@ -91,7 +194,7 @@ def _search_name(name: str) -> str:
     # Strip known prefixes
     for prefix in _STRIP_PREFIXES:
         if cleaned.lower().startswith(prefix):
-            cleaned = cleaned[len(prefix):].strip()
+            cleaned = cleaned[len(prefix) :].strip()
     # Strip trailing legal suffixes
     lower = cleaned.lower().rstrip(",. ")
     for suffix in _LEGAL_SUFFIXES:
@@ -112,13 +215,18 @@ def _search_name(name: str) -> str:
 async def _translate_text(text: str, target_lang: str) -> str:
     """Translate a short text via Groq LLM. Returns original on failure."""
     try:
-        from infrastructure.llm.deps import get_llm_provider
         from application.ports.llm import Message
+        from infrastructure.llm.deps import get_llm_provider
 
         llm = get_llm_provider()
         lang_name = "German" if target_lang == "de" else "English"
         resp = await llm.complete(
-            messages=[Message(role="user", content=f"Translate the following text to {lang_name}. Return ONLY the translation, no explanation:\n\n{text}")],
+            messages=[
+                Message(
+                    role="user",
+                    content=f"Translate the following text to {lang_name}. Return ONLY the translation, no explanation:\n\n{text}",
+                )
+            ],
             max_tokens=512,
             temperature=0.0,
         )
@@ -131,7 +239,22 @@ async def _translate_text(text: str, target_lang: str) -> str:
 def _detect_language(text: str) -> str:
     """Naive language detection based on common stop words."""
     text_lower = text.lower()
-    de_words = {"der", "die", "das", "und", "ist", "ein", "eine", "im", "zu", "auf", "für", "von", "mit", "bei"}
+    de_words = {
+        "der",
+        "die",
+        "das",
+        "und",
+        "ist",
+        "ein",
+        "eine",
+        "im",
+        "zu",
+        "auf",
+        "für",
+        "von",
+        "mit",
+        "bei",
+    }
     en_words = {"the", "and", "is", "in", "to", "of", "for", "with", "at", "by", "from"}
     words = set(text_lower.split())
     de_score = len(words & de_words)
@@ -146,6 +269,7 @@ def _company_name_in_text(search_name: str, text: str) -> bool:
     This catches false positives where a company name is a person's surname in an unrelated article.
     """
     import re
+
     tokens = [t for t in re.split(r"[\s,.\-]+", search_name) if len(t) >= 4]
     if not tokens:
         tokens = [search_name.strip()] if search_name.strip() else []
@@ -214,17 +338,20 @@ async def _fetch_gdelt(client: httpx.AsyncClient, query: str) -> list[dict]:
             if resp.status_code != 200 or not text or not text.startswith("{"):
                 return []
             import json as _json
+
             data = _json.loads(text)
             articles = []
             for art in data.get("articles", []):
-                articles.append({
-                    "title": art.get("title", ""),
-                    "description": art.get("seendescription", ""),
-                    "url": art.get("url", ""),
-                    "source": {"name": art.get("domain", "")},
-                    "publishedAt": art.get("seendate", ""),
-                    "image": None,
-                })
+                articles.append(
+                    {
+                        "title": art.get("title", ""),
+                        "description": art.get("seendescription", ""),
+                        "url": art.get("url", ""),
+                        "source": {"name": art.get("domain", "")},
+                        "publishedAt": art.get("seendate", ""),
+                        "image": None,
+                    }
+                )
             return articles
         except Exception as exc:
             logger.warning("gdelt_fetch_failed", error=str(exc), query=query[:40])
@@ -381,7 +508,7 @@ async def refresh_news_for_org(
                 new_count += 1
 
         # 4b. Country-level news
-        for country_name, country_query, match_type_unused, sup_ids in country_queries:
+        for country_name, country_query, _match_type_unused, sup_ids in country_queries:
             gnews_articles = await _fetch_gnews(client, f"{country_name} {_COUNTRY_ESG_SUFFIX}")
             await asyncio.sleep(6.0)
             gdelt_country = await _fetch_gdelt(client, f"{country_name} supply chain ESG")
@@ -399,12 +526,16 @@ async def refresh_news_for_org(
 
                 # Filter 1: country name must appear in title or summary
                 if not _company_name_in_text(country_name, combined_text):
-                    logger.debug("news_country_name_filtered", country=country_name, title=title[:60])
+                    logger.debug(
+                        "news_country_name_filtered", country=country_name, title=title[:60]
+                    )
                     continue
 
                 # Filter 2: at least one ESG keyword required for country-level articles
                 if not _has_business_relevance(title, summary):
-                    logger.debug("news_country_esg_filtered", country=country_name, title=title[:60])
+                    logger.debug(
+                        "news_country_esg_filtered", country=country_name, title=title[:60]
+                    )
                     continue
 
                 existing_urls.add(url)
@@ -483,10 +614,14 @@ async def get_news_feed(
     count_stmt = select(func.count()).select_from(base_stmt.subquery())
     total = (await session.execute(count_stmt)).scalar_one() or 0
 
-    stmt = base_stmt.order_by(
-        NewsArticleModel.published_at.desc().nullslast(),
-        NewsArticleModel.fetched_at.desc(),
-    ).limit(limit).offset(offset)
+    stmt = (
+        base_stmt.order_by(
+            NewsArticleModel.published_at.desc().nullslast(),
+            NewsArticleModel.fetched_at.desc(),
+        )
+        .limit(limit)
+        .offset(offset)
+    )
 
     rows = (await session.execute(stmt)).scalars().all()
 
@@ -502,18 +637,18 @@ async def get_news_feed(
 
     assign_map: dict[str, list[dict]] = {}
     for a in assignments:
-        assign_map.setdefault(a.article_id, []).append({
-            "supplier_id": a.supplier_id,
-            "match_reason": a.match_reason,
-        })
+        assign_map.setdefault(a.article_id, []).append(
+            {
+                "supplier_id": a.supplier_id,
+                "match_reason": a.match_reason,
+            }
+        )
 
     # Load supplier names
     if article_ids:
         all_sup_ids = {a.supplier_id for a in assignments}
         sup_result = await session.execute(
-            select(SupplierModel.id, SupplierModel.name).where(
-                SupplierModel.id.in_(all_sup_ids)
-            )
+            select(SupplierModel.id, SupplierModel.name).where(SupplierModel.id.in_(all_sup_ids))
         )
         sup_names = {row[0]: row[1] for row in sup_result.all()}
     else:
@@ -522,28 +657,30 @@ async def get_news_feed(
     articles = []
     for row in rows:
         sups = assign_map.get(row.id, [])
-        articles.append({
-            "id": row.id,
-            "title": row.title,
-            "translated_title": row.translated_title,
-            "summary": row.summary,
-            "translated_summary": row.translated_summary,
-            "url": row.url,
-            "source_name": row.source_name,
-            "image_url": row.image_url,
-            "published_at": row.published_at.isoformat() if row.published_at else None,
-            "fetched_at": row.fetched_at.isoformat(),
-            "language": row.language,
-            "match_type": row.match_type,
-            "suppliers": [
-                {
-                    "id": s["supplier_id"],
-                    "name": sup_names.get(s["supplier_id"], s["supplier_id"]),
-                    "match_reason": s["match_reason"],
-                }
-                for s in sups
-            ],
-        })
+        articles.append(
+            {
+                "id": row.id,
+                "title": row.title,
+                "translated_title": row.translated_title,
+                "summary": row.summary,
+                "translated_summary": row.translated_summary,
+                "url": row.url,
+                "source_name": row.source_name,
+                "image_url": row.image_url,
+                "published_at": row.published_at.isoformat() if row.published_at else None,
+                "fetched_at": row.fetched_at.isoformat(),
+                "language": row.language,
+                "match_type": row.match_type,
+                "suppliers": [
+                    {
+                        "id": s["supplier_id"],
+                        "name": sup_names.get(s["supplier_id"], s["supplier_id"]),
+                        "match_reason": s["match_reason"],
+                    }
+                    for s in sups
+                ],
+            }
+        )
 
     return articles, total
 
@@ -561,20 +698,65 @@ async def get_last_refresh(organization_id: str, session: AsyncSession) -> datet
 
 # ISO 3166-1 alpha-2 → readable country name for better search queries
 _COUNTRY_NAMES: dict[str, str] = {
-    "DE": "Germany", "US": "United States", "CN": "China", "JP": "Japan",
-    "GB": "United Kingdom", "FR": "France", "IT": "Italy", "ES": "Spain",
-    "NL": "Netherlands", "CH": "Switzerland", "AT": "Austria", "BE": "Belgium",
-    "PL": "Poland", "CZ": "Czech Republic", "HU": "Hungary", "RO": "Romania",
-    "SE": "Sweden", "NO": "Norway", "DK": "Denmark", "FI": "Finland",
-    "PT": "Portugal", "GR": "Greece", "TR": "Turkey", "RU": "Russia",
-    "UA": "Ukraine", "IN": "India", "KR": "South Korea", "TW": "Taiwan",
-    "MX": "Mexico", "BR": "Brazil", "AR": "Argentina", "ZA": "South Africa",
-    "NG": "Nigeria", "EG": "Egypt", "SA": "Saudi Arabia", "AE": "UAE",
-    "AU": "Australia", "NZ": "New Zealand", "SG": "Singapore", "MY": "Malaysia",
-    "TH": "Thailand", "VN": "Vietnam", "ID": "Indonesia", "PH": "Philippines",
-    "CD": "Democratic Republic of Congo", "CG": "Republic of Congo",
-    "ET": "Ethiopia", "KE": "Kenya", "TZ": "Tanzania", "GH": "Ghana",
-    "MA": "Morocco", "TN": "Tunisia", "DZ": "Algeria", "LY": "Libya",
-    "IQ": "Iraq", "IR": "Iran", "PK": "Pakistan", "BD": "Bangladesh",
-    "MM": "Myanmar", "KH": "Cambodia", "LA": "Laos",
+    "DE": "Germany",
+    "US": "United States",
+    "CN": "China",
+    "JP": "Japan",
+    "GB": "United Kingdom",
+    "FR": "France",
+    "IT": "Italy",
+    "ES": "Spain",
+    "NL": "Netherlands",
+    "CH": "Switzerland",
+    "AT": "Austria",
+    "BE": "Belgium",
+    "PL": "Poland",
+    "CZ": "Czech Republic",
+    "HU": "Hungary",
+    "RO": "Romania",
+    "SE": "Sweden",
+    "NO": "Norway",
+    "DK": "Denmark",
+    "FI": "Finland",
+    "PT": "Portugal",
+    "GR": "Greece",
+    "TR": "Turkey",
+    "RU": "Russia",
+    "UA": "Ukraine",
+    "IN": "India",
+    "KR": "South Korea",
+    "TW": "Taiwan",
+    "MX": "Mexico",
+    "BR": "Brazil",
+    "AR": "Argentina",
+    "ZA": "South Africa",
+    "NG": "Nigeria",
+    "EG": "Egypt",
+    "SA": "Saudi Arabia",
+    "AE": "UAE",
+    "AU": "Australia",
+    "NZ": "New Zealand",
+    "SG": "Singapore",
+    "MY": "Malaysia",
+    "TH": "Thailand",
+    "VN": "Vietnam",
+    "ID": "Indonesia",
+    "PH": "Philippines",
+    "CD": "Democratic Republic of Congo",
+    "CG": "Republic of Congo",
+    "ET": "Ethiopia",
+    "KE": "Kenya",
+    "TZ": "Tanzania",
+    "GH": "Ghana",
+    "MA": "Morocco",
+    "TN": "Tunisia",
+    "DZ": "Algeria",
+    "LY": "Libya",
+    "IQ": "Iraq",
+    "IR": "Iran",
+    "PK": "Pakistan",
+    "BD": "Bangladesh",
+    "MM": "Myanmar",
+    "KH": "Cambodia",
+    "LA": "Laos",
 }

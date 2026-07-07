@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.sector_intelligence.base_matrix import (
     BASE_MATRIX,
     CALIBRATED_NACE_CODES,
@@ -21,6 +19,7 @@ class TestBaseMatrixIntegrity:
 
     def test_all_calibrated_codes_in_nace_taxonomy(self) -> None:
         from application.sector_intelligence.nace_taxonomy import NACE_2DIGIT
+
         for code in BASE_MATRIX:
             assert code in NACE_2DIGIT, f"NACE {code} not in taxonomy"
 

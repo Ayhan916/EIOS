@@ -19,13 +19,13 @@ ReadinessLevel thresholds:
   PARTIAL      ≥  40%
   NOT_READY    <  40%
 """
+
 from __future__ import annotations
 
-import json
+from datetime import UTC, datetime
 from uuid import uuid4
-from datetime import datetime, timezone
 
-from sqlalchemy import func, select, text
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from domain.enums import ReadinessLevel
@@ -51,7 +51,9 @@ def _pct(earned: int, maximum: int) -> float:
 def _count(session: Session, table: str, where: str, params: dict) -> int:
     """Safe count — returns 0 if table/column does not exist yet."""
     try:
-        row = session.execute(text(f"SELECT COUNT(*) FROM {table} WHERE {where}"), params).fetchone()
+        row = session.execute(
+            text(f"SELECT COUNT(*) FROM {table} WHERE {where}"), params
+        ).fetchone()
         return int(row[0]) if row else 0
     except Exception:
         return 0
@@ -59,30 +61,35 @@ def _count(session: Session, table: str, where: str, params: dict) -> int:
 
 # ── Article scorers ───────────────────────────────────────────────────────────
 
+
 def _score_art7(session: Session, org: str) -> ArticleScore:
     """Art. 7 — DD Policy & Code of Conduct (25 pt)."""
     gaps: list[str] = []
     earned = 0
 
     # Active approved policy (10 pt)
-    approved_policies = _count(session, "dd_policies",
-        "organization_id = :org AND policy_status = 'approved'", {"org": org})
+    approved_policies = _count(
+        session,
+        "dd_policies",
+        "organization_id = :org AND policy_status = 'approved'",
+        {"org": org},
+    )
     if approved_policies >= 1:
         earned += 10
     else:
         gaps.append("Keine genehmigte Due-Diligence-Policy (Art. 7 Abs. 1)")
 
     # Active code of conduct (10 pt)
-    active_coc = _count(session, "codes_of_conduct",
-        "organization_id = :org AND is_active = true", {"org": org})
+    active_coc = _count(
+        session, "codes_of_conduct", "organization_id = :org AND is_active = true", {"org": org}
+    )
     if active_coc >= 1:
         earned += 10
     else:
         gaps.append("Kein aktiver Code of Conduct (Art. 7 Abs. 2)")
 
     # CoC acceptances from suppliers (5 pt)
-    coc_accepts = _count(session, "coc_acceptances",
-        "organization_id = :org", {"org": org})
+    coc_accepts = _count(session, "coc_acceptances", "organization_id = :org", {"org": org})
     if coc_accepts >= 3:
         earned += 5
     elif coc_accepts >= 1:
@@ -113,8 +120,9 @@ def _score_art8(session: Session, org: str) -> ArticleScore:
     else:
         gaps.append("Kein Scoping-Konfiguration vorhanden (Art. 8 Abs. 3)")
 
-    approved_study = _count(session, "scoping_studies",
-        "organization_id = :org AND status = 'approved'", {"org": org})
+    approved_study = _count(
+        session, "scoping_studies", "organization_id = :org AND status = 'approved'", {"org": org}
+    )
     if approved_study >= 1:
         earned += 15
     else:
@@ -141,20 +149,28 @@ def _score_art10a(session: Session, org: str) -> ArticleScore:
     gaps: list[str] = []
     earned = 0
 
-    active_clauses = _count(session, "contract_clauses",
-        "organization_id = :org AND is_active = true", {"org": org})
+    active_clauses = _count(
+        session, "contract_clauses", "organization_id = :org AND is_active = true", {"org": org}
+    )
     if active_clauses >= 5:
         earned += 5
     elif active_clauses >= 1:
         earned += 2
-        gaps.append(f"Nur {active_clauses} aktive Klauseln — mindestens 5 empfohlen (Art. 10 Abs. 2)")
+        gaps.append(
+            f"Nur {active_clauses} aktive Klauseln — mindestens 5 empfohlen (Art. 10 Abs. 2)"
+        )
     else:
         gaps.append("Keine Vertragsklauseln für Lieferanten definiert (Art. 10 Abs. 2)")
 
-    total_assurances = _count(session, "contract_assurances",
-        "organization_id = :org", {"org": org})
-    accepted_assurances = _count(session, "contract_assurances",
-        "organization_id = :org AND status = 'accepted'", {"org": org})
+    total_assurances = _count(
+        session, "contract_assurances", "organization_id = :org", {"org": org}
+    )
+    accepted_assurances = _count(
+        session,
+        "contract_assurances",
+        "organization_id = :org AND status = 'accepted'",
+        {"org": org},
+    )
 
     if total_assurances > 0:
         accept_rate = accepted_assurances / total_assurances
@@ -162,23 +178,33 @@ def _score_art10a(session: Session, org: str) -> ArticleScore:
             earned += 10
         elif accept_rate >= 0.5:
             earned += 6
-            gaps.append(f"Akzeptanzrate {round(accept_rate*100)}% — Ziel ≥80% (Art. 10 Abs. 4)")
+            gaps.append(f"Akzeptanzrate {round(accept_rate * 100)}% — Ziel ≥80% (Art. 10 Abs. 4)")
         else:
             earned += 2
-            gaps.append(f"Niedrige Akzeptanzrate {round(accept_rate*100)}% (Art. 10 Abs. 4)")
+            gaps.append(f"Niedrige Akzeptanzrate {round(accept_rate * 100)}% (Art. 10 Abs. 4)")
     else:
         gaps.append("Keine Zusicherungen erfasst (Art. 10 Abs. 2)")
 
     # Cascade confirmations (5 pt)
-    cascade_needed = _count(session, "contract_clauses",
-        "organization_id = :org AND cascade_required = true AND is_active = true", {"org": org})
-    cascade_confirmed = _count(session, "contract_assurances",
-        "organization_id = :org AND cascade_confirmed = true", {"org": org})
+    cascade_needed = _count(
+        session,
+        "contract_clauses",
+        "organization_id = :org AND cascade_required = true AND is_active = true",
+        {"org": org},
+    )
+    cascade_confirmed = _count(
+        session,
+        "contract_assurances",
+        "organization_id = :org AND cascade_confirmed = true",
+        {"org": org},
+    )
     if cascade_needed == 0 or cascade_confirmed >= cascade_needed:
         earned += 5
     elif cascade_confirmed > 0:
         earned += 2
-        gaps.append(f"Cascade-Weitergabe unvollständig ({cascade_confirmed}/{cascade_needed}) (Art. 10 Abs. 3)")
+        gaps.append(
+            f"Cascade-Weitergabe unvollständig ({cascade_confirmed}/{cascade_needed}) (Art. 10 Abs. 3)"
+        )
     else:
         gaps.append("Keine Cascade-Weitergabe bestätigt (Art. 10 Abs. 3)")
 
@@ -198,8 +224,12 @@ def _score_art10b(session: Session, org: str) -> ArticleScore:
     gaps: list[str] = []
     earned = 0
 
-    sme_profiles = _count(session, "sme_profiles",
-        "organization_id = :org AND classification != 'large'", {"org": org})
+    sme_profiles = _count(
+        session,
+        "sme_profiles",
+        "organization_id = :org AND classification != 'large'",
+        {"org": org},
+    )
     if sme_profiles >= 3:
         earned += 5
     elif sme_profiles >= 1:
@@ -208,8 +238,12 @@ def _score_art10b(session: Session, org: str) -> ArticleScore:
     else:
         gaps.append("Keine KMU-Lieferanten klassifiziert (Art. 10 Abs. 2 lit. b)")
 
-    active_programs = _count(session, "sme_support_programs",
-        "organization_id = :org AND status IN ('active', 'completed')", {"org": org})
+    active_programs = _count(
+        session,
+        "sme_support_programs",
+        "organization_id = :org AND status IN ('active', 'completed')",
+        {"org": org},
+    )
     if active_programs >= 1:
         earned += 5
     else:
@@ -231,8 +265,7 @@ def _score_art11(session: Session, org: str) -> ArticleScore:
     gaps: list[str] = []
     earned = 0
 
-    total_caps = _count(session, "corrective_action_plans",
-        "organization_id = :org", {"org": org})
+    total_caps = _count(session, "corrective_action_plans", "organization_id = :org", {"org": org})
     if total_caps == 0:
         gaps.append("Keine Korrekturmaßnahmen (CAPs) erfasst (Art. 11)")
         return ArticleScore(
@@ -247,18 +280,21 @@ def _score_art11(session: Session, org: str) -> ArticleScore:
 
     earned += 5  # has CAPs
 
-    closed_caps = _count(session, "corrective_action_plans",
+    closed_caps = _count(
+        session,
+        "corrective_action_plans",
         "organization_id = :org AND cap_status IN ('CLOSED', 'COMPLETED', 'Closed', 'Completed')",
-        {"org": org})
+        {"org": org},
+    )
     close_rate = closed_caps / total_caps
     if close_rate >= 0.8:
         earned += 10
     elif close_rate >= 0.5:
         earned += 6
-        gaps.append(f"CAP-Abschlussrate {round(close_rate*100)}% — Ziel ≥80% (Art. 11)")
+        gaps.append(f"CAP-Abschlussrate {round(close_rate * 100)}% — Ziel ≥80% (Art. 11)")
     else:
         earned += 2
-        gaps.append(f"Niedrige CAP-Abschlussrate {round(close_rate*100)}% (Art. 11)")
+        gaps.append(f"Niedrige CAP-Abschlussrate {round(close_rate * 100)}% (Art. 11)")
 
     return ArticleScore(
         article="Art. 11",
@@ -290,16 +326,17 @@ def _score_art12(session: Session, org: str) -> ArticleScore:
         )
 
     earned += 5
-    closed = _count(session, "remedy_cases",
-        "organization_id = :org AND status = 'closed'", {"org": org})
+    closed = _count(
+        session, "remedy_cases", "organization_id = :org AND status = 'closed'", {"org": org}
+    )
     close_rate = closed / total
     if close_rate >= 0.7:
         earned += 5
     elif close_rate >= 0.3:
         earned += 2
-        gaps.append(f"Remedy-Abschlussrate {round(close_rate*100)}% — Ziel ≥70% (Art. 12)")
+        gaps.append(f"Remedy-Abschlussrate {round(close_rate * 100)}% — Ziel ≥70% (Art. 12)")
     else:
-        gaps.append(f"Niedrige Remedy-Abschlussrate {round(close_rate*100)}% (Art. 12)")
+        gaps.append(f"Niedrige Remedy-Abschlussrate {round(close_rate * 100)}% (Art. 12)")
 
     return ArticleScore(
         article="Art. 12",
@@ -317,8 +354,7 @@ def _score_art13(session: Session, org: str) -> ArticleScore:
     gaps: list[str] = []
     earned = 0
 
-    stakeholders = _count(session, "stakeholders",
-        "organization_id = :org", {"org": org})
+    stakeholders = _count(session, "stakeholders", "organization_id = :org", {"org": org})
     if stakeholders >= 5:
         earned += 5
     elif stakeholders >= 1:
@@ -327,13 +363,16 @@ def _score_art13(session: Session, org: str) -> ArticleScore:
     else:
         gaps.append("Keine Stakeholder erfasst (Art. 13 Abs. 1)")
 
-    consultations = _count(session, "stakeholder_consultations",
-        "organization_id = :org", {"org": org})
+    consultations = _count(
+        session, "stakeholder_consultations", "organization_id = :org", {"org": org}
+    )
     if consultations >= 3:
         earned += 10
     elif consultations >= 1:
         earned += 5
-        gaps.append(f"Nur {consultations} Konsultationen — jährliche Durchführung empfohlen (Art. 13 Abs. 2)")
+        gaps.append(
+            f"Nur {consultations} Konsultationen — jährliche Durchführung empfohlen (Art. 13 Abs. 2)"
+        )
     else:
         gaps.append("Keine Stakeholder-Konsultationen dokumentiert (Art. 13 Abs. 2)")
 
@@ -353,8 +392,12 @@ def _score_art15(session: Session, org: str) -> ArticleScore:
     gaps: list[str] = []
     earned = 0
 
-    indicators = _count(session, "effectiveness_indicators",
-        "(organization_id = :org OR organization_id IS NULL)", {"org": org})
+    indicators = _count(
+        session,
+        "effectiveness_indicators",
+        "(organization_id = :org OR organization_id IS NULL)",
+        {"org": org},
+    )
     if indicators >= 5:
         earned += 5
     elif indicators >= 1:
@@ -363,10 +406,13 @@ def _score_art15(session: Session, org: str) -> ArticleScore:
     else:
         gaps.append("Keine Wirksamkeitsindikatoren definiert (Art. 15 Abs. 1)")
 
-    reviews = _count(session, "effectiveness_reviews",
-        "organization_id = :org", {"org": org})
-    closed_reviews = _count(session, "effectiveness_reviews",
-        "organization_id = :org AND status = 'closed'", {"org": org})
+    reviews = _count(session, "effectiveness_reviews", "organization_id = :org", {"org": org})
+    closed_reviews = _count(
+        session,
+        "effectiveness_reviews",
+        "organization_id = :org AND status = 'closed'",
+        {"org": org},
+    )
 
     if closed_reviews >= 1:
         earned += 10
@@ -392,8 +438,9 @@ def _score_art16(session: Session, org: str) -> ArticleScore:
     gaps: list[str] = []
     earned = 0
 
-    reports = _count(session, "reports",
-        "(organization_id = :org OR organization_id IS NULL)", {"org": org})
+    reports = _count(
+        session, "reports", "(organization_id = :org OR organization_id IS NULL)", {"org": org}
+    )
     if reports >= 1:
         earned += 10
     else:
@@ -412,7 +459,10 @@ def _score_art16(session: Session, org: str) -> ArticleScore:
 
 # ── Main entry point ──────────────────────────────────────────────────────────
 
-def compute(session: Session, organization_id: str, computed_by: str | None = None) -> ReadinessSnapshot:
+
+def compute(
+    session: Session, organization_id: str, computed_by: str | None = None
+) -> ReadinessSnapshot:
     """Compute a CSDDD readiness snapshot for the given organization.
 
     Fully deterministic — no LLM. Results depend only on the DB state at call time.
@@ -439,6 +489,6 @@ def compute(session: Session, organization_id: str, computed_by: str | None = No
         overall_score_pct=overall_pct,
         overall_level=_level(overall_pct),
         article_scores=article_scores,
-        computed_at=datetime.now(timezone.utc),
+        computed_at=datetime.now(UTC),
         computed_by=computed_by,
     )

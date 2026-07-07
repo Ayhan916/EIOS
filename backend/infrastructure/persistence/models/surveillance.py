@@ -12,7 +12,6 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
-    Boolean,
     DateTime,
     Float,
     Index,
@@ -67,9 +66,7 @@ class SurveillanceSignalModel(BaseModel):
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     episode_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     # Explainability snapshot — immutable at creation
-    explainability_json: Mapped[dict] = mapped_column(
-        JSONB, nullable=False, default=dict
-    )
+    explainability_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
     # Dedup key — prevents duplicate signals of same type for same supplier
     dedupe_key: Mapped[str | None] = mapped_column(String(300), nullable=True)
 
@@ -146,8 +143,7 @@ class RiskTrendModel(BaseModel):
     __tablename__ = "risk_trends"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "supplier_id", "period",
-            name="uq_risk_trend_org_supplier_period"
+            "organization_id", "supplier_id", "period", name="uq_risk_trend_org_supplier_period"
         ),
         Index("ix_risk_trends_supplier", "supplier_id"),
         Index("ix_risk_trends_org_period", "organization_id", "period"),

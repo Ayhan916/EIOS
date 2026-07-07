@@ -19,20 +19,21 @@ from application.agent_monitoring.finding_service import create_finding
 logger = structlog.get_logger(__name__)
 
 # Thresholds — calibrated conservatively to avoid noise
-_RISK_SCORE_HIGH_THRESHOLD = 70.0       # risk_score above this is HIGH
-_RISK_SCORE_CRITICAL_THRESHOLD = 85.0   # risk_score above this is CRITICAL
-_ESG_SCORE_LOW_THRESHOLD = 40.0         # ESG score below this is concerning
-_PERCENTILE_BOTTOM_DECILE = 10.0        # below 10th percentile = underperformer
-_TREND_DELTA_THRESHOLD = -10.0          # esg_score declined by 10+ points
-_OPEN_FINDINGS_HIGH = 5                 # more than 5 open findings = concern
+_RISK_SCORE_HIGH_THRESHOLD = 70.0  # risk_score above this is HIGH
+_RISK_SCORE_CRITICAL_THRESHOLD = 85.0  # risk_score above this is CRITICAL
+_ESG_SCORE_LOW_THRESHOLD = 40.0  # ESG score below this is concerning
+_PERCENTILE_BOTTOM_DECILE = 10.0  # below 10th percentile = underperformer
+_TREND_DELTA_THRESHOLD = -10.0  # esg_score declined by 10+ points
+_OPEN_FINDINGS_HIGH = 5  # more than 5 open findings = concern
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
     """Run the risk monitor for one organization. Returns number of findings generated."""
+    from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.finding import FindingModel
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.supplier_score import SupplierScoreModel
-    from infrastructure.persistence.models.finding import FindingModel
-    from sqlalchemy import func, select
 
     findings_created = 0
 
@@ -59,10 +60,14 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
             continue
 
         # Open findings count
-        findings_count_stmt = select(func.count()).select_from(FindingModel).where(
-            FindingModel.assessment_id.in_(
-                select(
-                    __import__("sqlalchemy", fromlist=["literal_column"]).literal_column("id")
+        findings_count_stmt = (
+            select(func.count())
+            .select_from(FindingModel)
+            .where(
+                FindingModel.assessment_id.in_(
+                    select(
+                        __import__("sqlalchemy", fromlist=["literal_column"]).literal_column("id")
+                    )
                 )
             )
         )
@@ -74,8 +79,10 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
             .where(AssessmentModel.supplier_id == supplier.id)
             .scalar_subquery()
         )
-        findings_count_stmt = select(func.count()).select_from(FindingModel).where(
-            FindingModel.assessment_id.in_(assessment_ids_subq)
+        findings_count_stmt = (
+            select(func.count())
+            .select_from(FindingModel)
+            .where(FindingModel.assessment_id.in_(assessment_ids_subq))
         )
         open_findings_count = (await session.execute(findings_count_stmt)).scalar_one()
 

@@ -95,7 +95,9 @@ async def _set_supplier_inactive(supplier_id: str) -> None:
     """Directly set supplier_status to Inactive without archiving, to test inactive guard."""
     from domain.enums import SupplierStatus  # noqa: PLC0415
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
-    from infrastructure.persistence.repositories.supplier import SQLSupplierRepository  # noqa: PLC0415
+    from infrastructure.persistence.repositories.supplier import (
+        SQLSupplierRepository,  # noqa: PLC0415
+    )
 
     async with AsyncSessionFactory() as session, session.begin():
         repo = SQLSupplierRepository(session)

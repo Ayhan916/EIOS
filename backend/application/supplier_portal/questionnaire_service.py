@@ -39,6 +39,7 @@ async def _log_activity(
     metadata: dict | None = None,
 ) -> None:
     import json
+
     from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
 
     now = datetime.now(UTC)
@@ -69,8 +70,11 @@ _BUILTIN_TEMPLATES = [
             {"text": "Does your organisation have a formal ESG policy?", "type": "boolean"},
             {"text": "Describe your environmental management system.", "type": "text"},
             {"text": "How many work-related injuries occurred last year?", "type": "number"},
-            {"text": "Select your primary environmental certifications.", "type": "multi_select",
-             "options": ["ISO 14001", "ISO 45001", "EMAS", "None"]},
+            {
+                "text": "Select your primary environmental certifications.",
+                "type": "multi_select",
+                "options": ["ISO 14001", "ISO 45001", "EMAS", "None"],
+            },
         ],
     },
     {
@@ -88,8 +92,14 @@ _BUILTIN_TEMPLATES = [
         "description": "Modern Slavery Act compliance questionnaire.",
         "version": "1.0",
         "questions": [
-            {"text": "Does your organisation conduct modern slavery risk assessments?", "type": "boolean"},
-            {"text": "Describe the steps taken to address modern slavery in supply chains.", "type": "text"},
+            {
+                "text": "Does your organisation conduct modern slavery risk assessments?",
+                "type": "boolean",
+            },
+            {
+                "text": "Describe the steps taken to address modern slavery in supply chains.",
+                "type": "text",
+            },
         ],
     },
     {
@@ -110,7 +120,10 @@ _BUILTIN_TEMPLATES = [
         "questions": [
             {"text": "Is there an independent audit committee?", "type": "boolean"},
             {"text": "Describe your anti-bribery and corruption policy.", "type": "text"},
-            {"text": "Has your organisation been subject to regulatory action in the last 3 years?", "type": "boolean"},
+            {
+                "text": "Has your organisation been subject to regulatory action in the last 3 years?",
+                "type": "boolean",
+            },
         ],
     },
     {
@@ -119,8 +132,11 @@ _BUILTIN_TEMPLATES = [
         "version": "1.0",
         "questions": [
             {"text": "Have you performed a double materiality assessment?", "type": "boolean"},
-            {"text": "Which ESRS standards are you currently reporting against?", "type": "multi_select",
-             "options": ["E1", "E2", "E3", "E4", "E5", "S1", "S2", "S3", "S4", "G1", "None"]},
+            {
+                "text": "Which ESRS standards are you currently reporting against?",
+                "type": "multi_select",
+                "options": ["E1", "E2", "E3", "E4", "E5", "S1", "S2", "S3", "S4", "G1", "None"],
+            },
             {"text": "When do you expect full CSRD compliance?", "type": "text"},
         ],
     },
@@ -129,7 +145,10 @@ _BUILTIN_TEMPLATES = [
         "description": "German Supply Chain Due Diligence Act (LkSG) review.",
         "version": "1.0",
         "questions": [
-            {"text": "Have you identified human rights and environmental risks per LkSG?", "type": "boolean"},
+            {
+                "text": "Have you identified human rights and environmental risks per LkSG?",
+                "type": "boolean",
+            },
             {"text": "Do you have a complaints mechanism per §8 LkSG?", "type": "boolean"},
             {"text": "Upload your most recent LkSG risk analysis.", "type": "file_upload"},
         ],
@@ -139,11 +158,12 @@ _BUILTIN_TEMPLATES = [
 
 async def seed_builtin_templates(session) -> None:
     """Seed the built-in questionnaire templates.  Idempotent — skips existing."""
-    from infrastructure.persistence.models.supplier_portal import (
-        QuestionnaireTemplateModel,
-        QuestionnaireQuestionModel,
-    )
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import (
+        QuestionnaireQuestionModel,
+        QuestionnaireTemplateModel,
+    )
 
     now = datetime.now(UTC)
     for tmpl in _BUILTIN_TEMPLATES:
@@ -226,11 +246,11 @@ async def add_question(
     weight: float = 1.0,
     session=None,
 ) -> object:
+
     from infrastructure.persistence.models.supplier_portal import (
-        QuestionnaireTemplateModel,
         QuestionnaireQuestionModel,
+        QuestionnaireTemplateModel,
     )
-    from sqlalchemy import select
 
     now = datetime.now(UTC)
     q = QuestionnaireQuestionModel(
@@ -249,6 +269,7 @@ async def add_question(
 
     # Update question count on template
     from sqlalchemy import update
+
     await session.execute(
         update(QuestionnaireTemplateModel)
         .where(QuestionnaireTemplateModel.id == template_id)
@@ -266,11 +287,12 @@ async def assign_questionnaire(
     due_date: datetime | None = None,
     session=None,
 ) -> object:
-    from infrastructure.persistence.models.supplier_portal import (
-        QuestionnaireTemplateModel,
-        QuestionnaireAssignmentModel,
-    )
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import (
+        QuestionnaireAssignmentModel,
+        QuestionnaireTemplateModel,
+    )
 
     # Load template to capture version
     tmpl_stmt = select(QuestionnaireTemplateModel).where(
@@ -311,8 +333,9 @@ async def get_my_assignments(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
 
     stmt = select(QuestionnaireAssignmentModel).where(
         QuestionnaireAssignmentModel.supplier_id == supplier_id
@@ -334,12 +357,13 @@ async def save_answer(
     session=None,
 ) -> object:
     """Upsert an answer for a question in an assignment (autosave)."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         QuestionnaireAnswerModel,
         QuestionnaireAssignmentModel,
         QuestionnaireQuestionModel,
     )
-    from sqlalchemy import select, update
 
     # Guard: assignment must belong to this supplier
     a_stmt = select(QuestionnaireAssignmentModel).where(
@@ -408,8 +432,9 @@ async def submit_questionnaire(
     session=None,
 ) -> object:
     """F5: logs activity event on submission."""
-    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
 
     stmt = select(QuestionnaireAssignmentModel).where(
         QuestionnaireAssignmentModel.id == assignment_id,
@@ -447,8 +472,9 @@ async def review_assignment(
     score: float | None = None,
     session=None,
 ) -> object:
-    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
 
     _VALID = {"approved", "rejected"}
     if new_status not in _VALID:

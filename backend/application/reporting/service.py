@@ -25,7 +25,9 @@ from domain.user import User
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.evidence import SQLEvidenceRepository
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
-from infrastructure.persistence.repositories.finding_evidence_link import SQLFindingEvidenceLinkRepository
+from infrastructure.persistence.repositories.finding_evidence_link import (
+    SQLFindingEvidenceLinkRepository,
+)
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.report import SQLReportRepository
 from infrastructure.persistence.repositories.review_action import SQLReviewActionRepository
@@ -134,7 +136,7 @@ def _build_snapshot(
 
     # Group evidence links by finding_id
     links_by_finding: dict[str, list[dict]] = {}
-    for lnk in (evidence_links or []):
+    for lnk in evidence_links or []:
         links_by_finding.setdefault(lnk.finding_id, []).append(_link_dict(lnk))
 
     return {

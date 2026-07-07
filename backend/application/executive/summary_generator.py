@@ -10,7 +10,7 @@ can trace exactly which data points produced which clause.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
@@ -86,13 +86,9 @@ def generate_executive_summary(inputs: ExecutiveSummaryInputs) -> str:
     # 3. Risk concentration
     high_and_critical = inputs.high_risk_count + inputs.critical_risk_count
     if high_and_critical == 0:
-        parts.append(
-            "No suppliers are currently classified as High or Critical risk."
-        )
+        parts.append("No suppliers are currently classified as High or Critical risk.")
     else:
-        pct = round(
-            (high_and_critical / max(inputs.scored_suppliers, 1)) * 100
-        )
+        pct = round((high_and_critical / max(inputs.scored_suppliers, 1)) * 100)
         crit_clause = (
             f", including {inputs.critical_risk_count}"
             f" Critical{'s' if inputs.critical_risk_count != 1 else ''}"
@@ -130,9 +126,7 @@ def generate_executive_summary(inputs: ExecutiveSummaryInputs) -> str:
             f" within the {inputs.top_risk_sector} sector."
         )
     elif inputs.top_risk_country:
-        parts.append(
-            f"The highest geographic risk concentration is in {inputs.top_risk_country}."
-        )
+        parts.append(f"The highest geographic risk concentration is in {inputs.top_risk_country}.")
 
     # 6. Action health
     if inputs.overdue_actions > 0:
@@ -168,13 +162,10 @@ def generate_executive_summary(inputs: ExecutiveSummaryInputs) -> str:
             f" supplier{'s' if inputs.critical_risk_count != 1 else ''}."
         )
     elif inputs.overdue_actions > 0:
-        parts.append(
-            "Management should prioritise closure of overdue remediation actions."
-        )
+        parts.append("Management should prioritise closure of overdue remediation actions.")
     elif inputs.deteriorating_count > 0:
         parts.append(
-            "Management should monitor deteriorating suppliers and"
-            " initiate targeted reassessments."
+            "Management should monitor deteriorating suppliers and initiate targeted reassessments."
         )
     elif inputs.high_risk_count > 0:
         parts.append(

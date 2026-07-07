@@ -12,6 +12,7 @@ Create Date: 2026-06-29
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "070"
@@ -33,7 +34,12 @@ def upgrade() -> None:
         sa.Column("outbox_status", sa.String(20), nullable=False, server_default="PENDING"),
         sa.Column("attempts", sa.Integer, nullable=False, server_default="0"),
         sa.Column("last_error", sa.Text, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("published_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("failed_at", sa.DateTime(timezone=True), nullable=True),
     )

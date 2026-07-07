@@ -19,7 +19,9 @@ class WebhookSubscriptionModel(BaseModel):
     events: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
 
 class WebhookDeliveryModel(BaseModel):

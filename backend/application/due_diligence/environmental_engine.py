@@ -7,18 +7,55 @@ All functions are pure: no I/O, no side effects.
 from __future__ import annotations
 
 _TOPIC_KEYWORDS: dict[str, list[str]] = {
-    "emissions": ["emission", "carbon", "ghg", "co2", "greenhouse", "scope 1", "scope 2", "scope 3", "net zero"],
+    "emissions": [
+        "emission",
+        "carbon",
+        "ghg",
+        "co2",
+        "greenhouse",
+        "scope 1",
+        "scope 2",
+        "scope 3",
+        "net zero",
+    ],
     "pollution": ["pollut", "contamin", "toxic", "chemical discharge", "effluent", "hazardous"],
     "waste": ["waste", "disposal", "recycling", "landfill", "e-waste", "hazardous waste"],
-    "biodiversity": ["biodiversity", "habitat", "species", "deforestation", "land use", "ecosystem"],
-    "water": ["water", "wastewater", "river", "groundwater", "discharge", "water stress", "water use"],
-    "climate": ["climate", "flood", "drought", "extreme weather", "sea level", "temperature", "climate risk"],
+    "biodiversity": [
+        "biodiversity",
+        "habitat",
+        "species",
+        "deforestation",
+        "land use",
+        "ecosystem",
+    ],
+    "water": [
+        "water",
+        "wastewater",
+        "river",
+        "groundwater",
+        "discharge",
+        "water stress",
+        "water use",
+    ],
+    "climate": [
+        "climate",
+        "flood",
+        "drought",
+        "extreme weather",
+        "sea level",
+        "temperature",
+        "climate risk",
+    ],
 }
 
 
 def _classify_finding(finding: dict) -> list[str]:
     text = (
-        (finding.get("title") or "") + " " + (finding.get("category") or "") + " " + (finding.get("description") or "")
+        (finding.get("title") or "")
+        + " "
+        + (finding.get("category") or "")
+        + " "
+        + (finding.get("description") or "")
     ).lower()
     matched = [topic for topic, kws in _TOPIC_KEYWORDS.items() if any(kw in text for kw in kws)]
     return matched or ["other"]
@@ -64,22 +101,26 @@ def build_environmental_report(
 
     # ── Build topic summaries ───────────────────────────────────────────────
     topic_summaries = []
-    for topic, kws in _TOPIC_KEYWORDS.items():
+    for topic, _kws in _TOPIC_KEYWORDS.items():
         t_findings = topic_findings.get(topic, [])
         t_risks = topic_risks.get(topic, [])
         suppliers = {f.get("supplier_id") for f in t_findings if f.get("supplier_id")}
         suppliers |= {r.get("supplier_id") for r in t_risks if r.get("supplier_id")}
 
-        topic_summaries.append({
-            "topic": topic,
-            "display_name": topic.replace("_", " ").title(),
-            "finding_count": len(t_findings),
-            "critical_findings": sum(1 for f in t_findings if f.get("severity") == "Critical"),
-            "high_findings": sum(1 for f in t_findings if f.get("severity") == "High"),
-            "risk_count": len(t_risks),
-            "unresolved_risks": sum(1 for r in t_risks if r.get("risk_level") in ("Critical", "High")),
-            "suppliers_impacted": len(suppliers),
-        })
+        topic_summaries.append(
+            {
+                "topic": topic,
+                "display_name": topic.replace("_", " ").title(),
+                "finding_count": len(t_findings),
+                "critical_findings": sum(1 for f in t_findings if f.get("severity") == "Critical"),
+                "high_findings": sum(1 for f in t_findings if f.get("severity") == "High"),
+                "risk_count": len(t_risks),
+                "unresolved_risks": sum(
+                    1 for r in t_risks if r.get("risk_level") in ("Critical", "High")
+                ),
+                "suppliers_impacted": len(suppliers),
+            }
+        )
 
     topic_summaries.sort(key=lambda x: -(x["finding_count"] + x["risk_count"]))
 
@@ -95,16 +136,32 @@ def build_environmental_report(
                 all_suppliers.add(risk["supplier_id"])
 
     # ── Mitigation controls ─────────────────────────────────────────────────
-    env_controls = [c for c in controls if any(
-        kw in (c.get("title") or "").lower()
-        for kw in ["environmental", "emission", "climate", "waste", "water", "pollution", "carbon"]
-    )]
+    env_controls = [
+        c
+        for c in controls
+        if any(
+            kw in (c.get("title") or "").lower()
+            for kw in [
+                "environmental",
+                "emission",
+                "climate",
+                "waste",
+                "water",
+                "pollution",
+                "carbon",
+            ]
+        )
+    ]
     effective_controls = [c for c in env_controls if (c.get("effectiveness") or 0) >= 0.75]
 
     # ── Remediation ─────────────────────────────────────────────────────────
     open_recs = sum(1 for r in recommendations if r.get("action_status") == "open")
     resolved = sum(1 for r in recommendations if r.get("action_status") in ("resolved", "verified"))
-    overdue = sum(1 for r in recommendations if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False))
+    overdue = sum(
+        1
+        for r in recommendations
+        if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False)
+    )
 
     # ── Unresolved risks across all topics ──────────────────────────────────
     all_env_risks = [r for t in _TOPIC_KEYWORDS for r in topic_risks.get(t, [])]
@@ -114,7 +171,8 @@ def build_environmental_report(
     evidence_count = len(evidence_items)
     avg_reliability = (
         sum((e.get("reliability_score") or 0.5) for e in evidence_items) / evidence_count
-        if evidence_count else 0.0
+        if evidence_count
+        else 0.0
     )
 
     return {
@@ -139,7 +197,9 @@ def build_environmental_report(
         "mitigation": {
             "total_controls": len(env_controls),
             "effective": len(effective_controls),
-            "partially_effective": sum(1 for c in env_controls if 0.4 <= (c.get("effectiveness") or 0) < 0.75),
+            "partially_effective": sum(
+                1 for c in env_controls if 0.4 <= (c.get("effectiveness") or 0) < 0.75
+            ),
             "ineffective": sum(1 for c in env_controls if 0 < (c.get("effectiveness") or 0) < 0.4),
             "unknown": sum(1 for c in env_controls if c.get("effectiveness") is None),
         },

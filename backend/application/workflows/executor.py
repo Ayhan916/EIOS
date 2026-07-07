@@ -20,27 +20,29 @@ import structlog
 from sqlalchemy import update
 
 import application.audit as audit_factory  # noqa: E402
+import application.notification_service as notification_service
+from application.extraction.evidence_linker import (
+    create_finding_evidence_links,
+    update_finding_evidence_strength,
+)
 from application.extraction.service import StructuredExtractionService
 from application.workflows.engine import WorkflowEngine
 from application.workflows.registry import get_workflow_definition
+from domain.enums import NotificationType
 from domain.workflow_job import WorkflowJob
 from infrastructure.embeddings.deps import get_embedding_provider
 from infrastructure.knowledge_search import EvidenceChunkSearchAdapter
 from infrastructure.llm.deps import get_llm_provider
 from infrastructure.persistence.database import AsyncSessionFactory
 from infrastructure.persistence.models.workflow_job import WorkflowJobModel
-import application.notification_service as notification_service
-from domain.enums import NotificationType
 from infrastructure.persistence.repositories.agent_run import SQLAgentRunRepository
 from infrastructure.persistence.repositories.assessment import SQLAssessmentRepository
 from infrastructure.persistence.repositories.audit_event import SQLAuditEventRepository
 from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
-from application.extraction.evidence_linker import (
-    create_finding_evidence_links,
-    update_finding_evidence_strength,
-)
 from infrastructure.persistence.repositories.finding import SQLFindingRepository
-from infrastructure.persistence.repositories.finding_evidence_link import SQLFindingEvidenceLinkRepository
+from infrastructure.persistence.repositories.finding_evidence_link import (
+    SQLFindingEvidenceLinkRepository,
+)
 from infrastructure.persistence.repositories.recommendation import SQLRecommendationRepository
 from infrastructure.persistence.repositories.risk import SQLRiskRepository
 from infrastructure.persistence.repositories.user import SQLUserRepository
@@ -111,6 +113,7 @@ async def execute_workflow_background(
     # Record aggregate token usage to in-process metrics counter
     try:
         from interfaces.api.routers.metrics import counters
+
         total_tokens = workflow_run.total_input_tokens + workflow_run.total_output_tokens
         counters.record_llm_call(total_tokens)
     except Exception:
@@ -179,6 +182,7 @@ async def execute_workflow_background(
 
                             # Group by finding and update strength + source count
                             from collections import defaultdict
+
                             links_by_finding: dict[str, list] = defaultdict(list)
                             for lnk in links:
                                 links_by_finding[lnk.finding_id].append(lnk)

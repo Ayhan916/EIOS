@@ -1,23 +1,24 @@
 """Repositories — Supplier Self-Assessment CSDDD (CSDDD-015)."""
+
 from __future__ import annotations
 
 import hashlib
 import json
 import random
 import string
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from domain.enums import AssessmentStatus
 from domain.supplier_assessment import (
     AssessmentQuestion,
     AssessmentResponse,
     AssessmentTemplate,
     SupplierAssessment,
 )
-from domain.enums import AssessmentStatus
 from infrastructure.persistence.models.supplier_assessment import (
     AssessmentQuestionModel,
     AssessmentResponseModel,
@@ -27,40 +28,218 @@ from infrastructure.persistence.models.supplier_assessment import (
 
 SEED_QUESTIONS: list[dict] = [
     # ── Section A: Company Structure (Art. 7) ────────────────────────────────
-    {"section": "company_structure", "question_text": "Does your company have a documented ownership and governance structure?", "question_type": "yes_no", "csddd_article": "Art. 7", "weight": 3, "sort_order": 1},
-    {"section": "company_structure", "question_text": "Is your company registered and operating legally in its country of domicile?", "question_type": "yes_no", "csddd_article": "Art. 7", "weight": 4, "sort_order": 2},
-    {"section": "company_structure", "question_text": "Does your company have an appointed compliance or ESG responsible person?", "question_type": "yes_no", "csddd_article": "Art. 7", "weight": 3, "sort_order": 3},
-    {"section": "company_structure", "question_text": "How many direct employees does your company have?", "question_type": "text", "csddd_article": "Art. 7", "weight": 1, "sort_order": 4, "is_required": False},
-    {"section": "company_structure", "question_text": "Does your company publish an annual sustainability or ESG report?", "question_type": "yes_no", "csddd_article": "Art. 7", "weight": 2, "sort_order": 5},
+    {
+        "section": "company_structure",
+        "question_text": "Does your company have a documented ownership and governance structure?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 7",
+        "weight": 3,
+        "sort_order": 1,
+    },
+    {
+        "section": "company_structure",
+        "question_text": "Is your company registered and operating legally in its country of domicile?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 7",
+        "weight": 4,
+        "sort_order": 2,
+    },
+    {
+        "section": "company_structure",
+        "question_text": "Does your company have an appointed compliance or ESG responsible person?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 7",
+        "weight": 3,
+        "sort_order": 3,
+    },
+    {
+        "section": "company_structure",
+        "question_text": "How many direct employees does your company have?",
+        "question_type": "text",
+        "csddd_article": "Art. 7",
+        "weight": 1,
+        "sort_order": 4,
+        "is_required": False,
+    },
+    {
+        "section": "company_structure",
+        "question_text": "Does your company publish an annual sustainability or ESG report?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 7",
+        "weight": 2,
+        "sort_order": 5,
+    },
     # ── Section B: HR Policies (Art. 10 + Annex I) ───────────────────────────
-    {"section": "hr_policies", "question_text": "Does your company have a written Human Rights Policy?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex I", "weight": 5, "sort_order": 6},
-    {"section": "hr_policies", "question_text": "Does your company prohibit child labour in all operations and supply chain?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex I Item 1", "weight": 5, "sort_order": 7},
-    {"section": "hr_policies", "question_text": "Does your company prohibit forced or compulsory labour?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex I Item 2", "weight": 5, "sort_order": 8},
-    {"section": "hr_policies", "question_text": "Does your company ensure freedom of association and right to collective bargaining?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex I Item 3", "weight": 4, "sort_order": 9},
-    {"section": "hr_policies", "question_text": "Does your company ensure equal pay and non-discrimination in employment?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex I Item 6", "weight": 4, "sort_order": 10},
-    {"section": "hr_policies", "question_text": "Does your company conduct regular worker health and safety assessments?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex I Item 5", "weight": 4, "sort_order": 11},
-    {"section": "hr_policies", "question_text": "Rate your company's maturity in human rights due diligence (1=none, 5=advanced)", "question_type": "scale_1_5", "csddd_article": "Art. 10 Annex I", "weight": 4, "sort_order": 12},
+    {
+        "section": "hr_policies",
+        "question_text": "Does your company have a written Human Rights Policy?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex I",
+        "weight": 5,
+        "sort_order": 6,
+    },
+    {
+        "section": "hr_policies",
+        "question_text": "Does your company prohibit child labour in all operations and supply chain?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex I Item 1",
+        "weight": 5,
+        "sort_order": 7,
+    },
+    {
+        "section": "hr_policies",
+        "question_text": "Does your company prohibit forced or compulsory labour?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex I Item 2",
+        "weight": 5,
+        "sort_order": 8,
+    },
+    {
+        "section": "hr_policies",
+        "question_text": "Does your company ensure freedom of association and right to collective bargaining?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex I Item 3",
+        "weight": 4,
+        "sort_order": 9,
+    },
+    {
+        "section": "hr_policies",
+        "question_text": "Does your company ensure equal pay and non-discrimination in employment?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex I Item 6",
+        "weight": 4,
+        "sort_order": 10,
+    },
+    {
+        "section": "hr_policies",
+        "question_text": "Does your company conduct regular worker health and safety assessments?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex I Item 5",
+        "weight": 4,
+        "sort_order": 11,
+    },
+    {
+        "section": "hr_policies",
+        "question_text": "Rate your company's maturity in human rights due diligence (1=none, 5=advanced)",
+        "question_type": "scale_1_5",
+        "csddd_article": "Art. 10 Annex I",
+        "weight": 4,
+        "sort_order": 12,
+    },
     # ── Section C: Environmental Measures (Art. 10 + Annex II) ───────────────
-    {"section": "environment", "question_text": "Does your company have a documented environmental management system (e.g. ISO 14001)?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex II", "weight": 4, "sort_order": 13},
-    {"section": "environment", "question_text": "Does your company measure and report greenhouse gas emissions (Scope 1 and 2)?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex II", "weight": 3, "sort_order": 14},
-    {"section": "environment", "question_text": "Does your company have policies to prevent or minimise adverse environmental impacts?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex II", "weight": 4, "sort_order": 15},
-    {"section": "environment", "question_text": "Does your company comply with applicable regulations on hazardous substances and waste disposal?", "question_type": "yes_no", "csddd_article": "Art. 10 Annex II Item 3", "weight": 5, "sort_order": 16},
-    {"section": "environment", "question_text": "Rate your company's maturity in environmental due diligence (1=none, 5=advanced)", "question_type": "scale_1_5", "csddd_article": "Art. 10 Annex II", "weight": 3, "sort_order": 17},
+    {
+        "section": "environment",
+        "question_text": "Does your company have a documented environmental management system (e.g. ISO 14001)?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex II",
+        "weight": 4,
+        "sort_order": 13,
+    },
+    {
+        "section": "environment",
+        "question_text": "Does your company measure and report greenhouse gas emissions (Scope 1 and 2)?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex II",
+        "weight": 3,
+        "sort_order": 14,
+    },
+    {
+        "section": "environment",
+        "question_text": "Does your company have policies to prevent or minimise adverse environmental impacts?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex II",
+        "weight": 4,
+        "sort_order": 15,
+    },
+    {
+        "section": "environment",
+        "question_text": "Does your company comply with applicable regulations on hazardous substances and waste disposal?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Annex II Item 3",
+        "weight": 5,
+        "sort_order": 16,
+    },
+    {
+        "section": "environment",
+        "question_text": "Rate your company's maturity in environmental due diligence (1=none, 5=advanced)",
+        "question_type": "scale_1_5",
+        "csddd_article": "Art. 10 Annex II",
+        "weight": 3,
+        "sort_order": 17,
+    },
     # ── Section D: Grievance Mechanism (Art. 14) ─────────────────────────────
-    {"section": "grievance", "question_text": "Does your company provide a grievance or complaints mechanism for workers and affected communities?", "question_type": "yes_no", "csddd_article": "Art. 14", "weight": 5, "sort_order": 18},
-    {"section": "grievance", "question_text": "Is the grievance mechanism accessible to all workers including migrant and agency workers?", "question_type": "yes_no", "csddd_article": "Art. 14", "weight": 4, "sort_order": 19},
-    {"section": "grievance", "question_text": "Does your company track and report on grievance resolution outcomes?", "question_type": "yes_no", "csddd_article": "Art. 14", "weight": 3, "sort_order": 20},
-    {"section": "grievance", "question_text": "Describe how grievances are investigated and remediated at your company.", "question_type": "text", "csddd_article": "Art. 14", "weight": 3, "sort_order": 21, "is_required": False},
+    {
+        "section": "grievance",
+        "question_text": "Does your company provide a grievance or complaints mechanism for workers and affected communities?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 14",
+        "weight": 5,
+        "sort_order": 18,
+    },
+    {
+        "section": "grievance",
+        "question_text": "Is the grievance mechanism accessible to all workers including migrant and agency workers?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 14",
+        "weight": 4,
+        "sort_order": 19,
+    },
+    {
+        "section": "grievance",
+        "question_text": "Does your company track and report on grievance resolution outcomes?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 14",
+        "weight": 3,
+        "sort_order": 20,
+    },
+    {
+        "section": "grievance",
+        "question_text": "Describe how grievances are investigated and remediated at your company.",
+        "question_type": "text",
+        "csddd_article": "Art. 14",
+        "weight": 3,
+        "sort_order": 21,
+        "is_required": False,
+    },
     # ── Section E: Sub-suppliers / Cascade (Art. 10 Abs. 2 lit. b) ───────────
-    {"section": "sub_suppliers", "question_text": "Does your company require direct sub-suppliers to comply with equivalent human rights and environmental standards?", "question_type": "yes_no", "csddd_article": "Art. 10 Abs. 2 lit. b", "weight": 5, "sort_order": 22},
-    {"section": "sub_suppliers", "question_text": "Are cascade due diligence obligations contractually included in supplier agreements?", "question_type": "yes_no", "csddd_article": "Art. 10 Abs. 2 lit. b", "weight": 5, "sort_order": 23},
-    {"section": "sub_suppliers", "question_text": "Does your company monitor or audit sub-supplier compliance?", "question_type": "yes_no", "csddd_article": "Art. 10 Abs. 2 lit. b", "weight": 4, "sort_order": 24},
-    {"section": "sub_suppliers", "question_text": "Approximately how many direct sub-suppliers does your company work with?", "question_type": "text", "csddd_article": "Art. 10 Abs. 2 lit. b", "weight": 1, "sort_order": 25, "is_required": False},
+    {
+        "section": "sub_suppliers",
+        "question_text": "Does your company require direct sub-suppliers to comply with equivalent human rights and environmental standards?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Abs. 2 lit. b",
+        "weight": 5,
+        "sort_order": 22,
+    },
+    {
+        "section": "sub_suppliers",
+        "question_text": "Are cascade due diligence obligations contractually included in supplier agreements?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Abs. 2 lit. b",
+        "weight": 5,
+        "sort_order": 23,
+    },
+    {
+        "section": "sub_suppliers",
+        "question_text": "Does your company monitor or audit sub-supplier compliance?",
+        "question_type": "yes_no",
+        "csddd_article": "Art. 10 Abs. 2 lit. b",
+        "weight": 4,
+        "sort_order": 24,
+    },
+    {
+        "section": "sub_suppliers",
+        "question_text": "Approximately how many direct sub-suppliers does your company work with?",
+        "question_type": "text",
+        "csddd_article": "Art. 10 Abs. 2 lit. b",
+        "weight": 1,
+        "sort_order": 25,
+        "is_required": False,
+    },
 ]
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _ref_code() -> str:
@@ -140,7 +319,7 @@ class SQLAssessmentTemplateRepository:
         """Create the 25-question CSDDD default template for an organization if it does not exist."""
         stmt = select(AssessmentTemplateModel).where(
             AssessmentTemplateModel.organization_id == organization_id,
-            AssessmentTemplateModel.is_default == True,
+            AssessmentTemplateModel.is_default,
         )
         existing = self._s.execute(stmt).scalar_one_or_none()
         if existing:
@@ -160,27 +339,31 @@ class SQLAssessmentTemplateRepository:
         self._s.flush()
 
         for seed in SEED_QUESTIONS:
-            self._s.add(AssessmentQuestionModel(
-                id=str(uuid4()),
-                template_id=tmpl.id,
-                section=seed["section"],
-                question_text=seed["question_text"],
-                question_type=seed["question_type"],
-                options_json="[]",
-                csddd_article=seed["csddd_article"],
-                weight=seed["weight"],
-                is_required=seed.get("is_required", True),
-                sort_order=seed["sort_order"],
-                is_active=True,
-            ))
+            self._s.add(
+                AssessmentQuestionModel(
+                    id=str(uuid4()),
+                    template_id=tmpl.id,
+                    section=seed["section"],
+                    question_text=seed["question_text"],
+                    question_type=seed["question_type"],
+                    options_json="[]",
+                    csddd_article=seed["csddd_article"],
+                    weight=seed["weight"],
+                    is_required=seed.get("is_required", True),
+                    sort_order=seed["sort_order"],
+                    is_active=True,
+                )
+            )
         self._s.flush()
         self._s.refresh(tmpl)
         return _template_to_domain(tmpl)
 
     def list_org(self, organization_id: str) -> list[AssessmentTemplate]:
-        stmt = select(AssessmentTemplateModel).where(
-            AssessmentTemplateModel.organization_id == organization_id
-        ).order_by(AssessmentTemplateModel.created_at.desc())
+        stmt = (
+            select(AssessmentTemplateModel)
+            .where(AssessmentTemplateModel.organization_id == organization_id)
+            .order_by(AssessmentTemplateModel.created_at.desc())
+        )
         return [_template_to_domain(m) for m in self._s.execute(stmt).scalars().all()]
 
     def get(self, template_id: str, organization_id: str) -> AssessmentTemplate | None:
@@ -266,13 +449,15 @@ class SQLSupplierAssessmentRepository:
                 existing[qid].answer_value = value
                 existing[qid].answered_at = _now()
             else:
-                self._s.add(AssessmentResponseModel(
-                    id=str(uuid4()),
-                    assessment_id=assessment_id,
-                    question_id=qid,
-                    answer_value=value,
-                    answered_at=_now(),
-                ))
+                self._s.add(
+                    AssessmentResponseModel(
+                        id=str(uuid4()),
+                        assessment_id=assessment_id,
+                        question_id=qid,
+                        answer_value=value,
+                        answered_at=_now(),
+                    )
+                )
         self._s.flush()
 
     def submit(

@@ -12,7 +12,7 @@ All DB calls are mocked.
 from __future__ import annotations
 
 import hashlib
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -79,8 +79,12 @@ class TestDeletedStatus:
     @pytest.mark.asyncio
     async def test_missing_object_is_deleted(self):
         session = _make_session(None)  # Object not found in DB
-        citations = [{"citation_type": "Supplier", "object_id": "nonexistent", "relevance": "explicit"}]
-        records = await verify_citations("msg-1", citations, {"nonexistent": "Supplier"}, "org-1", session)
+        citations = [
+            {"citation_type": "Supplier", "object_id": "nonexistent", "relevance": "explicit"}
+        ]
+        records = await verify_citations(
+            "msg-1", citations, {"nonexistent": "Supplier"}, "org-1", session
+        )
         assert len(records) == 1
         assert records[0].integrity_status == CitationIntegrityStatus.DELETED
         assert records[0].citation_snapshot == {}
@@ -102,7 +106,9 @@ class TestDeletedStatus:
         row = {"id": "s-1", "organization_id": "org-other", "updated_at": "2026-01-01T00:00:00Z"}
         session = _make_session(row)
         citations = [{"citation_type": "Supplier", "object_id": "s-1", "relevance": "explicit"}]
-        records = await verify_citations("msg-1", citations, {"s-1": "Supplier"}, "org-requester", session)
+        records = await verify_citations(
+            "msg-1", citations, {"s-1": "Supplier"}, "org-requester", session
+        )
         assert records[0].integrity_status == CitationIntegrityStatus.DELETED
 
 
@@ -110,8 +116,12 @@ class TestUnknownCitationType:
     @pytest.mark.asyncio
     async def test_unknown_type_returns_deleted(self):
         session = AsyncMock()  # Should not be called
-        citations = [{"citation_type": "UnknownEntity", "object_id": "u-1", "relevance": "explicit"}]
-        records = await verify_citations("msg-1", citations, {"u-1": "UnknownEntity"}, "org-1", session)
+        citations = [
+            {"citation_type": "UnknownEntity", "object_id": "u-1", "relevance": "explicit"}
+        ]
+        records = await verify_citations(
+            "msg-1", citations, {"u-1": "UnknownEntity"}, "org-1", session
+        )
         assert len(records) == 1
         assert records[0].integrity_status == CitationIntegrityStatus.DELETED
 
@@ -122,7 +132,9 @@ class TestCitationIntegrityFields:
         row = {"id": "s-1", "organization_id": "org-1", "updated_at": "2026-01-01T00:00:00Z"}
         session = _make_session(row)
         citations = [{"citation_type": "Supplier", "object_id": "s-1", "relevance": "explicit"}]
-        records = await verify_citations("msg-abc", citations, {"s-1": "Supplier"}, "org-1", session)
+        records = await verify_citations(
+            "msg-abc", citations, {"s-1": "Supplier"}, "org-1", session
+        )
         assert records[0].message_id == "msg-abc"
 
     @pytest.mark.asyncio
@@ -156,6 +168,7 @@ class TestCitationIntegrityFields:
     @pytest.mark.asyncio
     async def test_verified_at_is_set(self):
         from datetime import UTC, datetime
+
         row = {"id": "s-1", "organization_id": "org-1", "updated_at": "2026-01-01T00:00:00Z"}
         session = _make_session(row)
         before = datetime.now(UTC)

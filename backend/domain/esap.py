@@ -4,9 +4,10 @@ Art. 16 CSDDD requires public reporting on DD measures. From ca. 2031,
 large companies must submit reports to ESAP (European Single Access Point)
 in machine-readable format per EU Regulation 2023/2859.
 """
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 
@@ -14,11 +15,12 @@ from typing import Any
 @dataclass
 class ESAPSubmission:
     """Manual record of an ESAP submission for audit trail."""
+
     id: str
     organization_id: str
     report_year: int
-    export_format: str             # ESAPExportFormat
-    status: str                    # ESAPSubmissionStatus
+    export_format: str  # ESAPExportFormat
+    status: str  # ESAPSubmissionStatus
     submitted_at: datetime | None
     submitted_by: str | None
     confirmation_reference: str | None
@@ -30,15 +32,16 @@ class ESAPSubmission:
 @dataclass
 class ESAPExportBundle:
     """Structured ESAP-ready export document (Art. 16 fields)."""
+
     organization_id: str
     report_year: int
     generated_at: datetime
     schema_version: str
     # Art. 16 required sections
     dd_policy_description: str
-    risks_summary: list[dict]      # top risks
-    actions_summary: list[dict]    # CAPs + remedy cases
-    board_approvals: list[dict]    # board sign-offs
+    risks_summary: list[dict[str, Any]]  # top risks
+    actions_summary: list[dict[str, Any]]  # CAPs + remedy cases
+    board_approvals: list[dict[str, Any]]  # board sign-offs
     effectiveness_summary: str
     stakeholder_consultation: str
     # Validation

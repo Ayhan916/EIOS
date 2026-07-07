@@ -11,9 +11,18 @@ Five tables for the Material aggregate:
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -67,7 +76,9 @@ class MaterialCompositionModel(BaseModel):
     __tablename__ = "material_compositions"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "parent_material_id", "child_material_id",
+            "organization_id",
+            "parent_material_id",
+            "child_material_id",
             name="uq_mat_comp_parent_child",
         ),
         Index("ix_mcomp_parent", "parent_material_id"),
@@ -90,7 +101,9 @@ class MaterialSourcingModel(BaseModel):
     __tablename__ = "material_sourcing"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "material_id", "supplier_id",
+            "organization_id",
+            "material_id",
+            "supplier_id",
             name="uq_mat_sourcing_material_supplier",
         ),
         Index("ix_msrc_material", "material_id"),
@@ -120,7 +133,9 @@ class MaterialComplianceFlagModel(BaseModel):
     __tablename__ = "material_compliance_flags"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "material_id", "regulation",
+            "organization_id",
+            "material_id",
+            "regulation",
             name="uq_mat_compliance_material_reg",
         ),
         Index("ix_mcf_material", "material_id"),
@@ -148,7 +163,9 @@ class MaterialSustainabilityMetricModel(BaseModel):
     __tablename__ = "material_sustainability_metrics"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "material_id", "reporting_year",
+            "organization_id",
+            "material_id",
+            "reporting_year",
             name="uq_mat_sustain_material_year",
         ),
         Index("ix_msus_material", "material_id"),

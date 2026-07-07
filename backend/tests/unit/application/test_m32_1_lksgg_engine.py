@@ -5,26 +5,60 @@ from __future__ import annotations
 import pytest
 
 from application.due_diligence.lksgg_engine import (
-    build_lksgg_report,
-    _is_hr,
     _is_env,
+    _is_hr,
+    build_lksgg_report,
 )
 
 
 def _supplier(id: str = "s1", tier: str = "Tier 1", country: str = "Germany") -> dict:
-    return {"id": id, "name": f"Supplier {id}", "tier": tier, "country": country, "industry": "Manufacturing", "status": "Active"}
+    return {
+        "id": id,
+        "name": f"Supplier {id}",
+        "tier": tier,
+        "country": country,
+        "industry": "Manufacturing",
+        "status": "Active",
+    }
 
 
-def _score(supplier_id: str = "s1", risk_band: str = "Low", risk_score: float = 10.0, esg_score: float = 80.0) -> tuple[str, dict]:
-    return supplier_id, {"esg_score": esg_score, "risk_score": risk_score, "risk_band": risk_band, "trend": "Stable"}
+def _score(
+    supplier_id: str = "s1",
+    risk_band: str = "Low",
+    risk_score: float = 10.0,
+    esg_score: float = 80.0,
+) -> tuple[str, dict]:
+    return supplier_id, {
+        "esg_score": esg_score,
+        "risk_score": risk_score,
+        "risk_band": risk_band,
+        "trend": "Stable",
+    }
 
 
-def _finding(id: str = "f1", severity: str = "High", category: str = "Environmental", supplier_id: str = "s1") -> dict:
-    return {"id": id, "title": f"Finding {id}", "severity": severity, "category": category, "supplier_id": supplier_id}
+def _finding(
+    id: str = "f1", severity: str = "High", category: str = "Environmental", supplier_id: str = "s1"
+) -> dict:
+    return {
+        "id": id,
+        "title": f"Finding {id}",
+        "severity": severity,
+        "category": category,
+        "supplier_id": supplier_id,
+    }
 
 
-def _rec(id: str = "r1", status: str = "open", priority: str = "High", overdue: bool = False) -> dict:
-    return {"id": id, "title": f"Rec {id}", "action_status": status, "priority": priority, "supplier_id": "s1", "overdue": overdue}
+def _rec(
+    id: str = "r1", status: str = "open", priority: str = "High", overdue: bool = False
+) -> dict:
+    return {
+        "id": id,
+        "title": f"Rec {id}",
+        "action_status": status,
+        "priority": priority,
+        "supplier_id": "s1",
+        "overdue": overdue,
+    }
 
 
 def _base_args(**kwargs) -> dict:
@@ -73,7 +107,11 @@ class TestLksggEngineStructure:
 
 class TestLksggSupplierInventory:
     def test_supplier_count(self):
-        suppliers = [_supplier("s1", "Tier 1"), _supplier("s2", "Tier 2"), _supplier("s3", "Tier 1")]
+        suppliers = [
+            _supplier("s1", "Tier 1"),
+            _supplier("s2", "Tier 2"),
+            _supplier("s3", "Tier 1"),
+        ]
         result = build_lksgg_report(**_base_args(suppliers=suppliers))
         assert result["supplier_inventory"]["total"] == 3
         assert result["supplier_inventory"]["by_tier"]["Tier 1"] == 2
@@ -88,11 +126,13 @@ class TestLksggSupplierInventory:
 class TestLksggRiskClassification:
     def test_risk_band_counts(self):
         suppliers = [_supplier("s1"), _supplier("s2"), _supplier("s3")]
-        scores = dict([
-            _score("s1", "Critical", 90.0),
-            _score("s2", "High", 70.0),
-            _score("s3", "Low", 5.0),
-        ])
+        scores = dict(
+            [
+                _score("s1", "Critical", 90.0),
+                _score("s2", "High", 70.0),
+                _score("s3", "Low", 5.0),
+            ]
+        )
         result = build_lksgg_report(**_base_args(suppliers=suppliers, supplier_scores=scores))
         assert result["risk_classification"]["Critical"] == 1
         assert result["risk_classification"]["High"] == 1
@@ -107,11 +147,13 @@ class TestLksggRiskClassification:
 class TestLksggCriticalSuppliers:
     def test_critical_and_high_included(self):
         suppliers = [_supplier("s1"), _supplier("s2"), _supplier("s3")]
-        scores = dict([
-            _score("s1", "Critical", 95.0),
-            _score("s2", "High", 70.0),
-            _score("s3", "Low", 5.0),
-        ])
+        scores = dict(
+            [
+                _score("s1", "Critical", 95.0),
+                _score("s2", "High", 70.0),
+                _score("s3", "Low", 5.0),
+            ]
+        )
         result = build_lksgg_report(**_base_args(suppliers=suppliers, supplier_scores=scores))
         ids = {s["supplier_id"] for s in result["critical_suppliers"]}
         assert "s1" in ids
@@ -122,7 +164,10 @@ class TestLksggCriticalSuppliers:
         suppliers = [_supplier("s1"), _supplier("s2")]
         scores = dict([_score("s1", "Critical", 95.0), _score("s2", "Critical", 80.0)])
         result = build_lksgg_report(**_base_args(suppliers=suppliers, supplier_scores=scores))
-        assert result["critical_suppliers"][0]["risk_score"] >= result["critical_suppliers"][1]["risk_score"]
+        assert (
+            result["critical_suppliers"][0]["risk_score"]
+            >= result["critical_suppliers"][1]["risk_score"]
+        )
 
 
 class TestLksggHumanRightsClassification:

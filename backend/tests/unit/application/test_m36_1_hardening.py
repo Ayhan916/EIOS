@@ -13,13 +13,13 @@ Covers every P0/P1 finding from the M36 audit:
 from __future__ import annotations
 
 import inspect
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Shared helpers ─────────────────────────────────────────────────────────────
+
 
 def _make_session_multi(*return_values):
     """Session whose execute() returns successive values from return_values."""
@@ -56,8 +56,9 @@ def _make_run(run_id="run-1", agent_id="agent-1", org_id="org-1", status="RUNNIN
     return r
 
 
-def _make_agent(agent_id="agent-1", status="ACTIVE", enabled=True, run_interval_hours=24,
-                failure_count=0):
+def _make_agent(
+    agent_id="agent-1", status="ACTIVE", enabled=True, run_interval_hours=24, failure_count=0
+):
     a = MagicMock()
     a.id = agent_id
     a.agent_type = "RISK_MONITOR"
@@ -109,6 +110,7 @@ def _make_draft(draft_id="d-1", status="PENDING", finding_id="f-1", org_id="org-
 
 # ── F1: Tenant isolation ───────────────────────────────────────────────────────
 
+
 class TestF1TenantIsolation:
     def test_trigger_request_schema_has_no_organization_id(self):
         """TriggerAgentRunRequest must not expose organization_id to callers."""
@@ -135,6 +137,7 @@ class TestF1TenantIsolation:
 
 
 # ── F2: Concurrency guard ──────────────────────────────────────────────────────
+
 
 class TestF2ConcurrencyGuard:
     @pytest.mark.asyncio
@@ -172,6 +175,7 @@ class TestF2ConcurrencyGuard:
 
 # ── F3: Dead code absent ───────────────────────────────────────────────────────
 
+
 class TestF3DeadCodeAbsent:
     def test_execute_agent_does_not_import_record_run_failed(self):
         """_execute_agent must not import record_run_failed (would be dead inside begin())."""
@@ -185,8 +189,7 @@ class TestF3DeadCodeAbsent:
         assert "check_and_start_run" in src, "_execute_agent must import check_and_start_run"
         # Verify record_run_failed is not in the from…import line(s) inside _execute_agent
         import_lines = [
-            ln.strip() for ln in src.splitlines()
-            if "record_run_failed" in ln and "import" in ln
+            ln.strip() for ln in src.splitlines() if "record_run_failed" in ln and "import" in ln
         ]
         assert not import_lines, (
             f"F3: record_run_failed must not be imported inside _execute_agent. "
@@ -211,6 +214,7 @@ class TestF3DeadCodeAbsent:
 
 
 # ── F4: Data freshness ─────────────────────────────────────────────────────────
+
 
 class TestF4DataFreshness:
     def test_freshness_filter_present_in_source(self):
@@ -307,11 +311,13 @@ class TestF4DataFreshness:
 
 # ── F5: Agent-type escalation rule filtering ───────────────────────────────────
 
+
 class TestF5AgentTypeFiltering:
     def test_evaluate_finding_accepts_agent_type_param(self):
         """evaluate_finding must accept an agent_type keyword argument."""
-        from application.agent_monitoring import alert_service
         import inspect as _inspect
+
+        from application.agent_monitoring import alert_service
 
         sig = _inspect.signature(alert_service.evaluate_finding)
         assert "agent_type" in sig.parameters, "F5: evaluate_finding needs agent_type param"
@@ -358,12 +364,10 @@ class TestF5AgentTypeFiltering:
             "application.agent_monitoring.alert_service._trigger_notification",
             new=AsyncMock(),
         ):
-            alerts = await evaluate_finding(
-                finding, "org-1", session, agent_type="RISK_MONITOR"
-            )
+            alerts = await evaluate_finding(finding, "org-1", session, agent_type="RISK_MONITOR")
 
         # wildcard rule fired → at least one user-defined alert created
-        user_alerts = [a for a in alerts if "wildcard-rule" in (a.title or "")]
+        [a for a in alerts if "wildcard-rule" in (a.title or "")]
         # The rule was processed (session.add called for the alert)
         assert session.add.called
 
@@ -403,12 +407,12 @@ class TestF5AgentTypeFiltering:
 
     def test_each_monitor_passes_agent_type_to_maybe_escalate(self):
         """Every _maybe_escalate() call must pass agent_type= kwarg."""
-        import application.agent_monitoring.risk_monitor as rm
-        import application.agent_monitoring.regulatory_monitor as regm
-        import application.agent_monitoring.supplier_behaviour_monitor as sbm
         import application.agent_monitoring.compliance_drift_monitor as cdm
-        import application.agent_monitoring.remediation_monitor as rem
         import application.agent_monitoring.intelligence_monitor as im
+        import application.agent_monitoring.regulatory_monitor as regm
+        import application.agent_monitoring.remediation_monitor as rem
+        import application.agent_monitoring.risk_monitor as rm
+        import application.agent_monitoring.supplier_behaviour_monitor as sbm
 
         for mod, expected_type in [
             (rm, "RISK_MONITOR"),
@@ -426,6 +430,7 @@ class TestF5AgentTypeFiltering:
 
 # ── F6: Per-org failure isolation ──────────────────────────────────────────────
 
+
 class TestF6PerOrgFailureIsolation:
     def test_global_failed_status_not_set_in_source(self):
         """record_run_failed must never assign agent.status = 'FAILED'."""
@@ -434,10 +439,8 @@ class TestF6PerOrgFailureIsolation:
         src = inspect.getsource(agent_service.record_run_failed)
         # The line `agent.status = "FAILED"` must not appear
         lines = [ln.strip() for ln in src.splitlines() if not ln.strip().startswith("#")]
-        bad = [ln for ln in lines if 'agent.status' in ln and '"FAILED"' in ln]
-        assert not bad, (
-            f"F6: record_run_failed must not set agent.status='FAILED'. Found: {bad}"
-        )
+        bad = [ln for ln in lines if "agent.status" in ln and '"FAILED"' in ln]
+        assert not bad, f"F6: record_run_failed must not set agent.status='FAILED'. Found: {bad}"
 
     def test_per_org_threshold_constant_present(self):
         from application.agent_monitoring import agent_service
@@ -520,9 +523,7 @@ class TestF6PerOrgFailureIsolation:
         session.add = MagicMock()
         session.flush = AsyncMock()
 
-        with patch(
-            "application.agent_monitoring.agent_service.logger"
-        ) as mock_logger:
+        with patch("application.agent_monitoring.agent_service.logger") as mock_logger:
             await record_run_failed("run-1", "agent-1", "error", session)
 
         mock_logger.warning.assert_called_once()
@@ -531,6 +532,7 @@ class TestF6PerOrgFailureIsolation:
 
 
 # ── F7: Governance audit trail ─────────────────────────────────────────────────
+
 
 class TestF7AuditTrail:
     def test_log_audit_event_helper_in_finding_service(self):
@@ -579,7 +581,6 @@ class TestF7AuditTrail:
     @pytest.mark.asyncio
     async def test_acknowledge_finding_writes_audit_event_record(self):
         """acknowledge_finding must call session.add with an AuditEventModel."""
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.finding_service import acknowledge_finding
 
         finding = _make_finding()
@@ -608,7 +609,6 @@ class TestF7AuditTrail:
 
     @pytest.mark.asyncio
     async def test_dismiss_finding_writes_audit_event_record(self):
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.finding_service import dismiss_finding
 
         finding = _make_finding()
@@ -633,7 +633,6 @@ class TestF7AuditTrail:
 
     @pytest.mark.asyncio
     async def test_approve_draft_writes_audit_event_record(self):
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.alert_service import approve_draft
 
         draft = _make_draft()
@@ -666,7 +665,6 @@ class TestF7AuditTrail:
 
     @pytest.mark.asyncio
     async def test_reject_draft_writes_audit_event_record(self):
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.alert_service import reject_draft
 
         draft = _make_draft()
@@ -692,8 +690,8 @@ class TestF7AuditTrail:
     @pytest.mark.asyncio
     async def test_audit_event_fields_populated(self):
         """AuditEventModel must be created with action, actor_id, entity_type, entity_id."""
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.finding_service import acknowledge_finding
+        from infrastructure.persistence.models.audit_event import AuditEventModel
 
         finding = _make_finding()
 
@@ -711,7 +709,8 @@ class TestF7AuditTrail:
         await acknowledge_finding("f-1", "org-1", "user-456", session)
 
         audit_calls = [
-            call.args[0] for call in session.add.call_args_list
+            call.args[0]
+            for call in session.add.call_args_list
             if isinstance(call.args[0], AuditEventModel)
         ]
         assert len(audit_calls) == 1

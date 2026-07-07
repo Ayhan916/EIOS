@@ -16,9 +16,7 @@ from .base import Base
 
 class MFABackupCodeModel(Base):
     __tablename__ = "mfa_backup_codes"
-    __table_args__ = (
-        Index("ix_mfa_backup_codes_user_id", "user_id"),
-    )
+    __table_args__ = (Index("ix_mfa_backup_codes_user_id", "user_id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)

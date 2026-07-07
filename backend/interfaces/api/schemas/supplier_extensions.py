@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 from domain.supplier_extensions import (
     CertificationType,
@@ -15,10 +15,11 @@ from domain.supplier_extensions import (
     LocationType,
     OwnershipType,
 )
+
 from .base import EntityResponse
 
-
 # ── Supplier Location ─────────────────────────────────────────────────────────
+
 
 class SupplierLocationCreate(BaseModel):
     location_type: LocationType
@@ -73,6 +74,7 @@ class SupplierLocationResponse(EntityResponse):
 
 # ── Supplier Contact ──────────────────────────────────────────────────────────
 
+
 class SupplierContactCreate(BaseModel):
     first_name: str = Field(min_length=1, max_length=200)
     last_name: str = Field(min_length=1, max_length=200)
@@ -116,7 +118,7 @@ class SupplierContactResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "SupplierContactResponse":
+    def from_model(cls, m: Any) -> SupplierContactResponse:
         return cls(
             id=m.id,
             status=m.status,
@@ -141,6 +143,7 @@ class SupplierContactResponse(EntityResponse):
 
 
 # ── Supplier Certification ────────────────────────────────────────────────────
+
 
 class SupplierCertificationCreate(BaseModel):
     cert_type: CertificationType
@@ -174,7 +177,7 @@ class SupplierCertificationResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "SupplierCertificationResponse":
+    def from_model(cls, m: Any) -> SupplierCertificationResponse:
         today = date.today()
         is_expired = m.valid_until is not None and m.valid_until < today
         days = (m.valid_until - today).days if m.valid_until is not None else None
@@ -204,6 +207,7 @@ class SupplierCertificationResponse(EntityResponse):
 
 
 # ── Supplier Ownership ────────────────────────────────────────────────────────
+
 
 class SupplierOwnershipUpsert(BaseModel):
     ownership_type: OwnershipType = OwnershipType.PRIVATE
@@ -253,6 +257,7 @@ class SupplierOwnershipResponse(EntityResponse):
 
 # ── Supplier ESG Metrics ──────────────────────────────────────────────────────
 
+
 class SupplierESGMetricRecord(BaseModel):
     reporting_year: int = Field(ge=2000, le=2100)
     metric_type: ESGMetricType
@@ -288,6 +293,7 @@ class SupplierESGMetricResponse(EntityResponse):
 
 
 # ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
+
 
 class ExternalESGRatingCreate(BaseModel):
     provider: ESGRatingProvider
@@ -335,8 +341,9 @@ class ExternalESGRatingResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "ExternalESGRatingResponse":
+    def from_model(cls, m: Any) -> ExternalESGRatingResponse:
         from datetime import date as date_type
+
         today = date_type.today()
         is_expired = m.valid_until is not None and m.valid_until < today
         days = (m.valid_until - today).days if m.valid_until is not None else None

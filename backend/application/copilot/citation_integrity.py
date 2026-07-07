@@ -12,7 +12,6 @@ so auditors can verify citation provenance at any future point.
 from __future__ import annotations
 
 import hashlib
-import json
 from datetime import UTC, datetime
 
 import structlog
@@ -69,17 +68,19 @@ async def verify_citations(
 
         if table is None:
             # Unknown type — should not happen post-M33.1 hardening, but defensive
-            records.append(CopilotCitationIntegrity(
-                message_id=message_id,
-                organization_id=org_id,
-                citation_type=ctype,
-                object_id=obj_id,
-                integrity_status=CitationIntegrityStatus.DELETED,
-                citation_hash=chash,
-                citation_snapshot={},
-                verified_at=now,
-                status=EntityStatus.ACTIVE,
-            ))
+            records.append(
+                CopilotCitationIntegrity(
+                    message_id=message_id,
+                    organization_id=org_id,
+                    citation_type=ctype,
+                    object_id=obj_id,
+                    integrity_status=CitationIntegrityStatus.DELETED,
+                    citation_hash=chash,
+                    citation_snapshot={},
+                    verified_at=now,
+                    status=EntityStatus.ACTIVE,
+                )
+            )
             continue
 
         # Check existence and tenant ownership
@@ -113,16 +114,18 @@ async def verify_citations(
                 "updated_at": str(result.get("updated_at", "")),
             }
 
-        records.append(CopilotCitationIntegrity(
-            message_id=message_id,
-            organization_id=org_id,
-            citation_type=ctype,
-            object_id=obj_id,
-            integrity_status=status,
-            citation_hash=chash,
-            citation_snapshot=snapshot,
-            verified_at=now,
-            status=EntityStatus.ACTIVE,
-        ))
+        records.append(
+            CopilotCitationIntegrity(
+                message_id=message_id,
+                organization_id=org_id,
+                citation_type=ctype,
+                object_id=obj_id,
+                integrity_status=status,
+                citation_hash=chash,
+                citation_snapshot=snapshot,
+                verified_at=now,
+                status=EntityStatus.ACTIVE,
+            )
+        )
 
     return records

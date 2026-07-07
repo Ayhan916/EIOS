@@ -82,7 +82,11 @@ def next_retry_at(attempt: int) -> datetime | None:
     """Return the datetime of the next retry, or None if max attempts reached."""
     if attempt >= _MAX_ATTEMPTS:
         return None
-    delay = _RETRY_DELAYS_SECONDS[attempt] if attempt < len(_RETRY_DELAYS_SECONDS) else _RETRY_DELAYS_SECONDS[-1]
+    delay = (
+        _RETRY_DELAYS_SECONDS[attempt]
+        if attempt < len(_RETRY_DELAYS_SECONDS)
+        else _RETRY_DELAYS_SECONDS[-1]
+    )
     return datetime.now(UTC) + timedelta(seconds=delay)
 
 
@@ -103,12 +107,12 @@ async def attempt_delivery(
     (delivered, dead_letter) this function returns immediately without
     re-delivering — prevents duplicate deliveries after a restart.
     """
+    from domain.enums import WebhookDeliveryStatus  # noqa: PLC0415
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from infrastructure.persistence.repositories.webhook import (  # noqa: PLC0415
         SQLWebhookDeliveryRepository,
         SQLWebhookSubscriptionRepository,
     )
-    from domain.enums import WebhookDeliveryStatus  # noqa: PLC0415
 
     _TERMINAL = {WebhookDeliveryStatus.DELIVERED.value, WebhookDeliveryStatus.DEAD_LETTER.value}
 
@@ -140,7 +144,9 @@ async def attempt_delivery(
                 delivery.delivery_status = WebhookDeliveryStatus.DEAD_LETTER.value
                 delivery.error_message = error or "Max retries exceeded"
                 is_dead_letter = True
-                log.warning("webhook.dead_letter", delivery_id=delivery_id, url=target_url, error=error)
+                log.warning(
+                    "webhook.dead_letter", delivery_id=delivery_id, url=target_url, error=error
+                )
             else:
                 delivery.delivery_status = WebhookDeliveryStatus.FAILED.value
                 delivery.retry_at = ra
@@ -150,6 +156,7 @@ async def attempt_delivery(
         # Update in-process metrics counter
         try:
             from interfaces.api.routers.metrics import counters  # noqa: PLC0415
+
             counters.record_webhook_delivery(succeeded=success, dead_letter=is_dead_letter)
         except Exception:  # noqa: BLE001
             pass

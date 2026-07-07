@@ -105,9 +105,7 @@ class SQLEvaluationRunRepository(BaseRepository[EvaluationRun, EvaluationRunMode
         return [self._to_domain(row) for row in result.scalars().all()]
 
 
-class SQLBenchmarkResultRepository(
-    BaseRepository[BenchmarkResult, BenchmarkResultModel]
-):
+class SQLBenchmarkResultRepository(BaseRepository[BenchmarkResult, BenchmarkResultModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, BenchmarkResultModel)
 
@@ -176,9 +174,7 @@ class SQLBenchmarkResultRepository(
         return [self._to_domain(row) for row in result.scalars().all()]
 
 
-class SQLCalibrationEventRepository(
-    BaseRepository[CalibrationEvent, CalibrationEventModel]
-):
+class SQLCalibrationEventRepository(BaseRepository[CalibrationEvent, CalibrationEventModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, CalibrationEventModel)
 

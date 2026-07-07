@@ -33,20 +33,28 @@ def build_remediation_report(
         Serialisable snapshot dict.
     """
     open_items = [r for r in recommendations if r.get("action_status") in _OPEN_STATUSES]
-    in_progress_items = [r for r in recommendations if r.get("action_status") in _IN_PROGRESS_STATUSES]
+    in_progress_items = [
+        r for r in recommendations if r.get("action_status") in _IN_PROGRESS_STATUSES
+    ]
     completed_items = [r for r in recommendations if r.get("action_status") in _RESOLVED_STATUSES]
     overdue_items = [
-        r for r in recommendations
-        if r.get("action_status") in (_OPEN_STATUSES | _IN_PROGRESS_STATUSES) and r.get("overdue", False)
+        r
+        for r in recommendations
+        if r.get("action_status") in (_OPEN_STATUSES | _IN_PROGRESS_STATUSES)
+        and r.get("overdue", False)
     ]
 
     total = len(recommendations)
-    total_active = len(open_items) + len(in_progress_items)
+    len(open_items) + len(in_progress_items)
     closure_rate = round(len(completed_items) / total, 4) if total else 0.0
 
     # Average resolution time for completed items
-    resolved_days = [r.get("resolution_days") for r in completed_items if r.get("resolution_days") is not None]
-    avg_resolution_days = round(sum(resolved_days) / len(resolved_days), 1) if resolved_days else None
+    resolved_days = [
+        r.get("resolution_days") for r in completed_items if r.get("resolution_days") is not None
+    ]
+    avg_resolution_days = (
+        round(sum(resolved_days) / len(resolved_days), 1) if resolved_days else None
+    )
 
     # By priority
     priority_breakdown: dict[str, dict] = {
@@ -57,7 +65,9 @@ def build_remediation_report(
     }
     for r in recommendations:
         priority = r.get("priority", "Medium")
-        pb = priority_breakdown.setdefault(priority, {"open": 0, "in_progress": 0, "completed": 0, "overdue": 0})
+        pb = priority_breakdown.setdefault(
+            priority, {"open": 0, "in_progress": 0, "completed": 0, "overdue": 0}
+        )
         status = r.get("action_status", "open")
         if status in _OPEN_STATUSES:
             pb["open"] += 1

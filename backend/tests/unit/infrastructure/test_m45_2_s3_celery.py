@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Redis Blacklist client
@@ -25,8 +23,8 @@ class TestRedisBlacklistClient:
             patch("infrastructure.redis.blacklist.from_url", return_value=mock_client),
             patch("infrastructure.redis.blacklist._blacklist", None),
         ):
-            from infrastructure.redis.blacklist import init_redis_blacklist, get_redis_blacklist
             import infrastructure.redis.blacklist as _mod
+            from infrastructure.redis.blacklist import init_redis_blacklist
 
             _mod._blacklist = None
             await init_redis_blacklist()
@@ -39,12 +37,14 @@ class TestRedisBlacklistClient:
             side_effect=ConnectionRefusedError("refused"),
         ):
             import infrastructure.redis.blacklist as _mod
+
             _mod._blacklist = None
             await _mod.init_redis_blacklist()
             assert _mod._blacklist is None
 
     def test_get_redis_blacklist_returns_none_when_not_init(self) -> None:
         import infrastructure.redis.blacklist as _mod
+
         original = _mod._blacklist
         _mod._blacklist = None
         try:
@@ -56,6 +56,7 @@ class TestRedisBlacklistClient:
     @pytest.mark.asyncio
     async def test_close_noop_when_not_connected(self) -> None:
         import infrastructure.redis.blacklist as _mod
+
         original = _mod._blacklist
         _mod._blacklist = None
         try:
@@ -68,6 +69,7 @@ class TestRedisBlacklistClient:
     async def test_close_calls_aclose_and_clears(self) -> None:
         mock_client = AsyncMock()
         import infrastructure.redis.blacklist as _mod
+
         original = _mod._blacklist
         _mod._blacklist = mock_client
         try:
@@ -94,10 +96,12 @@ class TestJwtBlacklistHelpers:
     async def test_blacklist_token_calls_setex(self) -> None:
         mock_redis = AsyncMock()
         import infrastructure.redis.blacklist as _bl_mod
+
         original = _bl_mod._blacklist
         _bl_mod._blacklist = mock_redis
         try:
             from shared.security import blacklist_token
+
             await blacklist_token("jti-abc", 3600)
             mock_redis.setex.assert_awaited_once_with("blacklist:jti-abc", 3600, "1")
         finally:
@@ -106,10 +110,12 @@ class TestJwtBlacklistHelpers:
     @pytest.mark.asyncio
     async def test_blacklist_token_noop_when_redis_none(self) -> None:
         import infrastructure.redis.blacklist as _bl_mod
+
         original = _bl_mod._blacklist
         _bl_mod._blacklist = None
         try:
             from shared.security import blacklist_token
+
             await blacklist_token("jti-xyz", 3600)  # must not raise
         finally:
             _bl_mod._blacklist = original
@@ -119,10 +125,12 @@ class TestJwtBlacklistHelpers:
         mock_redis = AsyncMock()
         mock_redis.get = AsyncMock(return_value="1")
         import infrastructure.redis.blacklist as _bl_mod
+
         original = _bl_mod._blacklist
         _bl_mod._blacklist = mock_redis
         try:
             from shared.security import is_token_blacklisted
+
             result = await is_token_blacklisted("jti-abc")
             assert result is True
         finally:
@@ -133,10 +141,12 @@ class TestJwtBlacklistHelpers:
         mock_redis = AsyncMock()
         mock_redis.get = AsyncMock(return_value=None)
         import infrastructure.redis.blacklist as _bl_mod
+
         original = _bl_mod._blacklist
         _bl_mod._blacklist = mock_redis
         try:
             from shared.security import is_token_blacklisted
+
             result = await is_token_blacklisted("jti-none")
             assert result is False
         finally:
@@ -145,10 +155,12 @@ class TestJwtBlacklistHelpers:
     @pytest.mark.asyncio
     async def test_is_token_blacklisted_returns_false_when_redis_none(self) -> None:
         import infrastructure.redis.blacklist as _bl_mod
+
         original = _bl_mod._blacklist
         _bl_mod._blacklist = None
         try:
             from shared.security import is_token_blacklisted
+
             result = await is_token_blacklisted("jti-xyz")
             assert result is False
         finally:
@@ -167,6 +179,7 @@ class TestS3Client:
     async def test_upload_file_returns_key(self) -> None:
         with patch("infrastructure.storage.s3._upload_sync") as mock_upload:
             from infrastructure.storage.s3 import upload_file
+
             key = await upload_file(b"hello", "org/evidences/e1/file.pdf", "application/pdf")
             mock_upload.assert_called_once_with(
                 b"hello", "org/evidences/e1/file.pdf", "application/pdf"
@@ -177,6 +190,7 @@ class TestS3Client:
     async def test_download_file_returns_bytes(self) -> None:
         with patch("infrastructure.storage.s3._download_sync", return_value=b"bytes"):
             from infrastructure.storage.s3 import download_file
+
             data = await download_file("org/evidences/e1/file.pdf")
             assert data == b"bytes"
 
@@ -187,6 +201,7 @@ class TestS3Client:
             side_effect=Exception("NoSuchKey"),
         ):
             from infrastructure.storage.s3 import delete_file
+
             await delete_file("nonexistent-key")  # must not raise
 
     @pytest.mark.asyncio
@@ -196,6 +211,7 @@ class TestS3Client:
             return_value="https://s3.amazonaws.com/bucket/key?sig=abc",
         ):
             from infrastructure.storage.s3 import generate_presigned_url
+
             url = await generate_presigned_url("org/evidences/e1/file.pdf", expires_in=3600)
             assert url.startswith("https://")
 
@@ -238,6 +254,7 @@ class TestIngestEvidenceTask:
         # Importing the tasks module registers it with the Celery app.
         import infrastructure.celery.tasks.ingestion  # noqa: F401
         from infrastructure.celery.app import celery_app
+
         assert "eios.tasks.ingest_evidence" in celery_app.tasks
 
     def test_task_propagates_exception_on_failure(self) -> None:
@@ -307,25 +324,30 @@ class TestIngestEvidenceTask:
 class TestSettingsM452:
     def test_s3_disabled_by_default(self) -> None:
         from shared.config import Settings
+
         s = Settings()
         assert s.s3_enabled is False
 
     def test_s3_bucket_default(self) -> None:
         from shared.config import Settings
+
         s = Settings()
         assert s.s3_bucket == "eios-documents"
 
     def test_celery_broker_default(self) -> None:
         from shared.config import Settings
+
         s = Settings()
         assert s.celery_broker_url.startswith("redis://")
 
     def test_redis_blacklist_url_different_from_main(self) -> None:
         from shared.config import Settings
+
         s = Settings()
         assert s.redis_blacklist_url != s.redis_url
 
     def test_presigned_url_expiry_default_is_one_hour(self) -> None:
         from shared.config import Settings
+
         s = Settings()
         assert s.s3_presigned_url_expire_seconds == 3600

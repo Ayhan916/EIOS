@@ -203,7 +203,9 @@ async def test_api_key_auth_success(admin_client: AsyncClient, anon_client: Asyn
 
 
 @pytest.mark.asyncio
-async def test_revoked_api_key_rejected(admin_client: AsyncClient, anon_client: AsyncClient) -> None:
+async def test_revoked_api_key_rejected(
+    admin_client: AsyncClient, anon_client: AsyncClient
+) -> None:
     r = await admin_client.post(
         f"{BASE}/api-keys",
         json={"name": "Revoke Auth Key", "scopes": ["suppliers:read"]},

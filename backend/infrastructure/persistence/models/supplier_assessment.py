@@ -1,4 +1,5 @@
 """SQLAlchemy models — Supplier Self-Assessment CSDDD (CSDDD-015)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -19,16 +20,18 @@ class AssessmentTemplateModel(Base):
     is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     questions: Mapped[list[AssessmentQuestionModel]] = relationship(
-        "AssessmentQuestionModel", back_populates="template", cascade="all, delete-orphan",
+        "AssessmentQuestionModel",
+        back_populates="template",
+        cascade="all, delete-orphan",
         order_by="AssessmentQuestionModel.sort_order",
     )
 
-    __table_args__ = (
-        Index("ix_assessment_templates_org", "organization_id"),
-    )
+    __table_args__ = (Index("ix_assessment_templates_org", "organization_id"),)
 
 
 class AssessmentQuestionModel(Base):
@@ -72,9 +75,13 @@ class SupplierAssessmentModel(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="sent")
     reference_code: Mapped[str] = mapped_column(String(20), nullable=False)
     # submitted_by_email stored internally — NEVER returned in API response
-    _submitted_by_email: Mapped[str | None] = mapped_column("submitted_by_email", String(255), nullable=True)
+    _submitted_by_email: Mapped[str | None] = mapped_column(
+        "submitted_by_email", String(255), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     responses: Mapped[list[AssessmentResponseModel]] = relationship(
@@ -98,12 +105,12 @@ class AssessmentResponseModel(Base):
         String(36), ForeignKey("assessment_questions.id"), nullable=False
     )
     answer_value: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    answered_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    answered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
 
     assessment: Mapped[SupplierAssessmentModel] = relationship(
         "SupplierAssessmentModel", back_populates="responses"
     )
 
-    __table_args__ = (
-        Index("ix_assessment_responses_assessment", "assessment_id"),
-    )
+    __table_args__ = (Index("ix_assessment_responses_assessment", "assessment_id"),)

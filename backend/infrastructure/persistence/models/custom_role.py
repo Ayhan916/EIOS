@@ -18,9 +18,7 @@ class CustomRoleModel(Base):
     """
 
     __tablename__ = "custom_roles"
-    __table_args__ = (
-        UniqueConstraint("organization_id", "role_name", name="uq_org_role_name"),
-    )
+    __table_args__ = (UniqueConstraint("organization_id", "role_name", name="uq_org_role_name"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
@@ -46,24 +44,24 @@ ROLE_TEMPLATES = {
         "description": "Read + update on assessments, findings, risks, and evidence",
         "permissions": [
             {"resource": "assessment", "actions": ["read", "update"]},
-            {"resource": "finding",    "actions": ["read", "update", "create"]},
-            {"resource": "risk",       "actions": ["read", "update", "create"]},
-            {"resource": "evidence",   "actions": ["read", "create"]},
+            {"resource": "finding", "actions": ["read", "update", "create"]},
+            {"resource": "risk", "actions": ["read", "update", "create"]},
+            {"resource": "evidence", "actions": ["read", "create"]},
         ],
     },
     "auditor": {
         "description": "Read-only with audit trail access",
         "permissions": [
-            {"resource": "*",          "actions": ["read"]},
-            {"resource": "audit_log",  "actions": ["read", "export"]},
+            {"resource": "*", "actions": ["read"]},
+            {"resource": "audit_log", "actions": ["read", "export"]},
         ],
     },
     "supplier_manager": {
         "description": "Manage suppliers and due diligence",
         "permissions": [
-            {"resource": "supplier",       "actions": ["read", "create", "update"]},
-            {"resource": "due_diligence",  "actions": ["read", "create", "update"]},
-            {"resource": "finding",        "actions": ["read"]},
+            {"resource": "supplier", "actions": ["read", "create", "update"]},
+            {"resource": "due_diligence", "actions": ["read", "create", "update"]},
+            {"resource": "finding", "actions": ["read"]},
         ],
     },
 }

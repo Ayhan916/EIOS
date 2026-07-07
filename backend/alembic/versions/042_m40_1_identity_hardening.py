@@ -14,6 +14,7 @@ Create Date: 2026-06-21
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "042"
@@ -55,9 +56,7 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
-    op.create_index(
-        "ix_idp_secret_ref", "identity_providers", ["secret_reference_id"]
-    )
+    op.create_index("ix_idp_secret_ref", "identity_providers", ["secret_reference_id"])
 
     # ── 3. Drop client_secret_encrypted ──────────────────────────────────────
     op.drop_column("identity_providers", "client_secret_encrypted")

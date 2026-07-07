@@ -19,13 +19,13 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
 
 from application.ports.llm import LLMProvider, Message
-from domain.enums import CalibrationStatus, CSDDDRight, ConfidenceLevel
+from domain.enums import CalibrationStatus, ConfidenceLevel, CSDDDRight
 
 logger = structlog.get_logger(__name__)
 
@@ -89,6 +89,7 @@ _RIGHT_DISPLAY_NAMES: dict[CSDDDRight, str] = {
 # Result types
 # ---------------------------------------------------------------------------
 
+
 class CalibrationSuggestionDTO:
     """In-memory representation before DB persistence."""
 
@@ -112,12 +113,13 @@ class CalibrationSuggestionDTO:
         self.reasoning = reasoning
         self.sources = sources
         self.status = status
-        self.created_at = created_at or datetime.now(timezone.utc).isoformat()
+        self.created_at = created_at or datetime.now(UTC).isoformat()
 
 
 # ---------------------------------------------------------------------------
 # Pipeline
 # ---------------------------------------------------------------------------
+
 
 class SectorRiskCalibrationPipeline:
     """RAG-based calibration pipeline for CSDDD sector risk scores.
@@ -169,11 +171,13 @@ class SectorRiskCalibrationPipeline:
                 if text:
                     context_parts.append(f"[{title}]\n{text[:600]}")
             context = "\n\n".join(context_parts)
-            chunk_sources = list({
-                getattr(c, "evidence_title", None) or c.get("evidence_title", "")
-                for c in chunks
-                if getattr(c, "evidence_title", None) or c.get("evidence_title", "")
-            })
+            chunk_sources = list(
+                {
+                    getattr(c, "evidence_title", None) or c.get("evidence_title", "")
+                    for c in chunks
+                    if getattr(c, "evidence_title", None) or c.get("evidence_title", "")
+                }
+            )
         else:
             # No documents in knowledge base yet — LLM uses parametric knowledge
             context = (
@@ -243,15 +247,13 @@ class SectorRiskCalibrationPipeline:
         # Strip markdown code fences if present
         if content.startswith("```"):
             lines = content.split("\n")
-            content = "\n".join(
-                line for line in lines
-                if not line.strip().startswith("```")
-            )
+            content = "\n".join(line for line in lines if not line.strip().startswith("```"))
         try:
             return json.loads(content)
         except json.JSONDecodeError:
             # Try to find JSON object within the response
             import re
+
             match = re.search(r"\{[^{}]+\}", content, re.DOTALL)
             if match:
                 try:
@@ -266,11 +268,12 @@ class SectorRiskCalibrationPipeline:
 # DB persistence helpers (called from router with active SQLAlchemy session)
 # ---------------------------------------------------------------------------
 
+
 async def save_suggestion(dto: CalibrationSuggestionDTO, session: Any) -> str:
     """Persist a CalibrationSuggestionDTO to the calibration_suggestions table."""
     from infrastructure.persistence.models.sector_risk_register import CalibrationSuggestionModel
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     model = CalibrationSuggestionModel(
         id=dto.id,
         status=CalibrationStatus.PENDING.value,
@@ -296,11 +299,12 @@ async def approve_suggestion(
 ) -> bool:
     """Approve a pending suggestion → write to sector_right_scores."""
     from sqlalchemy import select
+
+    from application.sector_intelligence.base_matrix import CALIBRATION_VERSION
     from infrastructure.persistence.models.sector_risk_register import (
         CalibrationSuggestionModel,
         SectorRightScoreModel,
     )
-    from application.sector_intelligence.base_matrix import CALIBRATION_VERSION
 
     result = await session.execute(
         select(CalibrationSuggestionModel).where(
@@ -312,7 +316,7 @@ async def approve_suggestion(
     if model is None:
         return False
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     model.status = CalibrationStatus.APPROVED.value
     model.reviewed_by = reviewer_id
     model.reviewed_at = now
@@ -356,6 +360,7 @@ async def reject_suggestion(
 ) -> bool:
     """Reject a pending calibration suggestion."""
     from sqlalchemy import select
+
     from infrastructure.persistence.models.sector_risk_register import CalibrationSuggestionModel
 
     result = await session.execute(
@@ -368,7 +373,7 @@ async def reject_suggestion(
     if model is None:
         return False
 
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     model.status = CalibrationStatus.REJECTED.value
     model.reviewed_by = reviewer_id
     model.reviewed_at = now
@@ -384,11 +389,14 @@ async def list_suggestions(
     limit: int = 50,
 ) -> list[CalibrationSuggestionModel]:
     from sqlalchemy import select
+
     from infrastructure.persistence.models.sector_risk_register import CalibrationSuggestionModel
 
-    stmt = select(CalibrationSuggestionModel).order_by(
-        CalibrationSuggestionModel.created_at.desc()
-    ).limit(limit)
+    stmt = (
+        select(CalibrationSuggestionModel)
+        .order_by(CalibrationSuggestionModel.created_at.desc())
+        .limit(limit)
+    )
     if status is not None:
         stmt = stmt.where(CalibrationSuggestionModel.status == status.value)
     result = await session.execute(stmt)

@@ -9,9 +9,7 @@ from infrastructure.persistence.models.due_diligence import DueDiligenceReportMo
 from infrastructure.persistence.repositories.base import BaseRepository
 
 
-class SQLDueDiligenceReportRepository(
-    BaseRepository[DueDiligenceReport, DueDiligenceReportModel]
-):
+class SQLDueDiligenceReportRepository(BaseRepository[DueDiligenceReport, DueDiligenceReportModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, DueDiligenceReportModel)
 

@@ -16,7 +16,7 @@ Scenarios covered:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 import pytest_asyncio
@@ -171,9 +171,7 @@ class TestCreateFindingEvidenceLinks:
             similarity=0.3,
             evidence_id="ev-2",
         )
-        links = create_finding_evidence_links(
-            [finding], [low_chunk, high_chunk]
-        )
+        links = create_finding_evidence_links([finding], [low_chunk, high_chunk])
         assert len(links) >= 2
         # First link should be higher confidence than second
         assert links[0].confidence_score >= links[1].confidence_score  # type: ignore[operator]
@@ -306,16 +304,18 @@ async def test_evidence_insights_correct_structure(setup_test_schema: None) -> N
         )
         saved_finding = await finding_repo.save(finding)
 
-        _now = datetime.now(timezone.utc)
-        session.add(EvidenceModel(
-            id="ev-test-001",
-            organization_id=org_id,
-            title="Test Evidence",
-            source="test-source",
-            description="Evidence for insights test",
-            created_at=_now,
-            updated_at=_now,
-        ))
+        _now = datetime.now(UTC)
+        session.add(
+            EvidenceModel(
+                id="ev-test-001",
+                organization_id=org_id,
+                title="Test Evidence",
+                source="test-source",
+                description="Evidence for insights test",
+                created_at=_now,
+                updated_at=_now,
+            )
+        )
         await session.flush()
 
         link = FindingEvidenceLink(

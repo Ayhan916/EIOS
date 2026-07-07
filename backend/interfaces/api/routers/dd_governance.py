@@ -40,13 +40,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.dd_policy import CoCAcceptance, CodeOfConduct, DDPolicy
 from domain.enums import DDPolicyStatus
+from domain.user import User
 from infrastructure.persistence.repositories.dd_policy import (
     SQLCoCAcceptanceRepository,
     SQLCodeOfConductRepository,
     SQLDDPolicyRepository,
 )
 from interfaces.api.deps import get_current_user, get_db, require_analyst
-from domain.user import User
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -160,7 +160,9 @@ async def get_coc_repo(session: AsyncSession = Depends(get_db)) -> SQLCodeOfCond
     return SQLCodeOfConductRepository(session)
 
 
-async def get_acceptance_repo(session: AsyncSession = Depends(get_db)) -> SQLCoCAcceptanceRepository:
+async def get_acceptance_repo(
+    session: AsyncSession = Depends(get_db),
+) -> SQLCoCAcceptanceRepository:
     return SQLCoCAcceptanceRepository(session)
 
 
@@ -169,7 +171,9 @@ def _policy_response(p: DDPolicy) -> PolicyResponse:
         id=p.id,
         organization_id=p.organization_id,
         title=p.title,
-        policy_status=p.policy_status.value if hasattr(p.policy_status, "value") else p.policy_status,
+        policy_status=p.policy_status.value
+        if hasattr(p.policy_status, "value")
+        else p.policy_status,
         content_text=p.content_text,
         file_url=p.file_url,
         approved_by=p.approved_by,
@@ -466,6 +470,7 @@ async def supplier_accept_coc(
     client_ip = request.client.host if request.client else "unknown"
     now = datetime.now(UTC)
     from dateutil.relativedelta import relativedelta
+
     expires = (now + relativedelta(months=coc.acceptance_validity_months)).date()
     acc = CoCAcceptance(
         organization_id=current_user.organization_id,
@@ -519,16 +524,22 @@ async def get_review_status(
 ) -> ReviewStatusResponse:
     if not current_user.organization_id:
         return ReviewStatusResponse(
-            has_active_policy=False, review_status="no_policy",
-            next_review_due=None, days_until_review=None,
-            policy_version=None, policy_title=None,
+            has_active_policy=False,
+            review_status="no_policy",
+            next_review_due=None,
+            days_until_review=None,
+            policy_version=None,
+            policy_title=None,
         )
     p = await repo.get_active(current_user.organization_id)
     if not p:
         return ReviewStatusResponse(
-            has_active_policy=False, review_status="no_policy",
-            next_review_due=None, days_until_review=None,
-            policy_version=None, policy_title=None,
+            has_active_policy=False,
+            review_status="no_policy",
+            next_review_due=None,
+            days_until_review=None,
+            policy_version=None,
+            policy_title=None,
         )
     days = None
     if p.next_review_due:
@@ -561,14 +572,18 @@ async def governance_calendar(
         if p.policy_status == DDPolicyStatus.ACTIVE and p.next_review_due:
             days = (p.next_review_due - today).days
             evt_status = "overdue" if days < 0 else ("due_soon" if days <= 60 else "upcoming")
-            events.append(GovernanceEvent(
-                event_type="policy_review",
-                title=f"DD-Politik Review: {p.title}",
-                due_date=p.next_review_due,
-                status=evt_status,
-                detail=f"Version {p.policy_version} — fällig in {days} Tagen" if days >= 0 else f"Überfällig seit {abs(days)} Tagen",
-                reference_id=p.id,
-            ))
+            events.append(
+                GovernanceEvent(
+                    event_type="policy_review",
+                    title=f"DD-Politik Review: {p.title}",
+                    due_date=p.next_review_due,
+                    status=evt_status,
+                    detail=f"Version {p.policy_version} — fällig in {days} Tagen"
+                    if days >= 0
+                    else f"Überfällig seit {abs(days)} Tagen",
+                    reference_id=p.id,
+                )
+            )
 
     # Sort by due_date
     events.sort(key=lambda e: e.due_date or date.max)

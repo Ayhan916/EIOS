@@ -8,29 +8,28 @@ are captured at generation time and stored in the report record.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.strategy.metrics import strategy_counters
 from application.strategy.digital_twin_service import StrategyError
+from application.strategy.metrics import strategy_counters
 from infrastructure.persistence.models.strategy import (
     ClimateStressTestModel,
     FinancialStressTestModel,
-    ForecastResultModel,
     ForecastMethodologyRecordModel,
+    ForecastResultModel,
     ScenarioAssumptionModel,
-    StrategyMethodologyModel,
-    StrategyScenarioModel,
     StrategicForecastSummaryModel,
     StrategicScenarioReportModel,
+    StrategyMethodologyModel,
     TransitionPathwayModel,
 )
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assumptions_snapshot(organization_id: str, scenario_ids: list[str], session: Session) -> dict:
@@ -101,7 +100,11 @@ def _stress_tests_snapshot(organization_id: str, session: Session) -> dict:
             for t in climate
         ],
         "financial_stress_tests": [
-            {"test_name": t.test_name, "stress_type": t.stress_type, "financial_impact": t.financial_impact}
+            {
+                "test_name": t.test_name,
+                "stress_type": t.stress_type,
+                "financial_impact": t.financial_impact,
+            }
             for t in financial
         ],
     }
@@ -172,13 +175,17 @@ def _methodology_appendix(organization_id: str, session: Session) -> dict:
 
 def _assumption_appendix(organization_id: str, scenario_ids: list[str], session: Session) -> dict:
     rows = (
-        session.query(ScenarioAssumptionModel)
-        .filter(
-            ScenarioAssumptionModel.organization_id == organization_id,
-            ScenarioAssumptionModel.scenario_id.in_(scenario_ids) if scenario_ids else False,
+        (
+            session.query(ScenarioAssumptionModel)
+            .filter(
+                ScenarioAssumptionModel.organization_id == organization_id,
+                ScenarioAssumptionModel.scenario_id.in_(scenario_ids) if scenario_ids else False,
+            )
+            .all()
         )
-        .all()
-    ) if scenario_ids else []
+        if scenario_ids
+        else []
+    )
     return {
         "total_assumptions": len(rows),
         "assumptions_by_key": {
@@ -289,7 +296,6 @@ def generate_forecast_summary(
     session: Session,
 ) -> StrategicForecastSummaryModel:
     """Aggregate the latest forecast results into an executive summary."""
-    from sqlalchemy import func as _func
 
     rows = (
         session.query(ForecastResultModel)
@@ -298,7 +304,11 @@ def generate_forecast_summary(
     )
 
     def _avg_by_type(ftype: str) -> float | None:
-        vals = [r.forecast_value for r in rows if r.forecast_type == ftype and r.forecast_value is not None]
+        vals = [
+            r.forecast_value
+            for r in rows
+            if r.forecast_type == ftype and r.forecast_value is not None
+        ]
         return round(sum(vals) / len(vals), 4) if vals else None
 
     esg = _avg_by_type("KPI")
@@ -311,7 +321,9 @@ def generate_forecast_summary(
     forecast_delta: float | None = None
     scenario_confidence: float | None = None
 
-    emission_rows = [r for r in rows if r.forecast_type == "EMISSIONS" and r.forecast_value is not None]
+    emission_rows = [
+        r for r in rows if r.forecast_type == "EMISSIONS" and r.forecast_value is not None
+    ]
     if emission_rows:
         avg_baseline = sum(
             r.baseline_value for r in emission_rows if r.baseline_value is not None
@@ -320,7 +332,9 @@ def generate_forecast_summary(
         if avg_baseline and avg_baseline != 0:
             delta = (avg_forecast - avg_baseline) / abs(avg_baseline) * 100
             forecast_delta = round(delta, 4)
-            trend_direction = "IMPROVING" if delta < -2 else ("DECLINING" if delta > 2 else "STABLE")
+            trend_direction = (
+                "IMPROVING" if delta < -2 else ("DECLINING" if delta > 2 else "STABLE")
+            )
 
     conf_vals = [r.confidence_level for r in rows if r.confidence_level is not None]
     if conf_vals:

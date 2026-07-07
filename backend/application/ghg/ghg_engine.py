@@ -146,7 +146,7 @@ async def _lookup_factor(
         )
         .order_by(
             GHGEmissionFactorModel.is_custom.desc(),  # org custom wins
-            GHGEmissionFactorModel.year.desc(),       # latest year wins among same source
+            GHGEmissionFactorModel.year.desc(),  # latest year wins among same source
         )
         .limit(1)
     )

@@ -23,7 +23,7 @@ Routes:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, date, timedelta
+from datetime import UTC, date, datetime, timedelta
 from io import BytesIO
 from uuid import uuid4
 
@@ -44,7 +44,7 @@ from application.executive import (
 )
 from application.scoring import categorize_pillar
 from domain.board_report import BoardReport, ReportSchedule
-from domain.enums import EntityStatus, UserRole
+from domain.enums import EntityStatus
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.finding import FindingModel
@@ -76,10 +76,11 @@ from interfaces.api.deps import (
 from interfaces.api.routers.api_platform import dispatch_webhook_event
 from interfaces.api.schemas.executive import (
     ActionEffectivenessResponse,
+    ActionSummary,
     BoardReportDetail,
     BoardReportRequest,
-    ESGOperatingSummary,
     BoardReportSummary,
+    ESGOperatingSummary,
     ExecutiveDashboard,
     ExecutiveHeatmapResponse,
     GovernanceMetricsResponse,
@@ -88,13 +89,12 @@ from interfaces.api.schemas.executive import (
     KPITrendResponse,
     MonthlyDataPoint,
     PortfolioSummary,
-    ActionSummary,
     ReportScheduleRequest,
     ReportScheduleResponse,
     RiskRegisterEntry,
 )
-from interfaces.api.schemas.sustainability import SustainabilityExecutiveSummary
 from interfaces.api.schemas.financial_esg import FinancialSustainabilitySummary
+from interfaces.api.schemas.sustainability import SustainabilityExecutiveSummary
 
 logger = structlog.get_logger(__name__)
 
@@ -116,9 +116,7 @@ def _assert_org(user: User) -> str:
     return user.organization_id
 
 
-async def _latest_scores_for_org(
-    session: AsyncSession, org_id: str
-) -> list[SupplierScoreModel]:
+async def _latest_scores_for_org(session: AsyncSession, org_id: str) -> list[SupplierScoreModel]:
     """Latest score per supplier for the org (derived table approach)."""
     latest_subq = (
         select(
@@ -159,9 +157,9 @@ async def _action_counts(
     total = len(rows)
     open_count = sum(1 for r in rows if r.action_status not in _CLOSED_STATUSES)
     overdue = sum(
-        1 for r in rows
-        if r.action_status not in _CLOSED_STATUSES
-        and r.due_date and r.due_date < now
+        1
+        for r in rows
+        if r.action_status not in _CLOSED_STATUSES and r.due_date and r.due_date < now
     )
     return total, open_count, overdue
 
@@ -183,21 +181,23 @@ async def _critical_findings_count(session: AsyncSession, org_id: str) -> int:
     return row or 0
 
 
-async def _assessment_review_counts(
-    session: AsyncSession, org_id: str
-) -> tuple[int, int]:
+async def _assessment_review_counts(session: AsyncSession, org_id: str) -> tuple[int, int]:
     """Return (awaiting_review, approved) counts for the org."""
     rows = (
-        await session.execute(
-            select(AssessmentModel.review_status)
-            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
-            .where(
-                SupplierModel.organization_id == org_id,
-                AssessmentModel.status != "Deleted",
-                AssessmentModel.supplier_id.isnot(None),
+        (
+            await session.execute(
+                select(AssessmentModel.review_status)
+                .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+                .where(
+                    SupplierModel.organization_id == org_id,
+                    AssessmentModel.status != "Deleted",
+                    AssessmentModel.supplier_id.isnot(None),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     awaiting = sum(1 for s in rows if s in ("InReview", "ChangesRequested"))
     approved = sum(1 for s in rows if s == "Approved")
     return awaiting, approved
@@ -247,81 +247,118 @@ async def get_executive_dashboard(
 
     # M39 ESG Operating System summary
     try:
-        from sqlalchemy import func, select as sa_select
+        from datetime import UTC as _UTC
+        from datetime import datetime as _dt
+
+        from sqlalchemy import func
+        from sqlalchemy import select as sa_select
+
         from infrastructure.persistence.models.operating_system import (
-            ESGObjectiveModel, ESGInitiativeModel, StrategicRiskModel, ESGActionModel,
-            ESGControlModel, AccountabilityAssignmentModel, ComplianceOperationModel,
+            AccountabilityAssignmentModel,
+            ComplianceOperationModel,
+            ESGActionModel,
+            ESGControlModel,
+            ESGInitiativeModel,
+            ESGObjectiveModel,
+            StrategicRiskModel,
         )
-        from datetime import UTC as _UTC, datetime as _dt
 
         _now = _dt.now(_UTC)
 
-        _obj_rows = (await session.execute(
-            sa_select(ESGObjectiveModel.objective_status, func.count().label("cnt"))
-            .where(ESGObjectiveModel.organization_id == org_id)
-            .group_by(ESGObjectiveModel.objective_status)
-        )).all()
+        _obj_rows = (
+            await session.execute(
+                sa_select(ESGObjectiveModel.objective_status, func.count().label("cnt"))
+                .where(ESGObjectiveModel.organization_id == org_id)
+                .group_by(ESGObjectiveModel.objective_status)
+            )
+        ).all()
         _objectives_by_status: dict[str, int] = {r.objective_status: r.cnt for r in _obj_rows}
         _obj_at_risk = sum(
             v for k, v in _objectives_by_status.items() if k in ("AT_RISK", "OFF_TRACK")
         )
 
-        _init_rows = (await session.execute(
-            sa_select(ESGInitiativeModel.initiative_status, func.count().label("cnt"))
-            .where(ESGInitiativeModel.organization_id == org_id)
-            .group_by(ESGInitiativeModel.initiative_status)
-        )).all()
+        _init_rows = (
+            await session.execute(
+                sa_select(ESGInitiativeModel.initiative_status, func.count().label("cnt"))
+                .where(ESGInitiativeModel.organization_id == org_id)
+                .group_by(ESGInitiativeModel.initiative_status)
+            )
+        ).all()
         _initiatives_by_status: dict[str, int] = {r.initiative_status: r.cnt for r in _init_rows}
         _init_at_risk = _initiatives_by_status.get("BLOCKED", 0)
 
-        _sr_critical = (await session.execute(
-            sa_select(func.count()).select_from(StrategicRiskModel).where(
-                StrategicRiskModel.organization_id == org_id,
-                StrategicRiskModel.risk_level == "CRITICAL",
-                StrategicRiskModel.risk_status != "CLOSED",
+        _sr_critical = (
+            await session.execute(
+                sa_select(func.count())
+                .select_from(StrategicRiskModel)
+                .where(
+                    StrategicRiskModel.organization_id == org_id,
+                    StrategicRiskModel.risk_level == "CRITICAL",
+                    StrategicRiskModel.risk_status != "CLOSED",
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
 
-        _sr_total = (await session.execute(
-            sa_select(func.count()).select_from(StrategicRiskModel).where(
-                StrategicRiskModel.organization_id == org_id,
-                StrategicRiskModel.risk_status != "CLOSED",
+        _sr_total = (
+            await session.execute(
+                sa_select(func.count())
+                .select_from(StrategicRiskModel)
+                .where(
+                    StrategicRiskModel.organization_id == org_id,
+                    StrategicRiskModel.risk_status != "CLOSED",
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
 
-        _overdue_esg = (await session.execute(
-            sa_select(func.count()).select_from(ESGActionModel).where(
-                ESGActionModel.organization_id == org_id,
-                ESGActionModel.due_date < _now,
-                ESGActionModel.action_status.in_(["OPEN", "IN_PROGRESS", "BLOCKED"]),
+        _overdue_esg = (
+            await session.execute(
+                sa_select(func.count())
+                .select_from(ESGActionModel)
+                .where(
+                    ESGActionModel.organization_id == org_id,
+                    ESGActionModel.due_date < _now,
+                    ESGActionModel.action_status.in_(["OPEN", "IN_PROGRESS", "BLOCKED"]),
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
 
         # Controls failing tests
-        _controls_failing = (await session.execute(
-            sa_select(func.count()).select_from(ESGControlModel).where(
-                ESGControlModel.organization_id == org_id,
-                ESGControlModel.control_status == "FAILING",
+        _controls_failing = (
+            await session.execute(
+                sa_select(func.count())
+                .select_from(ESGControlModel)
+                .where(
+                    ESGControlModel.organization_id == org_id,
+                    ESGControlModel.control_status == "FAILING",
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
 
         # Accountability coverage (assignments with status ACTIVE)
-        _accountability_coverage = (await session.execute(
-            sa_select(func.count()).select_from(AccountabilityAssignmentModel).where(
-                AccountabilityAssignmentModel.organization_id == org_id,
-                AccountabilityAssignmentModel.assignment_status == "ACTIVE",
+        _accountability_coverage = (
+            await session.execute(
+                sa_select(func.count())
+                .select_from(AccountabilityAssignmentModel)
+                .where(
+                    AccountabilityAssignmentModel.organization_id == org_id,
+                    AccountabilityAssignmentModel.assignment_status == "ACTIVE",
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
 
         # Compliance readiness: framework → coverage_percent
-        _comp_ops = (await session.execute(
-            sa_select(
-                ComplianceOperationModel.framework_name,
-                ComplianceOperationModel.coverage_percent,
-            ).where(
-                ComplianceOperationModel.organization_id == org_id,
-            ).order_by(ComplianceOperationModel.updated_at.desc())
-        )).all()
+        _comp_ops = (
+            await session.execute(
+                sa_select(
+                    ComplianceOperationModel.framework_name,
+                    ComplianceOperationModel.coverage_percent,
+                )
+                .where(
+                    ComplianceOperationModel.organization_id == org_id,
+                )
+                .order_by(ComplianceOperationModel.updated_at.desc())
+            )
+        ).all()
         _compliance_readiness: dict[str, float] = {}
         for _row in _comp_ops:
             if _row.framework_name not in _compliance_readiness:
@@ -348,71 +385,98 @@ async def get_executive_dashboard(
 
     # M42 Sustainability Performance summary
     try:
-        from sqlalchemy import func as _func, select as _sa_select
+        from sqlalchemy import func as _func
+        from sqlalchemy import select as _sa_select
+
         from infrastructure.persistence.models.sustainability import (
-            SustainabilityObjectiveModel,
             CarbonInventoryModel,
-            SustainabilityScorecardModel,
             ClimateRiskAssessmentModel,
+            KPIAlertModel,
             NetZeroRoadmapModel,
             ScienceBasedTargetModel,
-            KPIAlertModel,
+            SustainabilityObjectiveModel,
+            SustainabilityScorecardModel,
         )
 
-        _s42_obj_rows = (await session.execute(
-            _sa_select(
-                SustainabilityObjectiveModel.objective_status,
-                _func.count().label("cnt"),
+        _s42_obj_rows = (
+            await session.execute(
+                _sa_select(
+                    SustainabilityObjectiveModel.objective_status,
+                    _func.count().label("cnt"),
+                )
+                .where(SustainabilityObjectiveModel.organization_id == org_id)
+                .group_by(SustainabilityObjectiveModel.objective_status)
             )
-            .where(SustainabilityObjectiveModel.organization_id == org_id)
-            .group_by(SustainabilityObjectiveModel.objective_status)
-        )).all()
+        ).all()
         _s42_obj_by_status: dict[str, int] = {r.objective_status: r.cnt for r in _s42_obj_rows}
         _s42_obj_total = sum(_s42_obj_by_status.values())
         _s42_obj_completed = _s42_obj_by_status.get("COMPLETED", 0)
-        _obj_completion_pct = round(_s42_obj_completed / _s42_obj_total * 100, 1) if _s42_obj_total else None
+        _obj_completion_pct = (
+            round(_s42_obj_completed / _s42_obj_total * 100, 1) if _s42_obj_total else None
+        )
 
-        _s42_emission_row = (await session.execute(
-            _sa_select(_func.sum(CarbonInventoryModel.total_emissions).label("total"))
-            .where(
-                CarbonInventoryModel.organization_id == org_id,
-                CarbonInventoryModel.inventory_status == "FINALIZED",
+        _s42_emission_row = (
+            await session.execute(
+                _sa_select(_func.sum(CarbonInventoryModel.total_emissions).label("total")).where(
+                    CarbonInventoryModel.organization_id == org_id,
+                    CarbonInventoryModel.inventory_status == "FINALIZED",
+                )
             )
-        )).one()
+        ).one()
         _total_emissions = float(_s42_emission_row.total) if _s42_emission_row.total else None
 
-        _s42_score_row = (await session.execute(
-            _sa_select(_func.avg(SustainabilityScorecardModel.overall_score).label("avg_score"))
-            .where(SustainabilityScorecardModel.organization_id == org_id)
-        )).one()
+        _s42_score_row = (
+            await session.execute(
+                _sa_select(
+                    _func.avg(SustainabilityScorecardModel.overall_score).label("avg_score")
+                ).where(SustainabilityScorecardModel.organization_id == org_id)
+            )
+        ).one()
         _sus_score = round(float(_s42_score_row.avg_score), 2) if _s42_score_row.avg_score else None
 
-        _s42_climate_row = (await session.execute(
-            _sa_select(_func.avg(ClimateRiskAssessmentModel.overall_risk_score).label("avg_risk"))
-            .where(ClimateRiskAssessmentModel.organization_id == org_id)
-        )).one()
-        _climate_risk = round(float(_s42_climate_row.avg_risk), 2) if _s42_climate_row.avg_risk else None
-
-        _active_roadmaps = (await session.execute(
-            _sa_select(_func.count()).select_from(NetZeroRoadmapModel).where(
-                NetZeroRoadmapModel.organization_id == org_id,
-                NetZeroRoadmapModel.roadmap_status == "ACTIVE",
+        _s42_climate_row = (
+            await session.execute(
+                _sa_select(
+                    _func.avg(ClimateRiskAssessmentModel.overall_risk_score).label("avg_risk")
+                ).where(ClimateRiskAssessmentModel.organization_id == org_id)
             )
-        )).scalar_one() or 0
+        ).one()
+        _climate_risk = (
+            round(float(_s42_climate_row.avg_risk), 2) if _s42_climate_row.avg_risk else None
+        )
 
-        _active_sbts = (await session.execute(
-            _sa_select(_func.count()).select_from(ScienceBasedTargetModel).where(
-                ScienceBasedTargetModel.organization_id == org_id,
-                ScienceBasedTargetModel.sbt_status == "COMMITTED",
+        _active_roadmaps = (
+            await session.execute(
+                _sa_select(_func.count())
+                .select_from(NetZeroRoadmapModel)
+                .where(
+                    NetZeroRoadmapModel.organization_id == org_id,
+                    NetZeroRoadmapModel.roadmap_status == "ACTIVE",
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
 
-        _open_kpi_alerts = (await session.execute(
-            _sa_select(_func.count()).select_from(KPIAlertModel).where(
-                KPIAlertModel.organization_id == org_id,
-                KPIAlertModel.alert_status == "OPEN",
+        _active_sbts = (
+            await session.execute(
+                _sa_select(_func.count())
+                .select_from(ScienceBasedTargetModel)
+                .where(
+                    ScienceBasedTargetModel.organization_id == org_id,
+                    ScienceBasedTargetModel.sbt_status == "COMMITTED",
+                )
             )
-        )).scalar_one() or 0
+        ).scalar_one() or 0
+
+        _open_kpi_alerts = (
+            await session.execute(
+                _sa_select(_func.count())
+                .select_from(KPIAlertModel)
+                .where(
+                    KPIAlertModel.organization_id == org_id,
+                    KPIAlertModel.alert_status == "OPEN",
+                )
+            )
+        ).scalar_one() or 0
 
         sustainability_summary = SustainabilityExecutiveSummary(
             status="ok",
@@ -432,52 +496,81 @@ async def get_executive_dashboard(
 
     # M43 Financial ESG summary
     try:
-        from sqlalchemy import func as _f43, select as _sel43
+        from sqlalchemy import func as _f43
+        from sqlalchemy import select as _sel43
+
         from infrastructure.persistence.models.financial_esg import (
-            GreenRevenueRecordModel as _GRR,
-            TaxonomyAlignmentAssessmentModel as _TAA,
-            CarbonCostModelRecord as _CCM,
-            ValueCreationInitiativeModel as _VCI,
-            SustainableFinanceInstrumentModel as _SFI,
             CapitalMarketsAssessmentModel as _CMA,
         )
+        from infrastructure.persistence.models.financial_esg import (
+            CarbonCostModelRecord as _CCM,
+        )
+        from infrastructure.persistence.models.financial_esg import (
+            GreenRevenueRecordModel as _GRR,
+        )
+        from infrastructure.persistence.models.financial_esg import (
+            SustainableFinanceInstrumentModel as _SFI,
+        )
+        from infrastructure.persistence.models.financial_esg import (
+            TaxonomyAlignmentAssessmentModel as _TAA,
+        )
+        from infrastructure.persistence.models.financial_esg import (
+            ValueCreationInitiativeModel as _VCI,
+        )
 
-        _grr_row = (await session.execute(
-            _sel43(_f43.avg(_GRR.green_revenue_percent).label("avg_grp"))
-            .where(_GRR.organization_id == org_id)
-        )).one()
+        _grr_row = (
+            await session.execute(
+                _sel43(_f43.avg(_GRR.green_revenue_percent).label("avg_grp")).where(
+                    _GRR.organization_id == org_id
+                )
+            )
+        ).one()
         _green_rev_pct = round(float(_grr_row.avg_grp), 2) if _grr_row.avg_grp else None
 
-        _tax_row = (await session.execute(
-            _sel43(_f43.avg(_TAA.aligned_percent).label("avg_aligned"))
-            .where(_TAA.organization_id == org_id)
-        )).one()
+        _tax_row = (
+            await session.execute(
+                _sel43(_f43.avg(_TAA.aligned_percent).label("avg_aligned")).where(
+                    _TAA.organization_id == org_id
+                )
+            )
+        ).one()
         _tax_pct = round(float(_tax_row.avg_aligned), 2) if _tax_row.avg_aligned else None
 
-        _ccm_row = (await session.execute(
-            _sel43(_f43.sum(_CCM.regulatory_exposure).label("total_reg"))
-            .where(_CCM.organization_id == org_id)
-        )).one()
+        _ccm_row = (
+            await session.execute(
+                _sel43(_f43.sum(_CCM.regulatory_exposure).label("total_reg")).where(
+                    _CCM.organization_id == org_id
+                )
+            )
+        ).one()
         _carbon_exp = round(float(_ccm_row.total_reg), 2) if _ccm_row.total_reg else None
 
-        _vci_row = (await session.execute(
-            _sel43(_f43.avg(_VCI.roi_percent).label("avg_roi"))
-            .where(_VCI.organization_id == org_id)
-        )).one()
+        _vci_row = (
+            await session.execute(
+                _sel43(_f43.avg(_VCI.roi_percent).label("avg_roi")).where(
+                    _VCI.organization_id == org_id
+                )
+            )
+        ).one()
         _sus_roi = round(float(_vci_row.avg_roi), 2) if _vci_row.avg_roi else None
 
-        _sfi_row = (await session.execute(
-            _sel43(_f43.sum(_SFI.amount).label("total_exp"))
-            .where(_SFI.organization_id == org_id)
-        )).one()
+        _sfi_row = (
+            await session.execute(
+                _sel43(_f43.sum(_SFI.amount).label("total_exp")).where(
+                    _SFI.organization_id == org_id
+                )
+            )
+        ).one()
         _fin_exp = round(float(_sfi_row.total_exp), 2) if _sfi_row.total_exp else None
 
-        _cma = (await session.execute(
-            _sel43(_CMA.overall_readiness)
-            .where(_CMA.organization_id == org_id)
-            .order_by(_CMA.assessed_at.desc())
-            .limit(1)
-        )).scalar_one_or_none()
+        _cma = (
+            await session.execute(
+                _sel43(_CMA.overall_readiness)
+                .where(_CMA.organization_id == org_id)
+                .order_by(_CMA.assessed_at.desc())
+                .limit(1)
+            )
+        ).scalar_one_or_none()
 
         financial_summary = FinancialSustainabilitySummary(
             status="ok",
@@ -561,9 +654,13 @@ async def get_kpi_trends(
                 func.avg(SupplierScoreModel.esg_score).label("avg_esg"),
                 func.avg(SupplierScoreModel.risk_score).label("avg_risk"),
                 func.count(SupplierScoreModel.supplier_id).label("count"),
-                func.sum(case((SupplierScoreModel.risk_band == "Critical", 1), else_=0)).label("critical"),
+                func.sum(case((SupplierScoreModel.risk_band == "Critical", 1), else_=0)).label(
+                    "critical"
+                ),
                 func.sum(case((SupplierScoreModel.risk_band == "High", 1), else_=0)).label("high"),
-                func.sum(case((SupplierScoreModel.risk_band == "Moderate", 1), else_=0)).label("moderate"),
+                func.sum(case((SupplierScoreModel.risk_band == "Moderate", 1), else_=0)).label(
+                    "moderate"
+                ),
                 func.sum(case((SupplierScoreModel.risk_band == "Low", 1), else_=0)).label("low"),
             )
             .join(
@@ -635,8 +732,11 @@ async def get_risk_register(
 
     score_models = await _latest_scores_for_org(session, org_id)
     all_suppliers, _ = await supplier_repo.list_org_paged(
-        organization_id=org_id, page=1, page_size=10000,
-        country=country, supplier_tier=supplier_tier,
+        organization_id=org_id,
+        page=1,
+        page_size=10000,
+        country=country,
+        supplier_tier=supplier_tier,
     )
     supplier_map = {s.id: s for s in all_suppliers}
 
@@ -690,7 +790,9 @@ async def get_risk_register(
                 supplier_name=sup.name,
                 country=sup.country or "",
                 industry=sup.industry or "",
-                supplier_tier=sup.supplier_tier if isinstance(sup.supplier_tier, str) else sup.supplier_tier.value,
+                supplier_tier=sup.supplier_tier
+                if isinstance(sup.supplier_tier, str)
+                else sup.supplier_tier.value,
                 risk_score=score.risk_score,
                 risk_band=score.risk_band,
                 esg_score=score.esg_score,
@@ -742,8 +844,7 @@ async def get_executive_heatmap(
                 SupplierModel.country,
                 SupplierModel.industry,
                 SupplierModel.supplier_tier,
-            )
-            .where(
+            ).where(
                 SupplierModel.id.in_(supplier_ids),
                 SupplierModel.organization_id == org_id,
                 SupplierModel.status.notin_(["Deleted", "Archived"]),
@@ -759,7 +860,9 @@ async def get_executive_heatmap(
         elif view == "sector":
             label = sup.industry or "Unknown"
         else:  # tier
-            label = sup.supplier_tier if isinstance(sup.supplier_tier, str) else str(sup.supplier_tier)
+            label = (
+                sup.supplier_tier if isinstance(sup.supplier_tier, str) else str(sup.supplier_tier)
+            )
 
         score = score_by_supplier.get(sup.id)
         if score is None:
@@ -802,7 +905,7 @@ async def get_action_effectiveness(
     """Measure whether actions reduce risk — resolution metrics."""
     org_id = _assert_org(current_user)
     since = datetime.now(UTC) - timedelta(days=period)
-    now = datetime.now(UTC)
+    datetime.now(UTC)
 
     # Actions opened this period
     opened_rows = (
@@ -825,9 +928,7 @@ async def get_action_effectiveness(
     ).all()
 
     opened_this_period = len(opened_rows)
-    closed_this_period = sum(
-        1 for r in opened_rows if r.action_status in _CLOSED_STATUSES
-    )
+    closed_this_period = sum(1 for r in opened_rows if r.action_status in _CLOSED_STATUSES)
 
     # Current open and overdue (all time)
     _, total_open, total_overdue = await _action_counts(session, org_id)
@@ -840,7 +941,9 @@ async def get_action_effectiveness(
             if delta_days >= 0:
                 resolution_times.append(delta_days)
 
-    avg_resolution = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else None
+    avg_resolution = (
+        round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else None
+    )
 
     metrics = compute_action_effectiveness(
         opened_this_period=opened_this_period,
@@ -908,7 +1011,9 @@ async def get_governance_metrics(
             if delta >= 0:
                 review_times_days.append(delta)
 
-    avg_review = round(sum(review_times_days) / len(review_times_days), 1) if review_times_days else None
+    avg_review = (
+        round(sum(review_times_days) / len(review_times_days), 1) if review_times_days else None
+    )
 
     awaiting, approved_total = await _assessment_review_counts(session, org_id)
 
@@ -932,19 +1037,18 @@ async def get_command_center(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     """Aggregated CEO/CFO/CSO/CCO command-center data in a single call."""
-    from datetime import date as _date
-    from infrastructure.persistence.models.risk import RiskModel
-    from infrastructure.persistence.models.sustainability import (
-        ESGKPIModel,
-        KPIAlertModel as ESGKPIAlertModel,
-        CarbonInventoryModel,
-        ScienceBasedTargetModel,
-    )
     from infrastructure.persistence.models.financial_esg import (
-        TaxonomyAlignmentAssessmentModel,
         GreenRevenueRecordModel,
+        TaxonomyAlignmentAssessmentModel,
     )
+    from infrastructure.persistence.models.risk import RiskModel
     from infrastructure.persistence.models.soc2_control import Soc2ControlModel
+    from infrastructure.persistence.models.sustainability import (
+        CarbonInventoryModel,
+    )
+    from infrastructure.persistence.models.sustainability import (
+        KPIAlertModel as ESGKPIAlertModel,
+    )
 
     org_id = _assert_org(current_user)
     now = datetime.now(UTC)
@@ -954,7 +1058,7 @@ async def get_command_center(
     score_models = await _latest_scores_for_org(session, org_id)
     scored = [s for s in score_models if s.esg_score is not None]
     avg_esg = sum(s.esg_score for s in scored) / len(scored) if scored else None
-    avg_risk = sum(s.risk_score for s in scored if s.risk_score) / len(scored) if scored else None
+    sum(s.risk_score for s in scored if s.risk_score) / len(scored) if scored else None
     critical_suppliers = sum(1 for s in scored if s.risk_band == "Critical")
     high_suppliers = sum(1 for s in scored if s.risk_band == "High")
     total_scored = len(scored)
@@ -964,35 +1068,40 @@ async def get_command_center(
     crit_findings = await _critical_findings_count(session, org_id)
 
     # ── All open findings count ───────────────────────────────────────────────
-    total_open_findings = (await session.execute(
-        select(func.count(FindingModel.id))
-        .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
-        .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
-        .where(
-            SupplierModel.organization_id == org_id,
-            FindingModel.status.notin_(["Deleted", "Resolved", "Verified"]),
-            AssessmentModel.status != "Deleted",
+    total_open_findings = (
+        await session.execute(
+            select(func.count(FindingModel.id))
+            .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+            .where(
+                SupplierModel.organization_id == org_id,
+                FindingModel.status.notin_(["Deleted", "Resolved", "Verified"]),
+                AssessmentModel.status != "Deleted",
+            )
         )
-    )).scalar_one() or 0
+    ).scalar_one() or 0
 
     # ── Critical risks count ──────────────────────────────────────────────────
-    total_critical_risks = (await session.execute(
-        select(func.count(RiskModel.id))
-        .join(AssessmentModel, RiskModel.assessment_id == AssessmentModel.id)
-        .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
-        .where(
-            SupplierModel.organization_id == org_id,
-            RiskModel.risk_level == "Critical",
-            AssessmentModel.status != "Deleted",
+    total_critical_risks = (
+        await session.execute(
+            select(func.count(RiskModel.id))
+            .join(AssessmentModel, RiskModel.assessment_id == AssessmentModel.id)
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+            .where(
+                SupplierModel.organization_id == org_id,
+                RiskModel.risk_level == "Critical",
+                AssessmentModel.status != "Deleted",
+            )
         )
-    )).scalar_one() or 0
+    ).scalar_one() or 0
 
     # ── ESG Health Score (composite 0–100) ────────────────────────────────────
     # Weighted: avg_esg (40%), low-risk pct (30%), recommendation closure (30%)
     esg_component = min((avg_esg or 0) / 100, 1.0) * 40
     low_risk_pct = (
         (total_scored - critical_suppliers - high_suppliers) / total_scored
-        if total_scored > 0 else 0.5
+        if total_scored > 0
+        else 0.5
     )
     risk_component = low_risk_pct * 30
     total_recs, open_recs, overdue_recs = await _action_counts(session, org_id)
@@ -1000,9 +1109,12 @@ async def get_command_center(
     closure_component = closure_rate * 30
     esg_health_score = round(esg_component + risk_component + closure_component, 1)
     health_label = (
-        "Excellent" if esg_health_score >= 80
-        else "Good" if esg_health_score >= 65
-        else "Needs Attention" if esg_health_score >= 50
+        "Excellent"
+        if esg_health_score >= 80
+        else "Good"
+        if esg_health_score >= 65
+        else "Needs Attention"
+        if esg_health_score >= 50
         else "Critical"
     )
 
@@ -1010,73 +1122,91 @@ async def get_command_center(
     priority_actions = []
 
     if overdue_recs > 0:
-        priority_actions.append({
-            "type": "overdue_actions",
-            "title": f"{overdue_recs} overdue recommendation{'s' if overdue_recs > 1 else ''}",
-            "severity": "critical" if overdue_recs >= 5 else "high",
-            "href": "/findings",
-            "count": overdue_recs,
-        })
+        priority_actions.append(
+            {
+                "type": "overdue_actions",
+                "title": f"{overdue_recs} overdue recommendation{'s' if overdue_recs > 1 else ''}",
+                "severity": "critical" if overdue_recs >= 5 else "high",
+                "href": "/findings",
+                "count": overdue_recs,
+            }
+        )
 
     if crit_findings > 0:
-        priority_actions.append({
-            "type": "critical_findings",
-            "title": f"{crit_findings} critical finding{'s' if crit_findings > 1 else ''} open",
-            "severity": "critical",
-            "href": "/findings",
-            "count": crit_findings,
-        })
+        priority_actions.append(
+            {
+                "type": "critical_findings",
+                "title": f"{crit_findings} critical finding{'s' if crit_findings > 1 else ''} open",
+                "severity": "critical",
+                "href": "/findings",
+                "count": crit_findings,
+            }
+        )
 
     if total_critical_risks > 0:
-        priority_actions.append({
-            "type": "critical_risks",
-            "title": f"{total_critical_risks} critical risk{'s' if total_critical_risks > 1 else ''} unmitigated",
-            "severity": "critical",
-            "href": "/risks",
-            "count": total_critical_risks,
-        })
+        priority_actions.append(
+            {
+                "type": "critical_risks",
+                "title": f"{total_critical_risks} critical risk{'s' if total_critical_risks > 1 else ''} unmitigated",
+                "severity": "critical",
+                "href": "/risks",
+                "count": total_critical_risks,
+            }
+        )
 
     awaiting_review, _ = await _assessment_review_counts(session, org_id)
     if awaiting_review > 0:
-        priority_actions.append({
-            "type": "assessments_pending",
-            "title": f"{awaiting_review} assessment{'s' if awaiting_review > 1 else ''} awaiting review",
-            "severity": "medium",
-            "href": "/assessments",
-            "count": awaiting_review,
-        })
+        priority_actions.append(
+            {
+                "type": "assessments_pending",
+                "title": f"{awaiting_review} assessment{'s' if awaiting_review > 1 else ''} awaiting review",
+                "severity": "medium",
+                "href": "/assessments",
+                "count": awaiting_review,
+            }
+        )
 
     # ── YoY Metrics ───────────────────────────────────────────────────────────
     score_models_py = await _latest_scores_for_org(session, org_id)
-    prior_scores = [s for s in score_models_py if s.created_at <= one_year_ago and s.esg_score is not None]
-    prior_avg_esg = sum(s.esg_score for s in prior_scores) / len(prior_scores) if prior_scores else None
-    esg_yoy_delta = round((avg_esg or 0) - (prior_avg_esg or 0), 1) if (avg_esg and prior_avg_esg) else None
+    prior_scores = [
+        s for s in score_models_py if s.created_at <= one_year_ago and s.esg_score is not None
+    ]
+    prior_avg_esg = (
+        sum(s.esg_score for s in prior_scores) / len(prior_scores) if prior_scores else None
+    )
+    esg_yoy_delta = (
+        round((avg_esg or 0) - (prior_avg_esg or 0), 1) if (avg_esg and prior_avg_esg) else None
+    )
 
     # ── CFO Metrics ───────────────────────────────────────────────────────────
     taxonomy_pct: float | None = None
     green_revenue_latest: float | None = None
     try:
-        tax_rows = (await session.execute(
-            select(
-                TaxonomyAlignmentAssessmentModel.aligned_revenue_pct,
-                TaxonomyAlignmentAssessmentModel.assessment_year,
+        tax_rows = (
+            await session.execute(
+                select(
+                    TaxonomyAlignmentAssessmentModel.aligned_revenue_pct,
+                    TaxonomyAlignmentAssessmentModel.assessment_year,
+                )
+                .where(TaxonomyAlignmentAssessmentModel.organization_id == org_id)
+                .order_by(TaxonomyAlignmentAssessmentModel.assessment_year.desc())
+                .limit(1)
             )
-            .where(TaxonomyAlignmentAssessmentModel.organization_id == org_id)
-            .order_by(TaxonomyAlignmentAssessmentModel.assessment_year.desc())
-            .limit(1)
-        )).first()
+        ).first()
         if tax_rows:
             taxonomy_pct = float(tax_rows.aligned_revenue_pct or 0)
 
-        gr_rows = (await session.execute(
-            select(
-                GreenRevenueRecordModel.green_revenue_amount,
-                GreenRevenueRecordModel.total_revenue_amount,
+        gr_rows = (
+            await session.execute(
+                select(
+                    GreenRevenueRecordModel.green_revenue_amount,
+                    GreenRevenueRecordModel.total_revenue_amount,
+                )
+                .where(GreenRevenueRecordModel.organization_id == org_id)
+                .order_by(GreenRevenueRecordModel.reporting_year.desc())
+                .limit(1)
             )
-            .where(GreenRevenueRecordModel.organization_id == org_id)
-            .order_by(GreenRevenueRecordModel.reporting_year.desc())
-            .limit(1)
-        )).first()
+        ).first()
         if gr_rows and gr_rows.total_revenue_amount:
             green_revenue_latest = round(
                 gr_rows.green_revenue_amount / gr_rows.total_revenue_amount * 100, 1
@@ -1090,22 +1220,31 @@ async def get_command_center(
     kpi_at_risk = 0
     kpi_missed = 0
     try:
-        em_row = (await session.execute(
-            select(CarbonInventoryModel.total_emissions_tco2e, CarbonInventoryModel.reporting_year)
-            .where(CarbonInventoryModel.organization_id == org_id)
-            .order_by(CarbonInventoryModel.reporting_year.desc())
-            .limit(1)
-        )).first()
+        em_row = (
+            await session.execute(
+                select(
+                    CarbonInventoryModel.total_emissions_tco2e, CarbonInventoryModel.reporting_year
+                )
+                .where(CarbonInventoryModel.organization_id == org_id)
+                .order_by(CarbonInventoryModel.reporting_year.desc())
+                .limit(1)
+            )
+        ).first()
         if em_row:
             latest_emissions = float(em_row.total_emissions_tco2e or 0)
 
-        kpi_alerts = (await session.execute(
-            select(ESGKPIAlertModel.alert_type)
-            .where(
-                ESGKPIAlertModel.organization_id == org_id,
-                ESGKPIAlertModel.resolved_at.is_(None),
+        kpi_alerts = (
+            (
+                await session.execute(
+                    select(ESGKPIAlertModel.alert_type).where(
+                        ESGKPIAlertModel.organization_id == org_id,
+                        ESGKPIAlertModel.resolved_at.is_(None),
+                    )
+                )
             )
-        )).scalars().all()
+            .scalars()
+            .all()
+        )
         kpi_on_track = sum(1 for a in kpi_alerts if a == "GREEN")
         kpi_at_risk = sum(1 for a in kpi_alerts if a == "AMBER")
         kpi_missed = sum(1 for a in kpi_alerts if a == "RED")
@@ -1117,10 +1256,17 @@ async def get_command_center(
     soc2_implemented = 0
     soc2_total = 0
     try:
-        soc2_rows = (await session.execute(
-            select(Soc2ControlModel.status)
-            .where(Soc2ControlModel.organization_id == org_id)
-        )).scalars().all()
+        soc2_rows = (
+            (
+                await session.execute(
+                    select(Soc2ControlModel.status).where(
+                        Soc2ControlModel.organization_id == org_id
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
         soc2_total = len(soc2_rows)
         soc2_implemented = sum(1 for s in soc2_rows if s == "Implemented")
         if soc2_total > 0:
@@ -1129,31 +1275,33 @@ async def get_command_center(
         pass
 
     # ── Pending Decisions (open recommendations awaiting action) ─────────────
-    pending_recs_rows = (await session.execute(
-        select(
-            RecommendationModel.id,
-            RecommendationModel.title,
-            RecommendationModel.priority,
-            RecommendationModel.due_date,
+    pending_recs_rows = (
+        await session.execute(
+            select(
+                RecommendationModel.id,
+                RecommendationModel.title,
+                RecommendationModel.priority,
+                RecommendationModel.due_date,
+            )
+            .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
+            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+            .where(
+                SupplierModel.organization_id == org_id,
+                RecommendationModel.action_status == "open",
+                AssessmentModel.status != "Deleted",
+            )
+            .order_by(
+                case(
+                    (RecommendationModel.priority == "Critical", 0),
+                    (RecommendationModel.priority == "High", 1),
+                    (RecommendationModel.priority == "Medium", 2),
+                    else_=3,
+                ),
+                RecommendationModel.due_date.asc().nulls_last(),
+            )
+            .limit(5)
         )
-        .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
-        .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
-        .where(
-            SupplierModel.organization_id == org_id,
-            RecommendationModel.action_status == "open",
-            AssessmentModel.status != "Deleted",
-        )
-        .order_by(
-            case(
-                (RecommendationModel.priority == "Critical", 0),
-                (RecommendationModel.priority == "High", 1),
-                (RecommendationModel.priority == "Medium", 2),
-                else_=3,
-            ),
-            RecommendationModel.due_date.asc().nulls_last(),
-        )
-        .limit(5)
-    )).all()
+    ).all()
     pending_decisions = [
         {
             "id": r.id,
@@ -1474,12 +1622,18 @@ async def list_suppliers_with_scores(
 
     # Latest questionnaire completion per supplier
     from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
+
     quest_sq = (
         select(
             QuestionnaireAssignmentModel.supplier_id,
             func.max(
                 case(
-                    (QuestionnaireAssignmentModel.questionnaire_status.in_(["submitted", "reviewed"]), 100),
+                    (
+                        QuestionnaireAssignmentModel.questionnaire_status.in_(
+                            ["submitted", "reviewed"]
+                        ),
+                        100,
+                    ),
                     (QuestionnaireAssignmentModel.questionnaire_status == "in_progress", 50),
                     else_=0,
                 )
@@ -1492,6 +1646,7 @@ async def list_suppliers_with_scores(
 
     # OFAC / sanctions status from supplier enrichments
     from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
+
     ofac_sq = (
         select(
             SupplierEnrichmentModel.supplier_id,
@@ -1637,10 +1792,27 @@ async def export_org_findings_csv(
     ).limit(limit)
     rows = (await session.execute(stmt)).all()
     csv_str = _rows_to_csv(
-        ["id", "title", "severity", "category", "status", "assessment_id", "created_at", "supplier_name"],
         [
-            [r.id, r.title, r.severity, r.category or "", r.status,
-             r.assessment_id, r.created_at.isoformat() if r.created_at else "", r.supplier_name]
+            "id",
+            "title",
+            "severity",
+            "category",
+            "status",
+            "assessment_id",
+            "created_at",
+            "supplier_name",
+        ],
+        [
+            [
+                r.id,
+                r.title,
+                r.severity,
+                r.category or "",
+                r.status,
+                r.assessment_id,
+                r.created_at.isoformat() if r.created_at else "",
+                r.supplier_name,
+            ]
             for r in rows
         ],
     )
@@ -1694,10 +1866,29 @@ async def export_org_risks_csv(
     ).limit(limit)
     rows = (await session.execute(stmt)).all()
     csv_str = _rows_to_csv(
-        ["id", "title", "risk_level", "category", "probability", "impact", "assessment_id", "created_at", "supplier_name"],
         [
-            [r.id, r.title, r.risk_level, r.category or "", str(r.probability or ""), str(r.impact or ""),
-             r.assessment_id, r.created_at.isoformat() if r.created_at else "", r.supplier_name]
+            "id",
+            "title",
+            "risk_level",
+            "category",
+            "probability",
+            "impact",
+            "assessment_id",
+            "created_at",
+            "supplier_name",
+        ],
+        [
+            [
+                r.id,
+                r.title,
+                r.risk_level,
+                r.category or "",
+                str(r.probability or ""),
+                str(r.impact or ""),
+                r.assessment_id,
+                r.created_at.isoformat() if r.created_at else "",
+                r.supplier_name,
+            ]
             for r in rows
         ],
     )
@@ -1742,11 +1933,33 @@ async def export_org_recommendations_csv(
     stmt = stmt.order_by(RecommendationModel.created_at.desc()).limit(limit)
     rows = (await session.execute(stmt)).all()
     csv_str = _rows_to_csv(
-        ["id", "title", "action_status", "priority", "due_date", "is_overdue", "assessment_id", "created_at", "supplier_name"],
         [
-            [r.id, r.title, r.action_status, r.priority or "", str(r.due_date) if r.due_date else "",
-             str(r.action_status not in ("resolved", "verified") and r.due_date is not None and r.due_date < now),
-             r.assessment_id, r.created_at.isoformat() if r.created_at else "", r.supplier_name]
+            "id",
+            "title",
+            "action_status",
+            "priority",
+            "due_date",
+            "is_overdue",
+            "assessment_id",
+            "created_at",
+            "supplier_name",
+        ],
+        [
+            [
+                r.id,
+                r.title,
+                r.action_status,
+                r.priority or "",
+                str(r.due_date) if r.due_date else "",
+                str(
+                    r.action_status not in ("resolved", "verified")
+                    and r.due_date is not None
+                    and r.due_date < now
+                ),
+                r.assessment_id,
+                r.created_at.isoformat() if r.created_at else "",
+                r.supplier_name,
+            ]
             for r in rows
         ],
     )
@@ -1788,9 +2001,7 @@ async def generate_board_report(
 
     # Freeze organization name at generation time (L4 fix)
     org_name_row = (
-        await session.execute(
-            select(OrganizationModel.name).where(OrganizationModel.id == org_id)
-        )
+        await session.execute(select(OrganizationModel.name).where(OrganizationModel.id == org_id))
     ).scalar_one_or_none()
     org_name = org_name_row or "Organisation"
 
@@ -1850,9 +2061,13 @@ async def generate_board_report(
                 func.avg(SupplierScoreModel.esg_score).label("avg_esg"),
                 func.avg(SupplierScoreModel.risk_score).label("avg_risk"),
                 func.count(SupplierScoreModel.supplier_id).label("count"),
-                func.sum(case((SupplierScoreModel.risk_band == "Critical", 1), else_=0)).label("critical"),
+                func.sum(case((SupplierScoreModel.risk_band == "Critical", 1), else_=0)).label(
+                    "critical"
+                ),
                 func.sum(case((SupplierScoreModel.risk_band == "High", 1), else_=0)).label("high"),
-                func.sum(case((SupplierScoreModel.risk_band == "Moderate", 1), else_=0)).label("moderate"),
+                func.sum(case((SupplierScoreModel.risk_band == "Moderate", 1), else_=0)).label(
+                    "moderate"
+                ),
                 func.sum(case((SupplierScoreModel.risk_band == "Low", 1), else_=0)).label("low"),
             )
             .join(
@@ -1891,7 +2106,9 @@ async def generate_board_report(
     top_high_risk = [
         {
             "supplier_id": s.supplier_id,
-            "supplier_name": supplier_map[s.supplier_id].name if s.supplier_id in supplier_map else "",
+            "supplier_name": supplier_map[s.supplier_id].name
+            if s.supplier_id in supplier_map
+            else "",
             "risk_score": s.risk_score,
             "risk_band": s.risk_band,
             "trend": s.trend,
@@ -1907,7 +2124,9 @@ async def generate_board_report(
         [
             {
                 "supplier_id": s.supplier_id,
-                "supplier_name": supplier_map[s.supplier_id].name if s.supplier_id in supplier_map else "",
+                "supplier_name": supplier_map[s.supplier_id].name
+                if s.supplier_id in supplier_map
+                else "",
                 "risk_score": s.risk_score,
                 "risk_band": s.risk_band,
                 "trend": s.trend,
@@ -1941,7 +2160,9 @@ async def generate_board_report(
 
     critical_findings_summary = [
         {
-            "supplier_name": supplier_map[r.supplier_id].name if r.supplier_id in supplier_map else "",
+            "supplier_name": supplier_map[r.supplier_id].name
+            if r.supplier_id in supplier_map
+            else "",
             "title": r.title,
             "category": r.category,
             "pillar": categorize_pillar(r.category or "", r.title or ""),
@@ -1973,7 +2194,9 @@ async def generate_board_report(
 
     overdue_actions_summary = [
         {
-            "supplier_name": supplier_map[r.supplier_id].name if r.supplier_id in supplier_map else "",
+            "supplier_name": supplier_map[r.supplier_id].name
+            if r.supplier_id in supplier_map
+            else "",
             "title": r.title,
             "due_date": r.due_date.isoformat() if r.due_date else None,
             "days_overdue": max(0, (now.date() - r.due_date).days) if r.due_date else 0,
@@ -1984,16 +2207,20 @@ async def generate_board_report(
     # Governance metrics — decisions and avg review turnaround (L3 fix)
     gov_since = now - timedelta(days=body.kpi_period_days)
     gov_decisions = (
-        await session.execute(
-            select(ReviewActionModel.action_type)
-            .join(AssessmentModel, ReviewActionModel.assessment_id == AssessmentModel.id)
-            .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
-            .where(
-                SupplierModel.organization_id == org_id,
-                ReviewActionModel.created_at >= gov_since,
+        (
+            await session.execute(
+                select(ReviewActionModel.action_type)
+                .join(AssessmentModel, ReviewActionModel.assessment_id == AssessmentModel.id)
+                .join(SupplierModel, AssessmentModel.supplier_id == SupplierModel.id)
+                .where(
+                    SupplierModel.organization_id == org_id,
+                    ReviewActionModel.created_at >= gov_since,
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     gov_approved = sum(1 for d in gov_decisions if d == "approve")
     gov_rejected = sum(1 for d in gov_decisions if d == "reject")
@@ -2032,7 +2259,9 @@ async def generate_board_report(
 
     # Action effectiveness — actions opened/closed during reporting period (L2 fix)
     period_start_dt = datetime(period_start.year, period_start.month, period_start.day, tzinfo=UTC)
-    period_end_dt = datetime(period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=UTC)
+    period_end_dt = datetime(
+        period_end.year, period_end.month, period_end.day, 23, 59, 59, tzinfo=UTC
+    )
     action_eff_rows = (
         await session.execute(
             select(
@@ -2059,7 +2288,9 @@ async def generate_board_report(
             delta_days = (r.updated_at - r.created_at).total_seconds() / 86400
             if delta_days >= 0:
                 resolution_times.append(delta_days)
-    avg_resolution = round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else None
+    avg_resolution = (
+        round(sum(resolution_times) / len(resolution_times), 1) if resolution_times else None
+    )
 
     action_eff = compute_action_effectiveness(
         opened_this_period=opened_this_period,
@@ -2080,8 +2311,16 @@ async def generate_board_report(
             if sup.industry:
                 sector_risk.setdefault(sup.industry, []).append(s.risk_score)
 
-    top_country = max(country_risk, key=lambda k: sum(country_risk[k]) / len(country_risk[k])) if country_risk else None
-    top_sector = max(sector_risk, key=lambda k: sum(sector_risk[k]) / len(sector_risk[k])) if sector_risk else None
+    top_country = (
+        max(country_risk, key=lambda k: sum(country_risk[k]) / len(country_risk[k]))
+        if country_risk
+        else None
+    )
+    top_sector = (
+        max(sector_risk, key=lambda k: sum(sector_risk[k]) / len(sector_risk[k]))
+        if sector_risk
+        else None
+    )
 
     # Generate executive summary
     summary_inputs = ExecutiveSummaryInputs(
@@ -2180,7 +2419,9 @@ async def generate_board_report(
     snapshot_entries = [
         {
             "supplier_id": s.supplier_id,
-            "supplier_name": supplier_map[s.supplier_id].name if s.supplier_id in supplier_map else "",
+            "supplier_name": supplier_map[s.supplier_id].name
+            if s.supplier_id in supplier_map
+            else "",
             "esg_score": s.esg_score,
             "risk_score": s.risk_score,
             "risk_band": s.risk_band,
@@ -2226,6 +2467,7 @@ async def generate_board_report(
     )
     try:
         from interfaces.api.routers.metrics import counters as _m  # noqa: PLC0415
+
         _m.record_board_report_generated()
     except Exception:  # noqa: BLE001
         pass
@@ -2235,7 +2477,12 @@ async def generate_board_report(
         dispatch_webhook_event,
         org_id,
         "board_report.generated",
-        {"report_id": saved.id, "title": saved.title, "period_start": body.period_start, "period_end": body.period_end},
+        {
+            "report_id": saved.id,
+            "title": saved.title,
+            "period_start": body.period_start,
+            "period_end": body.period_end,
+        },
     )
     return _to_detail(saved)
 
@@ -2310,6 +2557,7 @@ async def download_board_report_pdf(
     )
     try:
         from interfaces.api.routers.metrics import counters as _m  # noqa: PLC0415
+
         _m.record_board_report_downloaded()
     except Exception:  # noqa: BLE001
         pass

@@ -1,8 +1,9 @@
 """M34 sector benchmark service tests."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from application.external_intelligence.sector_benchmark_service import (
     get_benchmark_by_nace,

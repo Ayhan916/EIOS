@@ -12,6 +12,7 @@ Create Date: 2026-06-29
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "068"
@@ -26,8 +27,12 @@ _AUDIT_COLS = [
     sa.Column("owner", sa.String(36), nullable=True),
     sa.Column("created_by", sa.String(36), nullable=True),
     sa.Column("updated_by", sa.String(36), nullable=True),
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+    sa.Column(
+        "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    ),
+    sa.Column(
+        "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    ),
 ]
 
 
@@ -74,7 +79,8 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text, nullable=True),
     )
     op.create_unique_constraint(
-        "uq_prod_bom_product_material", "product_bom_items",
+        "uq_prod_bom_product_material",
+        "product_bom_items",
         ["organization_id", "product_id", "material_id"],
     )
     op.create_index("ix_pbom_product", "product_bom_items", ["product_id"])

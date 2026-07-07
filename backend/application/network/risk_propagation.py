@@ -59,6 +59,7 @@ async def _log_audit_event(
     except Exception as exc:
         logger.warning("network_signal_audit_failed", action=action, error=str(exc))
 
+
 ATTENUATION_FACTOR = 0.6
 MIN_CONFIDENCE = 0.10
 
@@ -92,11 +93,12 @@ async def propagate_signal(
     signals created in the same call (confidence-revision race protection).
     Returns all created exposure records.
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.network import (
         NetworkExposureSignalModel,
         SupplierRelationshipModel,
     )
-    from sqlalchemy import select
 
     # Load all active relationships in one query
     adj_stmt = select(
@@ -112,12 +114,8 @@ async def propagate_signal(
     # Build undirected adjacency with edge confidence
     adj: dict[str, list[tuple[str, float]]] = {}
     for row in rows:
-        adj.setdefault(row.supplier_id, []).append(
-            (row.related_supplier_id, row.confidence)
-        )
-        adj.setdefault(row.related_supplier_id, []).append(
-            (row.supplier_id, row.confidence)
-        )
+        adj.setdefault(row.supplier_id, []).append((row.related_supplier_id, row.confidence))
+        adj.setdefault(row.related_supplier_id, []).append((row.supplier_id, row.confidence))
 
     # P0 M38.1: load existing ACTIVE signals for this origin+type so we skip them
     existing_stmt = select(NetworkExposureSignalModel.impacted_supplier_id).where(
@@ -126,9 +124,7 @@ async def propagate_signal(
         NetworkExposureSignalModel.exposure_type == exposure_type,
         NetworkExposureSignalModel.exposure_status == "ACTIVE",
     )
-    already_signaled: set[str] = set(
-        (await session.execute(existing_stmt)).scalars().all()
-    )
+    already_signaled: set[str] = set((await session.execute(existing_stmt)).scalars().all())
 
     # BFS
     from collections import deque
@@ -149,7 +145,7 @@ async def propagate_signal(
             continue
 
         for neighbor, edge_conf in adj.get(node, []):
-            hop_conf = conf * edge_conf * (ATTENUATION_FACTOR ** dist)
+            hop_conf = conf * edge_conf * (ATTENUATION_FACTOR**dist)
             if hop_conf < MIN_CONFIDENCE:
                 continue
             if neighbor == origin_supplier_id:
@@ -221,23 +217,18 @@ async def list_exposure_signals(
     limit: int = 100,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.network import NetworkExposureSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import NetworkExposureSignalModel
 
     stmt = select(NetworkExposureSignalModel).where(
         NetworkExposureSignalModel.organization_id == organization_id
     )
     if impacted_supplier_id:
-        stmt = stmt.where(
-            NetworkExposureSignalModel.impacted_supplier_id == impacted_supplier_id
-        )
+        stmt = stmt.where(NetworkExposureSignalModel.impacted_supplier_id == impacted_supplier_id)
     if origin_supplier_id:
-        stmt = stmt.where(
-            NetworkExposureSignalModel.origin_supplier_id == origin_supplier_id
-        )
+        stmt = stmt.where(NetworkExposureSignalModel.origin_supplier_id == origin_supplier_id)
     if exposure_status:
-        stmt = stmt.where(
-            NetworkExposureSignalModel.exposure_status == exposure_status.upper()
-        )
+        stmt = stmt.where(NetworkExposureSignalModel.exposure_status == exposure_status.upper())
     stmt = stmt.order_by(NetworkExposureSignalModel.detected_at.desc()).limit(limit)
     return list((await session.execute(stmt)).scalars().all())

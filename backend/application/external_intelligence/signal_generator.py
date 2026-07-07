@@ -18,7 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus, ExternalSourceName, RiskSignalType, SignalSeverity
-from domain.external_intelligence import ExternalRiskSignal
+
 from .event_attribution import derive_esg_category, derive_protected_right
 
 logger = structlog.get_logger(__name__)
@@ -30,9 +30,21 @@ _SIGNAL_RULES: list[tuple[str, str, str, list[tuple[float, str, str]]]] = [
         RiskSignalType.CORRUPTION.value,
         ExternalSourceName.TRANSPARENCY_INTERNATIONAL.value,
         [
-            (70.0, SignalSeverity.CRITICAL.value, "Kritisch hohes Korruptionsrisiko in {country} (Score: {score:.0f}/100)"),
-            (50.0, SignalSeverity.HIGH.value,     "Hohes Korruptionsrisiko in {country} (Score: {score:.0f}/100)"),
-            (35.0, SignalSeverity.MEDIUM.value,   "Erhöhtes Korruptionsrisiko in {country} (Score: {score:.0f}/100)"),
+            (
+                70.0,
+                SignalSeverity.CRITICAL.value,
+                "Kritisch hohes Korruptionsrisiko in {country} (Score: {score:.0f}/100)",
+            ),
+            (
+                50.0,
+                SignalSeverity.HIGH.value,
+                "Hohes Korruptionsrisiko in {country} (Score: {score:.0f}/100)",
+            ),
+            (
+                35.0,
+                SignalSeverity.MEDIUM.value,
+                "Erhöhtes Korruptionsrisiko in {country} (Score: {score:.0f}/100)",
+            ),
         ],
     ),
     (
@@ -40,8 +52,16 @@ _SIGNAL_RULES: list[tuple[str, str, str, list[tuple[float, str, str]]]] = [
         RiskSignalType.GOVERNANCE.value,
         ExternalSourceName.WORLD_BANK.value,
         [
-            (70.0, SignalSeverity.HIGH.value,     "Schwache Regierungsführung in {country} (Score: {score:.0f}/100)"),
-            (50.0, SignalSeverity.MEDIUM.value,   "Mäßige Governance-Qualität in {country} (Score: {score:.0f}/100)"),
+            (
+                70.0,
+                SignalSeverity.HIGH.value,
+                "Schwache Regierungsführung in {country} (Score: {score:.0f}/100)",
+            ),
+            (
+                50.0,
+                SignalSeverity.MEDIUM.value,
+                "Mäßige Governance-Qualität in {country} (Score: {score:.0f}/100)",
+            ),
         ],
     ),
     (
@@ -49,8 +69,16 @@ _SIGNAL_RULES: list[tuple[str, str, str, list[tuple[float, str, str]]]] = [
         RiskSignalType.LABOUR_RIGHTS.value,
         ExternalSourceName.ILO.value,
         [
-            (70.0, SignalSeverity.HIGH.value,     "Erhebliche Verletzungen der Arbeitsrechte in {country} (Score: {score:.0f}/100)"),
-            (50.0, SignalSeverity.MEDIUM.value,   "Arbeitsrechtsrisiko in {country} (Score: {score:.0f}/100)"),
+            (
+                70.0,
+                SignalSeverity.HIGH.value,
+                "Erhebliche Verletzungen der Arbeitsrechte in {country} (Score: {score:.0f}/100)",
+            ),
+            (
+                50.0,
+                SignalSeverity.MEDIUM.value,
+                "Arbeitsrechtsrisiko in {country} (Score: {score:.0f}/100)",
+            ),
         ],
     ),
     (
@@ -58,8 +86,16 @@ _SIGNAL_RULES: list[tuple[str, str, str, list[tuple[float, str, str]]]] = [
         RiskSignalType.LABOUR_RIGHTS.value,
         ExternalSourceName.UNICEF.value,
         [
-            (70.0, SignalSeverity.HIGH.value,     "Hohes Menschenrechtsrisiko in {country} (Score: {score:.0f}/100)"),
-            (50.0, SignalSeverity.MEDIUM.value,   "Erhöhtes Menschenrechtsrisiko in {country} (Score: {score:.0f}/100)"),
+            (
+                70.0,
+                SignalSeverity.HIGH.value,
+                "Hohes Menschenrechtsrisiko in {country} (Score: {score:.0f}/100)",
+            ),
+            (
+                50.0,
+                SignalSeverity.MEDIUM.value,
+                "Erhöhtes Menschenrechtsrisiko in {country} (Score: {score:.0f}/100)",
+            ),
         ],
     ),
     (
@@ -67,15 +103,29 @@ _SIGNAL_RULES: list[tuple[str, str, str, list[tuple[float, str, str]]]] = [
         RiskSignalType.ENVIRONMENTAL.value,
         ExternalSourceName.WORLD_BANK.value,
         [
-            (70.0, SignalSeverity.HIGH.value,     "Hohes Umweltrisiko in {country} (Score: {score:.0f}/100)"),
-            (50.0, SignalSeverity.MEDIUM.value,   "Umweltrisiko in {country} (Score: {score:.0f}/100)"),
+            (
+                70.0,
+                SignalSeverity.HIGH.value,
+                "Hohes Umweltrisiko in {country} (Score: {score:.0f}/100)",
+            ),
+            (
+                50.0,
+                SignalSeverity.MEDIUM.value,
+                "Umweltrisiko in {country} (Score: {score:.0f}/100)",
+            ),
         ],
     ),
 ]
 
 _SANCTIONS_SOURCE_MAP = {
-    "comprehensive": (SignalSeverity.CRITICAL.value, "Umfassendes Sanktionsregime gegen {country} — Lieferant betroffen"),
-    "partial":       (SignalSeverity.HIGH.value,     "Teilsanktionen gegen {country} — erhöhtes Compliance-Risiko"),
+    "comprehensive": (
+        SignalSeverity.CRITICAL.value,
+        "Umfassendes Sanktionsregime gegen {country} — Lieferant betroffen",
+    ),
+    "partial": (
+        SignalSeverity.HIGH.value,
+        "Teilsanktionen gegen {country} — erhöhtes Compliance-Risiko",
+    ),
 }
 
 
@@ -191,6 +241,7 @@ async def auto_enrich_supplier_background(
         async with AsyncSessionFactory() as session, session.begin():
             # 1. Check if country risk profile exists — if not, run collector first
             from application.external_intelligence.country_risk_service import get_country_risk
+
             profile = await get_country_risk(country_code.upper(), session)
             if profile is None:
                 logger.info(
@@ -199,7 +250,10 @@ async def auto_enrich_supplier_background(
                     country=country_code,
                 )
                 try:
-                    from application.intelligence_engine.collector_orchestrator import run_collection_for_org
+                    from application.intelligence_engine.collector_orchestrator import (
+                        run_collection_for_org,
+                    )
+
                     await run_collection_for_org(org_id=organization_id, session=session)
                     await session.flush()
                 except Exception as collect_exc:
@@ -217,6 +271,7 @@ async def auto_enrich_supplier_background(
 
             # 3. Run full enrichment (scores, benchmark, combined risk)
             from application.external_intelligence.enrichment_service import enrich_supplier
+
             await enrich_supplier(
                 supplier_id=supplier_id,
                 organization_id=organization_id,

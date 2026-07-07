@@ -43,8 +43,6 @@ from domain.enums import EntityStatus
 from domain.reporting_package import ReportingPackage as ReportingPackageDomain
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
-from infrastructure.persistence.models.finding import FindingModel
-from infrastructure.persistence.models.risk import RiskModel
 from infrastructure.persistence.models.supplier import SupplierModel
 from infrastructure.persistence.repositories.disclosure import (
     SQLDisclosureFrameworkRepository,
@@ -52,21 +50,19 @@ from infrastructure.persistence.repositories.disclosure import (
     SQLDisclosureResponseRepository,
     SQLReportingPackageRepository,
 )
+from infrastructure.persistence.repositories.evidence import SQLEvidenceRepository
 from infrastructure.persistence.repositories.regulatory import (
     SQLComplianceGapRepository,
     SQLRequirementMappingRepository,
 )
-from infrastructure.persistence.repositories.evidence import SQLEvidenceRepository
 from interfaces.api.deps import (
-    get_current_user,
     get_db,
     require_analyst,
-    require_reviewer,
     require_executive,
+    require_reviewer,
     scope_gate,
 )
 from interfaces.api.schemas.disclosure import (
-    ApproveDisclosureRequest,
     AssessmentDisclosureMapping,
     CreateDisclosureResponseRequest,
     DisclosureDashboardResponse,
@@ -326,9 +322,7 @@ async def disclosure_dashboard(
         req_ids = {r.id for r in reqs}
         responses = await resp_repo.list_for_org(org_id, framework_id=fw.id)
 
-        counts = {
-            "Not Started": 0, "Draft": 0, "In Review": 0, "Approved": 0, "Published": 0
-        }
+        counts = {"Not Started": 0, "Draft": 0, "In Review": 0, "Approved": 0, "Published": 0}
         for resp in responses:
             counts[resp.disclosure_status] = counts.get(resp.disclosure_status, 0) + 1
         # Requirements with no response are "Not Started"
@@ -339,29 +333,26 @@ async def disclosure_dashboard(
         n_pub = counts["Published"]
         n_appr = counts["Approved"]
         completion_pct = (n_pub / n_total * 100) if n_total else 0.0
-        avg_cov = (
-            sum(r.evidence_coverage for r in responses) / len(responses)
-            if responses else 0.0
-        )
-        critical_blockers = sum(
-            1 for r in responses if r.readiness_status == "Blocked"
-        )
+        avg_cov = sum(r.evidence_coverage for r in responses) / len(responses) if responses else 0.0
+        critical_blockers = sum(1 for r in responses if r.readiness_status == "Blocked")
 
-        fw_summaries.append(FrameworkDisclosureSummary(
-            framework_id=fw.id,
-            framework_code=fw.code,
-            framework_name=fw.name,
-            fw_version=fw.fw_version,
-            total_requirements=n_total,
-            not_started=counts["Not Started"],
-            draft=counts["Draft"],
-            in_review=counts["In Review"],
-            approved=counts["Approved"],
-            published=counts["Published"],
-            completion_pct=round(completion_pct, 1),
-            avg_coverage=round(avg_cov, 4),
-            critical_blockers=critical_blockers,
-        ))
+        fw_summaries.append(
+            FrameworkDisclosureSummary(
+                framework_id=fw.id,
+                framework_code=fw.code,
+                framework_name=fw.name,
+                fw_version=fw.fw_version,
+                total_requirements=n_total,
+                not_started=counts["Not Started"],
+                draft=counts["Draft"],
+                in_review=counts["In Review"],
+                approved=counts["Approved"],
+                published=counts["Published"],
+                completion_pct=round(completion_pct, 1),
+                avg_coverage=round(avg_cov, 4),
+                critical_blockers=critical_blockers,
+            )
+        )
 
         total_req += n_total
         total_pub += n_pub
@@ -422,7 +413,9 @@ async def create_response(
         current_user.organization_id, body.requirement_id
     )
     if existing is not None:
-        raise HTTPException(status_code=409, detail="Disclosure response already exists for this requirement")
+        raise HTTPException(
+            status_code=409, detail="Disclosure response already exists for this requirement"
+        )
 
     resp = DisclosureResponse(
         organization_id=current_user.organization_id,
@@ -634,15 +627,17 @@ async def disclosure_workspace(
     # Match by requirement reference code against regulation requirement codes
     gaps = await gap_repo.list_for_org(org_id, requirement_id=None)
     # Filter to gaps whose requirement code starts with the disclosure ref prefix
-    ref_prefix = req.reference.split("-")[0] if req.reference else ""
+    req.reference.split("-")[0] if req.reference else ""
     open_gaps: list[LinkedEntitySummary] = []
     for gap in gaps:
-        open_gaps.append(LinkedEntitySummary(
-            id=gap.id,
-            entity_type="compliance_gap",
-            title=gap.description[:80] if gap.description else gap.gap_type,
-            severity=gap.severity,
-        ))
+        open_gaps.append(
+            LinkedEntitySummary(
+                id=gap.id,
+                entity_type="compliance_gap",
+                title=gap.description[:80] if gap.description else gap.gap_type,
+                severity=gap.severity,
+            )
+        )
 
     # Requirement mappings for this org (for coverage purposes)
     mappings = await mapping_repo.list_for_org(org_id)
@@ -667,24 +662,44 @@ async def disclosure_workspace(
     linked_findings: list[LinkedEntitySummary] = []
     if finding_ids:
         from sqlalchemy import select as _select  # noqa: PLC0415
+
         from infrastructure.persistence.models.finding import FindingModel as _FM  # noqa: PLC0415
-        rows = (await session.execute(
-            _select(_FM).where(_FM.id.in_(finding_ids), _FM.organization_id == org_id)
-        )).scalars().all()
+
+        rows = (
+            (
+                await session.execute(
+                    _select(_FM).where(_FM.id.in_(finding_ids), _FM.organization_id == org_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
         linked_findings = [
-            LinkedEntitySummary(id=r.id, entity_type="finding", title=r.title, severity=r.severity, status=r.status)
+            LinkedEntitySummary(
+                id=r.id, entity_type="finding", title=r.title, severity=r.severity, status=r.status
+            )
             for r in rows
         ]
 
     linked_risks: list[LinkedEntitySummary] = []
     if risk_ids:
         from sqlalchemy import select as _select  # noqa: PLC0415
+
         from infrastructure.persistence.models.risk import RiskModel as _RM  # noqa: PLC0415
-        rows = (await session.execute(
-            _select(_RM).where(_RM.id.in_(risk_ids), _RM.organization_id == org_id)
-        )).scalars().all()
+
+        rows = (
+            (
+                await session.execute(
+                    _select(_RM).where(_RM.id.in_(risk_ids), _RM.organization_id == org_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
         linked_risks = [
-            LinkedEntitySummary(id=r.id, entity_type="risk", title=r.title, severity=r.severity, status=r.status)
+            LinkedEntitySummary(
+                id=r.id, entity_type="risk", title=r.title, severity=r.severity, status=r.status
+            )
             for r in rows
         ]
 
@@ -723,12 +738,14 @@ async def supplier_disclosure_contribution(
 ) -> SupplierDisclosureContribution:
     org_id = current_user.organization_id
 
-    supplier_row = (await session.execute(
-        select(SupplierModel).where(
-            SupplierModel.id == supplier_id,
-            SupplierModel.organization_id == org_id,
+    supplier_row = (
+        await session.execute(
+            select(SupplierModel).where(
+                SupplierModel.id == supplier_id,
+                SupplierModel.organization_id == org_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if supplier_row is None:
         raise HTTPException(status_code=404, detail="Supplier not found")
 
@@ -768,12 +785,14 @@ async def assessment_disclosure_mapping(
 ) -> AssessmentDisclosureMapping:
     org_id = current_user.organization_id
 
-    assessment_row = (await session.execute(
-        select(AssessmentModel).where(
-            AssessmentModel.id == assessment_id,
-            AssessmentModel.organization_id == org_id,
+    assessment_row = (
+        await session.execute(
+            select(AssessmentModel).where(
+                AssessmentModel.id == assessment_id,
+                AssessmentModel.organization_id == org_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if assessment_row is None:
         raise HTTPException(status_code=404, detail="Assessment not found")
 
@@ -782,7 +801,7 @@ async def assessment_disclosure_mapping(
     gap_repo = SQLComplianceGapRepository(session)
 
     assessment_mappings = await mapping_repo.list_for_org(org_id, assessment_id=assessment_id)
-    mapped_reg_req_ids = {m.regulation_requirement_id for m in assessment_mappings}
+    {m.regulation_requirement_id for m in assessment_mappings}
 
     # Find disclosure requirements whose reference matches regulation requirement codes
     # by checking all disclosure frameworks' requirements
@@ -796,7 +815,8 @@ async def assessment_disclosure_mapping(
 
     avg_confidence = (
         sum(m.confidence for m in assessment_mappings) / len(assessment_mappings)
-        if assessment_mappings else 0.0
+        if assessment_mappings
+        else 0.0
     )
 
     gaps = await gap_repo.list_for_org(org_id, severity="Critical")
@@ -852,17 +872,19 @@ async def generate_package(
     req_snapshots = []
     for req in reqs:
         resp = resp_by_req.get(req.id)
-        req_snapshots.append({
-            "requirement_id": req.id,
-            "reference": req.reference,
-            "title": req.title,
-            "category": req.category,
-            "disclosure_status": resp.disclosure_status if resp else "Not Started",
-            "narrative_text": resp.narrative_text if resp else "",
-            "evidence_coverage": resp.evidence_coverage if resp else 0.0,
-            "coverage_category": resp.coverage_category if resp else "Weak",
-            "readiness_status": resp.readiness_status if resp else "Not Started",
-        })
+        req_snapshots.append(
+            {
+                "requirement_id": req.id,
+                "reference": req.reference,
+                "title": req.title,
+                "category": req.category,
+                "disclosure_status": resp.disclosure_status if resp else "Not Started",
+                "narrative_text": resp.narrative_text if resp else "",
+                "evidence_coverage": resp.evidence_coverage if resp else 0.0,
+                "coverage_category": resp.coverage_category if resp else "Weak",
+                "readiness_status": resp.readiness_status if resp else "Not Started",
+            }
+        )
 
     published_count = sum(1 for r in responses if r.disclosure_status == "Published")
     approved_count = sum(1 for r in responses if r.disclosure_status == "Approved")
@@ -884,6 +906,7 @@ async def generate_package(
     }
 
     import json  # noqa: PLC0415
+
     snapshot_bytes = json.dumps(report_data, sort_keys=True, default=str).encode()
     report_hash = hashlib.sha256(snapshot_bytes).hexdigest()
 
@@ -936,7 +959,9 @@ async def download_package(
     if pkg is None or pkg.organization_id != current_user.organization_id:
         raise HTTPException(status_code=404, detail="Reporting package not found")
 
-    from infrastructure.reporting.disclosure_pdf_renderer import render_reporting_package  # noqa: PLC0415
+    from infrastructure.reporting.disclosure_pdf_renderer import (
+        render_reporting_package,  # noqa: PLC0415
+    )
 
     pdf_bytes = render_reporting_package(
         org_name=current_user.organization_id,

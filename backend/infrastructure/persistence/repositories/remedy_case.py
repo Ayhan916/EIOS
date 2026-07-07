@@ -1,8 +1,9 @@
 """Repositories for Remedy Case Manager (CSDDD Art. 12)."""
+
 from __future__ import annotations
 
 import json
-from typing import Optional
+from datetime import UTC
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
@@ -17,7 +18,7 @@ from infrastructure.persistence.models.remedy_case import (
 )
 
 
-def _loads(v: Optional[str]) -> list:
+def _loads(v: str | None) -> list:
     if not v:
         return []
     try:
@@ -119,7 +120,7 @@ class SQLRemedyCaseRepository:
         self.db.flush()
         return _to_domain(m)
 
-    def get(self, case_id: UUID, org_id: UUID) -> Optional[RemedyCase]:
+    def get(self, case_id: UUID, org_id: UUID) -> RemedyCase | None:
         m = (
             self.db.query(RemedyCaseModel)
             .filter(RemedyCaseModel.id == case_id, RemedyCaseModel.organization_id == org_id)
@@ -130,7 +131,7 @@ class SQLRemedyCaseRepository:
     def list_by_org(
         self,
         org_id: UUID,
-        status: Optional[str] = None,
+        status: str | None = None,
         skip: int = 0,
         limit: int = 50,
     ) -> list[RemedyCase]:
@@ -141,9 +142,11 @@ class SQLRemedyCaseRepository:
         return [_to_domain(m) for m in q.all()]
 
     def count_by_org(self, org_id: UUID) -> int:
-        return self.db.query(RemedyCaseModel).filter(RemedyCaseModel.organization_id == org_id).count()
+        return (
+            self.db.query(RemedyCaseModel).filter(RemedyCaseModel.organization_id == org_id).count()
+        )
 
-    def update(self, case_id: UUID, org_id: UUID, data: dict) -> Optional[RemedyCase]:
+    def update(self, case_id: UUID, org_id: UUID, data: dict) -> RemedyCase | None:
         m = (
             self.db.query(RemedyCaseModel)
             .filter(RemedyCaseModel.id == case_id, RemedyCaseModel.organization_id == org_id)
@@ -159,9 +162,12 @@ class SQLRemedyCaseRepository:
         self.db.flush()
         return _to_domain(m)
 
-    def close(self, case_id: UUID, org_id: UUID, closed_by: str, notes: Optional[str]) -> Optional[RemedyCase]:
+    def close(
+        self, case_id: UUID, org_id: UUID, closed_by: str, notes: str | None
+    ) -> RemedyCase | None:
         """HUMAN ANALYST/ADMIN ONLY — AI agents MUST NOT call this."""
-        from datetime import datetime, timezone
+        from datetime import datetime
+
         m = (
             self.db.query(RemedyCaseModel)
             .filter(RemedyCaseModel.id == case_id, RemedyCaseModel.organization_id == org_id)
@@ -170,16 +176,17 @@ class SQLRemedyCaseRepository:
         if not m:
             return None
         m.status = RemedyCaseStatus.COMPLETED.value
-        m.closed_at = datetime.now(timezone.utc)
+        m.closed_at = datetime.now(UTC)
         m.closed_by = closed_by
         m.closure_notes = notes
         self.db.flush()
         return _to_domain(m)
 
     def remedy_summary(self, org_id: UUID, year: int) -> dict:
-        from datetime import datetime, timezone
-        start = datetime(year, 1, 1, tzinfo=timezone.utc)
-        end = datetime(year + 1, 1, 1, tzinfo=timezone.utc)
+        from datetime import datetime
+
+        start = datetime(year, 1, 1, tzinfo=UTC)
+        end = datetime(year + 1, 1, 1, tzinfo=UTC)
         cases = (
             self.db.query(RemedyCaseModel)
             .filter(
@@ -193,12 +200,13 @@ class SQLRemedyCaseRepository:
             "year": year,
             "total": len(cases),
             "by_status": {
-                s.value: sum(1 for c in cases if c.status == s.value)
-                for s in RemedyCaseStatus
+                s.value: sum(1 for c in cases if c.status == s.value) for s in RemedyCaseStatus
             },
             "by_affected_type": _aggregate_list([c.affected_type for c in cases]),
             "total_affected_persons": sum(c.affected_count for c in cases),
-            "avg_severity": round(sum(c.severity_score for c in cases) / len(cases), 2) if cases else 0.0,
+            "avg_severity": round(sum(c.severity_score for c in cases) / len(cases), 2)
+            if cases
+            else 0.0,
         }
 
 
@@ -235,8 +243,12 @@ class SQLRemedyBeneficiaryRepository:
             .all()
         ]
 
-    def update(self, ben_id: UUID, data: dict) -> Optional[RemedyBeneficiary]:
-        m = self.db.query(RemedyBeneficiaryModel).filter(RemedyBeneficiaryModel.id == ben_id).first()
+    def update(self, ben_id: UUID, data: dict) -> RemedyBeneficiary | None:
+        m = (
+            self.db.query(RemedyBeneficiaryModel)
+            .filter(RemedyBeneficiaryModel.id == ben_id)
+            .first()
+        )
         if not m:
             return None
         for k, v in data.items():
@@ -274,8 +286,9 @@ class SQLRemedyActionRepository:
             .all()
         ]
 
-    def update(self, action_id: UUID, data: dict) -> Optional[RemedyAction]:
-        from datetime import datetime, timezone
+    def update(self, action_id: UUID, data: dict) -> RemedyAction | None:
+        from datetime import datetime
+
         m = self.db.query(RemedyActionModel).filter(RemedyActionModel.id == action_id).first()
         if not m:
             return None
@@ -283,7 +296,7 @@ class SQLRemedyActionRepository:
             if hasattr(m, k):
                 setattr(m, k, v)
         if data.get("status") == "done" and not m.completed_at:
-            m.completed_at = datetime.now(timezone.utc)
+            m.completed_at = datetime.now(UTC)
         self.db.flush()
         return _action_to_domain(m)
 
@@ -292,7 +305,9 @@ class SQLRemedyAuditLogRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def log(self, remedy_case_id: UUID, action: str, performed_by: str, details: Optional[str] = None) -> None:
+    def log(
+        self, remedy_case_id: UUID, action: str, performed_by: str, details: str | None = None
+    ) -> None:
         m = RemedyAuditLogModel(
             id=uuid4(),
             remedy_case_id=remedy_case_id,

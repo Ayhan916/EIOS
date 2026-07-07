@@ -15,9 +15,8 @@ Forecasting methods:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 from statistics import mean
-from typing import Any
 
 from sqlalchemy.orm import Session
 
@@ -25,7 +24,6 @@ from application.ai_governance._audit import emit_audit_event
 from infrastructure.persistence.models.sustainability import (
     FORECAST_METHODS,
     FORECAST_TYPES,
-    SCENARIO_STATUSES,
     SCENARIO_TYPES,
     ESGKPIModel,
     KPIMeasurementModel,
@@ -34,7 +32,7 @@ from infrastructure.persistence.models.sustainability import (
     SustainabilityScorecardModel,
 )
 
-from .objective_service import SustainabilityError, _assert_org, _now
+from .objective_service import SustainabilityError, _now
 
 _ENV_WEIGHT = 0.40
 _SOC_WEIGHT = 0.30
@@ -90,21 +88,31 @@ def compute_scorecard(
         cat = kpi.category
         if cat in scores_by_category:
             scores_by_category[cat].append(attainment)
-        kpi_breakdown.append({
-            "kpi_id": kpi.id,
-            "kpi_name": kpi.name,
-            "category": cat,
-            "measured": latest.measured_value,
-            "target": kpi.target_value,
-            "attainment_pct": attainment,
-        })
+        kpi_breakdown.append(
+            {
+                "kpi_id": kpi.id,
+                "kpi_name": kpi.name,
+                "category": cat,
+                "measured": latest.measured_value,
+                "target": kpi.target_value,
+                "attainment_pct": attainment,
+            }
+        )
 
-    env_score = round(mean(scores_by_category["ENVIRONMENTAL"]), 2) if scores_by_category["ENVIRONMENTAL"] else 0.0
-    soc_score = round(mean(scores_by_category["SOCIAL"]), 2) if scores_by_category["SOCIAL"] else 0.0
-    gov_score = round(mean(scores_by_category["GOVERNANCE"]), 2) if scores_by_category["GOVERNANCE"] else 0.0
-    overall = round(
-        env_score * _ENV_WEIGHT + soc_score * _SOC_WEIGHT + gov_score * _GOV_WEIGHT, 2
+    env_score = (
+        round(mean(scores_by_category["ENVIRONMENTAL"]), 2)
+        if scores_by_category["ENVIRONMENTAL"]
+        else 0.0
     )
+    soc_score = (
+        round(mean(scores_by_category["SOCIAL"]), 2) if scores_by_category["SOCIAL"] else 0.0
+    )
+    gov_score = (
+        round(mean(scores_by_category["GOVERNANCE"]), 2)
+        if scores_by_category["GOVERNANCE"]
+        else 0.0
+    )
+    overall = round(env_score * _ENV_WEIGHT + soc_score * _SOC_WEIGHT + gov_score * _GOV_WEIGHT, 2)
 
     now = _now()
     sc = SustainabilityScorecardModel(
@@ -117,12 +125,16 @@ def compute_scorecard(
         governance_score=gov_score,
         overall_score=overall,
         calculation_method=(
-            f"ENV={_ENV_WEIGHT*100:.0f}% × avg(ENVIRONMENTAL KPI attainment), "
-            f"SOC={_SOC_WEIGHT*100:.0f}% × avg(SOCIAL KPI attainment), "
-            f"GOV={_GOV_WEIGHT*100:.0f}% × avg(GOVERNANCE KPI attainment)"
+            f"ENV={_ENV_WEIGHT * 100:.0f}% × avg(ENVIRONMENTAL KPI attainment), "
+            f"SOC={_SOC_WEIGHT * 100:.0f}% × avg(SOCIAL KPI attainment), "
+            f"GOV={_GOV_WEIGHT * 100:.0f}% × avg(GOVERNANCE KPI attainment)"
         ),
         score_data={
-            "weights": {"environmental": _ENV_WEIGHT, "social": _SOC_WEIGHT, "governance": _GOV_WEIGHT},
+            "weights": {
+                "environmental": _ENV_WEIGHT,
+                "social": _SOC_WEIGHT,
+                "governance": _GOV_WEIGHT,
+            },
             "category_scores": {
                 "environmental": env_score,
                 "social": soc_score,
@@ -168,6 +180,7 @@ def list_scorecards(
 
 # ── Deterministic Forecasting ─────────────────────────────────────────────────
 
+
 def _linear_trend(data: list[float]) -> tuple[float, float]:
     """Returns (slope, intercept) for simple linear regression over index positions."""
     n = len(data)
@@ -176,7 +189,7 @@ def _linear_trend(data: list[float]) -> tuple[float, float]:
     xs = list(range(n))
     mean_x = mean(xs)
     mean_y = mean(data)
-    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, data))
+    num = sum((x - mean_x) * (y - mean_y) for x, y in zip(xs, data, strict=False))
     den = sum((x - mean_x) ** 2 for x in xs)
     slope = num / den if den != 0 else 0.0
     intercept = mean_y - slope * mean_x
@@ -217,8 +230,7 @@ def create_forecast(
         slope, intercept = _linear_trend(historical_data)
         n = len(historical_data)
         forecast_data = [
-            round(intercept + slope * (n + i), 6)
-            for i in range(forecast_horizon_months)
+            round(intercept + slope * (n + i), 6) for i in range(forecast_horizon_months)
         ]
     else:  # MOVING_AVERAGE
         window = min(3, len(historical_data))
@@ -267,6 +279,7 @@ def list_forecasts(
 
 # ── Scenario Analysis ─────────────────────────────────────────────────────────
 
+
 def create_scenario(
     organization_id: str,
     name: str,
@@ -303,9 +316,7 @@ def create_scenario(
     return sc
 
 
-def _compute_scenario_outputs(
-    scenario_type: str, inputs: dict, assumptions: dict
-) -> dict:
+def _compute_scenario_outputs(scenario_type: str, inputs: dict, assumptions: dict) -> dict:
     """Deterministic scenario calculations. All formulas are explicit and auditable."""
     if scenario_type == "SUPPLIER_IMPROVEMENT":
         baseline = float(inputs.get("baseline_supplier_compliance", 0))

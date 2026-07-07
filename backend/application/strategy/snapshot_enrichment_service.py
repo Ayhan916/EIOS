@@ -9,7 +9,7 @@ is safe to call even when those modules are not yet present.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
@@ -18,12 +18,15 @@ from infrastructure.persistence.models.strategy import DigitalTwinSnapshotModel
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _fetch_green_revenue(organization_id: str, session: Session) -> dict | None:
     try:
-        from infrastructure.persistence.models.financial_esg import GreenRevenueRecordModel  # type: ignore[import]
+        from infrastructure.persistence.models.financial_esg import (
+            GreenRevenueRecordModel,  # type: ignore[import]
+        )
+
         row = (
             session.query(GreenRevenueRecordModel)
             .filter(GreenRevenueRecordModel.organization_id == organization_id)
@@ -43,7 +46,10 @@ def _fetch_green_revenue(organization_id: str, session: Session) -> dict | None:
 
 def _fetch_taxonomy_alignment(organization_id: str, session: Session) -> dict | None:
     try:
-        from infrastructure.persistence.models.financial_esg import TaxonomyAlignmentAssessmentModel  # type: ignore[import]
+        from infrastructure.persistence.models.financial_esg import (
+            TaxonomyAlignmentAssessmentModel,  # type: ignore[import]
+        )
+
         row = (
             session.query(TaxonomyAlignmentAssessmentModel)
             .filter(TaxonomyAlignmentAssessmentModel.organization_id == organization_id)

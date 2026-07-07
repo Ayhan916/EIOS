@@ -95,9 +95,9 @@ async def build_founder_context(session: AsyncSession, *, window_days: int = 30)
     try:
         from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
-        stmt = select(
-            MonitoringAgentModel.status, func.count().label("n")
-        ).group_by(MonitoringAgentModel.status)
+        stmt = select(MonitoringAgentModel.status, func.count().label("n")).group_by(
+            MonitoringAgentModel.status
+        )
         result = await session.execute(stmt)
         counts = {row.status: row.n for row in result.all()}
         snapshot["agent_monitoring"] = {

@@ -19,15 +19,17 @@ from infrastructure.persistence.models.copilot_audit import (
     CopilotAnswerReviewModel,
     CopilotAuditPackageModel,
     CopilotCitationIntegrityModel,
-    CopilotContradictionModel as DetectedContradictionModel,
     CopilotFeedbackModel,
 )
+from infrastructure.persistence.models.copilot_audit import (
+    CopilotContradictionModel as DetectedContradictionModel,
+)
 from infrastructure.persistence.repositories.base import BaseRepository
-
 
 # ---------------------------------------------------------------------------
 # Contradiction
 # ---------------------------------------------------------------------------
+
 
 class SQLDetectedContradictionRepository(
     BaseRepository[DetectedContradiction, DetectedContradictionModel]
@@ -73,9 +75,7 @@ class SQLDetectedContradictionRepository(
             detected_at=model.detected_at or datetime.now(UTC),
         )
 
-    async def list_for_message(
-        self, message_id: str, org_id: str
-    ) -> list[DetectedContradiction]:
+    async def list_for_message(self, message_id: str, org_id: str) -> list[DetectedContradiction]:
         stmt = (
             select(DetectedContradictionModel)
             .where(
@@ -91,6 +91,7 @@ class SQLDetectedContradictionRepository(
 # ---------------------------------------------------------------------------
 # Citation Integrity
 # ---------------------------------------------------------------------------
+
 
 class SQLCopilotCitationIntegrityRepository(
     BaseRepository[CopilotCitationIntegrity, CopilotCitationIntegrityModel]
@@ -159,9 +160,8 @@ class SQLCopilotCitationIntegrityRepository(
 # Feedback
 # ---------------------------------------------------------------------------
 
-class SQLCopilotFeedbackRepository(
-    BaseRepository[CopilotFeedback, CopilotFeedbackModel]
-):
+
+class SQLCopilotFeedbackRepository(BaseRepository[CopilotFeedback, CopilotFeedbackModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, CopilotFeedbackModel)
 
@@ -203,13 +203,15 @@ class SQLCopilotFeedbackRepository(
             submitted_at=model.submitted_at or datetime.now(UTC),
         )
 
-    async def get_for_message(
-        self, message_id: str, org_id: str
-    ) -> CopilotFeedback | None:
-        stmt = select(CopilotFeedbackModel).where(
-            CopilotFeedbackModel.message_id == message_id,
-            CopilotFeedbackModel.organization_id == org_id,
-        ).limit(1)
+    async def get_for_message(self, message_id: str, org_id: str) -> CopilotFeedback | None:
+        stmt = (
+            select(CopilotFeedbackModel)
+            .where(
+                CopilotFeedbackModel.message_id == message_id,
+                CopilotFeedbackModel.organization_id == org_id,
+            )
+            .limit(1)
+        )
         row = (await self._session.execute(stmt)).scalars().first()
         return self._to_domain(row) if row else None
 
@@ -217,6 +219,7 @@ class SQLCopilotFeedbackRepository(
 # ---------------------------------------------------------------------------
 # Answer Review
 # ---------------------------------------------------------------------------
+
 
 class SQLCopilotAnswerReviewRepository(
     BaseRepository[CopilotAnswerReview, CopilotAnswerReviewModel]
@@ -262,13 +265,15 @@ class SQLCopilotAnswerReviewRepository(
             reviewed_at=model.reviewed_at or datetime.now(UTC),
         )
 
-    async def get_for_message(
-        self, message_id: str, org_id: str
-    ) -> CopilotAnswerReview | None:
-        stmt = select(CopilotAnswerReviewModel).where(
-            CopilotAnswerReviewModel.message_id == message_id,
-            CopilotAnswerReviewModel.organization_id == org_id,
-        ).limit(1)
+    async def get_for_message(self, message_id: str, org_id: str) -> CopilotAnswerReview | None:
+        stmt = (
+            select(CopilotAnswerReviewModel)
+            .where(
+                CopilotAnswerReviewModel.message_id == message_id,
+                CopilotAnswerReviewModel.organization_id == org_id,
+            )
+            .limit(1)
+        )
         row = (await self._session.execute(stmt)).scalars().first()
         return self._to_domain(row) if row else None
 
@@ -276,6 +281,7 @@ class SQLCopilotAnswerReviewRepository(
 # ---------------------------------------------------------------------------
 # Audit Package
 # ---------------------------------------------------------------------------
+
 
 class SQLCopilotAuditPackageRepository(
     BaseRepository[CopilotAuditPackage, CopilotAuditPackageModel]
@@ -323,16 +329,17 @@ class SQLCopilotAuditPackageRepository(
             verified_at=model.verified_at,
         )
 
-    async def get_for_message(
-        self, message_id: str, org_id: str
-    ) -> CopilotAuditPackage | None:
-        stmt = select(CopilotAuditPackageModel).where(
-            CopilotAuditPackageModel.message_id == message_id,
-            CopilotAuditPackageModel.organization_id == org_id,
-        ).limit(1)
+    async def get_for_message(self, message_id: str, org_id: str) -> CopilotAuditPackage | None:
+        stmt = (
+            select(CopilotAuditPackageModel)
+            .where(
+                CopilotAuditPackageModel.message_id == message_id,
+                CopilotAuditPackageModel.organization_id == org_id,
+            )
+            .limit(1)
+        )
         row = (await self._session.execute(stmt)).scalars().first()
         return self._to_domain(row) if row else None
 
 
 # Re-export so reproducibility_verifier can import from here cleanly
-from infrastructure.persistence.repositories.copilot import SQLCopilotMessageRepository  # noqa: E402

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.sector_intelligence.nace_taxonomy import (
     ALL_NACE_2DIGIT_CODES,
     NACE_2DIGIT,
@@ -18,7 +16,7 @@ class TestNACETaxonomyCompleteness:
         assert len(NACE_2DIGIT) == 88
 
     def test_all_codes_are_sorted(self) -> None:
-        assert ALL_NACE_2DIGIT_CODES == sorted(ALL_NACE_2DIGIT_CODES)
+        assert sorted(ALL_NACE_2DIGIT_CODES) == ALL_NACE_2DIGIT_CODES
 
     def test_all_codes_are_two_digits(self) -> None:
         for code in NACE_2DIGIT:
@@ -32,7 +30,7 @@ class TestNACETaxonomyCompleteness:
 
     def test_sections_cover_a_through_u(self) -> None:
         sections = {section for section, _ in NACE_2DIGIT.values()}
-        expected = set("ABCDEFGHIJKLMNOPQRSTU")
+        set("ABCDEFGHIJKLMNOPQRSTU")
         # Not all letters are used (no E=Energy in original NACE sections that are missing)
         # but at minimum these high-priority sections must be present
         for s in "ABCDFGHJKMN":
@@ -69,7 +67,7 @@ class TestGetSection:
     def test_unknown_code_returns_none(self) -> None:
         assert get_section("99") is not None  # 99 exists (extraterritorial)
         assert get_section("00") is None
-        assert get_section("04") is None    # 04 does not exist in NACE Rev. 2
+        assert get_section("04") is None  # 04 does not exist in NACE Rev. 2
 
     def test_all_known_codes_return_result(self) -> None:
         for code in ALL_NACE_2DIGIT_CODES:

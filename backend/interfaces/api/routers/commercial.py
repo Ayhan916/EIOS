@@ -11,11 +11,11 @@ from __future__ import annotations
 
 import json
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from infrastructure.persistence.database import AsyncSessionFactory
@@ -26,6 +26,7 @@ router = APIRouter(tags=["commercial"])
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class ShareLinkRequest(BaseModel):
     expires_in_hours: int = Field(168, ge=1, le=720)
@@ -63,6 +64,7 @@ class OrgSettingsUpdate(BaseModel):
 
 # ── G-018: PPTX Export ───────────────────────────────────────────────────────
 
+
 @router.get(
     "/executive/reports/{report_id}/export",
     summary="G-018: Export board report as PPTX",
@@ -73,11 +75,12 @@ async def export_report_pptx(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
     format: str = Query("pptx", pattern="^pptx$"),
 ):
-    from infrastructure.persistence.models.board_report import BoardReportModel
-    from infrastructure.persistence.models.risk import RiskModel
-    from infrastructure.persistence.models.recommendation import RecommendationModel
     from sqlalchemy import select
+
     from application.executive.pptx_exporter import build_board_report_pptx
+    from infrastructure.persistence.models.board_report import BoardReportModel
+    from infrastructure.persistence.models.recommendation import RecommendationModel
+    from infrastructure.persistence.models.risk import RiskModel
 
     async with AsyncSessionFactory() as session:
         report = await session.get(BoardReportModel, report_id)
@@ -85,10 +88,13 @@ async def export_report_pptx(
             raise HTTPException(status_code=404, detail="Report not found")
 
         risks_res = await session.execute(
-            select(RiskModel).where(
+            select(RiskModel)
+            .where(
                 RiskModel.owner == current_user.organization_id,
                 RiskModel.status == "Active",
-            ).order_by(RiskModel.updated_at.desc()).limit(10)
+            )
+            .order_by(RiskModel.updated_at.desc())
+            .limit(10)
         )
         risks = [
             {
@@ -101,10 +107,12 @@ async def export_report_pptx(
         ]
 
         recs_res = await session.execute(
-            select(RecommendationModel).where(
+            select(RecommendationModel)
+            .where(
                 RecommendationModel.owner == current_user.organization_id,
                 RecommendationModel.status == "Open",
-            ).limit(8)
+            )
+            .limit(8)
         )
         recs = [
             {
@@ -137,6 +145,7 @@ async def export_report_pptx(
 
 # ── G-034: Board Portal Share-Link ───────────────────────────────────────────
 
+
 @router.post(
     "/executive/reports/{report_id}/share-link",
     response_model=ShareLinkResponse,
@@ -150,7 +159,6 @@ async def create_share_link(
     from application.commercial.board_portal import create_board_token, hash_token
     from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
     from infrastructure.persistence.models.board_report import BoardReportModel
-    from shared.config import settings
 
     async with AsyncSessionFactory() as session:
         report = await session.get(BoardReportModel, report_id)
@@ -200,8 +208,9 @@ async def revoke_board_token(
     token_hash: str,
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
-    from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
     from sqlalchemy import update
+
+    from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
 
     async with AsyncSessionFactory() as session, session.begin():
         await session.execute(
@@ -217,6 +226,7 @@ async def revoke_board_token(
 
 # ── M50: Board Portal Public Data Endpoint ───────────────────────────────────
 
+
 @router.get(
     "/board/{token}",
     summary="M50: Read board report data via share-link token (public, no auth)",
@@ -227,11 +237,14 @@ async def get_board_portal_data(token: str):
     This endpoint is intentionally public (no auth dependency) — access is
     controlled by the time-limited signed JWT token.
     """
+    from datetime import UTC as _UTC
+    from datetime import datetime as _dt
+
+    import jwt
+
     from application.commercial.board_portal import decode_board_token, hash_token
     from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
     from infrastructure.persistence.models.board_report import BoardReportModel
-    from datetime import UTC as _UTC, datetime as _dt
-    import jwt
 
     # Decode and verify the JWT
     try:
@@ -246,14 +259,15 @@ async def get_board_portal_data(token: str):
 
     async with AsyncSessionFactory() as session:
         # Verify token not revoked in DB
-        bat = await session.get(BoardAccessTokenModel, token_hash)
+        await session.get(BoardAccessTokenModel, token_hash)
         # Try looking up by token_hash field directly
         from sqlalchemy import select as _select
-        bat_row = (await session.execute(
-            _select(BoardAccessTokenModel).where(
-                BoardAccessTokenModel.token_hash == token_hash
+
+        bat_row = (
+            await session.execute(
+                _select(BoardAccessTokenModel).where(BoardAccessTokenModel.token_hash == token_hash)
             )
-        )).scalar_one_or_none()
+        ).scalar_one_or_none()
 
         if bat_row is None:
             raise HTTPException(status_code=401, detail="Token not found")
@@ -269,6 +283,7 @@ async def get_board_portal_data(token: str):
             raise HTTPException(status_code=404, detail="Board report not found")
 
         import json as _json
+
         allowed_sections = _json.loads(bat_row.allowed_sections or "[]")
 
         def _section(key: str, data: dict) -> dict | None:
@@ -288,7 +303,9 @@ async def get_board_portal_data(token: str):
             "allowed_sections": allowed_sections,
             "expires_at": bat_row.expires_at.isoformat(),
             "shared_with_email": bat_row.shared_with_email,
-            "supplier_snapshot": report.supplier_snapshot if not allowed_sections or "portfolio" in allowed_sections else None,
+            "supplier_snapshot": report.supplier_snapshot
+            if not allowed_sections or "portfolio" in allowed_sections
+            else None,
             "sections": {
                 "portfolio": _section("portfolio_summary", report_data),
                 "esg": _section("esg_summary", report_data),
@@ -302,6 +319,7 @@ async def get_board_portal_data(token: str):
 
 # ── G-032: Supplier Benchmarking ─────────────────────────────────────────────
 
+
 @router.get(
     "/suppliers/{supplier_id}/benchmark",
     summary="G-032: Benchmark supplier against sector peers",
@@ -310,10 +328,11 @@ async def get_supplier_benchmark(
     supplier_id: str,
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
+    from sqlalchemy import select
+
+    from application.commercial.benchmarking import compute_benchmark
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.supplier_score import SupplierScoreModel
-    from sqlalchemy import select
-    from application.commercial.benchmarking import compute_benchmark
 
     async with AsyncSessionFactory() as session:
         supplier = await session.get(SupplierModel, supplier_id)
@@ -322,9 +341,10 @@ async def get_supplier_benchmark(
 
         # Fetch scores for this supplier
         score_res = await session.execute(
-            select(SupplierScoreModel).where(
-                SupplierScoreModel.supplier_id == supplier_id
-            ).order_by(SupplierScoreModel.created_at.desc()).limit(1)
+            select(SupplierScoreModel)
+            .where(SupplierScoreModel.supplier_id == supplier_id)
+            .order_by(SupplierScoreModel.created_at.desc())
+            .limit(1)
         )
         score_row = score_res.scalar_one_or_none()
         supplier_scores = {}
@@ -358,12 +378,14 @@ async def get_supplier_benchmark(
             )
             row = ps_score.scalar_one_or_none()
             if row:
-                peer_score_rows.append({
-                    "overall_esg_score": row.overall_esg_score,
-                    "environmental_score": row.environmental_score,
-                    "social_score": row.social_score,
-                    "governance_score": row.governance_score,
-                })
+                peer_score_rows.append(
+                    {
+                        "overall_esg_score": row.overall_esg_score,
+                        "environmental_score": row.environmental_score,
+                        "social_score": row.social_score,
+                        "governance_score": row.governance_score,
+                    }
+                )
 
     result = compute_benchmark(
         supplier_id=supplier_id,
@@ -377,6 +399,7 @@ async def get_supplier_benchmark(
 
 
 # ── G-060: Custom Roles ──────────────────────────────────────────────────────
+
 
 @router.post(
     "/roles/custom",
@@ -418,8 +441,9 @@ async def create_custom_role(
 async def list_custom_roles(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
-    from infrastructure.persistence.models.custom_role import CustomRoleModel, ROLE_TEMPLATES
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.custom_role import ROLE_TEMPLATES, CustomRoleModel
 
     async with AsyncSessionFactory() as session:
         res = await session.execute(
@@ -475,10 +499,12 @@ async def list_role_templates(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
     from infrastructure.persistence.models.custom_role import ROLE_TEMPLATES
+
     return {"templates": ROLE_TEMPLATES}
 
 
 # ── G-055: White-Labeling / Org Settings ─────────────────────────────────────
+
 
 @router.get(
     "/organizations/me/settings",
@@ -490,9 +516,7 @@ async def get_org_settings(
     from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
 
     async with AsyncSessionFactory() as session:
-        settings_row = await session.get(
-            OrganizationSettingsModel, current_user.organization_id
-        )
+        settings_row = await session.get(OrganizationSettingsModel, current_user.organization_id)
 
     if not settings_row:
         return {
@@ -538,13 +562,9 @@ async def update_org_settings(
     from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
 
     async with AsyncSessionFactory() as session, session.begin():
-        settings_row = await session.get(
-            OrganizationSettingsModel, current_user.organization_id
-        )
+        settings_row = await session.get(OrganizationSettingsModel, current_user.organization_id)
         if not settings_row:
-            settings_row = OrganizationSettingsModel(
-                organization_id=current_user.organization_id
-            )
+            settings_row = OrganizationSettingsModel(organization_id=current_user.organization_id)
             session.add(settings_row)
 
         update_data = body.model_dump(exclude_none=True)

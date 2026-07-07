@@ -5,9 +5,10 @@ Revises: 021
 Create Date: 2026-06-12
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSONB
+
+from alembic import op
 
 revision = "022"
 down_revision = "021"
@@ -25,10 +26,18 @@ def upgrade() -> None:
         sa.Column("owner", sa.String, nullable=True),
         sa.Column("created_by", sa.String, nullable=True),
         sa.Column("updated_by", sa.String, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("organization_id", sa.String, nullable=False),
         sa.Column("name", sa.String(200), nullable=False, server_default=""),
         sa.Column("description", sa.Text, nullable=False, server_default=""),
@@ -45,10 +54,18 @@ def upgrade() -> None:
         sa.Column("owner", sa.String, nullable=True),
         sa.Column("created_by", sa.String, nullable=True),
         sa.Column("updated_by", sa.String, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("organization_id", sa.String, nullable=False),
         sa.Column("service_account_id", sa.String, nullable=True),
         sa.Column("name", sa.String(200), nullable=False, server_default=""),
@@ -81,10 +98,18 @@ def upgrade() -> None:
         sa.Column("owner", sa.String, nullable=True),
         sa.Column("created_by", sa.String, nullable=True),
         sa.Column("updated_by", sa.String, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("organization_id", sa.String, nullable=False),
         sa.Column("name", sa.String(200), nullable=False, server_default=""),
         sa.Column("target_url", sa.Text, nullable=False, server_default=""),
@@ -105,10 +130,18 @@ def upgrade() -> None:
         sa.Column("owner", sa.String, nullable=True),
         sa.Column("created_by", sa.String, nullable=True),
         sa.Column("updated_by", sa.String, nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("now()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("now()"),
+        ),
         sa.Column("subscription_id", sa.String, nullable=False),
         sa.Column("event_type", sa.String(100), nullable=False, server_default=""),
         sa.Column("payload_hash", sa.String(64), nullable=False, server_default=""),
@@ -120,8 +153,12 @@ def upgrade() -> None:
         sa.Column("error_message", sa.Text, nullable=True),
         sa.Column("delivered_at", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_index("ix_webhook_deliveries_subscription_id", "webhook_deliveries", ["subscription_id"])
-    op.create_index("ix_webhook_deliveries_delivery_status", "webhook_deliveries", ["delivery_status"])
+    op.create_index(
+        "ix_webhook_deliveries_subscription_id", "webhook_deliveries", ["subscription_id"]
+    )
+    op.create_index(
+        "ix_webhook_deliveries_delivery_status", "webhook_deliveries", ["delivery_status"]
+    )
     op.create_index("ix_webhook_deliveries_retry_at", "webhook_deliveries", ["retry_at"])
 
 

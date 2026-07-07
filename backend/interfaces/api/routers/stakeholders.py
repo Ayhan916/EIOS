@@ -36,13 +36,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import ConsultationBarrier, ConsultationFormat, CSDDDRight, StakeholderType
 from domain.stakeholder import Stakeholder, StakeholderConsultation, StakeholderFeedback
+from domain.user import User
 from infrastructure.persistence.repositories.stakeholder import (
     SQLStakeholderConsultationRepository,
     SQLStakeholderFeedbackRepository,
     SQLStakeholderRepository,
 )
-from interfaces.api.deps import get_current_user, get_db, require_admin, require_analyst
-from domain.user import User
+from interfaces.api.deps import get_current_user, get_db, require_analyst
 
 # ── Schemas ─��─────────────────────────────────────────────────────────────────
 
@@ -142,6 +142,7 @@ class PublicFeedbackCreate(BaseModel):
 
 class FeedbackResponse(BaseModel):
     """PII fields are NEVER included."""
+
     id: str
     consultation_id: str
     risk_assessment: int
@@ -192,7 +193,9 @@ def _stakeholder_to_response(s: Stakeholder) -> StakeholderResponse:
         id=s.id,
         organization_id=s.organization_id,
         name=s.name,
-        stakeholder_type=s.stakeholder_type.value if hasattr(s.stakeholder_type, "value") else s.stakeholder_type,
+        stakeholder_type=s.stakeholder_type.value
+        if hasattr(s.stakeholder_type, "value")
+        else s.stakeholder_type,
         contact_email=s.contact_email,
         language=s.language,
         activity_chain_ids=s.activity_chain_ids,
@@ -204,7 +207,9 @@ def _stakeholder_to_response(s: Stakeholder) -> StakeholderResponse:
     )
 
 
-def _consultation_to_response(c: StakeholderConsultation, feedback_count: int = 0) -> ConsultationResponse:
+def _consultation_to_response(
+    c: StakeholderConsultation, feedback_count: int = 0
+) -> ConsultationResponse:
     return ConsultationResponse(
         id=c.id,
         organization_id=c.organization_id,
@@ -314,14 +319,18 @@ async def get_map_data(
             color = "yellow"
         else:
             color = "green"
-        nodes.append({
-            "id": s.id,
-            "name": s.name,
-            "type": s.stakeholder_type.value if hasattr(s.stakeholder_type, "value") else s.stakeholder_type,
-            "lastConsultation": last.isoformat() if last else None,
-            "color": color,
-            "regions": s.regions,
-        })
+        nodes.append(
+            {
+                "id": s.id,
+                "name": s.name,
+                "type": s.stakeholder_type.value
+                if hasattr(s.stakeholder_type, "value")
+                else s.stakeholder_type,
+                "lastConsultation": last.isoformat() if last else None,
+                "color": color,
+                "regions": s.regions,
+            }
+        )
     return MapDataResponse(nodes=nodes)
 
 
@@ -333,9 +342,14 @@ async def engagement_report(
 ) -> EngagementReportResponse:
     if not current_user.organization_id:
         return EngagementReportResponse(
-            total_stakeholders=0, stakeholders_by_type={}, total_consultations=0,
-            consultations_by_format={}, barrier_summary={},
-            stakeholders_without_consultation_12m=0, consultations=[], stakeholders=[],
+            total_stakeholders=0,
+            stakeholders_by_type={},
+            total_consultations=0,
+            consultations_by_format={},
+            barrier_summary={},
+            stakeholders_without_consultation_12m=0,
+            consultations=[],
+            stakeholders=[],
         )
     stakeholders = await repo.list_by_org(current_user.organization_id, limit=500)
     consultations = await consult_repo.list_by_org(current_user.organization_id, limit=500)
@@ -362,8 +376,10 @@ async def engagement_report(
                 last_consult[sid] = c.consultation_date
 
     overdue = sum(
-        1 for s in stakeholders
-        if s.id not in last_consult or last_consult[s.id] is None
+        1
+        for s in stakeholders
+        if s.id not in last_consult
+        or last_consult[s.id] is None
         or (today - last_consult[s.id]).days > 365
     )
 
@@ -457,7 +473,9 @@ async def list_consultations(
     return [_consultation_to_response(c) for c in items]
 
 
-@router.post("/consultations/", response_model=ConsultationResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/consultations/", response_model=ConsultationResponse, status_code=status.HTTP_201_CREATED
+)
 async def create_consultation(
     body: ConsultationCreate,
     current_user: User = Depends(get_current_user),

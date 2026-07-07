@@ -13,7 +13,7 @@ No destructive actions. All outputs are AgentFindings + optional drafts.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import structlog
 
@@ -21,16 +21,17 @@ from application.agent_monitoring.finding_service import create_finding
 
 logger = structlog.get_logger(__name__)
 
-_OVERDUE_HIGH_DAYS = 30     # overdue 30-89 days = HIGH
+_OVERDUE_HIGH_DAYS = 30  # overdue 30-89 days = HIGH
 _OVERDUE_CRITICAL_DAYS = 90  # overdue 90+ days = CRITICAL
-_OPEN_PLANS_HIGH = 10        # supplier with 10+ open plans = concern
+_OPEN_PLANS_HIGH = 10  # supplier with 10+ open plans = concern
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
     """Run remediation monitor for one organization. Returns findings created."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.supplier_portal import RemediationPlanModel
-    from sqlalchemy import func, select
 
     findings_created = 0
     drafts_created = 0

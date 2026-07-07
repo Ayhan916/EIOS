@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime, UTC
+from datetime import date, datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -39,7 +40,7 @@ class DisclosureResponse(BaseEntity):
     narrative_text: str = ""
     evidence_coverage: float = 0.0
     coverage_category: str = "Weak"
-    coverage_rationale: list[dict] = field(default_factory=list)
+    coverage_rationale: list[dict[str, Any]] = field(default_factory=list)
     readiness_status: str = "Not Started"
     readiness_rationale: str = ""
     reviewed_by: str | None = None

@@ -5,11 +5,11 @@ Uses MagicMock / AsyncMock — no real database or Kafka.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
+from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from application.dpp.service import DPPService
 from domain.dpp import DPPFormat, DPPStatus
@@ -59,7 +59,7 @@ def _make_dpp_model(org_id: str, dpp_id: str | None = None, *, disclosed: bool =
     m.manufacturing_date = date(2024, 1, 15)
     m.valid_from = date(2024, 2, 1)
     m.valid_until = None
-    m.disclosed_at = datetime.now(timezone.utc) if disclosed else None
+    m.disclosed_at = datetime.now(UTC) if disclosed else None
     m.evidence_id = None
     m.notes = None
     m.status = "Draft"
@@ -72,6 +72,7 @@ def _make_dpp_model(org_id: str, dpp_id: str | None = None, *, disclosed: bool =
 
 
 # ── create ─────────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_create_dpp_adds_to_session():
@@ -130,6 +131,7 @@ async def test_create_dpp_disclosed_at_is_none_by_default():
 
 # ── get ────────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_get_returns_model_when_org_matches():
     org_id = _uid()
@@ -168,6 +170,7 @@ async def test_get_returns_none_when_not_found():
 
 # ── get_by_uid (public — no org filter) ────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_get_by_uid_returns_disclosed_dpp():
     model = _make_dpp_model(_uid(), disclosed=True)
@@ -195,6 +198,7 @@ async def test_get_by_uid_returns_none_when_not_disclosed():
 
 # ── update ────────────────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_update_returns_none_when_not_found():
     db = _make_db()
@@ -215,7 +219,8 @@ async def test_update_modifies_fields():
 
     svc = DPPService(db, _make_kafka())
     result = await svc.update(
-        org_id, dpp_id,
+        org_id,
+        dpp_id,
         notes="Updated note",
         recycled_content_pct=25.0,
         actor_id=_uid(),
@@ -227,6 +232,7 @@ async def test_update_modifies_fields():
 
 
 # ── withdraw ──────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_withdraw_sets_withdrawn_status():
@@ -253,6 +259,7 @@ async def test_withdraw_returns_false_when_not_found():
 
 
 # ── publish ───────────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_publish_sets_active_and_discloses():
@@ -289,6 +296,7 @@ async def test_publish_returns_none_when_not_found():
 
 
 # ── list_for_product ──────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_list_for_product_org_filter_applied():

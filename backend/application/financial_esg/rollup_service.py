@@ -13,16 +13,15 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from infrastructure.persistence.models.organization import OrganizationModel
+from application.financial_esg.kpi_service import FinancialESGError, _now
 from infrastructure.persistence.models.financial_esg import (
     CarbonCostModelRecord,
     GreenRevenueRecordModel,
     SustainableFinanceInstrumentModel,
     TaxonomyAlignmentAssessmentModel,
     ValueCreationInitiativeModel,
-    CapitalMarketsAssessmentModel,
 )
-from application.financial_esg.kpi_service import FinancialESGError, _now
+from infrastructure.persistence.models.organization import OrganizationModel
 
 EntityType = Literal["enterprise", "business_unit", "legal_entity", "region"]
 
@@ -147,8 +146,12 @@ def _taxonomy_rollup(org_ids: list[str], session: Session) -> TaxonomyRollup:
     if not row.cnt:
         return TaxonomyRollup()
     return TaxonomyRollup(
-        avg_aligned_percent=round(float(row.avg_aligned), 4) if row.avg_aligned is not None else None,
-        avg_eligible_percent=round(float(row.avg_eligible), 4) if row.avg_eligible is not None else None,
+        avg_aligned_percent=round(float(row.avg_aligned), 4)
+        if row.avg_aligned is not None
+        else None,
+        avg_eligible_percent=round(float(row.avg_eligible), 4)
+        if row.avg_eligible is not None
+        else None,
         assessment_count=int(row.cnt),
     )
 
@@ -170,7 +173,8 @@ def _finance_rollup(org_ids: list[str], session: Session) -> FinanceRollup:
             SustainableFinanceInstrumentModel.organization_id.in_(org_ids),
             SustainableFinanceInstrumentModel.covenant_status == "BREACHED",
         )
-        .scalar() or 0
+        .scalar()
+        or 0
     )
     return FinanceRollup(
         total_exposure=round(float(row.total or 0), 4),

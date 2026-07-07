@@ -13,7 +13,6 @@ Same supplier name across different organizations remains allowed.
 
 from collections.abc import Sequence
 
-import sqlalchemy as sa
 from alembic import op
 
 revision: str = "019"

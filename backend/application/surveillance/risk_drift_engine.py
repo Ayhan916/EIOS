@@ -27,13 +27,14 @@ _RISK_DRIFT_SEVERE = 20.0
 _RISK_DRIFT_CRITICAL = 30.0
 
 # Compliance: percentage of gaps worsening
-_COMPLIANCE_GAP_THRESHOLD = 3   # new gaps in last 30 days
+_COMPLIANCE_GAP_THRESHOLD = 3  # new gaps in last 30 days
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
     """Run drift detection for one organization. Returns signal count."""
-    from infrastructure.persistence.models.supplier import SupplierModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     suppliers_stmt = select(SupplierModel).where(
         SupplierModel.organization_id == organization_id,
@@ -52,8 +53,9 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
 
 async def _check_score_drift(supplier, organization_id: str, session) -> int:
     """Compare latest two score snapshots. Generate drift signal on decline."""
-    from infrastructure.persistence.models.supplier_score import SupplierScoreModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_score import SupplierScoreModel
 
     scores_stmt = (
         select(SupplierScoreModel)
@@ -167,17 +169,22 @@ async def _check_score_drift(supplier, organization_id: str, session) -> int:
 
 async def _check_compliance_drift(supplier, organization_id: str, session) -> int:
     """Detect new compliance gaps opened in last 30 days for this supplier."""
-    from infrastructure.persistence.models.regulatory import ComplianceGapModel
+    from datetime import UTC, datetime, timedelta
+
     from sqlalchemy import func, select
-    from datetime import timedelta
-    from datetime import UTC, datetime
+
+    from infrastructure.persistence.models.regulatory import ComplianceGapModel
 
     cutoff = datetime.now(UTC) - timedelta(days=30)
-    gap_stmt = select(func.count()).select_from(ComplianceGapModel).where(
-        ComplianceGapModel.organization_id == organization_id,
-        ComplianceGapModel.entity_id == supplier.id,
-        ComplianceGapModel.gap_status == "OPEN",
-        ComplianceGapModel.created_at >= cutoff,
+    gap_stmt = (
+        select(func.count())
+        .select_from(ComplianceGapModel)
+        .where(
+            ComplianceGapModel.organization_id == organization_id,
+            ComplianceGapModel.entity_id == supplier.id,
+            ComplianceGapModel.gap_status == "OPEN",
+            ComplianceGapModel.created_at >= cutoff,
+        )
     )
     new_gaps = (await session.execute(gap_stmt)).scalar_one()
     if new_gaps < _COMPLIANCE_GAP_THRESHOLD:
@@ -206,9 +213,9 @@ async def _check_compliance_drift(supplier, organization_id: str, session) -> in
 
 async def _check_due_diligence_drift(supplier, organization_id: str, session) -> int:
     """Detect deterioration in due diligence findings (M32 integration)."""
+    from datetime import UTC, datetime, timedelta
+
     from sqlalchemy import func, select
-    from datetime import timedelta
-    from datetime import UTC, datetime
 
     # Avoid hard import failure if M32 table doesn't exist yet
     try:
@@ -218,10 +225,14 @@ async def _check_due_diligence_drift(supplier, organization_id: str, session) ->
 
     cutoff = datetime.now(UTC) - timedelta(days=30)
     try:
-        stmt = select(func.count()).select_from(DueDiligenceFindingModel).where(
-            DueDiligenceFindingModel.organization_id == organization_id,
-            DueDiligenceFindingModel.supplier_id == supplier.id,
-            DueDiligenceFindingModel.created_at >= cutoff,
+        stmt = (
+            select(func.count())
+            .select_from(DueDiligenceFindingModel)
+            .where(
+                DueDiligenceFindingModel.organization_id == organization_id,
+                DueDiligenceFindingModel.supplier_id == supplier.id,
+                DueDiligenceFindingModel.created_at >= cutoff,
+            )
         )
         new_findings = (await session.execute(stmt)).scalar_one()
     except Exception:

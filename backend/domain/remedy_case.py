@@ -1,9 +1,9 @@
 """Domain models for CSDDD Art. 12 — Remedy Case Manager."""
+
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from domain.enums import (
@@ -29,11 +29,11 @@ class RemedyCase:
     severity_score: float
     impact_causation: ImpactCausation
     status: RemedyCaseStatus
-    source_grievance_id: Optional[UUID]
+    source_grievance_id: UUID | None
     co_responsible_parties: list[str]
-    closed_at: Optional[datetime]
-    closed_by: Optional[str]
-    closure_notes: Optional[str]
+    closed_at: datetime | None
+    closed_by: str | None
+    closure_notes: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -44,9 +44,9 @@ class RemedyBeneficiary:
     remedy_case_id: UUID
     reference: str
     affected_type: AffectedPartyType
-    promised_compensation: Optional[float]
-    received_compensation: Optional[float]
-    confirmation_date: Optional[datetime]
+    promised_compensation: float | None
+    received_compensation: float | None
+    confirmation_date: datetime | None
     created_at: datetime
 
 
@@ -57,9 +57,9 @@ class RemedyAction:
     title: str
     description: str
     status: RemedyActionStatus
-    responsible_party: Optional[str]
-    due_date: Optional[datetime]
-    completed_at: Optional[datetime]
+    responsible_party: str | None
+    due_date: datetime | None
+    completed_at: datetime | None
     created_by: str
     created_at: datetime
     updated_at: datetime
@@ -71,5 +71,5 @@ class RemedyAuditLog:
     remedy_case_id: UUID
     action: str
     performed_by: str
-    details: Optional[str]
+    details: str | None
     created_at: datetime

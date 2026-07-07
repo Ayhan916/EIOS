@@ -1,7 +1,8 @@
 """Repository — Company Profiles / CSDDD Threshold Monitor (CSDDD-010)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -12,7 +13,7 @@ from infrastructure.persistence.models.threshold_monitor import CompanyProfileMo
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _to_domain(m: CompanyProfileModel) -> CompanyProfile:
@@ -37,16 +38,21 @@ class SQLCompanyProfileRepository:
         self._s = session
 
     def latest(self, organization_id: str) -> CompanyProfile | None:
-        stmt = select(CompanyProfileModel).where(
-            CompanyProfileModel.organization_id == organization_id
-        ).order_by(CompanyProfileModel.fiscal_year.desc()).limit(1)
+        stmt = (
+            select(CompanyProfileModel)
+            .where(CompanyProfileModel.organization_id == organization_id)
+            .order_by(CompanyProfileModel.fiscal_year.desc())
+            .limit(1)
+        )
         m = self._s.execute(stmt).scalar_one_or_none()
         return _to_domain(m) if m else None
 
     def list_org(self, organization_id: str) -> list[CompanyProfile]:
-        stmt = select(CompanyProfileModel).where(
-            CompanyProfileModel.organization_id == organization_id
-        ).order_by(CompanyProfileModel.fiscal_year.desc())
+        stmt = (
+            select(CompanyProfileModel)
+            .where(CompanyProfileModel.organization_id == organization_id)
+            .order_by(CompanyProfileModel.fiscal_year.desc())
+        )
         return [_to_domain(m) for m in self._s.execute(stmt).scalars().all()]
 
     def get_by_year(self, organization_id: str, fiscal_year: int) -> CompanyProfile | None:

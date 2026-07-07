@@ -1,8 +1,9 @@
 """M34 Copilot external intelligence retriever tests."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 def _now():
@@ -66,6 +67,7 @@ async def test_retriever_returns_retrieval_result():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-001", session)
     assert result.retriever == "external_intelligence_retriever"
 
@@ -78,6 +80,7 @@ async def test_retriever_includes_enrichment_data():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-001", session)
     assert any(d.get("supplier_id") == "sup-001" for d in result.data)
 
@@ -90,6 +93,7 @@ async def test_retriever_includes_signal_data():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-001", session)
     assert any(d.get("signal_id") is not None for d in result.data)
 
@@ -102,6 +106,7 @@ async def test_retriever_includes_freshness_metadata():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-001", session)
     assert len(result.freshness_metadata) >= 1
     assert "object_type" in result.freshness_metadata[0]
@@ -117,6 +122,7 @@ async def test_retriever_provenance_includes_counts():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-001", session)
     assert "1" in result.provenance
     assert "enrichment" in result.provenance.lower()
@@ -129,6 +135,7 @@ async def test_retriever_empty_org_returns_empty_data():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-empty", session)
     assert result.data == []
     assert result.source_ids == []
@@ -137,7 +144,7 @@ async def test_retriever_empty_org_returns_empty_data():
 @pytest.mark.asyncio
 async def test_retriever_supplier_filter():
     enrich1 = _make_enrichment_model("sup-001", "org-001")
-    enrich2 = _make_enrichment_model("sup-002", "org-001")
+    _make_enrichment_model("sup-002", "org-001")
     # With supplier filter, only sup-001 should be in session call
     # The query is built with WHERE supplier_id = supplier_id
     session = _make_session_with_two_results([enrich1], [])
@@ -145,9 +152,8 @@ async def test_retriever_supplier_filter():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
-    result = await retrieve_external_intelligence_context(
-        "org-001", session, supplier_id="sup-001"
-    )
+
+    result = await retrieve_external_intelligence_context("org-001", session, supplier_id="sup-001")
     # Result comes from mocked DB — just ensure no crash and correct retriever
     assert result.retriever == "external_intelligence_retriever"
 
@@ -159,5 +165,6 @@ async def test_retriever_citation_type_is_supplier():
     from application.copilot.retrieval.external_intelligence_retriever import (
         retrieve_external_intelligence_context,
     )
+
     result = await retrieve_external_intelligence_context("org-001", session)
     assert result.citation_type == "Supplier"

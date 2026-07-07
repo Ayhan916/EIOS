@@ -22,11 +22,11 @@ Endpoints:
 
 from __future__ import annotations
 
+from datetime import UTC
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from interfaces.api.deps import get_db
 
 from application.sector_intelligence.base_matrix import (
     CALIBRATED_NACE_CODES,
@@ -42,6 +42,7 @@ from application.sector_intelligence.nace_taxonomy import (
 )
 from application.sector_intelligence.simulation_engine import ScenarioSimulationEngine
 from domain.enums import CSDDDRight, ScenarioType
+from interfaces.api.deps import get_db
 
 router = APIRouter(prefix="/sector-risk-register", tags=["Sector Risk Register"])
 
@@ -52,12 +53,13 @@ _engine = ScenarioSimulationEngine()
 # Response schemas
 # ---------------------------------------------------------------------------
 
+
 class RightScoreResponse(BaseModel):
     right_id: str
     right_name: str
     probability: int = Field(..., ge=1, le=10)
     is_calibrated: bool
-    scenario: "ScenarioDeltaResponse | None" = None
+    scenario: ScenarioDeltaResponse | None = None
 
 
 class ScenarioDeltaResponse(BaseModel):
@@ -107,7 +109,7 @@ class SimulationResponse(BaseModel):
     calibration_version: str
     simulated_at: str
     rights: list[RightScoreResponse]
-    summary: "SimulationSummaryResponse"
+    summary: SimulationSummaryResponse
 
 
 class SimulationSummaryResponse(BaseModel):
@@ -172,6 +174,7 @@ def _build_rights(scores: dict[CSDDDRight, int], calibrated: bool) -> list[Right
 def _resolve_nace(raw: str) -> str:
     """Normalize and validate a NACE code, raise 404 if unknown."""
     from application.sector_intelligence.nace_taxonomy import normalize_nace
+
     code = normalize_nace(raw)
     if code is None:
         raise HTTPException(
@@ -185,6 +188,7 @@ def _resolve_nace(raw: str) -> str:
 # Endpoints
 # ---------------------------------------------------------------------------
 
+
 @router.get("/", response_model=list[SectorListItemResponse], summary="List calibrated sectors")
 async def list_sectors(
     calibrated_only: bool = Query(False, description="Return only sectors with curated scores"),
@@ -196,9 +200,7 @@ async def list_sectors(
         scores = get_scores(code)
         sorted_scores = sorted(scores.values(), reverse=True)
         highest_score = sorted_scores[0] if sorted_scores else 1
-        highest_right = next(
-            (r.value for r, s in scores.items() if s == highest_score), None
-        )
+        highest_right = next((r.value for r, s in scores.items() if s == highest_score), None)
         avg = round(sum(scores.values()) / len(scores), 1)
         above7 = sum(1 for s in scores.values() if s >= 7)
         result.append(
@@ -279,6 +281,7 @@ async def simulate_scenario(
         adj = result.scenario_scores[right]
         delta = result.delta[right]
         from application.sector_intelligence.simulation_engine import _SCENARIO_TEMPLATES
+
         template = _SCENARIO_TEMPLATES[scenario]
         factor = template.factors.get(right, 1.0)
         rights_out.append(
@@ -326,6 +329,7 @@ async def simulate_scenario(
 # Phase 3 — RAG Calibration endpoints
 # ---------------------------------------------------------------------------
 
+
 class CalibrateRequest(BaseModel):
     nace_code: str
     right: CSDDDRight
@@ -364,10 +368,10 @@ async def start_calibration(
         SectorRiskCalibrationPipeline,
         save_suggestion,
     )
-    from infrastructure.llm.deps import get_llm_provider
-    from infrastructure.knowledge_search import EvidenceChunkSearchAdapter
-    from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
     from infrastructure.embeddings.deps import get_embedding_provider
+    from infrastructure.knowledge_search import EvidenceChunkSearchAdapter
+    from infrastructure.llm.deps import get_llm_provider
+    from infrastructure.persistence.repositories.evidence_chunk import SQLEvidenceChunkRepository
 
     llm = get_llm_provider()
     chunk_repo = SQLEvidenceChunkRepository(session)
@@ -441,6 +445,7 @@ async def approve_calibration(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     from application.sector_intelligence.rag_calibration import approve_suggestion
+
     ok = await approve_suggestion(suggestion_id, reviewer_id="founder", session=session)
     if not ok:
         raise HTTPException(status_code=404, detail="Suggestion not found or not pending")
@@ -458,6 +463,7 @@ async def reject_calibration(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     from application.sector_intelligence.rag_calibration import reject_suggestion
+
     ok = await reject_suggestion(
         suggestion_id, reviewer_id="founder", reason=body.reason, session=session
     )
@@ -469,6 +475,7 @@ async def reject_calibration(
 # ---------------------------------------------------------------------------
 # Phase 4 — News Scenario Trigger endpoints
 # ---------------------------------------------------------------------------
+
 
 class ScenarioSuggestionResponse(BaseModel):
     id: str
@@ -498,21 +505,25 @@ async def detect_scenarios(
     session: AsyncSession = Depends(get_db),
 ) -> list[ScenarioSuggestionResponse]:
     """Scan recent news articles for scenario signals. Creates pending suggestions."""
-    from datetime import datetime, timedelta, timezone
+    from datetime import datetime, timedelta
+
     from sqlalchemy import select
-    from infrastructure.persistence.models.news_feed import NewsArticleModel
+
     from application.sector_intelligence.news_scenario_detector import (
         NewsScenarioDetector,
         get_active_scenario_types,
         save_suggestions,
     )
+    from infrastructure.persistence.models.news_feed import NewsArticleModel
 
-    cutoff = datetime.now(timezone.utc) - timedelta(days=body.lookback_days)
+    cutoff = datetime.now(UTC) - timedelta(days=body.lookback_days)
     result = await session.execute(
-        select(NewsArticleModel).where(
+        select(NewsArticleModel)
+        .where(
             NewsArticleModel.organization_id == body.organization_id,
             NewsArticleModel.fetched_at >= cutoff,
-        ).limit(500)
+        )
+        .limit(500)
     )
     articles = [
         {
@@ -595,6 +606,7 @@ async def activate_scenario(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     from application.sector_intelligence.news_scenario_detector import activate_suggestion
+
     ok = await activate_suggestion(
         suggestion_id,
         activator_id="founder",
@@ -616,6 +628,7 @@ async def dismiss_scenario(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     from application.sector_intelligence.news_scenario_detector import dismiss_suggestion
+
     ok = await dismiss_suggestion(suggestion_id, session=session)
     if not ok:
         raise HTTPException(status_code=404, detail="Suggestion not found or not pending")

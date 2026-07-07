@@ -6,7 +6,6 @@ and required columns are present — without a database connection.
 """
 
 from infrastructure.persistence.models import (
-    ApiKeyModel,
     AssessmentModel,
     AssetModel,
     Base,
@@ -22,13 +21,190 @@ from infrastructure.persistence.models import (
     RequirementModel,
     RiskModel,
     SectorModel,
-    ServiceAccountModel,
     StandardModel,
     TaskModel,
     UserModel,
-    WebhookDeliveryModel,
-    WebhookSubscriptionModel,
 )
+
+# M36: ensure agent monitoring models are registered
+from infrastructure.persistence.models.agent_monitoring import (  # noqa: F401
+    AgentAlertModel,
+    AgentFindingModel,
+    EscalationRuleModel,
+    MonitoringAgentModel,
+    MonitoringAgentRunModel,
+    RecommendationDraftModel,
+)
+
+# M41: ensure AI Governance models are registered
+from infrastructure.persistence.models.ai_governance import (  # noqa: F401
+    AIAssuranceReportModel,
+    AIControlModel,
+    AIControlTestModel,
+    AIDecisionLogModel,
+    AIExplanationModel,
+    AIIncidentModel,
+    AIModelModel,
+    AIPolicyModel,
+    AIRegulationMappingModel,
+    AIRiskAssessmentModel,
+    AIUseCaseModel,
+    HumanReviewModel,
+    ModelApprovalWorkflowModel,
+    ModelDriftAlertModel,
+    ModelMonitoringRecordModel,
+    PromptChangeModel,
+    PromptTemplateModel,
+)
+
+# CSDDD (M90–M98): ensure all CSDDD compliance models are registered
+from infrastructure.persistence.models.board_signoff import (  # noqa: F401
+    BoardDecisionModel,
+    BoardSignoffRequestModel,
+)
+
+# M34.1: ensure connector run models are registered
+from infrastructure.persistence.models.connector_run import (  # noqa: F401
+    ConnectorRunModel,
+    DatasetValidationResultModel,
+)
+from infrastructure.persistence.models.contractual_assurance import (  # noqa: F401
+    ClauseAuditLogModel,
+    ContractAssuranceModel,
+    ContractClauseModel,
+)
+
+# M33: ensure copilot models are registered
+from infrastructure.persistence.models.copilot import (  # noqa: F401
+    CopilotConversationModel,
+    CopilotMessageModel,
+)
+
+# M33.2: ensure copilot audit models are registered
+from infrastructure.persistence.models.copilot_audit import (  # noqa: F401
+    CopilotAnswerReviewModel,
+    CopilotAuditPackageModel,
+    CopilotCitationIntegrityModel,
+    CopilotContradictionModel,
+    CopilotFeedbackModel,
+)
+from infrastructure.persistence.models.corrective_action_plan import (
+    CorrectiveActionPlanModel,  # noqa: F401
+)
+from infrastructure.persistence.models.dd_policy import (  # noqa: F401
+    CoCAcceptanceModel,
+    CodeOfConductModel,
+    DDPolicyModel,
+)
+
+# M32: ensure disclosure models are registered
+from infrastructure.persistence.models.disclosure import (  # noqa: F401
+    DisclosureFrameworkModel,
+    DisclosureRequirementModel,
+    DisclosureResponseModel,
+    ReportingPackageModel,
+)
+
+# M32.1: ensure due diligence model is registered
+from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel  # noqa: F401
+from infrastructure.persistence.models.effectiveness import (  # noqa: F401
+    EffectivenessIndicatorModel,
+    EffectivenessReviewModel,
+    ReviewLineModel,
+)
+
+# M40: ensure enterprise models are registered (includes M40.1 SecretReference + SCIMToken)
+from infrastructure.persistence.models.enterprise import (  # noqa: F401
+    BusinessUnitModel,
+    EnterpriseModel,
+    EnterprisePolicyModel,
+    EnterpriseRiskModel,
+    GroupMappingModel,
+    IdentityProviderModel,
+    LegalEntityModel,
+    NotificationPolicyModel,
+    RegionModel,
+    RetentionRuleModel,
+    SCIMTokenModel,
+    SecretReferenceModel,
+)
+from infrastructure.persistence.models.esap import ESAPSubmissionModel  # noqa: F401
+from infrastructure.persistence.models.evaluation import (  # noqa: F401
+    BenchmarkResultModel,
+    CalibrationEventModel,
+    EvaluationRunModel,
+)
+
+# M34: ensure external intelligence models are registered
+from infrastructure.persistence.models.external_intelligence import (  # noqa: F401
+    CountryRiskProfileModel,
+    ExternalDatasetModel,
+    ExternalRiskSignalModel,
+    SectorBenchmarkModel,
+    SupplierEnrichmentModel,
+)
+
+# M43: ensure Financial ESG models are registered
+from infrastructure.persistence.models.financial_esg import (  # noqa: F401
+    CapitalMarketsAssessmentModel,
+    CarbonCostModelRecord,
+    ClimateFinanceAnalysisModel,
+    CostOfRiskAssessmentModel,
+    ESGFinancialCorrelationModel,
+    FinanceLinkedKPIModel,
+    FinancialESGKPIModel,
+    FinancialESGReportModel,
+    FinancialKPIMeasurementModel,
+    FinancialScenarioAnalysisModel,
+    GreenCapexRecordModel,
+    GreenOpexRecordModel,
+    GreenRevenueRecordModel,
+    InvestorDisclosurePackageModel,
+    SustainabilityValuationModelRecord,
+    SustainableFinanceInstrumentModel,
+    TaxonomyAlignmentAssessmentModel,
+    TransitionPlanMilestoneModel,
+    TransitionPlanModel,
+    ValueCreationInitiativeModel,
+)
+from infrastructure.persistence.models.impact_assessment import ImpactAssessmentModel  # noqa: F401
+from infrastructure.persistence.models.improvement import ImprovementProposalModel  # noqa: F401
+
+# M38: ensure network intelligence models are registered
+from infrastructure.persistence.models.network import (  # noqa: F401
+    DependencyAnalysisModel,
+    IncidentClusterModel,
+    NetworkExposureSignalModel,
+    NetworkWatchlistEntryModel,
+    ResilienceAssessmentModel,
+    SuggestedRelationshipModel,
+    SupplierCriticalityModel,
+    SupplierRelationshipModel,
+)
+
+# M39: ensure operating system models are registered
+from infrastructure.persistence.models.operating_system import (  # noqa: F401
+    AccountabilityAssignmentModel,
+    ComplianceOperationModel,
+    ControlTestModel,
+    ESGActionModel,
+    ESGControlModel,
+    ESGInitiativeModel,
+    ESGKeyResultModel,
+    ESGObjectiveModel,
+    ESGPlaybookModel,
+    ESGProgramModel,
+    GovernanceCalendarEventModel,
+    GovernanceEscalationRuleModel,
+    OrganizationESGHealthScoreModel,
+    StrategicRiskModel,
+    WorkflowExecutionModel,
+)
+from infrastructure.persistence.models.prioritization import (
+    PrioritizationDecisionModel,  # noqa: F401
+)
+from infrastructure.persistence.models.readiness import ReadinessSnapshotModel  # noqa: F401
+
 # M31/M31.1: ensure new regulatory models are registered
 from infrastructure.persistence.models.regulatory import (  # noqa: F401
     ComplianceGapModel,
@@ -37,212 +213,100 @@ from infrastructure.persistence.models.regulatory import (  # noqa: F401
     RegulationRequirementModel,
     RequirementMappingModel,
 )
-# M32: ensure disclosure models are registered
-from infrastructure.persistence.models.disclosure import (  # noqa: F401
-    DisclosureFrameworkModel,
-    DisclosureRequirementModel,
-    DisclosureResponseModel,
-    ReportingPackageModel,
+from infrastructure.persistence.models.regulatory_change import (  # noqa: F401
+    RegulatoryChangeModel as LegacyRegulatoryChangeModel,
 )
-# M32.1: ensure due diligence model is registered
-from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel  # noqa: F401
-# M33: ensure copilot models are registered
-from infrastructure.persistence.models.copilot import CopilotConversationModel, CopilotMessageModel  # noqa: F401
-# M33.2: ensure copilot audit models are registered
-from infrastructure.persistence.models.copilot_audit import (  # noqa: F401
-    CopilotContradictionModel,
-    CopilotCitationIntegrityModel,
-    CopilotFeedbackModel,
-    CopilotAnswerReviewModel,
-    CopilotAuditPackageModel,
+from infrastructure.persistence.models.regulatory_radar import (  # noqa: F401
+    RegulatoryFeedEntryModel,
+    RegulatorySourceModel,
 )
-# M34: ensure external intelligence models are registered
-from infrastructure.persistence.models.external_intelligence import (  # noqa: F401
-    ExternalDatasetModel,
-    CountryRiskProfileModel,
-    SectorBenchmarkModel,
-    ExternalRiskSignalModel,
-    SupplierEnrichmentModel,
+from infrastructure.persistence.models.remedy_case import (  # noqa: F401
+    RemedyActionModel,
+    RemedyAuditLogModel,
+    RemedyBeneficiaryModel,
+    RemedyCaseModel,
 )
-# M34.1: ensure connector run models are registered
-from infrastructure.persistence.models.connector_run import (  # noqa: F401
-    ConnectorRunModel,
-    DatasetValidationResultModel,
+from infrastructure.persistence.models.scoping import (  # noqa: F401
+    ScopingConfigAuditLogModel,
+    ScopingConfigModel,
+    ScopingStudyModel,
 )
-# M35: ensure supplier portal models are registered
-from infrastructure.persistence.models.supplier_portal import (  # noqa: F401
-    SupplierUserModel,
-    SupplierInvitationModel,
-    EvidenceRequestModel,
-    EvidenceSubmissionModel,
-    EvidenceSubmissionFileModel,
-    QuestionnaireTemplateModel,
-    QuestionnaireQuestionModel,
-    QuestionnaireAssignmentModel,
-    QuestionnaireAnswerModel,
-    RemediationPlanModel,
-    ConversationModel,
-    ConversationParticipantModel,
-    MessageModel,
-    MessageAttachmentModel,
-    SupplierActivityEventModel,
-    SupplierPasswordResetTokenModel,
+from infrastructure.persistence.models.sme_support import (  # noqa: F401
+    SMEProfileModel,
+    SupportMeasureModel,
+    SupportProgramModel,
 )
-# M36: ensure agent monitoring models are registered
-from infrastructure.persistence.models.agent_monitoring import (  # noqa: F401
-    MonitoringAgentModel,
-    MonitoringAgentRunModel,
-    AgentFindingModel,
-    AgentAlertModel,
-    EscalationRuleModel,
-    RecommendationDraftModel,
+from infrastructure.persistence.models.stakeholder import (  # noqa: F401
+    StakeholderConsultationModel,
+    StakeholderFeedbackModel,
+    StakeholderModel,
 )
-# M37: ensure surveillance models are registered
-from infrastructure.persistence.models.surveillance import (  # noqa: F401
-    SurveillanceSignalModel,
-    SupplierWatchlistModel,
-    RiskEpisodeModel,
-    RiskTrendModel,
-)
-# M38: ensure network intelligence models are registered
-from infrastructure.persistence.models.network import (  # noqa: F401
-    SupplierRelationshipModel,
-    SuggestedRelationshipModel,
-    NetworkExposureSignalModel,
-    SupplierCriticalityModel,
-    DependencyAnalysisModel,
-    ResilienceAssessmentModel,
-    IncidentClusterModel,
-    NetworkWatchlistEntryModel,
-)
-# M40: ensure enterprise models are registered (includes M40.1 SecretReference + SCIMToken)
-from infrastructure.persistence.models.enterprise import (  # noqa: F401
-    EnterpriseModel,
-    BusinessUnitModel,
-    LegalEntityModel,
-    RegionModel,
-    IdentityProviderModel,
-    GroupMappingModel,
-    EnterprisePolicyModel,
-    RetentionRuleModel,
-    NotificationPolicyModel,
-    EnterpriseRiskModel,
-    SecretReferenceModel,
-    SCIMTokenModel,
-)
-# M41: ensure AI Governance models are registered
-from infrastructure.persistence.models.ai_governance import (  # noqa: F401
-    AIModelModel,
-    AIUseCaseModel,
-    AIRiskAssessmentModel,
-    AIControlModel,
-    AIControlTestModel,
-    ModelApprovalWorkflowModel,
-    PromptTemplateModel,
-    PromptChangeModel,
-    AIDecisionLogModel,
-    AIExplanationModel,
-    HumanReviewModel,
-    ModelMonitoringRecordModel,
-    ModelDriftAlertModel,
-    AIIncidentModel,
-    AIPolicyModel,
-    AIAssuranceReportModel,
-    AIRegulationMappingModel,
-)
-# M39: ensure operating system models are registered
-from infrastructure.persistence.models.operating_system import (  # noqa: F401
-    ESGObjectiveModel,
-    ESGKeyResultModel,
-    ESGInitiativeModel,
-    GovernanceCalendarEventModel,
-    ESGProgramModel,
-    ESGControlModel,
-    ControlTestModel,
-    ComplianceOperationModel,
-    ESGActionModel,
-    AccountabilityAssignmentModel,
-    ESGPlaybookModel,
-    WorkflowExecutionModel,
-    GovernanceEscalationRuleModel,
-    OrganizationESGHealthScoreModel,
-    StrategicRiskModel,
-)
-# M43: ensure Financial ESG models are registered
-from infrastructure.persistence.models.financial_esg import (  # noqa: F401
-    FinancialESGKPIModel,
-    FinancialKPIMeasurementModel,
-    CarbonCostModelRecord,
-    CostOfRiskAssessmentModel,
-    ValueCreationInitiativeModel,
-    SustainableFinanceInstrumentModel,
-    TaxonomyAlignmentAssessmentModel,
-    GreenRevenueRecordModel,
-    GreenCapexRecordModel,
-    GreenOpexRecordModel,
-    TransitionPlanModel,
-    TransitionPlanMilestoneModel,
-    FinanceLinkedKPIModel,
-    CapitalMarketsAssessmentModel,
-    InvestorDisclosurePackageModel,
-    ClimateFinanceAnalysisModel,
-    SustainabilityValuationModelRecord,
-    ESGFinancialCorrelationModel,
-    FinancialScenarioAnalysisModel,
-    FinancialESGReportModel,
-)
-
-# CSDDD (M90–M98): ensure all CSDDD compliance models are registered
-from infrastructure.persistence.models.board_signoff import BoardSignoffRequestModel, BoardDecisionModel  # noqa: F401
-from infrastructure.persistence.models.threshold_monitor import CompanyProfileModel  # noqa: F401
-from infrastructure.persistence.models.regulatory_radar import RegulatorySourceModel, RegulatoryChangeModel as CSDDDRegulatoryChangeModel, RegulatoryFeedEntryModel  # noqa: F401
-from infrastructure.persistence.models.supplier_assessment import AssessmentTemplateModel, AssessmentQuestionModel, SupplierAssessmentModel, AssessmentResponseModel  # noqa: F401
-from infrastructure.persistence.models.esap import ESAPSubmissionModel  # noqa: F401
-from infrastructure.persistence.models.effectiveness import EffectivenessIndicatorModel, EffectivenessReviewModel, ReviewLineModel  # noqa: F401
-from infrastructure.persistence.models.scoping import ScopingConfigModel, ScopingConfigAuditLogModel, ScopingStudyModel  # noqa: F401
-from infrastructure.persistence.models.remedy_case import RemedyCaseModel, RemedyBeneficiaryModel, RemedyActionModel, RemedyAuditLogModel  # noqa: F401
-from infrastructure.persistence.models.corrective_action_plan import CorrectiveActionPlanModel  # noqa: F401
-from infrastructure.persistence.models.dd_policy import DDPolicyModel, CodeOfConductModel, CoCAcceptanceModel  # noqa: F401
-from infrastructure.persistence.models.contractual_assurance import ContractClauseModel, ContractAssuranceModel, ClauseAuditLogModel  # noqa: F401
-from infrastructure.persistence.models.readiness import ReadinessSnapshotModel  # noqa: F401
-from infrastructure.persistence.models.impact_assessment import ImpactAssessmentModel  # noqa: F401
-from infrastructure.persistence.models.stakeholder import StakeholderModel, StakeholderConsultationModel, StakeholderFeedbackModel  # noqa: F401
-from infrastructure.persistence.models.regulatory_change import RegulatoryChangeModel as LegacyRegulatoryChangeModel, RegulatoryChangeImpactModel  # noqa: F401
-from infrastructure.persistence.models.evaluation import EvaluationRunModel, BenchmarkResultModel, CalibrationEventModel  # noqa: F401
-from infrastructure.persistence.models.improvement import ImprovementProposalModel  # noqa: F401
-from infrastructure.persistence.models.prioritization import PrioritizationDecisionModel  # noqa: F401
-from infrastructure.persistence.models.sme_support import SMEProfileModel, SupportProgramModel, SupportMeasureModel  # noqa: F401
 
 # M44: ensure Strategy models are registered
 from infrastructure.persistence.models.strategy import (  # noqa: F401
-    EnterpriseDigitalTwinModel,
-    DigitalTwinSnapshotModel,
-    StrategicPlanModel,
-    StrategicObjectiveModel,
-    StrategyScenarioModel,
-    ScenarioAssumptionModel,
-    ScenarioExecutionModel,
+    BoardSimulationModel,
     ClimateStressTestModel,
-    SupplierShockScenarioModel,
+    DigitalTwinSnapshotModel,
+    EnterpriseDigitalTwinModel,
     FinancialStressTestModel,
-    TransitionPathwayModel,
-    NetZeroPathwayRecord,
-    StrategicRiskProjectionModel,
-    PortfolioOptimizationModel,
-    InvestmentScenarioModel,
     ForecastMethodologyRecordModel,
     ForecastModelRecord,
     ForecastResultModel,
-    BoardSimulationModel,
-    StrategicForecastSummaryModel,
-    StrategicScenarioReportModel,
+    ForecastWindowPolicyModel,
+    InvestmentScenarioModel,
+    NetZeroPathwayRecord,
+    PortfolioOptimizationModel,
+    ScenarioAssumptionModel,
+    ScenarioComparisonModel,
+    ScenarioExecutionModel,
     # M44.1 additions
     ScenarioTemplateModel,
+    StrategicForecastSummaryModel,
+    StrategicObjectiveModel,
+    StrategicPlanModel,
+    StrategicRiskProjectionModel,
+    StrategicScenarioReportModel,
     StrategyMethodologyModel,
-    ScenarioComparisonModel,
+    StrategyScenarioModel,
     StressTestTemplateModel,
-    ForecastWindowPolicyModel,
+    SupplierShockScenarioModel,
+    TransitionPathwayModel,
 )
+from infrastructure.persistence.models.supplier_assessment import (  # noqa: F401
+    AssessmentQuestionModel,
+    AssessmentResponseModel,
+    AssessmentTemplateModel,
+    SupplierAssessmentModel,
+)
+
+# M35: ensure supplier portal models are registered
+from infrastructure.persistence.models.supplier_portal import (  # noqa: F401
+    ConversationModel,
+    ConversationParticipantModel,
+    EvidenceRequestModel,
+    EvidenceSubmissionFileModel,
+    EvidenceSubmissionModel,
+    MessageAttachmentModel,
+    MessageModel,
+    QuestionnaireAnswerModel,
+    QuestionnaireAssignmentModel,
+    QuestionnaireQuestionModel,
+    QuestionnaireTemplateModel,
+    RemediationPlanModel,
+    SupplierActivityEventModel,
+    SupplierInvitationModel,
+    SupplierPasswordResetTokenModel,
+    SupplierUserModel,
+)
+
+# M37: ensure surveillance models are registered
+from infrastructure.persistence.models.surveillance import (  # noqa: F401
+    RiskEpisodeModel,
+    RiskTrendModel,
+    SupplierWatchlistModel,
+    SurveillanceSignalModel,
+)
+from infrastructure.persistence.models.threshold_monitor import CompanyProfileModel  # noqa: F401
 
 EXPECTED_ENTITY_TABLES = {
     "organizations",
@@ -600,7 +664,9 @@ class TestTableRegistration:
         assert EXPECTED_ASSOCIATION_TABLES.issubset(registered)
 
     def test_total_table_count(self) -> None:
-        assert len(Base.metadata.tables) == 304  # 231 baseline +30 supply-chain/material/product +11 CSDDD Phase4 +32 CSDDD due-diligence domain
+        assert (
+            len(Base.metadata.tables) == 304
+        )  # 231 baseline +30 supply-chain/material/product +11 CSDDD Phase4 +32 CSDDD due-diligence domain
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())

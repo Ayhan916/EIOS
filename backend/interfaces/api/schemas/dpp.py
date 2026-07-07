@@ -8,6 +8,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.dpp import DPPFormat, DPPStatus
+
 from .base import EntityResponse
 
 
@@ -87,7 +88,7 @@ class DPPResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "DPPResponse":
+    def from_model(cls, m: Any) -> DPPResponse:
         today = date.today()
         is_expired = m.valid_until is not None and m.valid_until < today
         return cls(

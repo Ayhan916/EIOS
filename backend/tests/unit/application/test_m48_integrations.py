@@ -19,9 +19,8 @@ Covers:
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-
 
 # ── Teams adapter ─────────────────────────────────────────────────────────────
 
@@ -29,6 +28,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 class TestTeamsAdapter:
     def test_build_adaptive_card_basic(self) -> None:
         from application.notifications.teams_adapter import build_adaptive_card
+
         payload = build_adaptive_card(title="Test", body="Body text")
         assert payload["type"] == "message"
         assert len(payload["attachments"]) == 1
@@ -37,6 +37,7 @@ class TestTeamsAdapter:
 
     def test_build_adaptive_card_with_facts(self) -> None:
         from application.notifications.teams_adapter import build_adaptive_card
+
         payload = build_adaptive_card(
             title="Risk Alert",
             body="High severity finding",
@@ -51,6 +52,7 @@ class TestTeamsAdapter:
 
     def test_build_adaptive_card_action_url(self) -> None:
         from application.notifications.teams_adapter import build_adaptive_card
+
         payload = build_adaptive_card(
             title="Test", body="body", action_url="https://app.eios.com/findings/1"
         )
@@ -60,6 +62,7 @@ class TestTeamsAdapter:
 
     def test_mask_url_hides_full_url(self) -> None:
         from application.notifications.teams_adapter import _mask_url
+
         url = "https://outlook.office.com/webhook/abc123"
         masked = _mask_url(url)
         assert "teams-webhook:" in masked
@@ -68,15 +71,17 @@ class TestTeamsAdapter:
 
     def test_send_skips_invalid_url(self) -> None:
         import asyncio
+
         from application.notifications.teams_adapter import send_teams_notification
-        result = asyncio.run(
-            send_teams_notification(webhook_url="not-a-url", title="T", body="B")
-        )
+
+        result = asyncio.run(send_teams_notification(webhook_url="not-a-url", title="T", body="B"))
         assert result is False
 
     def test_send_teams_success(self) -> None:
         import asyncio
+
         from application.notifications.teams_adapter import send_teams_notification
+
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -101,25 +106,30 @@ class TestTeamsAdapter:
 class TestSlackAdapter:
     def test_build_block_kit_has_blocks(self) -> None:
         from application.notifications.slack_adapter import build_block_kit_message
+
         payload = build_block_kit_message(title="Test", body="Body")
         assert "blocks" in payload
         assert len(payload["blocks"]) >= 2
 
     def test_build_block_kit_severity_emoji(self) -> None:
         from application.notifications.slack_adapter import build_block_kit_message
+
         payload = build_block_kit_message(title="T", body="B", severity="CRITICAL")
         header = payload["blocks"][0]["text"]["text"]
         assert ":red_circle:" in header
 
     def test_build_block_kit_with_action_url(self) -> None:
         from application.notifications.slack_adapter import build_block_kit_message
+
         payload = build_block_kit_message(title="T", body="B", action_url="https://app.eios.com")
         action_block = next((b for b in payload["blocks"] if b.get("type") == "actions"), None)
         assert action_block is not None
 
     def test_send_skips_invalid_url(self) -> None:
         import asyncio
+
         from application.notifications.slack_adapter import send_slack_notification
+
         result = asyncio.run(
             send_slack_notification(webhook_url="https://api.slack.com/wrong", title="T", body="B")
         )
@@ -127,7 +137,9 @@ class TestSlackAdapter:
 
     def test_send_slack_success(self) -> None:
         import asyncio
+
         from application.notifications.slack_adapter import send_slack_notification
+
         mock_response = MagicMock()
         mock_response.raise_for_status = MagicMock()
         with patch("httpx.AsyncClient") as mock_client_cls:
@@ -173,11 +185,13 @@ SAMPLE_SDN_XML = b"""<?xml version="1.0"?>
 class TestOfacConnector:
     def test_parse_returns_entries(self) -> None:
         from application.external_intelligence.connectors.ofac import parse_sdn_entries
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
         assert len(entries) == 2
 
     def test_parse_entry_fields(self) -> None:
         from application.external_intelligence.connectors.ofac import parse_sdn_entries
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
         e = next(e for e in entries if e["uid"] == "12345")
         assert e["name"] == "JOHN DOE CORP"
@@ -186,19 +200,23 @@ class TestOfacConnector:
 
     def test_parse_entity_name(self) -> None:
         from application.external_intelligence.connectors.ofac import parse_sdn_entries
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
         entity = next(e for e in entries if e["uid"] == "99999")
         assert entity["name"] == "ACME TRADING LLC"
 
     def test_parse_invalid_xml_returns_empty(self) -> None:
         from application.external_intelligence.connectors.ofac import parse_sdn_entries
+
         entries = parse_sdn_entries(b"<invalid xml>")
         assert entries == []
 
     def test_exact_match(self) -> None:
         from application.external_intelligence.connectors.ofac import (
-            parse_sdn_entries, match_supplier_against_sdn,
+            match_supplier_against_sdn,
+            parse_sdn_entries,
         )
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
         matches = match_supplier_against_sdn("ACME TRADING LLC", entries)
         assert len(matches) == 1
@@ -206,28 +224,32 @@ class TestOfacConnector:
 
     def test_no_match(self) -> None:
         from application.external_intelligence.connectors.ofac import (
-            parse_sdn_entries, match_supplier_against_sdn,
+            match_supplier_against_sdn,
+            parse_sdn_entries,
         )
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
         matches = match_supplier_against_sdn("Safe Supplier GmbH", entries)
         assert matches == []
 
     def test_case_insensitive_match(self) -> None:
         from application.external_intelligence.connectors.ofac import (
-            parse_sdn_entries, match_supplier_against_sdn,
+            match_supplier_against_sdn,
+            parse_sdn_entries,
         )
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
         matches = match_supplier_against_sdn("acme trading llc", entries)
         assert len(matches) == 1
 
     def test_sdn_entry_to_signal(self) -> None:
         from application.external_intelligence.connectors.ofac import (
-            parse_sdn_entries, sdn_entry_to_signal,
+            parse_sdn_entries,
+            sdn_entry_to_signal,
         )
+
         entries = parse_sdn_entries(SAMPLE_SDN_XML)
-        signal = sdn_entry_to_signal(
-            entries[0], supplier_id="sup-001", organization_id="org-001"
-        )
+        signal = sdn_entry_to_signal(entries[0], supplier_id="sup-001", organization_id="org-001")
         assert signal["signal_type"] == "SANCTIONS_MATCH"
         assert signal["severity"] == "CRITICAL"
         assert signal["source"] == "OFAC_SDN"
@@ -240,6 +262,7 @@ class TestOfacConnector:
 class TestSBTiService:
     def _call(self, **kwargs):
         from application.integrations.sbti_service import validate_sbti_target
+
         defaults = dict(
             target_id="tgt-001",
             organization_name="Test Corp",
@@ -297,7 +320,13 @@ class TestSBTiService:
     def test_to_dict_has_required_keys(self) -> None:
         result = self._call()
         d = result.to_dict()
-        assert {"target_id", "overall_aligned", "criteria_detail", "methodology", "disclaimer"}.issubset(d.keys())
+        assert {
+            "target_id",
+            "overall_aligned",
+            "criteria_detail",
+            "methodology",
+            "disclaimer",
+        }.issubset(d.keys())
 
     def test_criteria_detail_list(self) -> None:
         result = self._call()
@@ -316,6 +345,7 @@ class TestSBTiService:
 class TestCDPService:
     def _report(self, **kwargs):
         from application.integrations.cdp_service import build_cdp_climate_report
+
         defaults = dict(organization_name="Test Corp", reporting_year=2024)
         defaults.update(kwargs)
         return build_cdp_climate_report(**defaults)
@@ -347,7 +377,9 @@ class TestCDPService:
 
     def test_c6_renewable_pct_calculated(self) -> None:
         r = self._report(total_energy_mwh=10000.0, renewable_energy_mwh=4000.0)
-        c6 = [resp for resp in r["responses"] if resp["module"] == "C6" and resp["question"] == "C6.2"]
+        c6 = [
+            resp for resp in r["responses"] if resp["module"] == "C6" and resp["question"] == "C6.2"
+        ]
         assert len(c6) == 1
         assert c6[0]["response"] == 40.0
 
@@ -367,6 +399,7 @@ class TestCDPService:
 class TestPptxExporter:
     def _build(self, **kwargs):
         from application.executive.pptx_exporter import build_board_report_pptx
+
         defaults = dict(
             organization_name="Test Corp",
             report_title="Q4 2024 Board Report",
@@ -396,13 +429,17 @@ class TestPptxExporter:
 
     def test_with_risks(self) -> None:
         result = self._build(
-            risks=[{"title": "Climate Risk", "severity": "HIGH", "status": "Active", "owner": "EHS"}]
+            risks=[
+                {"title": "Climate Risk", "severity": "HIGH", "status": "Active", "owner": "EHS"}
+            ]
         )
         assert isinstance(result, bytes)
 
     def test_with_recommendations(self) -> None:
         result = self._build(
-            recommendations=[{"title": "Reduce Scope 1", "priority": "High", "due_date": "2025-06-30"}]
+            recommendations=[
+                {"title": "Reduce Scope 1", "priority": "High", "due_date": "2025-06-30"}
+            ]
         )
         assert isinstance(result, bytes)
 
@@ -413,6 +450,7 @@ class TestPptxExporter:
 class TestBoardPortal:
     def test_create_token_returns_string_and_datetime(self) -> None:
         from application.commercial.board_portal import create_board_token
+
         token, expires_at = create_board_token(
             report_id="rep-001",
             organization_id="org-001",
@@ -424,6 +462,7 @@ class TestBoardPortal:
 
     def test_decode_token_returns_correct_claims(self) -> None:
         from application.commercial.board_portal import create_board_token, decode_board_token
+
         token, _ = create_board_token(
             report_id="rep-001",
             organization_id="org-001",
@@ -438,41 +477,50 @@ class TestBoardPortal:
 
     def test_hash_token_returns_64_char_hex(self) -> None:
         from application.commercial.board_portal import hash_token
+
         h = hash_token("some.jwt.token")
         assert len(h) == 64
         assert all(c in "0123456789abcdef" for c in h)
 
     def test_hash_is_deterministic(self) -> None:
         from application.commercial.board_portal import hash_token
+
         assert hash_token("abc") == hash_token("abc")
 
     def test_is_section_allowed_empty_means_all(self) -> None:
         from application.commercial.board_portal import is_section_allowed
+
         payload = {"sections": []}
         assert is_section_allowed(payload, "any_section") is True
 
     def test_is_section_allowed_scoped(self) -> None:
         from application.commercial.board_portal import is_section_allowed
+
         payload = {"sections": ["executive_summary"]}
         assert is_section_allowed(payload, "executive_summary") is True
         assert is_section_allowed(payload, "risk_register") is False
 
     def test_expires_in_hours_bounds(self) -> None:
-        from application.commercial.board_portal import create_board_token
         import pytest
+
+        from application.commercial.board_portal import create_board_token
+
         with pytest.raises(ValueError):
             create_board_token(report_id="r", organization_id="o", expires_in_hours=0)
 
     def test_wrong_token_type_raises(self) -> None:
         import jwt as _jwt
+
         from application.commercial.board_portal import decode_board_token
         from shared.config import settings
+
         bad_token = _jwt.encode(
             {"type": "access", "sub": "user-1", "exp": 9999999999},
             settings.secret_key,
             algorithm="HS256",
         )
         import pytest
+
         with pytest.raises(ValueError, match="Not a board access token"):
             decode_board_token(bad_token)
 
@@ -482,12 +530,23 @@ class TestBoardPortal:
 
 class TestBenchmarking:
     def _peers(self, scores):
-        return [{"overall_esg_score": s, "environmental_score": s, "social_score": s, "governance_score": s} for s in scores]
+        return [
+            {
+                "overall_esg_score": s,
+                "environmental_score": s,
+                "social_score": s,
+                "governance_score": s,
+            }
+            for s in scores
+        ]
 
     def test_top_quartile(self) -> None:
         from application.commercial.benchmarking import compute_benchmark
+
         result = compute_benchmark(
-            supplier_id="s1", supplier_name="Best Corp", organization_id="o1",
+            supplier_id="s1",
+            supplier_name="Best Corp",
+            organization_id="o1",
             supplier_scores={"overall_esg_score": 90.0},
             peers=self._peers([30.0, 40.0, 50.0, 60.0, 70.0]),
         )
@@ -497,8 +556,11 @@ class TestBenchmarking:
 
     def test_bottom_quartile(self) -> None:
         from application.commercial.benchmarking import compute_benchmark
+
         result = compute_benchmark(
-            supplier_id="s1", supplier_name="Laggard Corp", organization_id="o1",
+            supplier_id="s1",
+            supplier_name="Laggard Corp",
+            organization_id="o1",
             supplier_scores={"overall_esg_score": 10.0},
             peers=self._peers([60.0, 70.0, 80.0, 90.0, 95.0]),
         )
@@ -506,8 +568,11 @@ class TestBenchmarking:
 
     def test_no_peers_returns_insufficient(self) -> None:
         from application.commercial.benchmarking import compute_benchmark
+
         result = compute_benchmark(
-            supplier_id="s1", supplier_name="Alone Corp", organization_id="o1",
+            supplier_id="s1",
+            supplier_name="Alone Corp",
+            organization_id="o1",
             supplier_scores={"overall_esg_score": 50.0},
             peers=[],
         )
@@ -515,8 +580,11 @@ class TestBenchmarking:
 
     def test_strengths_identified(self) -> None:
         from application.commercial.benchmarking import compute_benchmark
+
         result = compute_benchmark(
-            supplier_id="s1", supplier_name="Green Corp", organization_id="o1",
+            supplier_id="s1",
+            supplier_name="Green Corp",
+            organization_id="o1",
             supplier_scores={
                 "overall_esg_score": 80.0,
                 "environmental_score": 95.0,
@@ -524,28 +592,43 @@ class TestBenchmarking:
                 "governance_score": 50.0,
             },
             peers=[
-                {"overall_esg_score": 60.0, "environmental_score": 40.0,
-                 "social_score": 50.0, "governance_score": 55.0},
+                {
+                    "overall_esg_score": 60.0,
+                    "environmental_score": 40.0,
+                    "social_score": 50.0,
+                    "governance_score": 55.0,
+                },
             ],
         )
         assert "Environmental" in result.strengths
 
     def test_to_dict_structure(self) -> None:
         from application.commercial.benchmarking import compute_benchmark
+
         result = compute_benchmark(
-            supplier_id="s1", supplier_name="Corp", organization_id="o1",
+            supplier_id="s1",
+            supplier_name="Corp",
+            organization_id="o1",
             supplier_scores={"overall_esg_score": 70.0},
             peers=self._peers([40.0, 50.0, 60.0]),
         )
         d = result.to_dict()
-        assert {"supplier_id", "scores", "peer_group", "percentile_ranks", "performance_tier"}.issubset(d.keys())
+        assert {
+            "supplier_id",
+            "scores",
+            "peer_group",
+            "percentile_ranks",
+            "performance_tier",
+        }.issubset(d.keys())
 
     def test_percentile_rank_calculation(self) -> None:
         from application.commercial.benchmarking import _percentile_rank
+
         assert _percentile_rank(75.0, [50.0, 60.0, 70.0, 80.0, 90.0]) == 60.0
 
     def test_percentile_rank_no_peers(self) -> None:
         from application.commercial.benchmarking import _percentile_rank
+
         assert _percentile_rank(50.0, []) == 50.0
 
 
@@ -555,30 +638,35 @@ class TestBenchmarking:
 class TestCustomRoleModel:
     def test_tablename(self) -> None:
         from infrastructure.persistence.models.custom_role import CustomRoleModel
+
         assert CustomRoleModel.__tablename__ == "custom_roles"
 
     def test_required_columns(self) -> None:
         from infrastructure.persistence.models.custom_role import CustomRoleModel
+
         cols = {c.key for c in CustomRoleModel.__table__.columns}
         assert {"id", "organization_id", "role_name", "permissions", "created_by"}.issubset(cols)
 
     def test_unique_constraint(self) -> None:
-        from infrastructure.persistence.models.custom_role import CustomRoleModel
         from sqlalchemy import UniqueConstraint
+
+        from infrastructure.persistence.models.custom_role import CustomRoleModel
+
         uc_names = {
-            c.name for c in CustomRoleModel.__table__.constraints
-            if isinstance(c, UniqueConstraint)
+            c.name for c in CustomRoleModel.__table__.constraints if isinstance(c, UniqueConstraint)
         }
         assert "uq_org_role_name" in uc_names
 
     def test_role_templates_keys(self) -> None:
         from infrastructure.persistence.models.custom_role import ROLE_TEMPLATES
+
         expected = {"viewer", "analyst", "auditor", "supplier_manager"}
         assert expected == set(ROLE_TEMPLATES.keys())
 
     def test_each_template_has_permissions(self) -> None:
         from infrastructure.persistence.models.custom_role import ROLE_TEMPLATES
-        for name, template in ROLE_TEMPLATES.items():
+
+        for _name, template in ROLE_TEMPLATES.items():
             assert "permissions" in template
             assert isinstance(template["permissions"], list)
             assert len(template["permissions"]) >= 1
@@ -587,20 +675,24 @@ class TestCustomRoleModel:
 class TestOrganizationSettingsModel:
     def test_tablename(self) -> None:
         from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
         assert OrganizationSettingsModel.__tablename__ == "organization_settings"
 
     def test_pk_is_organization_id(self) -> None:
         from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
         pk_cols = [c.name for c in OrganizationSettingsModel.__table__.primary_key.columns]
         assert pk_cols == ["organization_id"]
 
     def test_branding_columns(self) -> None:
         from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
         cols = {c.key for c in OrganizationSettingsModel.__table__.columns}
         assert {"logo_url", "primary_color", "company_name_override"}.issubset(cols)
 
     def test_integration_columns(self) -> None:
         from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
         cols = {c.key for c in OrganizationSettingsModel.__table__.columns}
         assert {"teams_webhook_url", "slack_webhook_url", "jira_base_url"}.issubset(cols)
 
@@ -608,15 +700,18 @@ class TestOrganizationSettingsModel:
 class TestBoardAccessTokenModel:
     def test_tablename(self) -> None:
         from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
+
         assert BoardAccessTokenModel.__tablename__ == "board_access_tokens"
 
     def test_security_columns(self) -> None:
         from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
+
         cols = {c.key for c in BoardAccessTokenModel.__table__.columns}
         assert {"token_hash", "expires_at", "revoked", "allowed_sections"}.issubset(cols)
 
     def test_token_hash_unique(self) -> None:
         from infrastructure.persistence.models.board_access_token import BoardAccessTokenModel
+
         token_hash_col = BoardAccessTokenModel.__table__.columns["token_hash"]
         assert token_hash_col.unique is True
 
@@ -651,7 +746,9 @@ def _load_migration_m48(path: str, mod_name: str):
     fake_alembic = MagicMock()
     fake_alembic.op = fake_op
 
-    with _patch_dict(sys.modules, {"alembic": fake_alembic, "alembic.op": fake_op, "sqlalchemy": fake_sa}):
+    with _patch_dict(
+        sys.modules, {"alembic": fake_alembic, "alembic.op": fake_op, "sqlalchemy": fake_sa}
+    ):
         spec = importlib.util.spec_from_file_location(mod_name, path)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

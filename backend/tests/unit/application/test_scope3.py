@@ -6,11 +6,13 @@ Tests cover:
 - PCFCalculationService: list methods
 - Scope3InventoryService: aggregate, upsert idempotency, zero-products case
 """
+
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+
+import pytest
 
 from application.scope3.inventory_service import Scope3InventoryService
 from application.scope3.pcf_service import PCFCalculationService
@@ -70,7 +72,9 @@ def _make_name_row(id_: str, name: str):
     return r
 
 
-def _make_pcf_model(org_id: str, product_id: str, year: int, pcf: float | None, cov: float | None = None):
+def _make_pcf_model(
+    org_id: str, product_id: str, year: int, pcf: float | None, cov: float | None = None
+):
     m = MagicMock()
     m.organization_id = org_id
     m.product_id = product_id
@@ -81,6 +85,7 @@ def _make_pcf_model(org_id: str, product_id: str, year: int, pcf: float | None, 
 
 
 # ── PCF formula tests ─────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_pcf_correct_weighted_sum():
@@ -93,11 +98,13 @@ async def test_pcf_correct_weighted_sum():
     # PCF = (60/100)*10 + (40/100)*5 = 6 + 2 = 8 kg CO2e/unit
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _rows_result([_make_bom_row(mat_a, 60.0), _make_bom_row(mat_b, 40.0)]),
-        _rows_result([_make_lca_row(mat_a, 10.0), _make_lca_row(mat_b, 5.0)]),
-        _rows_result([_make_name_row(mat_a, "Steel"), _make_name_row(mat_b, "Plastic")]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _rows_result([_make_bom_row(mat_a, 60.0), _make_bom_row(mat_b, 40.0)]),
+            _rows_result([_make_lca_row(mat_a, 10.0), _make_lca_row(mat_b, 5.0)]),
+            _rows_result([_make_name_row(mat_a, "Steel"), _make_name_row(mat_b, "Plastic")]),
+        ]
+    )
 
     svc = PCFCalculationService(db)
     record = await svc.calculate(org_id, product_id, 2024)
@@ -119,11 +126,13 @@ async def test_pcf_partial_lca_coverage():
     # PCF = (70/100)*8 = 5.6, coverage = 70/100 = 70%
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _rows_result([_make_bom_row(mat_a, 70.0), _make_bom_row(mat_b, 30.0)]),
-        _rows_result([_make_lca_row(mat_a, 8.0)]),  # only mat_a has LCA
-        _rows_result([_make_name_row(mat_a, "Aluminum"), _make_name_row(mat_b, "Rubber")]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _rows_result([_make_bom_row(mat_a, 70.0), _make_bom_row(mat_b, 30.0)]),
+            _rows_result([_make_lca_row(mat_a, 8.0)]),  # only mat_a has LCA
+            _rows_result([_make_name_row(mat_a, "Aluminum"), _make_name_row(mat_b, "Rubber")]),
+        ]
+    )
 
     svc = PCFCalculationService(db)
     record = await svc.calculate(org_id, product_id, 2024)
@@ -140,11 +149,13 @@ async def test_pcf_no_lca_data_returns_none():
     mat_a = _uid()
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _rows_result([_make_bom_row(mat_a, 100.0)]),
-        _rows_result([]),  # no LCA rows
-        _rows_result([_make_name_row(mat_a, "Unknown Material")]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _rows_result([_make_bom_row(mat_a, 100.0)]),
+            _rows_result([]),  # no LCA rows
+            _rows_result([_make_name_row(mat_a, "Unknown Material")]),
+        ]
+    )
 
     svc = PCFCalculationService(db)
     record = await svc.calculate(org_id, product_id, 2024)
@@ -207,11 +218,13 @@ async def test_pcf_material_breakdown_has_entry_per_material():
     mat_a, mat_b = _uid(), _uid()
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _rows_result([_make_bom_row(mat_a, 50.0), _make_bom_row(mat_b, 50.0)]),
-        _rows_result([_make_lca_row(mat_a, 4.0)]),
-        _rows_result([_make_name_row(mat_a, "Steel"), _make_name_row(mat_b, "Glass")]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _rows_result([_make_bom_row(mat_a, 50.0), _make_bom_row(mat_b, 50.0)]),
+            _rows_result([_make_lca_row(mat_a, 4.0)]),
+            _rows_result([_make_name_row(mat_a, "Steel"), _make_name_row(mat_b, "Glass")]),
+        ]
+    )
 
     svc = PCFCalculationService(db)
     record = await svc.calculate(org_id, product_id, 2024)
@@ -250,6 +263,7 @@ async def test_list_for_org_filters_by_year():
 
 # ── Scope3InventoryService tests ──────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_inventory_aggregates_pcfs():
     org_id = _uid()
@@ -259,10 +273,12 @@ async def test_inventory_aggregates_pcfs():
     pcf2 = _make_pcf_model(org_id, p2, 2024, pcf=6.0, cov=80.0)
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([pcf1, pcf2]),  # load PCFs
-        _scalar_one_or_none(None),       # no existing inventory
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([pcf1, pcf2]),  # load PCFs
+            _scalar_one_or_none(None),  # no existing inventory
+        ]
+    )
 
     svc = Scope3InventoryService(db)
     inv = await svc.compute_inventory(org_id, 2024)
@@ -283,10 +299,12 @@ async def test_inventory_full_lca_requires_95pct_coverage():
     pcf_none = _make_pcf_model(org_id, p3, 2024, pcf=None, cov=None)
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([pcf_full, pcf_partial, pcf_none]),
-        _scalar_one_or_none(None),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([pcf_full, pcf_partial, pcf_none]),
+            _scalar_one_or_none(None),
+        ]
+    )
 
     svc = Scope3InventoryService(db)
     inv = await svc.compute_inventory(org_id, 2024)
@@ -305,10 +323,12 @@ async def test_inventory_upsert_overwrites_existing():
     existing.total_pcf_kg_co2e = 5.0
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([]),          # no PCFs → total 0
-        _scalar_one_or_none(existing),  # existing inventory
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([]),  # no PCFs → total 0
+            _scalar_one_or_none(existing),  # existing inventory
+        ]
+    )
 
     svc = Scope3InventoryService(db)
     inv = await svc.compute_inventory(org_id, 2024)
@@ -324,10 +344,12 @@ async def test_inventory_zero_products_returns_zero_totals():
     org_id = _uid()
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([]),
-        _scalar_one_or_none(None),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([]),
+            _scalar_one_or_none(None),
+        ]
+    )
 
     svc = Scope3InventoryService(db)
     inv = await svc.compute_inventory(org_id, 2024)
@@ -347,10 +369,12 @@ async def test_inventory_top_contributors_sorted_descending():
     pcf_mid = _make_pcf_model(org_id, p3, 2024, pcf=4.0, cov=100.0)
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([pcf_low, pcf_high, pcf_mid]),
-        _scalar_one_or_none(None),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([pcf_low, pcf_high, pcf_mid]),
+            _scalar_one_or_none(None),
+        ]
+    )
 
     svc = Scope3InventoryService(db)
     inv = await svc.compute_inventory(org_id, 2024)

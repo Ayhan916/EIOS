@@ -7,14 +7,11 @@ import pytest
 
 from application.executive.kpi_calculator import (
     KPISnapshot,
-    MonthlyDataPoint,
-    KPITrendResult,
     compute_action_effectiveness,
     compute_governance_metrics,
     compute_kpi_trends,
     compute_portfolio_summary,
 )
-
 
 # ── compute_portfolio_summary ─────────────────────────────────────────────────
 
@@ -145,7 +142,10 @@ class TestComputeKpiTrends:
         assert r.risk_delta is None
 
     def test_two_rows_delta_computed(self):
-        rows = [_row("2026-01", avg_esg=60.0, avg_risk=50.0), _row("2026-02", avg_esg=70.0, avg_risk=40.0)]
+        rows = [
+            _row("2026-01", avg_esg=60.0, avg_risk=50.0),
+            _row("2026-02", avg_esg=70.0, avg_risk=40.0),
+        ]
         r = compute_kpi_trends(rows, period_days=90)
         assert r.esg_delta == pytest.approx(10.0)
         assert r.risk_delta == pytest.approx(-10.0)

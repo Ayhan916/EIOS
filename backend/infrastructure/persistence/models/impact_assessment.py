@@ -1,4 +1,5 @@
 """SQLAlchemy model — Impact Severity Assessments (CSDDD Art. 3/6)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -28,7 +29,9 @@ class ImpactAssessmentModel(Base):
     justification: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
         Index("ix_impact_assessments_org_level", "organization_id", "severity_level"),

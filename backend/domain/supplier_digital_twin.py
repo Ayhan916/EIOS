@@ -16,12 +16,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import Optional
 
 from .base_entity import BaseEntity
 
-
 # ── Twin Health Dimensions ────────────────────────────────────────────────────
+
 
 @dataclass(slots=True, kw_only=True)
 class SupplierDigitalTwin(BaseEntity):
@@ -50,19 +49,19 @@ class SupplierDigitalTwin(BaseEntity):
 
     # ── Overall ───────────────────────────────────────────────────────────────
     overall_health: float = 75.0
-    health_trend: str = "STABLE"          # IMPROVING | STABLE | DETERIORATING
-    ai_confidence: float = 0.7            # Model confidence in the twin state
+    health_trend: str = "STABLE"  # IMPROVING | STABLE | DETERIORATING
+    ai_confidence: float = 0.7  # Model confidence in the twin state
 
     # ── Aggregated counters ───────────────────────────────────────────────────
     open_recommendations: int = 0
     open_actions: int = 0
     event_count: int = 0
     critical_event_count: int = 0
-    last_event_at: Optional[datetime] = None
+    last_event_at: datetime | None = None
 
     # ── Snapshot metadata ─────────────────────────────────────────────────────
     last_updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
-    twin_version: int = 1                  # bumped on every state change
+    twin_version: int = 1  # bumped on every state change
 
 
 @dataclass(slots=True, kw_only=True)
@@ -87,12 +86,12 @@ class IntelligenceTimelineEvent(BaseEntity):
     organization_id: str
 
     # ── Classification ────────────────────────────────────────────────────────
-    event_type: str     # EXTERNAL_SIGNAL | ASSESSMENT_COMPLETED | FINDING_CREATED |
-                        # CERTIFICATE_EXPIRED | REGULATION_PUBLISHED | CORRECTIVE_ACTION |
-                        # COUNTRY_RISK_CHANGE | NGO_REPORT | FINANCIAL_DOWNGRADE
+    event_type: str  # EXTERNAL_SIGNAL | ASSESSMENT_COMPLETED | FINDING_CREATED |
+    # CERTIFICATE_EXPIRED | REGULATION_PUBLISHED | CORRECTIVE_ACTION |
+    # COUNTRY_RISK_CHANGE | NGO_REPORT | FINANCIAL_DOWNGRADE
     event_category: str  # ESG | COMPLIANCE | FINANCIAL | GEOPOLITICAL | CYBER |
-                         # HUMAN_RIGHTS | ENVIRONMENTAL | OPERATIONAL
-    severity: str       # CRITICAL | HIGH | MEDIUM | LOW | INFO
+    # HUMAN_RIGHTS | ENVIRONMENTAL | OPERATIONAL
+    severity: str  # CRITICAL | HIGH | MEDIUM | LOW | INFO
 
     # ── Content ───────────────────────────────────────────────────────────────
     title: str
@@ -104,17 +103,17 @@ class IntelligenceTimelineEvent(BaseEntity):
     recommended_action: str = ""
 
     # ── Traceability ──────────────────────────────────────────────────────────
-    source_type: str = ""      # EXTERNAL_DATASET | INTERNAL | MANUAL
-    source_name: str = ""      # e.g. "UN Sanctions", "ILO", "Transparency International"
+    source_type: str = ""  # EXTERNAL_DATASET | INTERNAL | MANUAL
+    source_name: str = ""  # e.g. "UN Sanctions", "ILO", "Transparency International"
     source_url: str = ""
-    evidence_ids: str = "[]"   # JSON array of evidence UUIDs
-    regulation_ids: str = "[]" # JSON array of regulation UUIDs
-    risk_ids: str = "[]"       # JSON array of risk UUIDs
-    signal_id: str = ""        # originating ExternalRiskSignal.id
+    evidence_ids: str = "[]"  # JSON array of evidence UUIDs
+    regulation_ids: str = "[]"  # JSON array of regulation UUIDs
+    risk_ids: str = "[]"  # JSON array of risk UUIDs
+    signal_id: str = ""  # originating ExternalRiskSignal.id
 
     # ── Twin Impact ───────────────────────────────────────────────────────────
-    twin_dimension_affected: str = ""   # which health dimension was updated
-    health_delta: float = 0.0           # how much the score changed (negative = deterioration)
+    twin_dimension_affected: str = ""  # which health dimension was updated
+    health_delta: float = 0.0  # how much the score changed (negative = deterioration)
     confidence: float = 0.7
 
     # ── Timing ───────────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ import jwt as pyjwt
 import pytest
 
 from domain.enums import UserRole, has_min_role
+from shared.config import settings
 from shared.security import (
     ALGORITHM,
     create_access_token,
@@ -24,7 +25,6 @@ from shared.security import (
     decode_external_audit_token,
     decode_token,
 )
-from shared.config import settings
 
 
 class TestExternalAuditorEnum:

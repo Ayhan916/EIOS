@@ -6,7 +6,6 @@ from domain.enums import ActionStatus, ConfidenceLevel, RiskLevel
 
 from .base import EntityResponse
 
-
 COMPLEXITY_VALUES = ("Low", "Medium", "High", "Very High")
 
 

@@ -1,4 +1,5 @@
 """SQLAlchemy models — Regulatory Change Radar (CSDDD-014)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -13,7 +14,9 @@ class RegulatorySourceModel(Base):
     __tablename__ = "regulatory_sources"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    organization_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)  # None = global library
+    organization_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )  # None = global library
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     url: Mapped[str] = mapped_column(String(500), nullable=False, default="")
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -46,12 +49,12 @@ class RegulatoryChangeModel(Base):
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_by: Mapped[str] = mapped_column(String(255), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
     url_hash: Mapped[str] = mapped_column(String(64), nullable=False, default="")
 
-    __table_args__ = (
-        Index("ix_csddd_regulatory_changes_org_status", "organization_id", "status"),
-    )
+    __table_args__ = (Index("ix_csddd_regulatory_changes_org_status", "organization_id", "status"),)
 
 
 class RegulatoryFeedEntryModel(Base):

@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
-
 
 # ──────────────────────────────────────────────────────────────────────────────
 # OTel tracing module
@@ -15,10 +14,12 @@ import pytest
 class TestOtelTracing:
     def test_configure_tracing_is_idempotent(self) -> None:
         from infrastructure.observability import tracing as _mod
+
         original = _mod._CONFIGURED
         _mod._CONFIGURED = False
         try:
             from infrastructure.observability.tracing import configure_tracing
+
             configure_tracing(None)
             configure_tracing(None)  # second call must be a no-op
             assert _mod._CONFIGURED is True
@@ -27,6 +28,7 @@ class TestOtelTracing:
 
     def test_get_trace_context_returns_empty_when_no_span(self) -> None:
         from infrastructure.observability.tracing import get_trace_context
+
         ctx = get_trace_context()
         assert "trace_id" in ctx
         assert "span_id" in ctx
@@ -35,6 +37,7 @@ class TestOtelTracing:
 
     def test_otel_structlog_processor_adds_keys(self) -> None:
         from infrastructure.observability.tracing import OtelStructlogProcessor
+
         proc = OtelStructlogProcessor()
         event = {"event": "test_log"}
         result = proc(None, "info", event)
@@ -43,6 +46,7 @@ class TestOtelTracing:
 
     def test_otel_structlog_processor_does_not_overwrite_existing_keys(self) -> None:
         from infrastructure.observability.tracing import OtelStructlogProcessor
+
         proc = OtelStructlogProcessor()
         event = {"event": "test", "trace_id": "existing-trace"}
         result = proc(None, "info", event)
@@ -50,11 +54,16 @@ class TestOtelTracing:
 
     def test_configure_tracing_graceful_when_otel_missing(self) -> None:
         import infrastructure.observability.tracing as _mod
+
         original = _mod._CONFIGURED
         _mod._CONFIGURED = False
         try:
-            with patch("infrastructure.observability.tracing._setup_tracing", side_effect=ImportError("no otel")):
+            with patch(
+                "infrastructure.observability.tracing._setup_tracing",
+                side_effect=ImportError("no otel"),
+            ):
                 from infrastructure.observability.tracing import configure_tracing
+
                 configure_tracing(None)  # must not raise
         finally:
             _mod._CONFIGURED = original
@@ -68,11 +77,7 @@ class TestOtelTracing:
 class TestHttpMetrics:
     def test_prometheus_metrics_are_registered(self) -> None:
         from prometheus_client import REGISTRY
-        from infrastructure.observability.http_metrics import (
-            http_request_duration,
-            http_requests_active,
-            http_requests_total,
-        )
+
         # prometheus_client stores Counter("eios_http_requests_total") under base name
         # "eios_http_requests" (strips _total suffix in MetricFamily.name)
         names = {m.name for m in REGISTRY.collect()}
@@ -83,6 +88,7 @@ class TestHttpMetrics:
 
     def test_record_request_increments_counter(self) -> None:
         from infrastructure.observability.http_metrics import http_requests_total, record_request
+
         before = http_requests_total.labels(
             method="GET", endpoint="/test", status_code="200"
         )._value.get()
@@ -93,7 +99,8 @@ class TestHttpMetrics:
         assert after == before + 1
 
     def test_record_request_observes_histogram(self) -> None:
-        from infrastructure.observability.http_metrics import http_request_duration, record_request
+        from infrastructure.observability.http_metrics import record_request
+
         record_request("POST", "/evidences/", 201, 0.123)
         # Histogram sum should increase — just verify no exception raised
 
@@ -106,11 +113,12 @@ class TestHttpMetrics:
 class TestMetricsCounterMiddleware:
     @pytest.mark.asyncio
     async def test_middleware_calls_record_request(self) -> None:
-        from app.middleware.metrics_counter import MetricsCounterMiddleware
-        from starlette.testclient import TestClient
         from starlette.applications import Starlette
         from starlette.responses import Response
         from starlette.routing import Route
+        from starlette.testclient import TestClient
+
+        from app.middleware.metrics_counter import MetricsCounterMiddleware
 
         async def homepage(request):
             return Response("ok", status_code=200)
@@ -143,11 +151,13 @@ class TestMetricsCounterMiddleware:
 class TestHealthEndpoints:
     def test_version_is_updated(self) -> None:
         from interfaces.api.routers.health import VERSION
+
         assert VERSION == "0.23.0"
 
     @pytest.mark.asyncio
     async def test_liveness_returns_ok(self) -> None:
         from interfaces.api.routers.health import liveness
+
         result = await liveness()
         assert result.status == "ok"
         assert result.service == "eios-backend"
@@ -201,11 +211,13 @@ class TestHealthEndpoints:
 class TestAlertRules:
     def test_alert_rules_file_exists(self) -> None:
         import os
+
         path = "/Users/ayhanyaman/Desktop/EIOS/backend/infrastructure/observability/alert_rules.yml"
         assert os.path.exists(path)
 
     def test_alert_rules_are_valid_yaml(self) -> None:
         import yaml
+
         path = "/Users/ayhanyaman/Desktop/EIOS/backend/infrastructure/observability/alert_rules.yml"
         with open(path) as f:
             data = yaml.safe_load(f)
@@ -214,14 +226,11 @@ class TestAlertRules:
 
     def test_critical_alerts_defined(self) -> None:
         import yaml
+
         path = "/Users/ayhanyaman/Desktop/EIOS/backend/infrastructure/observability/alert_rules.yml"
         with open(path) as f:
             data = yaml.safe_load(f)
-        alert_names = [
-            rule["alert"]
-            for group in data["groups"]
-            for rule in group["rules"]
-        ]
+        alert_names = [rule["alert"] for group in data["groups"] for rule in group["rules"]]
         assert "EIOSHighErrorRate" in alert_names
         assert "EIOSHighP99Latency" in alert_names
         assert "EIOSServiceDown" in alert_names
@@ -230,5 +239,6 @@ class TestAlertRules:
 
     def test_prometheus_scrape_config_exists(self) -> None:
         import os
+
         path = "/Users/ayhanyaman/Desktop/EIOS/backend/infrastructure/observability/prometheus.yml"
         assert os.path.exists(path)

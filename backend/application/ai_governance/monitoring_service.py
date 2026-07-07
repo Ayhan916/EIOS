@@ -3,19 +3,19 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
 from infrastructure.persistence.models.ai_governance import (
-    DRIFT_ALERT_TYPES,
     AI_POLICY_TYPES,
+    DRIFT_ALERT_TYPES,
+    RISK_LEVELS,
+    AIModelModel,
+    AIPolicyModel,
     ModelDriftAlertModel,
     ModelMonitoringRecordModel,
-    AIPolicyModel,
-    AIModelModel,
-    RISK_LEVELS,
 )
 
 from .inventory_service import AIGovernanceError
@@ -28,7 +28,7 @@ _DRIFT_HIGH_SEVERITY_THRESHOLD: float = 0.6
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def record_monitoring_snapshot(
@@ -158,15 +158,14 @@ def list_drift_alerts(
     limit: int = 50,
     offset: int = 0,
 ) -> list[ModelDriftAlertModel]:
-    q = session.query(ModelDriftAlertModel).filter(
-        ModelDriftAlertModel.model_id == model_id
-    )
+    q = session.query(ModelDriftAlertModel).filter(ModelDriftAlertModel.model_id == model_id)
     if unresolved_only:
         q = q.filter(ModelDriftAlertModel.is_resolved == False)  # noqa: E712
     return q.order_by(ModelDriftAlertModel.detected_at.desc()).limit(limit).offset(offset).all()
 
 
 # ── AI Policies ───────────────────────────────────────────────────────────────
+
 
 def create_ai_policy(
     name: str,

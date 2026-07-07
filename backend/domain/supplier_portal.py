@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 from .enums import (
@@ -19,7 +20,6 @@ from .enums import (
     QuestionnaireStatus,
     QuestionType,
     RemediationStatus,
-    SupplierActivityEventType,
     SupplierUserRole,
 )
 
@@ -37,7 +37,7 @@ class SupplierUser(BaseEntity):
     invited_at: datetime | None = None
     accepted_at: datetime | None = None
     password_hash: str | None = None
-    notification_preferences: dict = field(default_factory=dict)
+    notification_preferences: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True, kw_only=True)

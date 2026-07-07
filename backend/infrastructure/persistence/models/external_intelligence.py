@@ -15,7 +15,9 @@ class ExternalDatasetModel(BaseModel):
 
     __tablename__ = "external_datasets"
     __table_args__ = (
-        UniqueConstraint("source_name", "source_version", name="uq_external_datasets_source_version"),
+        UniqueConstraint(
+            "source_name", "source_version", name="uq_external_datasets_source_version"
+        ),
         Index("ix_external_datasets_source", "source_name"),
         Index("ix_external_datasets_status", "dataset_status"),
     )
@@ -118,7 +120,9 @@ class SupplierEnrichmentModel(BaseModel):
 
     __tablename__ = "supplier_enrichments"
     __table_args__ = (
-        UniqueConstraint("supplier_id", "organization_id", name="uq_supplier_enrichments_supplier_org"),
+        UniqueConstraint(
+            "supplier_id", "organization_id", name="uq_supplier_enrichments_supplier_org"
+        ),
         Index("ix_supplier_enrichments_supplier", "supplier_id"),
         Index("ix_supplier_enrichments_org", "organization_id"),
         Index("ix_supplier_enrichments_risk", "combined_risk_score"),

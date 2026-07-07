@@ -8,7 +8,6 @@ All alignment percentages are deterministic:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -49,12 +48,10 @@ def create_taxonomy_assessment(
     aligned_activities = aligned_activities or {}
 
     eligible_value = sum(
-        float(v.get("amount", 0)) for v in eligible_activities.values()
-        if isinstance(v, dict)
+        float(v.get("amount", 0)) for v in eligible_activities.values() if isinstance(v, dict)
     )
     aligned_value = sum(
-        float(v.get("amount", 0)) for v in aligned_activities.values()
-        if isinstance(v, dict)
+        float(v.get("amount", 0)) for v in aligned_activities.values() if isinstance(v, dict)
     )
 
     eligible_pct = _compute_percent(eligible_value, total_revenue or 0.0)

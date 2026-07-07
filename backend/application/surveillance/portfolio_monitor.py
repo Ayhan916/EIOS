@@ -13,7 +13,7 @@ Also computes and stores RiskTrend records per supplier per month.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import structlog
 
@@ -22,60 +22,78 @@ logger = structlog.get_logger(__name__)
 
 async def compute_portfolio_stats(organization_id: str, session) -> dict:
     """Compute org-wide portfolio risk stats. Used by dashboard."""
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.supplier_score import SupplierScoreModel
     from infrastructure.persistence.models.surveillance import (
-        SurveillanceSignalModel,
-        SupplierWatchlistModel,
         RiskEpisodeModel,
+        SupplierWatchlistModel,
+        SurveillanceSignalModel,
     )
-    from sqlalchemy import func, select
 
     # Active suppliers
-    total_stmt = select(func.count()).select_from(SupplierModel).where(
-        SupplierModel.organization_id == organization_id,
-        SupplierModel.supplier_status == "Active",
+    total_stmt = (
+        select(func.count())
+        .select_from(SupplierModel)
+        .where(
+            SupplierModel.organization_id == organization_id,
+            SupplierModel.supplier_status == "Active",
+        )
     )
     total_suppliers = (await session.execute(total_stmt)).scalar_one()
 
     # Suppliers with active CRITICAL/HIGH signals
-    at_risk_stmt = (
-        select(func.count(SurveillanceSignalModel.supplier_id.distinct()))
-        .where(
-            SurveillanceSignalModel.organization_id == organization_id,
-            SurveillanceSignalModel.signal_status == "ACTIVE",
-            SurveillanceSignalModel.severity.in_(["CRITICAL", "HIGH"]),
-            SurveillanceSignalModel.supplier_id.is_not(None),
-        )
+    at_risk_stmt = select(func.count(SurveillanceSignalModel.supplier_id.distinct())).where(
+        SurveillanceSignalModel.organization_id == organization_id,
+        SurveillanceSignalModel.signal_status == "ACTIVE",
+        SurveillanceSignalModel.severity.in_(["CRITICAL", "HIGH"]),
+        SurveillanceSignalModel.supplier_id.is_not(None),
     )
     suppliers_at_risk = (await session.execute(at_risk_stmt)).scalar_one()
 
     # Watchlist count
-    watchlist_stmt = select(func.count()).select_from(SupplierWatchlistModel).where(
-        SupplierWatchlistModel.organization_id == organization_id,
-        SupplierWatchlistModel.watchlist_status == "ACTIVE",
+    watchlist_stmt = (
+        select(func.count())
+        .select_from(SupplierWatchlistModel)
+        .where(
+            SupplierWatchlistModel.organization_id == organization_id,
+            SupplierWatchlistModel.watchlist_status == "ACTIVE",
+        )
     )
     watchlist_count = (await session.execute(watchlist_stmt)).scalar_one()
 
     # Active signals total
-    active_signals_stmt = select(func.count()).select_from(SurveillanceSignalModel).where(
-        SurveillanceSignalModel.organization_id == organization_id,
-        SurveillanceSignalModel.signal_status == "ACTIVE",
+    active_signals_stmt = (
+        select(func.count())
+        .select_from(SurveillanceSignalModel)
+        .where(
+            SurveillanceSignalModel.organization_id == organization_id,
+            SurveillanceSignalModel.signal_status == "ACTIVE",
+        )
     )
     active_signals = (await session.execute(active_signals_stmt)).scalar_one()
 
     # Critical signals
-    critical_signals_stmt = select(func.count()).select_from(SurveillanceSignalModel).where(
-        SurveillanceSignalModel.organization_id == organization_id,
-        SurveillanceSignalModel.signal_status == "ACTIVE",
-        SurveillanceSignalModel.severity == "CRITICAL",
+    critical_signals_stmt = (
+        select(func.count())
+        .select_from(SurveillanceSignalModel)
+        .where(
+            SurveillanceSignalModel.organization_id == organization_id,
+            SurveillanceSignalModel.signal_status == "ACTIVE",
+            SurveillanceSignalModel.severity == "CRITICAL",
+        )
     )
     critical_signals = (await session.execute(critical_signals_stmt)).scalar_one()
 
     # Open episodes
-    open_episodes_stmt = select(func.count()).select_from(RiskEpisodeModel).where(
-        RiskEpisodeModel.organization_id == organization_id,
-        RiskEpisodeModel.episode_status.in_(["OPEN", "MONITORING"]),
+    open_episodes_stmt = (
+        select(func.count())
+        .select_from(RiskEpisodeModel)
+        .where(
+            RiskEpisodeModel.organization_id == organization_id,
+            RiskEpisodeModel.episode_status.in_(["OPEN", "MONITORING"]),
+        )
     )
     open_episodes = (await session.execute(open_episodes_stmt)).scalar_one()
 
@@ -142,9 +160,6 @@ async def compute_portfolio_stats(organization_id: str, session) -> dict:
 
 async def compute_heatmap(organization_id: str, dimension: str, session) -> list[dict]:
     """Compute risk heatmap by dimension: geography | sector | severity | esg_pillar."""
-    from infrastructure.persistence.models.supplier import SupplierModel
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-    from sqlalchemy import func, select
 
     allowed = {"geography", "sector", "severity", "esg_pillar"}
     if dimension not in allowed:
@@ -171,9 +186,10 @@ async def _heatmap_by_geography(organization_id: str, session) -> list[dict]:
     - func.max(severity string) replaced with numeric rank CASE expression so that
       CRITICAL > HIGH > MEDIUM > LOW rather than alphabetical C < H < L < M.
     """
+    from sqlalchemy import and_, case, func, select
+
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-    from sqlalchemy import and_, case, func, select
 
     severity_rank = case(
         (SurveillanceSignalModel.severity == "CRITICAL", 4),
@@ -222,9 +238,10 @@ async def _heatmap_by_sector(organization_id: str, session) -> list[dict]:
     P3 fix: signal_status == ACTIVE filter moved into JOIN ON to count only
     current active signals, consistent with the severity heatmap.
     """
+    from sqlalchemy import and_, func, select
+
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-    from sqlalchemy import and_, func, select
 
     stmt = (
         select(
@@ -259,8 +276,9 @@ async def _heatmap_by_sector(organization_id: str, session) -> list[dict]:
 
 
 async def _heatmap_by_severity(organization_id: str, session) -> list[dict]:
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     stmt = (
         select(
@@ -276,15 +294,20 @@ async def _heatmap_by_severity(organization_id: str, session) -> list[dict]:
     )
     rows = (await session.execute(stmt)).all()
     return [
-        {"dimension": "severity", "key": r.severity,
-         "signal_count": r.signal_count, "max_severity": r.severity}
+        {
+            "dimension": "severity",
+            "key": r.severity,
+            "signal_count": r.signal_count,
+            "max_severity": r.severity,
+        }
         for r in rows
     ]
 
 
 async def _heatmap_by_esg_pillar(organization_id: str, session) -> list[dict]:
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     # Map signal_type to pillar
     pillars = {
@@ -294,18 +317,24 @@ async def _heatmap_by_esg_pillar(organization_id: str, session) -> list[dict]:
     }
     results = []
     for pillar, types in pillars.items():
-        stmt = select(func.count()).select_from(SurveillanceSignalModel).where(
-            SurveillanceSignalModel.organization_id == organization_id,
-            SurveillanceSignalModel.signal_status == "ACTIVE",
-            SurveillanceSignalModel.signal_type.in_(types),
+        stmt = (
+            select(func.count())
+            .select_from(SurveillanceSignalModel)
+            .where(
+                SurveillanceSignalModel.organization_id == organization_id,
+                SurveillanceSignalModel.signal_status == "ACTIVE",
+                SurveillanceSignalModel.signal_type.in_(types),
+            )
         )
         count = (await session.execute(stmt)).scalar_one()
-        results.append({
-            "dimension": "esg_pillar",
-            "key": pillar,
-            "signal_count": count,
-            "max_severity": "N/A",
-        })
+        results.append(
+            {
+                "dimension": "esg_pillar",
+                "key": pillar,
+                "signal_count": count,
+                "max_severity": "N/A",
+            }
+        )
     return results
 
 
@@ -316,13 +345,13 @@ async def compute_supplier_risk_timeline(
     limit: int = 100,
 ) -> list[dict]:
     """Chronological risk timeline for a supplier."""
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.agent_monitoring import (
         AgentFindingModel,
-        AgentAlertModel,
     )
     from infrastructure.persistence.models.supplier_score import SupplierScoreModel
-    from sqlalchemy import select
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     events: list[dict] = []
 
@@ -337,14 +366,16 @@ async def compute_supplier_risk_timeline(
         .limit(limit)
     )
     for s in (await session.execute(sig_stmt)).scalars().all():
-        events.append({
-            "event_type": "signal",
-            "timestamp": s.detected_at,
-            "title": s.title,
-            "severity": s.severity,
-            "entity_id": s.id,
-            "signal_type": s.signal_type,
-        })
+        events.append(
+            {
+                "event_type": "signal",
+                "timestamp": s.detected_at,
+                "title": s.title,
+                "severity": s.severity,
+                "entity_id": s.id,
+                "signal_type": s.signal_type,
+            }
+        )
 
     # Agent findings
     finding_stmt = (
@@ -357,14 +388,16 @@ async def compute_supplier_risk_timeline(
         .limit(limit)
     )
     for f in (await session.execute(finding_stmt)).scalars().all():
-        events.append({
-            "event_type": "finding",
-            "timestamp": f.created_at,
-            "title": f.title,
-            "severity": f.severity,
-            "entity_id": f.id,
-            "signal_type": None,
-        })
+        events.append(
+            {
+                "event_type": "finding",
+                "timestamp": f.created_at,
+                "title": f.title,
+                "severity": f.severity,
+                "entity_id": f.id,
+                "signal_type": None,
+            }
+        )
 
     # Score changes
     score_stmt = (
@@ -377,14 +410,16 @@ async def compute_supplier_risk_timeline(
         .limit(12)
     )
     for sc in (await session.execute(score_stmt)).scalars().all():
-        events.append({
-            "event_type": "score_change",
-            "timestamp": sc.created_at,
-            "title": f"ESG score: {sc.esg_score:.1f} (risk: {sc.risk_score:.1f})",
-            "severity": "INFO",
-            "entity_id": sc.id,
-            "signal_type": None,
-        })
+        events.append(
+            {
+                "event_type": "score_change",
+                "timestamp": sc.created_at,
+                "title": f"ESG score: {sc.esg_score:.1f} (risk: {sc.risk_score:.1f})",
+                "severity": "INFO",
+                "entity_id": sc.id,
+                "signal_type": None,
+            }
+        )
 
     # Sort chronologically descending
     events.sort(key=lambda e: e["timestamp"] or datetime.min.replace(tzinfo=UTC), reverse=True)
@@ -393,10 +428,11 @@ async def compute_supplier_risk_timeline(
 
 async def update_risk_trends(organization_id: str, session) -> int:
     """Compute and upsert monthly RiskTrend records for all suppliers."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.supplier_score import SupplierScoreModel
     from infrastructure.persistence.models.surveillance import RiskTrendModel
-    from sqlalchemy import select
 
     now = datetime.now(UTC)
     period = now.strftime("%Y-%m")

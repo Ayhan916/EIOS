@@ -6,7 +6,9 @@ from application.copilot.context_assembler import assemble_context, build_citati
 from application.copilot.retrieval.base import RetrievalResult
 
 
-def _result(retriever: str, data: list, source_ids: list, citation_type: str = "Supplier") -> RetrievalResult:
+def _result(
+    retriever: str, data: list, source_ids: list, citation_type: str = "Supplier"
+) -> RetrievalResult:
     return RetrievalResult(
         retriever=retriever,
         provenance=f"Retrieved {len(data)} {citation_type}s",

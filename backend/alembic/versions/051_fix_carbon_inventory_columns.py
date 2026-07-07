@@ -8,7 +8,6 @@ Revises: 050
 Create Date: 2026-06-22
 """
 
-import sqlalchemy as sa
 from alembic import op
 
 revision = "051"

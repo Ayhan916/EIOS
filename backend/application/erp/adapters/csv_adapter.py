@@ -73,17 +73,23 @@ class CsvERPAdapter(BaseERPAdapter):
             ext_ref = row.get(cols["external_ref"], "").strip()
             if not ext_ref:
                 continue
-            records.append(ERPMaterialRecord(
-                external_ref=ext_ref,
-                name=row.get(cols["name"], ext_ref).strip(),
-                material_type=row.get(cols["material_type"], "RAW_MATERIAL").strip() or "RAW_MATERIAL",
-                cas_number=row.get(cols.get("cas_number", ""), "").strip() or None,
-                unit_of_measure=row.get(cols.get("unit_of_measure", ""), "").strip() or None,
-                description=row.get(cols.get("description", ""), "").strip() or None,
-                country_of_origin=row.get(cols.get("country_of_origin", ""), "").strip() or None,
-                is_substance_of_concern=_bool_val(row.get(cols.get("is_substance_of_concern", ""))),
-                raw=dict(row),
-            ))
+            records.append(
+                ERPMaterialRecord(
+                    external_ref=ext_ref,
+                    name=row.get(cols["name"], ext_ref).strip(),
+                    material_type=row.get(cols["material_type"], "RAW_MATERIAL").strip()
+                    or "RAW_MATERIAL",
+                    cas_number=row.get(cols.get("cas_number", ""), "").strip() or None,
+                    unit_of_measure=row.get(cols.get("unit_of_measure", ""), "").strip() or None,
+                    description=row.get(cols.get("description", ""), "").strip() or None,
+                    country_of_origin=row.get(cols.get("country_of_origin", ""), "").strip()
+                    or None,
+                    is_substance_of_concern=_bool_val(
+                        row.get(cols.get("is_substance_of_concern", ""))
+                    ),
+                    raw=dict(row),
+                )
+            )
         return records
 
     async def fetch_bom(self) -> list[ERPBOMRecord]:
@@ -106,31 +112,46 @@ class CsvERPAdapter(BaseERPAdapter):
                 weight_pct: float | None = float(weight_pct_raw) if weight_pct_raw else None
             except ValueError:
                 weight_pct = None
-            records.append(ERPBOMRecord(
-                product_external_ref=product_ref,
-                material_external_ref=material_ref,
-                quantity=qty,
-                unit_of_measure=row.get(cols.get("unit_of_measure", ""), "").strip() or None,
-                weight_pct=weight_pct,
-                is_substance_of_concern=_bool_val(row.get(cols.get("is_substance_of_concern", ""))),
-                raw=dict(row),
-            ))
+            records.append(
+                ERPBOMRecord(
+                    product_external_ref=product_ref,
+                    material_external_ref=material_ref,
+                    quantity=qty,
+                    unit_of_measure=row.get(cols.get("unit_of_measure", ""), "").strip() or None,
+                    weight_pct=weight_pct,
+                    is_substance_of_concern=_bool_val(
+                        row.get(cols.get("is_substance_of_concern", ""))
+                    ),
+                    raw=dict(row),
+                )
+            )
         return records
 
     async def push_dpp(self, records: list[ERPDPPRecord]) -> dict:
         # CSV export — generate output CSV rows (caller decides what to do with it)
         output = io.StringIO()
         writer = csv.writer(output, delimiter=self._delimiter)
-        writer.writerow(["PassportUID", "ProductRef", "CarbonFootprint_kgCO2e",
-                         "RecycledContent_pct", "SubstancesOfConcern", "NonCompliantRegs", "DisclosedAt"])
+        writer.writerow(
+            [
+                "PassportUID",
+                "ProductRef",
+                "CarbonFootprint_kgCO2e",
+                "RecycledContent_pct",
+                "SubstancesOfConcern",
+                "NonCompliantRegs",
+                "DisclosedAt",
+            ]
+        )
         for rec in records:
-            writer.writerow([
-                rec.passport_uid,
-                rec.product_external_ref,
-                rec.carbon_footprint_kg_co2e,
-                rec.recycled_content_pct,
-                rec.substances_of_concern_count,
-                rec.non_compliant_regulations_count,
-                rec.disclosed_at,
-            ])
+            writer.writerow(
+                [
+                    rec.passport_uid,
+                    rec.product_external_ref,
+                    rec.carbon_footprint_kg_co2e,
+                    rec.recycled_content_pct,
+                    rec.substances_of_concern_count,
+                    rec.non_compliant_regulations_count,
+                    rec.disclosed_at,
+                ]
+            )
         return {"pushed": len(records), "failed": 0, "errors": [], "csv_output": output.getvalue()}

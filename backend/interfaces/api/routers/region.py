@@ -15,8 +15,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.user import User
-from interfaces.api.deps import get_current_user, get_db, require_admin
 from infrastructure.routing.region_router import VALID_REGIONS, region_router
+from interfaces.api.deps import get_current_user, get_db, require_admin
 from shared.config import settings
 
 router = APIRouter(tags=["M47 — Data Residency"])
@@ -25,6 +25,7 @@ _ADMIN = Depends(require_admin)
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class InstanceRegionResponse(BaseModel):
     instance_region: str
@@ -58,6 +59,7 @@ class AuditLogEntry(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/region/info", response_model=InstanceRegionResponse)
 async def get_instance_region_info(
     _current_user: User = Depends(get_current_user),
@@ -85,9 +87,9 @@ async def get_org_residency(
     if current_user.organization_id != org_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
-    org = (await session.execute(
-        select(OrganizationModel).where(OrganizationModel.id == org_id)
-    )).scalar_one_or_none()
+    org = (
+        await session.execute(select(OrganizationModel).where(OrganizationModel.id == org_id))
+    ).scalar_one_or_none()
     if org is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
 

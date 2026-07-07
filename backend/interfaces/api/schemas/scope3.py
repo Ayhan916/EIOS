@@ -1,4 +1,5 @@
 """Pydantic schemas — M8 Scope 3 Supply Chain Carbon Inventory."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -38,7 +39,7 @@ class ProductCarbonFootprintResponse(BaseModel):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: ProductCarbonFootprintModel) -> "ProductCarbonFootprintResponse":
+    def from_model(cls, m: ProductCarbonFootprintModel) -> ProductCarbonFootprintResponse:
         return cls.model_validate(m)
 
 
@@ -76,7 +77,7 @@ class Scope3InventoryResponse(BaseModel):
     calculated_by: str | None
 
     @classmethod
-    def from_model(cls, m: Scope3InventoryModel) -> "Scope3InventoryResponse":
+    def from_model(cls, m: Scope3InventoryModel) -> Scope3InventoryResponse:
         return cls.model_validate(m)
 
 

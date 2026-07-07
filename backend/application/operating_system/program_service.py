@@ -9,15 +9,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def _log_audit(session, action: str, entity_id: str, organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()), status="Active", version=1,
-        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
-        action=action, entity_type="ESGProgram", entity_id=entity_id,
-        actor_id=None, outcome="success", detail=detail,
-        event_metadata={"organization_id": organization_id},
-    ))
+
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type="ESGProgram",
+            entity_id=entity_id,
+            actor_id=None,
+            outcome="success",
+            detail=detail,
+            event_metadata={"organization_id": organization_id},
+        )
+    )
 
 
 async def create_program(
@@ -30,10 +42,17 @@ async def create_program(
     linked_suppliers: list | None = None,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ESGProgramModel
+
     now = datetime.now(UTC)
     prog = ESGProgramModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, title=title, description=description,
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        title=title,
+        description=description,
         program_status="ACTIVE",
         linked_objectives=linked_objectives or [],
         linked_initiatives=linked_initiatives or [],
@@ -43,15 +62,19 @@ async def create_program(
     await session.flush()
     await _log_audit(session, "program.created", prog.id, organization_id, detail=f"title={title}")
     from application.operating_system.metrics import os_counters
+
     os_counters.record_program_created()
     return _to_dict(prog)
 
 
 async def list_programs(
-    organization_id: str, session: AsyncSession,
-    program_status: str | None = None, limit: int = 100,
+    organization_id: str,
+    session: AsyncSession,
+    program_status: str | None = None,
+    limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGProgramModel
+
     stmt = select(ESGProgramModel).where(ESGProgramModel.organization_id == organization_id)
     if program_status:
         stmt = stmt.where(ESGProgramModel.program_status == program_status)
@@ -60,10 +83,9 @@ async def list_programs(
     return [_to_dict(r) for r in rows]
 
 
-async def get_program(
-    organization_id: str, program_id: str, session: AsyncSession
-) -> dict | None:
+async def get_program(organization_id: str, program_id: str, session: AsyncSession) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGProgramModel
+
     stmt = select(ESGProgramModel).where(
         ESGProgramModel.organization_id == organization_id,
         ESGProgramModel.id == program_id,
@@ -76,6 +98,7 @@ async def update_program(
     organization_id: str, program_id: str, session: AsyncSession, **fields
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGProgramModel
+
     stmt = select(ESGProgramModel).where(
         ESGProgramModel.organization_id == organization_id,
         ESGProgramModel.id == program_id,

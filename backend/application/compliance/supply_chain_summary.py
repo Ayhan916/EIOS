@@ -5,6 +5,7 @@ an organisation. All counts are computed from DB state at call time (no cache).
 
 Output is a plain dict — deterministic, auditable, no LLM scoring.
 """
+
 from __future__ import annotations
 
 from sqlalchemy import func, select
@@ -128,9 +129,7 @@ class SupplyChainComplianceSummaryService:
             "non_compliant": non_compliant_dpp,
         }
 
-    async def _top_non_compliant_regulations(
-        self, org_id: str, limit: int = 5
-    ) -> list[dict]:
+    async def _top_non_compliant_regulations(self, org_id: str, limit: int = 5) -> list[dict]:
         result = await self._db.execute(
             select(
                 MaterialComplianceFlagModel.regulation,

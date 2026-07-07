@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -13,7 +14,7 @@ class WebhookDelivery(BaseEntity):
     subscription_id: str = ""
     event_type: str = ""
     payload_hash: str = ""
-    payload: dict | None = None
+    payload: dict[str, Any] | None = None
     delivery_status: str = "pending"
     response_code: int | None = None
     duration_ms: int | None = None

@@ -19,11 +19,10 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.product import ProductStatus, ProductType, TargetMarket
-from infrastructure.kafka.events import DomainEvent, ProductEventType
+from infrastructure.kafka.events import DomainEvent
 from infrastructure.kafka.producer import KafkaEventProducer
 from infrastructure.persistence.models.material import (
     MaterialComplianceFlagModel,
-    MaterialSourcingModel,
     MaterialSustainabilityMetricModel,
 )
 from infrastructure.persistence.models.product import ProductBOMItemModel, ProductModel
@@ -40,6 +39,7 @@ def _uid() -> str:
 
 
 # ── Product CRUD ──────────────────────────────────────────────────────────────
+
 
 class ProductService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -226,6 +226,7 @@ class ProductService:
 
 # ── Product BOM ───────────────────────────────────────────────────────────────
 
+
 class ProductBOMService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
         self._session = session
@@ -273,9 +274,7 @@ class ProductBOMService:
         )
         return model
 
-    async def list_bom(
-        self, organization_id: str, product_id: str
-    ) -> list[ProductBOMItemModel]:
+    async def list_bom(self, organization_id: str, product_id: str) -> list[ProductBOMItemModel]:
         stmt = (
             select(ProductBOMItemModel)
             .where(
@@ -295,9 +294,7 @@ class ProductBOMService:
         await self._session.flush()
         return True
 
-    async def aggregate_compliance(
-        self, organization_id: str, product_id: str
-    ) -> list[dict]:
+    async def aggregate_compliance(self, organization_id: str, product_id: str) -> list[dict]:
         """Return compliance flags for all materials in the BOM, grouped by regulation."""
         bom = await self.list_bom(organization_id, product_id)
         if not bom:
@@ -358,9 +355,7 @@ class ProductBOMService:
             MaterialSustainabilityMetricModel.material_id.in_(material_ids),
         )
         if reporting_year is not None:
-            stmt = stmt.where(
-                MaterialSustainabilityMetricModel.reporting_year == reporting_year
-            )
+            stmt = stmt.where(MaterialSustainabilityMetricModel.reporting_year == reporting_year)
         else:
             # Use the most recent year for each material
             subq = (
@@ -387,9 +382,7 @@ class ProductBOMService:
         # Build BOM weight lookup
         bom_by_material = {item.material_id: item for item in bom}
 
-        total_weight_pct = sum(
-            (item.weight_pct or 0) for item in bom if item.weight_pct is not None
-        )
+        sum((item.weight_pct or 0) for item in bom if item.weight_pct is not None)
 
         pcf_contributions: list[tuple[float, float]] = []  # (weight_pct, co2e_per_kg)
         water_contributions: list[tuple[float, float]] = []
@@ -407,7 +400,9 @@ class ProductBOMService:
                 water_contributions.append((pct, m.water_footprint_l_per_kg))
 
         pcf = round(sum(p * v for p, v in pcf_contributions), 4) if pcf_contributions else None
-        water = round(sum(p * v for p, v in water_contributions), 4) if water_contributions else None
+        water = (
+            round(sum(p * v for p, v in water_contributions), 4) if water_contributions else None
+        )
 
         return {
             "has_data": bool(metrics),

@@ -22,10 +22,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # RegionRouter tests
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestRegionRouter:
     def _router_with(self, instance_region="US", **kwargs):
@@ -53,6 +53,7 @@ class TestRegionRouter:
         mod._build_session_factory.cache_clear()
         try:
             from infrastructure.routing.region_router import RegionRouter
+
             router = RegionRouter()
             yield router
         finally:
@@ -61,13 +62,15 @@ class TestRegionRouter:
 
     def test_canonical_eu(self):
         from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         assert r.canonical("eu") == "EU"
         assert r.canonical("EU") == "EU"
 
     def test_canonical_unknown_falls_back_to_instance_region(self):
-        from infrastructure.routing.region_router import RegionRouter
         import shared.config as cfg_mod
+        from infrastructure.routing.region_router import RegionRouter
+
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "US"
         try:
@@ -78,8 +81,9 @@ class TestRegionRouter:
             cfg_mod.settings.instance_region = original
 
     def test_is_local_region_match(self):
-        from infrastructure.routing.region_router import RegionRouter
         import shared.config as cfg_mod
+        from infrastructure.routing.region_router import RegionRouter
+
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "EU"
         try:
@@ -90,8 +94,9 @@ class TestRegionRouter:
             cfg_mod.settings.instance_region = original
 
     def test_is_local_region_mismatch(self):
-        from infrastructure.routing.region_router import RegionRouter
         import shared.config as cfg_mod
+        from infrastructure.routing.region_router import RegionRouter
+
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "US"
         try:
@@ -102,22 +107,26 @@ class TestRegionRouter:
 
     def test_celery_queue_eu(self):
         from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         assert r.get_celery_queue("EU") == "eios-eu"
 
     def test_celery_queue_us(self):
         from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         assert r.get_celery_queue("US") == "eios-us"
 
     def test_celery_queue_apac(self):
         from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         assert r.get_celery_queue("APAC") == "eios-apac"
 
     def test_celery_queue_unknown_falls_back(self):
-        from infrastructure.routing.region_router import RegionRouter
         import shared.config as cfg_mod
+        from infrastructure.routing.region_router import RegionRouter
+
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "US"
         try:
@@ -127,8 +136,9 @@ class TestRegionRouter:
             cfg_mod.settings.instance_region = original
 
     def test_s3_bucket_regional_configured(self):
-        from infrastructure.routing.region_router import RegionRouter
         import shared.config as cfg_mod
+        from infrastructure.routing.region_router import RegionRouter
+
         original_eu = cfg_mod.settings.region_s3_bucket_eu
         cfg_mod.settings.region_s3_bucket_eu = "eios-docs-eu"
         try:
@@ -138,8 +148,9 @@ class TestRegionRouter:
             cfg_mod.settings.region_s3_bucket_eu = original_eu
 
     def test_s3_bucket_falls_back_to_global(self):
-        from infrastructure.routing.region_router import RegionRouter
         import shared.config as cfg_mod
+        from infrastructure.routing.region_router import RegionRouter
+
         original_eu = cfg_mod.settings.region_s3_bucket_eu
         original_global = cfg_mod.settings.s3_bucket
         cfg_mod.settings.region_s3_bucket_eu = ""
@@ -153,23 +164,28 @@ class TestRegionRouter:
 
     def test_get_aws_region_eu(self):
         from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         assert r.get_aws_region("EU") == "eu-west-1"
 
     def test_get_aws_region_apac(self):
         from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         assert r.get_aws_region("APAC") == "ap-southeast-1"
 
     def test_session_factory_returns_sessionmaker(self):
-        from infrastructure.routing.region_router import RegionRouter
         from sqlalchemy.ext.asyncio import async_sessionmaker
+
+        from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         factory = r.get_session_factory("US")
         assert isinstance(factory, async_sessionmaker)
 
     def test_session_factory_cached_for_same_url(self):
-        from infrastructure.routing.region_router import RegionRouter, _build_session_factory
+        from infrastructure.routing.region_router import RegionRouter
+
         r = RegionRouter()
         f1 = r.get_session_factory("US")
         f2 = r.get_session_factory("US")
@@ -180,19 +196,23 @@ class TestRegionRouter:
 # DataResidencyAuditLogModel
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestDataResidencyAuditLogModel:
     def test_tablename(self):
         from infrastructure.persistence.models.region import DataResidencyAuditLogModel
+
         assert DataResidencyAuditLogModel.__tablename__ == "data_residency_audit_log"
 
     def test_required_columns(self):
         from infrastructure.persistence.models.region import DataResidencyAuditLogModel
+
         cols = {c.key for c in DataResidencyAuditLogModel.__table__.columns}
         for field in ("id", "instance_region", "event_type", "created_at"):
             assert field in cols
 
     def test_optional_columns(self):
         from infrastructure.persistence.models.region import DataResidencyAuditLogModel
+
         cols = {c.key for c in DataResidencyAuditLogModel.__table__.columns}
         for field in ("organization_id", "user_id", "org_region", "ip_address", "user_agent"):
             assert field in cols
@@ -201,8 +221,9 @@ class TestDataResidencyAuditLogModel:
 
     def test_does_not_inherit_base_model(self):
         """Audit log is append-only — must NOT inherit the mutable BaseModel."""
-        from infrastructure.persistence.models.region import DataResidencyAuditLogModel
         from infrastructure.persistence.models.base import BaseModel
+        from infrastructure.persistence.models.region import DataResidencyAuditLogModel
+
         assert not issubclass(DataResidencyAuditLogModel, BaseModel), (
             "DataResidencyAuditLogModel must use Base (not BaseModel) — it is append-only"
         )
@@ -212,8 +233,11 @@ class TestDataResidencyAuditLogModel:
 # Middleware advisory logging
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestRegionEnforcementMiddleware:
-    def _make_request(self, *, path="/api/v1/assessments", org_id=None, data_residency=None, user_id=None):
+    def _make_request(
+        self, *, path="/api/v1/assessments", org_id=None, data_residency=None, user_id=None
+    ):
         request = MagicMock()
         request.url.path = path
         request.method = "GET"
@@ -248,8 +272,8 @@ class TestRegionEnforcementMiddleware:
 
     def test_local_region_no_audit_task(self):
         """Local-region requests do NOT create audit tasks."""
-        from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
 
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "EU"
@@ -266,8 +290,8 @@ class TestRegionEnforcementMiddleware:
 
     def test_cross_region_creates_audit_task(self):
         """Cross-region access triggers an asyncio background audit task."""
-        from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
 
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "US"
@@ -284,8 +308,8 @@ class TestRegionEnforcementMiddleware:
 
     def test_advisory_mode_does_not_block(self):
         """Even in cross-region, advisory mode (strict=False) never blocks."""
-        from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import RegionEnforcementMiddleware
 
         original_region = cfg_mod.settings.instance_region
         original_strict = cfg_mod.settings.region_enforcement_strict
@@ -312,6 +336,7 @@ class TestRegionEnforcementMiddleware:
 # enforce_data_residency dependency
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestEnforceDataResidencyDep:
     def _make_request(self, org_id=None, data_residency=None):
         request = MagicMock()
@@ -320,8 +345,8 @@ class TestEnforceDataResidencyDep:
         return request
 
     def test_advisory_mode_always_passes(self):
-        from infrastructure.middleware.region_enforcement import enforce_data_residency
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import enforce_data_residency
 
         original = cfg_mod.settings.region_enforcement_strict
         cfg_mod.settings.region_enforcement_strict = False
@@ -333,8 +358,8 @@ class TestEnforceDataResidencyDep:
             cfg_mod.settings.region_enforcement_strict = original
 
     def test_strict_mode_local_region_passes(self):
-        from infrastructure.middleware.region_enforcement import enforce_data_residency
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import enforce_data_residency
 
         orig_strict = cfg_mod.settings.region_enforcement_strict
         orig_region = cfg_mod.settings.instance_region
@@ -348,9 +373,10 @@ class TestEnforceDataResidencyDep:
             cfg_mod.settings.instance_region = orig_region
 
     def test_strict_mode_cross_region_raises_451(self):
-        from infrastructure.middleware.region_enforcement import enforce_data_residency
         from fastapi import HTTPException
+
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import enforce_data_residency
 
         orig_strict = cfg_mod.settings.region_enforcement_strict
         orig_region = cfg_mod.settings.instance_region
@@ -367,8 +393,8 @@ class TestEnforceDataResidencyDep:
 
     def test_strict_mode_no_org_passes(self):
         """Unauthenticated requests (no org_id) are never blocked."""
-        from infrastructure.middleware.region_enforcement import enforce_data_residency
         import shared.config as cfg_mod
+        from infrastructure.middleware.region_enforcement import enforce_data_residency
 
         orig_strict = cfg_mod.settings.region_enforcement_strict
         cfg_mod.settings.region_enforcement_strict = True
@@ -382,6 +408,7 @@ class TestEnforceDataResidencyDep:
 # ─────────────────────────────────────────────────────────────────────────────
 # Region dispatch helper
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestDispatchToRegion:
     def test_routes_eu_to_eu_queue(self):
@@ -404,8 +431,8 @@ class TestDispatchToRegion:
         assert ckw["queue"] == "eios-us"
 
     def test_none_region_falls_back(self):
-        from infrastructure.celery.region_dispatch import dispatch_to_region
         import shared.config as cfg_mod
+        from infrastructure.celery.region_dispatch import dispatch_to_region
 
         original = cfg_mod.settings.instance_region
         cfg_mod.settings.instance_region = "APAC"
@@ -430,24 +457,29 @@ class TestDispatchToRegion:
 # Config defaults
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestM47Config:
     def test_instance_region_default(self):
         from shared.config import settings
+
         assert hasattr(settings, "instance_region")
         assert settings.instance_region == "US"
 
     def test_enforcement_strict_default_false(self):
         from shared.config import settings
+
         assert settings.region_enforcement_strict is False
 
     def test_regional_db_defaults_empty(self):
         from shared.config import settings
+
         assert settings.region_db_eu_url == ""
         assert settings.region_db_us_url == ""
         assert settings.region_db_apac_url == ""
 
     def test_regional_s3_defaults_empty(self):
         from shared.config import settings
+
         assert settings.region_s3_bucket_eu == ""
         assert settings.region_s3_bucket_us == ""
         assert settings.region_s3_bucket_apac == ""
@@ -457,12 +489,15 @@ class TestM47Config:
 # Migration 058
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestMigration058:
     @staticmethod
     def _load_migration():
         migration_path = (
             pathlib.Path(__file__).parent.parent.parent.parent
-            / "alembic" / "versions" / "058_m47_multi_region.py"
+            / "alembic"
+            / "versions"
+            / "058_m47_multi_region.py"
         )
         spec = importlib.util.spec_from_file_location("migration_058", migration_path)
         mod = ModuleType("migration_058")

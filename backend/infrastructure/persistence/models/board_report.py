@@ -11,9 +11,7 @@ from .base import BaseModel
 
 class BoardReportModel(BaseModel):
     __tablename__ = "board_reports"
-    __table_args__ = (
-        Index("ix_board_reports_org_created", "organization_id", "created_at"),
-    )
+    __table_args__ = (Index("ix_board_reports_org_created", "organization_id", "created_at"),)
 
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False, index=True
@@ -29,17 +27,13 @@ class BoardReportModel(BaseModel):
 
 class ReportScheduleModel(BaseModel):
     __tablename__ = "report_schedules"
-    __table_args__ = (
-        Index("ix_report_schedules_org_active", "organization_id", "is_active"),
-    )
+    __table_args__ = (Index("ix_report_schedules_org_active", "organization_id", "is_active"),)
 
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False, index=True
     )
     frequency: Mapped[str] = mapped_column(String(20), nullable=False, default="monthly")
     next_run_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    last_run_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     report_config: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

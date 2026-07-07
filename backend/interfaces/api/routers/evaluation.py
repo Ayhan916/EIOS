@@ -233,8 +233,8 @@ class ModuleComparisonEntry(BaseModel):
     current_pass_rate: float
     prev_pass_rate: float | None
     delta: float | None
-    status: str              # "green" | "yellow" | "red" | "unknown"
-    baseline: float          # target pass rate (1.0 for deterministic benchmarks)
+    status: str  # "green" | "yellow" | "red" | "unknown"
+    baseline: float  # target pass rate (1.0 for deterministic benchmarks)
     total_cases: int
     passed_cases: int
     trend: list[BenchmarkTrendPoint]
@@ -291,6 +291,7 @@ async def get_benchmark_comparison(
 
     # Group: module → run_id → list[BenchmarkResult]
     from collections import defaultdict
+
     by_module_run: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
     for bm in all_bm:
         by_module_run[bm.module][bm.evaluation_run_id].append(bm)
@@ -310,13 +311,15 @@ async def get_benchmark_comparison(
             passed = sum(1 for b in bms if b.passed)
             total = len(bms)
             run_obj = run_map[rid]
-            trend.append(BenchmarkTrendPoint(
-                run_id=rid,
-                computed_at=run_obj.computed_at.isoformat() if run_obj.computed_at else None,
-                pass_rate=round(passed / total, 4) if total else 0.0,
-                passed=passed,
-                total=total,
-            ))
+            trend.append(
+                BenchmarkTrendPoint(
+                    run_id=rid,
+                    computed_at=run_obj.computed_at.isoformat() if run_obj.computed_at else None,
+                    pass_rate=round(passed / total, 4) if total else 0.0,
+                    passed=passed,
+                    total=total,
+                )
+            )
 
         # Current pass rate (from latest run)
         latest_bms = run_bm_map.get(latest_run.id, [])
@@ -339,18 +342,20 @@ async def get_benchmark_comparison(
 
         failing_cases = [b.benchmark_name for b in latest_bms if not b.passed]
 
-        entries.append(ModuleComparisonEntry(
-            module=module,
-            current_pass_rate=current_pass_rate,
-            prev_pass_rate=prev_pass_rate,
-            delta=delta,
-            status=_bm_status(current_pass_rate),
-            baseline=1.0,
-            total_cases=cur_total,
-            passed_cases=cur_passed,
-            trend=trend,
-            failing_cases=failing_cases,
-        ))
+        entries.append(
+            ModuleComparisonEntry(
+                module=module,
+                current_pass_rate=current_pass_rate,
+                prev_pass_rate=prev_pass_rate,
+                delta=delta,
+                status=_bm_status(current_pass_rate),
+                baseline=1.0,
+                total_cases=cur_total,
+                passed_cases=cur_passed,
+                trend=trend,
+                failing_cases=failing_cases,
+            )
+        )
 
     # Sort: worst first (ascending pass_rate)
     entries.sort(key=lambda e: e.current_pass_rate)
@@ -399,16 +404,18 @@ async def get_system_status(
     _: Any = Depends(get_current_user),
 ) -> SystemStatusResponse:
     """Single-call endpoint for the Mission Control Dashboard header."""
-    from sqlalchemy import func as sqlfunc, select as sqselect
+    from sqlalchemy import func as sqlfunc
+    from sqlalchemy import select as sqselect
+
     from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
     run_repo = SQLEvaluationRunRepository(db)
     latest = await run_repo.get_latest()
 
     # Agent status counts
-    stmt = sqselect(
-        MonitoringAgentModel.status, sqlfunc.count().label("n")
-    ).group_by(MonitoringAgentModel.status)
+    stmt = sqselect(MonitoringAgentModel.status, sqlfunc.count().label("n")).group_by(
+        MonitoringAgentModel.status
+    )
     result = await db.execute(stmt)
     counts: dict[str, int] = {row.status: row.n for row in result.all()}
 
@@ -464,10 +471,10 @@ _VALID_ENTITY_TYPE = {"finding", "risk", "recommendation"}
 
 
 class RecordCalibrationRequest(BaseModel):
-    entity_type: str        # "finding" | "risk" | "recommendation"
+    entity_type: str  # "finding" | "risk" | "recommendation"
     entity_id: str
     predicted_confidence: str  # "high" | "medium" | "low"
-    actual_outcome: str     # "confirmed" | "refuted" | "unknown"
+    actual_outcome: str  # "confirmed" | "refuted" | "unknown"
 
 
 class CalibrationEventResponse(BaseModel):
@@ -482,12 +489,12 @@ class CalibrationEventResponse(BaseModel):
 
 
 class CalibrationPoint(BaseModel):
-    confidence_level: str      # "high" | "medium" | "low"
+    confidence_level: str  # "high" | "medium" | "low"
     total: int
     confirmed: int
     refuted: int
     unknown: int
-    accuracy: float | None     # confirmed / (confirmed + refuted), None if no decisive events
+    accuracy: float | None  # confirmed / (confirmed + refuted), None if no decisive events
 
 
 class CalibrationCurveResponse(BaseModel):
@@ -514,13 +521,22 @@ async def record_calibration_event(
 
     if body.entity_type not in _VALID_ENTITY_TYPE:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail=f"entity_type must be one of {_VALID_ENTITY_TYPE}")
+
+        raise HTTPException(
+            status_code=422, detail=f"entity_type must be one of {_VALID_ENTITY_TYPE}"
+        )
     if body.predicted_confidence not in _VALID_CONFIDENCE:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail=f"predicted_confidence must be one of {_VALID_CONFIDENCE}")
+
+        raise HTTPException(
+            status_code=422, detail=f"predicted_confidence must be one of {_VALID_CONFIDENCE}"
+        )
     if body.actual_outcome not in _VALID_OUTCOME:
         from fastapi import HTTPException
-        raise HTTPException(status_code=422, detail=f"actual_outcome must be one of {_VALID_OUTCOME}")
+
+        raise HTTPException(
+            status_code=422, detail=f"actual_outcome must be one of {_VALID_OUTCOME}"
+        )
 
     now = datetime.now(__import__("datetime").timezone.utc)
     event = CalibrationEvent(

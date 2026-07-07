@@ -155,6 +155,7 @@ class TestBudgetDict:
 
     def test_budget_dict_serializable(self):
         import json
+
         budget = ContextBudget(max_chars=8000)
         d = budget_dict(budget)
         assert isinstance(json.dumps(d), str)

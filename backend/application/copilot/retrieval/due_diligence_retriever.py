@@ -47,18 +47,27 @@ async def retrieve_due_diligence_context(
 
     report_data = []
     for rpt in reports:
-        meta = rpt.report_data.get("meta", {}) if rpt.report_data else {}
-        report_data.append({
-            "report_id": rpt.id,
-            "report_type": rpt.report_type,
-            "framework": rpt.framework,
-            "generated_at": rpt.generated_at.isoformat() if rpt.generated_at else "",
-            "summary": {
-                k: v
-                for k, v in (rpt.report_data or {}).items()
-                if k in ("supplier_inventory", "risk_classification", "remediation", "human_rights", "environmental")
-            },
-        })
+        rpt.report_data.get("meta", {}) if rpt.report_data else {}
+        report_data.append(
+            {
+                "report_id": rpt.id,
+                "report_type": rpt.report_type,
+                "framework": rpt.framework,
+                "generated_at": rpt.generated_at.isoformat() if rpt.generated_at else "",
+                "summary": {
+                    k: v
+                    for k, v in (rpt.report_data or {}).items()
+                    if k
+                    in (
+                        "supplier_inventory",
+                        "risk_classification",
+                        "remediation",
+                        "human_rights",
+                        "environmental",
+                    )
+                },
+            }
+        )
 
     overdue_data = [
         {

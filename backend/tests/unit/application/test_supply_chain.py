@@ -14,10 +14,10 @@ from __future__ import annotations
 
 import json
 from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch, call
 
 from application.supply_chain.event_log import EventLogService
 from application.supply_chain.outbox import OutboxPublisher, OutboxService
@@ -48,7 +48,11 @@ def _make_event(event_type=None) -> DomainEvent:
         aggregate_id=_uid(),
         organization_id=_uid(),
         actor_id=_uid(),
-        payload={"material_id": _uid(), "regulation": "REACH", "compliance_status": "NON_COMPLIANT"},
+        payload={
+            "material_id": _uid(),
+            "regulation": "REACH",
+            "compliance_status": "NON_COMPLIANT",
+        },
     )
 
 
@@ -70,6 +74,7 @@ def _make_outbox_entry(status="PENDING", attempts=0):
 
 
 # ── OutboxService ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_outbox_service_append_adds_entry():
@@ -97,6 +102,7 @@ async def test_outbox_service_payload_is_json_string():
 
 
 # ── OutboxPublisher ───────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_outbox_publisher_marks_published():
@@ -149,6 +155,7 @@ async def test_outbox_publisher_no_entries_returns_zero():
 
 
 # ── EventLogService ────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_event_log_append_writes_to_db():
@@ -220,6 +227,7 @@ async def test_event_log_retry_outbox_returns_none_when_not_found():
 
 # ── KafkaEventConsumer ─────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_consumer_register_handler():
     consumer = KafkaEventConsumer()
@@ -278,7 +286,13 @@ async def test_consumer_wildcard_handler_receives_all_events():
         msg.topic = "eios.material.events"
         msg.partition = 0
         msg.offset = 0
-        msg.value = {"event_type": event_type, "organization_id": _uid(), "aggregate_id": _uid(), "aggregate_type": "Material", "payload": {}}
+        msg.value = {
+            "event_type": event_type,
+            "organization_id": _uid(),
+            "aggregate_id": _uid(),
+            "aggregate_type": "Material",
+            "payload": {},
+        }
         await consumer._dispatch(msg)
 
     assert len(received) == 2

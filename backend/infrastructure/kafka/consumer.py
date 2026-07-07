@@ -15,8 +15,8 @@ Design decisions:
 from __future__ import annotations
 
 import json
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
-from typing import Awaitable, Callable
 from uuid import uuid4
 
 import structlog
@@ -115,7 +115,9 @@ class KafkaEventConsumer:
         try:
             event = msg.value  # already deserialized by value_deserializer
         except Exception as exc:
-            logger.error("kafka_message_deserialize_failed", error=str(exc), topic=topic, offset=offset)
+            logger.error(
+                "kafka_message_deserialize_failed", error=str(exc), topic=topic, offset=offset
+            )
             return
 
         event_type = event.get("event_type", "")

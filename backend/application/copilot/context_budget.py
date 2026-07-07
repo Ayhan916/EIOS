@@ -9,8 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .retrieval.base import RetrievalResult
-
 
 @dataclass
 class ContextBudget:

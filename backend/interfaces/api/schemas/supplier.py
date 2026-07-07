@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field
 
 from domain.enums import ChainDirection, SupplierStatus, SupplierTier
 
@@ -18,6 +18,9 @@ class SupplierCreate(BaseModel):
     notes: str | None = None
     chain_direction: str = ChainDirection.UPSTREAM.value
     downstream_type: str | None = None
+    supplier_type: str = "manufacturing"
+    commodity: str | None = Field(default=None, max_length=100)
+    commodity_code: str | None = Field(default=None, max_length=20)
 
 
 class SupplierUpdate(BaseModel):
@@ -32,6 +35,9 @@ class SupplierUpdate(BaseModel):
     notes: str | None = None
     chain_direction: str | None = None
     downstream_type: str | None = None
+    supplier_type: str | None = None
+    commodity: str | None = Field(default=None, max_length=100)
+    commodity_code: str | None = Field(default=None, max_length=20)
 
 
 class SupplierResponse(EntityResponse):
@@ -47,6 +53,9 @@ class SupplierResponse(EntityResponse):
     notes: str | None = None
     chain_direction: str = ChainDirection.UPSTREAM.value
     downstream_type: str | None = None
+    supplier_type: str = "manufacturing"
+    commodity: str | None = None
+    commodity_code: str | None = None
 
 
 class SupplierRiskProfile(BaseModel):

@@ -8,8 +8,9 @@ Creates:
   impact_assessments — OECD RBC severity assessments linked to any EIOS entity
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "095"
 down_revision = "094"
@@ -39,8 +40,14 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_impact_assessments_org", "impact_assessments", ["organization_id"])
-    op.create_index("ix_impact_assessments_org_level", "impact_assessments", ["organization_id", "severity_level"])
-    op.create_index("ix_impact_assessments_org_type", "impact_assessments", ["organization_id", "impact_type"])
+    op.create_index(
+        "ix_impact_assessments_org_level",
+        "impact_assessments",
+        ["organization_id", "severity_level"],
+    )
+    op.create_index(
+        "ix_impact_assessments_org_type", "impact_assessments", ["organization_id", "impact_type"]
+    )
 
 
 def downgrade() -> None:

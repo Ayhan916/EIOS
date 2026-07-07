@@ -5,9 +5,10 @@ Revises: 020
 Create Date: 2026-06-18
 """
 
-from alembic import op
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
+
+from alembic import op
 
 revision = "021"
 down_revision = "020"
@@ -40,9 +41,7 @@ def upgrade() -> None:
         sa.Column("report_data", JSON, nullable=False),
         sa.Column("supplier_snapshot", JSON, nullable=False),
     )
-    op.create_index(
-        "ix_board_reports_org_id", "board_reports", ["organization_id"]
-    )
+    op.create_index("ix_board_reports_org_id", "board_reports", ["organization_id"])
     op.create_index(
         "ix_board_reports_org_created", "board_reports", ["organization_id", "created_at"]
     )
@@ -69,9 +68,7 @@ def upgrade() -> None:
         sa.Column("report_config", JSON, nullable=False),
         sa.Column("is_active", sa.Boolean, nullable=False, default=True),
     )
-    op.create_index(
-        "ix_report_schedules_org_id", "report_schedules", ["organization_id"]
-    )
+    op.create_index("ix_report_schedules_org_id", "report_schedules", ["organization_id"])
     op.create_index(
         "ix_report_schedules_org_active", "report_schedules", ["organization_id", "is_active"]
     )

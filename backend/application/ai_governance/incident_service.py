@@ -3,24 +3,24 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
 from infrastructure.persistence.models.ai_governance import (
+    HIGH_SEVERITY_LEVELS,
     INCIDENT_TYPES,
     RISK_LEVELS,
-    HIGH_SEVERITY_LEVELS,
     AIIncidentModel,
     HumanReviewModel,
 )
 
-from .inventory_service import AIGovernanceError, AIGovernanceConflict, _assert_org_ownership
+from .inventory_service import AIGovernanceConflict, AIGovernanceError, _assert_org_ownership
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def report_incident(
@@ -131,9 +131,7 @@ def list_incidents(
     limit: int = 50,
     offset: int = 0,
 ) -> list[AIIncidentModel]:
-    q = session.query(AIIncidentModel).filter(
-        AIIncidentModel.organization_id == organization_id
-    )
+    q = session.query(AIIncidentModel).filter(AIIncidentModel.organization_id == organization_id)
     if model_id:
         q = q.filter(AIIncidentModel.model_id == model_id)
     if unresolved_only:

@@ -47,14 +47,29 @@ class TestExecutiveBriefEngine:
         assert "HighCorp" in names
 
     def test_key_risks_capped_at_5(self):
-        findings = [{"id": f"f{i}", "title": f"F{i}", "severity": "Critical", "category": "ESG"} for i in range(10)]
+        findings = [
+            {"id": f"f{i}", "title": f"F{i}", "severity": "Critical", "category": "ESG"}
+            for i in range(10)
+        ]
         result = build_executive_brief_payload(**_base(critical_findings=findings))
         assert len(result["key_risks"]) <= 5
 
     def test_compliance_concerns_sorted_by_severity(self):
         gaps = [
-            {"gap_id": "g1", "severity": "Low", "regulation_name": "R1", "requirement_title": "Req1", "remediation_steps": ""},
-            {"gap_id": "g2", "severity": "Critical", "regulation_name": "R2", "requirement_title": "Req2", "remediation_steps": ""},
+            {
+                "gap_id": "g1",
+                "severity": "Low",
+                "regulation_name": "R1",
+                "requirement_title": "Req1",
+                "remediation_steps": "",
+            },
+            {
+                "gap_id": "g2",
+                "severity": "Critical",
+                "regulation_name": "R2",
+                "requirement_title": "Req2",
+                "remediation_steps": "",
+            },
         ]
         result = build_executive_brief_payload(**_base(compliance_gaps=gaps))
         if len(result["compliance_concerns"]) >= 2:
@@ -62,8 +77,18 @@ class TestExecutiveBriefEngine:
 
     def test_reporting_blockers_only_weak(self):
         disclosures = [
-            {"response_id": "d1", "is_weak": True, "disclosure_status": "Not Started", "requirement_title": "T1"},
-            {"response_id": "d2", "is_weak": False, "disclosure_status": "Approved", "requirement_title": "T2"},
+            {
+                "response_id": "d1",
+                "is_weak": True,
+                "disclosure_status": "Not Started",
+                "requirement_title": "T1",
+            },
+            {
+                "response_id": "d2",
+                "is_weak": False,
+                "disclosure_status": "Approved",
+                "requirement_title": "T2",
+            },
         ]
         result = build_executive_brief_payload(**_base(weak_disclosures=disclosures))
         blocker_ids = [b["response_id"] for b in result["reporting_blockers"]]

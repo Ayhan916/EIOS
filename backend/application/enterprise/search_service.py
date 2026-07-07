@@ -29,11 +29,11 @@ async def global_search(
     org_ids = list(
         (
             await session.execute(
-                select(OrganizationModel.id).where(
-                    OrganizationModel.enterprise_id == enterprise_id
-                )
+                select(OrganizationModel.id).where(OrganizationModel.enterprise_id == enterprise_id)
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
     if not org_ids:
@@ -44,75 +44,93 @@ async def global_search(
 
     if "suppliers" in entity_types:
         rows = (
-            await session.execute(
-                select(SupplierModel)
-                .where(
-                    SupplierModel.organization_id.in_(org_ids),
-                    or_(
-                        SupplierModel.name.ilike(pattern),
-                        SupplierModel.country.ilike(pattern),
-                    ),
+            (
+                await session.execute(
+                    select(SupplierModel)
+                    .where(
+                        SupplierModel.organization_id.in_(org_ids),
+                        or_(
+                            SupplierModel.name.ilike(pattern),
+                            SupplierModel.country.ilike(pattern),
+                        ),
+                    )
+                    .limit(limit)
                 )
-                .limit(limit)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for r in rows:
-            hits.append({
-                "entity_type": "suppliers",
-                "entity_id": r.id,
-                "organization_id": r.organization_id,
-                "title": r.name,
-                "snippet": f"Country: {r.country or 'N/A'}",
-                "score": 1.0,
-            })
+            hits.append(
+                {
+                    "entity_type": "suppliers",
+                    "entity_id": r.id,
+                    "organization_id": r.organization_id,
+                    "title": r.name,
+                    "snippet": f"Country: {r.country or 'N/A'}",
+                    "score": 1.0,
+                }
+            )
 
     if "risks" in entity_types:
         rows = (
-            await session.execute(
-                select(RiskModel)
-                .where(
-                    RiskModel.organization_id.in_(org_ids),
-                    or_(
-                        RiskModel.title.ilike(pattern),
-                        RiskModel.description.ilike(pattern),
-                    ),
+            (
+                await session.execute(
+                    select(RiskModel)
+                    .where(
+                        RiskModel.organization_id.in_(org_ids),
+                        or_(
+                            RiskModel.title.ilike(pattern),
+                            RiskModel.description.ilike(pattern),
+                        ),
+                    )
+                    .limit(limit)
                 )
-                .limit(limit)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for r in rows:
-            hits.append({
-                "entity_type": "risks",
-                "entity_id": r.id,
-                "organization_id": r.organization_id,
-                "title": r.title,
-                "snippet": (r.description or "")[:120],
-                "score": 1.0,
-            })
+            hits.append(
+                {
+                    "entity_type": "risks",
+                    "entity_id": r.id,
+                    "organization_id": r.organization_id,
+                    "title": r.title,
+                    "snippet": (r.description or "")[:120],
+                    "score": 1.0,
+                }
+            )
 
     if "findings" in entity_types:
         rows = (
-            await session.execute(
-                select(FindingModel)
-                .where(
-                    FindingModel.organization_id.in_(org_ids),
-                    or_(
-                        FindingModel.title.ilike(pattern),
-                        FindingModel.description.ilike(pattern),
-                    ),
+            (
+                await session.execute(
+                    select(FindingModel)
+                    .where(
+                        FindingModel.organization_id.in_(org_ids),
+                        or_(
+                            FindingModel.title.ilike(pattern),
+                            FindingModel.description.ilike(pattern),
+                        ),
+                    )
+                    .limit(limit)
                 )
-                .limit(limit)
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         for r in rows:
-            hits.append({
-                "entity_type": "findings",
-                "entity_id": r.id,
-                "organization_id": r.organization_id,
-                "title": r.title,
-                "snippet": (r.description or "")[:120],
-                "score": 1.0,
-            })
+            hits.append(
+                {
+                    "entity_type": "findings",
+                    "entity_id": r.id,
+                    "organization_id": r.organization_id,
+                    "title": r.title,
+                    "snippet": (r.description or "")[:120],
+                    "score": 1.0,
+                }
+            )
 
     # Truncate to global limit and return
     hits = hits[:limit]

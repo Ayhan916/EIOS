@@ -13,8 +13,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.supply_chain.event_log import EventLogService
-from interfaces.api.deps import get_current_user, get_db, require_analyst, scope_gate
 from domain.user import User
+from interfaces.api.deps import get_current_user, get_db, require_analyst, scope_gate
 from interfaces.api.schemas.supply_chain_event import (
     EventLogListResponse,
     EventLogResponse,

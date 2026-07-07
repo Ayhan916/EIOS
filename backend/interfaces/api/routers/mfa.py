@@ -11,27 +11,24 @@ Endpoints:
 
 from __future__ import annotations
 
+import jwt
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import application.mfa.service as mfa_service
-from application.mfa.service import setup_mfa, confirm_mfa, verify_mfa_code, disable_mfa
+from application.mfa.service import confirm_mfa, disable_mfa, setup_mfa, verify_mfa_code
 from domain.user import User
 from interfaces.api.deps import get_current_user, get_db
 from interfaces.api.schemas.auth import TokenResponse
+from shared.config import settings
 from shared.rate_limit import rate_limit_auth
 from shared.security import (
+    blacklist_token,
     create_access_token,
     create_refresh_token,
     decode_token,
-    blacklist_token,
 )
-from shared.config import settings
-
-import jwt
-from fastapi import Request
 
 logger = structlog.get_logger(__name__)
 
@@ -120,6 +117,7 @@ async def verify(
 
     # Enforce rate limiting per user: track failed attempts in Redis
     from infrastructure.redis.client import get_redis
+
     redis = get_redis()
     lockout_key = f"mfa_lockout:{user_id}"
     if redis is not None:
@@ -151,12 +149,14 @@ async def verify(
 
     # Fetch user for token generation
     from infrastructure.persistence.repositories.user import SQLUserRepository
+
     user_repo = SQLUserRepository(session)
     user = await user_repo.get_by_id(user_id)
     if user is None or not user.is_active:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
 
     from interfaces.api.schemas.user import UserResponse
+
     logger.info("mfa_login_complete", user_id=user_id)
     return TokenResponse(
         access_token=create_access_token(user.id, user.email, user.role),
@@ -189,6 +189,7 @@ async def mfa_status(
 ) -> MFAStatusResponse:
     """Return the MFA state for the current user."""
     from sqlalchemy import text
+
     row = await session.execute(
         text("SELECT mfa_enabled, mfa_confirmed_at FROM users WHERE id = :user_id"),
         {"user_id": current_user.id},

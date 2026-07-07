@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -24,7 +25,7 @@ class ComplianceGap(BaseEntity):
     gap_type: str = "missing_evidence"
     severity: str = "Medium"  # Low / Medium / High / Critical
     description: str = ""
-    evidence_refs: list = field(default_factory=list)
+    evidence_refs: list[Any] = field(default_factory=list)
     source_entity_type: str | None = None  # "finding" / "risk" / None
     source_entity_id: str | None = None
     calculated_at: datetime = field(default_factory=lambda: datetime.now(UTC))

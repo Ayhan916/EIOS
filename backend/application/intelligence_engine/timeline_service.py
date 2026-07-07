@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import EntityStatus
 from domain.supplier_digital_twin import IntelligenceTimelineEvent
 
 
@@ -16,7 +13,6 @@ async def append_event(
     session: AsyncSession,
 ) -> IntelligenceTimelineEvent:
     """Append an intelligence event to the timeline (never mutated)."""
-    from infrastructure.persistence.models.supplier_digital_twin import IntelligenceTimelineEventModel
 
     model = _domain_to_model(event)
     session.add(model)
@@ -34,7 +30,9 @@ async def list_timeline(
     category: str | None = None,
 ) -> list[IntelligenceTimelineEvent]:
     """Return timeline events for a supplier, newest first."""
-    from infrastructure.persistence.models.supplier_digital_twin import IntelligenceTimelineEventModel
+    from infrastructure.persistence.models.supplier_digital_twin import (
+        IntelligenceTimelineEventModel,
+    )
 
     stmt = (
         select(IntelligenceTimelineEventModel)
@@ -63,7 +61,9 @@ async def list_org_intelligence_feed(
     min_severity: str = "MEDIUM",
 ) -> list[IntelligenceTimelineEvent]:
     """Return the latest intelligence events across all suppliers in an org."""
-    from infrastructure.persistence.models.supplier_digital_twin import IntelligenceTimelineEventModel
+    from infrastructure.persistence.models.supplier_digital_twin import (
+        IntelligenceTimelineEventModel,
+    )
 
     severity_order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3, "INFO": 4}
     min_idx = severity_order.get(min_severity.upper(), 2)
@@ -84,7 +84,10 @@ async def list_org_intelligence_feed(
 
 
 def _domain_to_model(e: IntelligenceTimelineEvent):
-    from infrastructure.persistence.models.supplier_digital_twin import IntelligenceTimelineEventModel
+    from infrastructure.persistence.models.supplier_digital_twin import (
+        IntelligenceTimelineEventModel,
+    )
+
     return IntelligenceTimelineEventModel(
         id=e.id,
         status=e.status.value if hasattr(e.status, "value") else e.status,

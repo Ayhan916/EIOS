@@ -17,7 +17,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -35,36 +35,57 @@ SCENARIO_TYPES = ("CLIMATE", "REGULATORY", "FINANCIAL", "SUPPLY_CHAIN", "COMBINE
 SCENARIO_STATUSES = ("Draft", "Active", "Archived")
 
 CLIMATE_STRESS_TYPES = (
-    "TRANSITION_SHOCK", "PHYSICAL_RISK", "CARBON_PRICE", "REGULATORY",
+    "TRANSITION_SHOCK",
+    "PHYSICAL_RISK",
+    "CARBON_PRICE",
+    "REGULATORY",
 )
 SUPPLIER_SHOCK_TYPES = (
-    "SUPPLIER_FAILURE", "REGIONAL_DISRUPTION", "SANCTIONS", "ESG_INCIDENT",
+    "SUPPLIER_FAILURE",
+    "REGIONAL_DISRUPTION",
+    "SANCTIONS",
+    "ESG_INCIDENT",
 )
 PROPAGATION_MODELS = ("LINEAR", "NETWORK")
 
 FINANCIAL_STRESS_TYPES = (
-    "FINANCING_COST", "GREEN_REVENUE_DECLINE", "CARBON_TAX", "TRANSITION_DELAY",
+    "FINANCING_COST",
+    "GREEN_REVENUE_DECLINE",
+    "CARBON_TAX",
+    "TRANSITION_DELAY",
 )
 
 PATHWAY_TYPES = ("CONSERVATIVE", "EXPECTED", "ACCELERATED", "CUSTOM")
 
 OPTIMIZATION_OBJECTIVES = (
-    "MAXIMIZE_VALUE", "MINIMIZE_RISK", "MAXIMIZE_EMISSIONS_REDUCTION",
+    "MAXIMIZE_VALUE",
+    "MINIMIZE_RISK",
+    "MAXIMIZE_EMISSIONS_REDUCTION",
 )
 INVESTMENT_TYPES = ("ESG_INITIATIVE", "DECARBONIZATION", "RISK_REDUCTION")
 
 FORECAST_METHODOLOGIES = (
-    "LINEAR_TREND", "WEIGHTED_MOVING_AVERAGE", "SCENARIO_PROJECTION",
+    "LINEAR_TREND",
+    "WEIGHTED_MOVING_AVERAGE",
+    "SCENARIO_PROJECTION",
 )
 FORECAST_TYPES = (
-    "KPI", "EMISSIONS", "TARGETS", "GREEN_REVENUE", "TAXONOMY",
+    "KPI",
+    "EMISSIONS",
+    "TARGETS",
+    "GREEN_REVENUE",
+    "TAXONOMY",
 )
 
 # M44.1 additions
 MILESTONE_FREQUENCIES = ("ANNUAL", "SEMIANNUAL", "QUARTERLY")
 SCENARIO_TEMPLATE_TYPES = (
-    "NET_ZERO", "CARBON_PRICE_SHOCK", "SUPPLIER_FAILURE",
-    "REGULATORY_TIGHTENING", "TAXONOMY_EXPANSION", "CLIMATE_DISASTER",
+    "NET_ZERO",
+    "CARBON_PRICE_SHOCK",
+    "SUPPLIER_FAILURE",
+    "REGULATORY_TIGHTENING",
+    "TAXONOMY_EXPANSION",
+    "CLIMATE_DISASTER",
 )
 METHODOLOGY_APPROVAL_STATUSES = ("DRAFT", "APPROVED", "DEPRECATED")
 STRESS_TEST_TEMPLATE_TYPES = ("CLIMATE", "FINANCIAL", "REGULATORY", "SUPPLY_CHAIN")
@@ -73,6 +94,7 @@ TREND_DIRECTIONS = ("IMPROVING", "STABLE", "DECLINING")
 
 
 # ── Section 1: Enterprise Digital Twin ────────────────────────────────────────
+
 
 class EnterpriseDigitalTwinModel(BaseModel):
     __tablename__ = "enterprise_digital_twins"
@@ -99,6 +121,7 @@ class EnterpriseDigitalTwinModel(BaseModel):
 
 # ── Section 2: Digital Twin Snapshot ─────────────────────────────────────────
 
+
 class DigitalTwinSnapshotModel(BaseModel):
     __tablename__ = "digital_twin_snapshots"
 
@@ -121,6 +144,7 @@ class DigitalTwinSnapshotModel(BaseModel):
 
 # ── Section 3: Strategic Plan ─────────────────────────────────────────────────
 
+
 class StrategicPlanModel(BaseModel):
     __tablename__ = "strategic_plans"
 
@@ -139,6 +163,7 @@ class StrategicPlanModel(BaseModel):
 
 
 # ── Section 4: Strategic Objective ───────────────────────────────────────────
+
 
 class StrategicObjectiveModel(BaseModel):
     __tablename__ = "strategic_objectives"
@@ -165,6 +190,7 @@ class StrategicObjectiveModel(BaseModel):
 
 # ── Section 5: Scenario ───────────────────────────────────────────────────────
 
+
 class StrategyScenarioModel(BaseModel):
     __tablename__ = "strategy_scenarios"
 
@@ -180,6 +206,7 @@ class StrategyScenarioModel(BaseModel):
 
 
 # ── Section 6: Scenario Assumption ───────────────────────────────────────────
+
 
 class ScenarioAssumptionModel(BaseModel):
     __tablename__ = "scenario_assumptions"
@@ -201,6 +228,7 @@ class ScenarioAssumptionModel(BaseModel):
 
 
 # ── Section 7: Scenario Execution ────────────────────────────────────────────
+
 
 class ScenarioExecutionModel(BaseModel):
     __tablename__ = "scenario_executions"
@@ -225,6 +253,7 @@ class ScenarioExecutionModel(BaseModel):
 
 # ── Section 8: Climate Stress Test ───────────────────────────────────────────
 
+
 class ClimateStressTestModel(BaseModel):
     __tablename__ = "climate_stress_tests"
 
@@ -245,6 +274,7 @@ class ClimateStressTestModel(BaseModel):
 
 # ── Section 9: Supplier Shock Scenario ───────────────────────────────────────
 
+
 class SupplierShockScenarioModel(BaseModel):
     __tablename__ = "supplier_shock_scenarios"
 
@@ -264,6 +294,7 @@ class SupplierShockScenarioModel(BaseModel):
 
 # ── Section 10: Financial Stress Test ────────────────────────────────────────
 
+
 class FinancialStressTestModel(BaseModel):
     __tablename__ = "financial_stress_tests"
 
@@ -281,6 +312,7 @@ class FinancialStressTestModel(BaseModel):
 
 
 # ── Section 11: Transition Pathway ───────────────────────────────────────────
+
 
 class TransitionPathwayModel(BaseModel):
     __tablename__ = "transition_pathways"
@@ -300,6 +332,7 @@ class TransitionPathwayModel(BaseModel):
 
 
 # ── Section 12: Net Zero Pathway ─────────────────────────────────────────────
+
 
 class NetZeroPathwayRecord(BaseModel):
     __tablename__ = "net_zero_pathways"
@@ -321,6 +354,7 @@ class NetZeroPathwayRecord(BaseModel):
 
 # ── Section 13: Strategic Risk Projection ────────────────────────────────────
 
+
 class StrategicRiskProjectionModel(BaseModel):
     __tablename__ = "strategic_risk_projections"
 
@@ -337,6 +371,7 @@ class StrategicRiskProjectionModel(BaseModel):
 
 
 # ── Section 14: Portfolio Optimization ───────────────────────────────────────
+
 
 class PortfolioOptimizationModel(BaseModel):
     __tablename__ = "portfolio_optimizations"
@@ -356,6 +391,7 @@ class PortfolioOptimizationModel(BaseModel):
 
 
 # ── Section 15: Investment Scenario ──────────────────────────────────────────
+
 
 class InvestmentScenarioModel(BaseModel):
     __tablename__ = "investment_scenarios"
@@ -380,6 +416,7 @@ class InvestmentScenarioModel(BaseModel):
 
 # ── Section 16: Forecast Methodology Record (AI Governance) ──────────────────
 
+
 class ForecastMethodologyRecordModel(BaseModel):
     __tablename__ = "forecast_methodology_records"
 
@@ -396,6 +433,7 @@ class ForecastMethodologyRecordModel(BaseModel):
 
 
 # ── Section 17: Forecast Model ────────────────────────────────────────────────
+
 
 class ForecastModelRecord(BaseModel):
     __tablename__ = "forecast_models"
@@ -417,6 +455,7 @@ class ForecastModelRecord(BaseModel):
 
 
 # ── Section 18: Forecast Result ───────────────────────────────────────────────
+
 
 class ForecastResultModel(BaseModel):
     __tablename__ = "forecast_results"
@@ -442,6 +481,7 @@ class ForecastResultModel(BaseModel):
 
 # ── Section 19: Board Simulation ──────────────────────────────────────────────
 
+
 class BoardSimulationModel(BaseModel):
     __tablename__ = "board_simulations"
 
@@ -460,6 +500,7 @@ class BoardSimulationModel(BaseModel):
 
 
 # ── Section 20: Strategic Forecast Summary ────────────────────────────────────
+
 
 class StrategicForecastSummaryModel(BaseModel):
     __tablename__ = "strategic_forecast_summaries"
@@ -482,6 +523,7 @@ class StrategicForecastSummaryModel(BaseModel):
 
 
 # ── Section 21: Strategic Scenario Report ────────────────────────────────────
+
 
 class StrategicScenarioReportModel(BaseModel):
     __tablename__ = "strategic_scenario_reports"
@@ -507,6 +549,7 @@ class StrategicScenarioReportModel(BaseModel):
 
 # ── M44.1 Section 22: Scenario Template ──────────────────────────────────────
 
+
 class ScenarioTemplateModel(BaseModel):
     __tablename__ = "scenario_templates"
 
@@ -522,6 +565,7 @@ class ScenarioTemplateModel(BaseModel):
 
 
 # ── M44.1 Section 23: Strategy Methodology ───────────────────────────────────
+
 
 class StrategyMethodologyModel(BaseModel):
     __tablename__ = "strategy_methodologies"
@@ -539,6 +583,7 @@ class StrategyMethodologyModel(BaseModel):
 
 # ── M44.1 Section 24: Scenario Comparison ────────────────────────────────────
 
+
 class ScenarioComparisonModel(BaseModel):
     __tablename__ = "scenario_comparisons"
 
@@ -555,6 +600,7 @@ class ScenarioComparisonModel(BaseModel):
 
 # ── M44.1 Section 25: Stress Test Template ───────────────────────────────────
 
+
 class StressTestTemplateModel(BaseModel):
     __tablename__ = "stress_test_templates"
 
@@ -568,6 +614,7 @@ class StressTestTemplateModel(BaseModel):
 
 
 # ── M44.1 Section 26: Forecast Window Policy ─────────────────────────────────
+
 
 class ForecastWindowPolicyModel(BaseModel):
     __tablename__ = "forecast_window_policies"

@@ -6,6 +6,7 @@ Maps to: CountryRiskProfile.human_rights_score (partial contribution).
 
 from __future__ import annotations
 
+import contextlib
 from typing import Any
 
 import structlog
@@ -41,7 +42,9 @@ class UNICEFConnector(BaseLiveConnector):
             try:
                 resp = await client.get(url, follow_redirects=True)
                 if resp.status_code not in (200, 206):
-                    logger.warning("unicef_indicator_fetch_failed", indicator=dataflow, status=resp.status_code)
+                    logger.warning(
+                        "unicef_indicator_fetch_failed", indicator=dataflow, status=resp.status_code
+                    )
                     continue
                 data = resp.json()
                 series = data.get("dataSets", [{}])[0].get("series", {})
@@ -68,10 +71,8 @@ class UNICEFConnector(BaseLiveConnector):
                         continue
                     if iso3 not in aggregated:
                         aggregated[iso3] = {"country_code": iso3, "country_name": country_name}
-                    try:
+                    with contextlib.suppress(ValueError, TypeError):
                         aggregated[iso3][metric_key] = float(val)
-                    except (ValueError, TypeError):
-                        pass
             except Exception as exc:
                 logger.warning("unicef_indicator_fetch_failed", indicator=dataflow, error=str(exc))
 
@@ -84,14 +85,16 @@ class UNICEFConnector(BaseLiveConnector):
             child_labour = min(float(entry.get("child_labour_pct", 0.0)), 100.0)
             out_of_school = min(float(entry.get("out_of_school_pct", 0.0)), 100.0)
             human_rights_score = round((child_labour * 0.6 + out_of_school * 0.4), 2)
-            records.append({
-                "country_code": entry["country_code"],
-                "country_name": entry.get("country_name", ""),
-                "human_rights_score": human_rights_score,
-                "child_labour_pct": entry.get("child_labour_pct", 0.0),
-                "out_of_school_pct": entry.get("out_of_school_pct", 0.0),
-                "source": ExternalSourceName.UNICEF.value,
-            })
+            records.append(
+                {
+                    "country_code": entry["country_code"],
+                    "country_name": entry.get("country_name", ""),
+                    "human_rights_score": human_rights_score,
+                    "child_labour_pct": entry.get("child_labour_pct", 0.0),
+                    "out_of_school_pct": entry.get("out_of_school_pct", 0.0),
+                    "source": ExternalSourceName.UNICEF.value,
+                }
+            )
         return RawDataset(
             source_name=ExternalSourceName.UNICEF.value,
             source_version=self.connector_version,

@@ -10,12 +10,12 @@ Naming convention: copilot_<event>_total for counters, copilot_<metric> for gaug
 from __future__ import annotations
 
 from prometheus_client import (
+    CONTENT_TYPE_LATEST,
     REGISTRY,
     Counter,
     Gauge,
     Histogram,
     generate_latest,
-    CONTENT_TYPE_LATEST,
 )
 
 # ── Counters ──────────────────────────────────────────────────────────────────
@@ -81,6 +81,7 @@ copilot_average_confidence_score = Gauge(
 
 
 # ── Helper functions ──────────────────────────────────────────────────────────
+
 
 def record_question(org_id: str, intent: str) -> None:
     copilot_questions_total.labels(org_id=org_id, intent=intent).inc()

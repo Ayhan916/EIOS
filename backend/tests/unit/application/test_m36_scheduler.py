@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_session(scalar_one_or_none=None, scalars_all=None):
     session = AsyncMock()
@@ -55,6 +55,7 @@ def _make_run(run_id="run-1", agent_id="agent-1"):
 
 
 # ── _dispatch routing ──────────────────────────────────────────────────────────
+
 
 class TestDispatch:
     async def test_dispatch_risk_monitor(self) -> None:
@@ -185,22 +186,27 @@ class TestDispatch:
 
 # ── _execute_agent ─────────────────────────────────────────────────────────────
 
+
 class TestExecuteAgent:
     async def test_execute_records_completed_on_success(self) -> None:
         from application.agent_monitoring import scheduler
 
         run = _make_run()
 
-        with patch(
-            "application.agent_monitoring.agent_service.check_and_start_run",
-            new=AsyncMock(return_value=run),
-        ), patch(
-            "application.agent_monitoring.scheduler._dispatch",
-            new=AsyncMock(return_value=(2, 1, 0)),
-        ), patch(
-            "application.agent_monitoring.agent_service.record_run_completed",
-            new=AsyncMock(),
-        ) as mock_completed:
+        with (
+            patch(
+                "application.agent_monitoring.agent_service.check_and_start_run",
+                new=AsyncMock(return_value=run),
+            ),
+            patch(
+                "application.agent_monitoring.scheduler._dispatch",
+                new=AsyncMock(return_value=(2, 1, 0)),
+            ),
+            patch(
+                "application.agent_monitoring.agent_service.record_run_completed",
+                new=AsyncMock(),
+            ) as mock_completed,
+        ):
             session = AsyncMock()
             await scheduler._execute_agent("agent-1", "RISK_MONITOR", "org-1", session)
 
@@ -213,16 +219,20 @@ class TestExecuteAgent:
 
         run = _make_run()
 
-        with patch(
-            "application.agent_monitoring.agent_service.check_and_start_run",
-            new=AsyncMock(return_value=run),
-        ), patch(
-            "application.agent_monitoring.scheduler._dispatch",
-            new=AsyncMock(side_effect=RuntimeError("DB error")),
-        ), patch(
-            "application.agent_monitoring.agent_service.record_run_failed",
-            new=AsyncMock(),
-        ) as mock_failed:
+        with (
+            patch(
+                "application.agent_monitoring.agent_service.check_and_start_run",
+                new=AsyncMock(return_value=run),
+            ),
+            patch(
+                "application.agent_monitoring.scheduler._dispatch",
+                new=AsyncMock(side_effect=RuntimeError("DB error")),
+            ),
+            patch(
+                "application.agent_monitoring.agent_service.record_run_failed",
+                new=AsyncMock(),
+            ) as mock_failed,
+        ):
             session = AsyncMock()
             with pytest.raises(RuntimeError, match="DB error"):
                 await scheduler._execute_agent("agent-1", "RISK_MONITOR", "org-1", session)
@@ -232,6 +242,7 @@ class TestExecuteAgent:
 
 
 # ── trigger_agent_run ──────────────────────────────────────────────────────────
+
 
 class TestTriggerAgentRun:
     async def test_trigger_known_enabled_agent(self) -> None:
@@ -244,18 +255,23 @@ class TestTriggerAgentRun:
         count_result = MagicMock()
         count_result.scalar_one = MagicMock(return_value=0)
 
-        with patch(
-            "application.agent_monitoring.agent_service.get_agent_by_type",
-            new=AsyncMock(return_value=agent),
-        ), patch(
-            "application.agent_monitoring.agent_service.check_and_start_run",
-            new=AsyncMock(return_value=run),
-        ), patch(
-            "application.agent_monitoring.scheduler._dispatch",
-            new=AsyncMock(return_value=(1, 0, 0)),
-        ), patch(
-            "application.agent_monitoring.agent_service.record_run_completed",
-            new=AsyncMock(),
+        with (
+            patch(
+                "application.agent_monitoring.agent_service.get_agent_by_type",
+                new=AsyncMock(return_value=agent),
+            ),
+            patch(
+                "application.agent_monitoring.agent_service.check_and_start_run",
+                new=AsyncMock(return_value=run),
+            ),
+            patch(
+                "application.agent_monitoring.scheduler._dispatch",
+                new=AsyncMock(return_value=(1, 0, 0)),
+            ),
+            patch(
+                "application.agent_monitoring.agent_service.record_run_completed",
+                new=AsyncMock(),
+            ),
         ):
             result = await scheduler.trigger_agent_run("RISK_MONITOR", "org-1", session)
 
@@ -289,6 +305,7 @@ class TestTriggerAgentRun:
 
 # ── Scheduler constants ────────────────────────────────────────────────────────
 
+
 class TestSchedulerConstants:
     def test_check_interval_is_one_hour(self) -> None:
         from application.agent_monitoring.scheduler import _CHECK_INTERVAL_SECONDS
@@ -304,6 +321,7 @@ class TestSchedulerConstants:
     def test_all_six_agent_types_in_dispatch(self) -> None:
         """All 6 agent types must be in the dispatch_map — no silent no-ops."""
         import inspect
+
         from application.agent_monitoring import scheduler
 
         src = inspect.getsource(scheduler._dispatch)

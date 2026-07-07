@@ -14,8 +14,6 @@ The MetricsCounterMiddleware calls record_request() after each response.
 
 from __future__ import annotations
 
-import time
-
 from prometheus_client import Counter, Gauge, Histogram
 
 # Latency histogram — buckets chosen to cover both fast API calls and slow LLM/S3 operations
@@ -50,6 +48,4 @@ def record_request(
     http_request_duration.labels(
         method=method, endpoint=endpoint, status_code=label_status
     ).observe(duration_seconds)
-    http_requests_total.labels(
-        method=method, endpoint=endpoint, status_code=label_status
-    ).inc()
+    http_requests_total.labels(method=method, endpoint=endpoint, status_code=label_status).inc()

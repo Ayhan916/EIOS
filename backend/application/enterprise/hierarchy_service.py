@@ -28,20 +28,23 @@ async def _log_audit(
     metadata: dict | None = None,
 ) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        actor_id=actor_id,
-        outcome=outcome,
-        detail=detail,
-        event_metadata=metadata or {},
-    ))
+
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            actor_id=actor_id,
+            outcome=outcome,
+            detail=detail,
+            event_metadata=metadata or {},
+        )
+    )
 
 
 async def create_enterprise(
@@ -163,9 +166,7 @@ async def create_business_unit(
     return bu
 
 
-async def list_business_units(
-    enterprise_id: str, session: AsyncSession
-) -> list[BusinessUnitModel]:
+async def list_business_units(enterprise_id: str, session: AsyncSession) -> list[BusinessUnitModel]:
     result = await session.execute(
         select(BusinessUnitModel).where(
             BusinessUnitModel.enterprise_id == enterprise_id,
@@ -215,9 +216,7 @@ async def create_legal_entity(
     return le
 
 
-async def list_legal_entities(
-    enterprise_id: str, session: AsyncSession
-) -> list[LegalEntityModel]:
+async def list_legal_entities(enterprise_id: str, session: AsyncSession) -> list[LegalEntityModel]:
     result = await session.execute(
         select(LegalEntityModel).where(
             LegalEntityModel.enterprise_id == enterprise_id,

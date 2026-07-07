@@ -66,16 +66,21 @@ async def find_open_duplicate(
     session,
 ) -> object | None:
     """Return an existing OPEN or ACKNOWLEDGED finding with the same key, or None."""
-    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
     from sqlalchemy import select
 
-    stmt = select(AgentFindingModel).where(
-        AgentFindingModel.organization_id == organization_id,
-        AgentFindingModel.supplier_id == supplier_id,
-        AgentFindingModel.category == category,
-        AgentFindingModel.rule_triggered == rule_triggered,
-        AgentFindingModel.finding_status.in_(["OPEN", "ACKNOWLEDGED"]),
-    ).limit(1)
+    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
+
+    stmt = (
+        select(AgentFindingModel)
+        .where(
+            AgentFindingModel.organization_id == organization_id,
+            AgentFindingModel.supplier_id == supplier_id,
+            AgentFindingModel.category == category,
+            AgentFindingModel.rule_triggered == rule_triggered,
+            AgentFindingModel.finding_status.in_(["OPEN", "ACKNOWLEDGED"]),
+        )
+        .limit(1)
+    )
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
@@ -179,12 +184,11 @@ async def list_findings(
     offset: int = 0,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
     from sqlalchemy import select
 
-    stmt = select(AgentFindingModel).where(
-        AgentFindingModel.organization_id == organization_id
-    )
+    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
+
+    stmt = select(AgentFindingModel).where(AgentFindingModel.organization_id == organization_id)
     if supplier_id:
         stmt = stmt.where(AgentFindingModel.supplier_id == supplier_id)
     if agent_id:
@@ -202,8 +206,9 @@ async def get_finding(
     organization_id: str,
     session,
 ) -> object | None:
-    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
 
     stmt = select(AgentFindingModel).where(
         AgentFindingModel.id == finding_id,

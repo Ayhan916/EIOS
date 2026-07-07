@@ -13,9 +13,10 @@ Security:
   - organization_id MANDATORY
   - Scoring fully deterministic, no LLM (M43/M44)
 """
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -28,11 +29,19 @@ from interfaces.api.deps import get_current_user, get_sync_db
 
 router = APIRouter(prefix="/impact", tags=["impact"])
 
-VALID_IMPACT_TYPES = {"human_rights", "labor_rights", "environment", "health_safety", "anti_corruption", "other"}
+VALID_IMPACT_TYPES = {
+    "human_rights",
+    "labor_rights",
+    "environment",
+    "health_safety",
+    "anti_corruption",
+    "other",
+}
 VALID_ENTITY_TYPES = {"finding", "risk", "supplier", "assessment", "standalone"}
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class DimensionScore(BaseModel):
     gravity: int = Field(ge=1, le=5, description="1=minor, 5=catastrophic")
@@ -45,13 +54,13 @@ class AssessmentCreate(DimensionScore):
     title: str = Field(min_length=3, max_length=255)
     impact_type: str = Field(default="other")
     entity_type: str = Field(default="standalone")
-    entity_id: Optional[UUID] = None
-    justification: Optional[str] = Field(default=None, max_length=5000)
+    entity_id: UUID | None = None
+    justification: str | None = Field(default=None, max_length=5000)
 
 
 class AssessmentUpdate(DimensionScore):
-    title: Optional[str] = Field(default=None, max_length=255)
-    justification: Optional[str] = Field(default=None, max_length=5000)
+    title: str | None = Field(default=None, max_length=255)
+    justification: str | None = Field(default=None, max_length=5000)
 
 
 class AssessmentResponse(BaseModel):
@@ -60,7 +69,7 @@ class AssessmentResponse(BaseModel):
     title: str
     impact_type: str
     entity_type: str
-    entity_id: Optional[UUID]
+    entity_id: UUID | None
     gravity: int
     scope: int
     remediability: int
@@ -68,7 +77,7 @@ class AssessmentResponse(BaseModel):
     severity_score: float
     priority_score: float
     severity_level: str
-    justification: Optional[str]
+    justification: str | None
     created_by: str
     created_at: Any
     updated_at: Any
@@ -92,6 +101,7 @@ def preview_score(
 ):
     """Compute severity score in real-time without saving. Used by the live calculator UI."""
     from application.csddd.severity_calculator import assess
+
     return assess(body.gravity, body.scope, body.remediability, body.likelihood)
 
 
@@ -106,9 +116,9 @@ def get_dashboard(
 
 @router.get("/", response_model=list[AssessmentResponse])
 def list_assessments(
-    severity_level: Optional[str] = Query(default=None),
-    impact_type: Optional[str] = Query(default=None),
-    entity_id: Optional[UUID] = Query(default=None),
+    severity_level: str | None = Query(default=None),
+    impact_type: str | None = Query(default=None),
+    entity_id: UUID | None = Query(default=None),
     db: Session = Depends(get_sync_db),
     user: User = Depends(get_current_user),
 ):
@@ -128,9 +138,13 @@ def create_assessment(
     user: User = Depends(get_current_user),
 ):
     if body.impact_type not in VALID_IMPACT_TYPES:
-        raise HTTPException(status_code=422, detail=f"impact_type must be one of {VALID_IMPACT_TYPES}")
+        raise HTTPException(
+            status_code=422, detail=f"impact_type must be one of {VALID_IMPACT_TYPES}"
+        )
     if body.entity_type not in VALID_ENTITY_TYPES:
-        raise HTTPException(status_code=422, detail=f"entity_type must be one of {VALID_ENTITY_TYPES}")
+        raise HTTPException(
+            status_code=422, detail=f"entity_type must be one of {VALID_ENTITY_TYPES}"
+        )
 
     repo = SQLImpactAssessmentRepository(db)
     a = repo.create(

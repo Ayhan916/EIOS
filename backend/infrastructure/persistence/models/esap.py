@@ -1,4 +1,5 @@
 """SQLAlchemy models — ESAP Export (CSDDD-009)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -22,4 +23,6 @@ class ESAPSubmissionModel(Base):
     confirmation_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notes: Mapped[str] = mapped_column(Text, nullable=False, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )

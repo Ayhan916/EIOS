@@ -18,14 +18,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from interfaces.api.deps import get_current_user, get_db, require_admin, require_analyst
 from interfaces.api.schemas.agent_monitoring import (
-    AcknowledgeAlertRequest,
-    AcknowledgeFindingRequest,
     AgentAlertResponse,
     AgentDashboard,
     AgentFindingResponse,
     AgentHealthInfo,
     AgentRunResponse,
-    ApproveDraftRequest,
     EscalationRuleCreate,
     EscalationRuleResponse,
     MonitoringAgentResponse,
@@ -41,6 +38,7 @@ _ADMIN = Depends(require_admin)
 
 
 # ── Agent Registry ────────────────────────────────────────────────────────────
+
 
 @router.get("", response_model=list[MonitoringAgentResponse], dependencies=[_ANALYST])
 async def list_agents(
@@ -73,6 +71,7 @@ async def set_agent_enabled(
 
 # ── Manual Trigger ─────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/trigger",
     response_model=AgentRunResponse,
@@ -97,6 +96,7 @@ async def trigger_agent_run(
 
 # ── Run History ────────────────────────────────────────────────────────────────
 
+
 @router.get("/runs", response_model=list[AgentRunResponse], dependencies=[_ANALYST])
 async def list_runs(
     agent_id: str | None = None,
@@ -116,6 +116,7 @@ async def list_runs(
 
 
 # ── Findings ──────────────────────────────────────────────────────────────────
+
 
 @router.get("/findings", response_model=list[AgentFindingResponse], dependencies=[_ANALYST])
 async def list_findings(
@@ -203,6 +204,7 @@ async def dismiss_finding(
 
 # ── Alerts ────────────────────────────────────────────────────────────────────
 
+
 @router.get("/alerts", response_model=list[AgentAlertResponse], dependencies=[_ANALYST])
 async def list_alerts(
     supplier_id: str | None = None,
@@ -249,6 +251,7 @@ async def acknowledge_alert(
 
 # ── Escalation Rules ──────────────────────────────────────────────────────────
 
+
 @router.get(
     "/escalation-rules",
     response_model=list[EscalationRuleResponse],
@@ -293,6 +296,7 @@ async def create_escalation_rule(
 
 # ── Recommendation Drafts ─────────────────────────────────────────────────────
 
+
 @router.get(
     "/drafts",
     response_model=list[RecommendationDraftResponse],
@@ -330,7 +334,9 @@ async def approve_draft(
     from application.agent_monitoring.alert_service import approve_draft
 
     try:
-        draft = await approve_draft(draft_id, current_user.organization_id, current_user.id, session)
+        draft = await approve_draft(
+            draft_id, current_user.organization_id, current_user.id, session
+        )
         await session.commit()
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -362,11 +368,14 @@ async def reject_draft(
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/dashboard", response_model=AgentDashboard, dependencies=[_ANALYST])
 async def get_agent_dashboard(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> AgentDashboard:
+    from sqlalchemy import func, select
+
     from application.agent_monitoring.agent_service import list_agents
     from application.agent_monitoring.alert_service import list_alerts
     from application.agent_monitoring.finding_service import list_findings
@@ -375,7 +384,6 @@ async def get_agent_dashboard(
         AgentFindingModel,
         RecommendationDraftModel,
     )
-    from sqlalchemy import func, select
 
     org_id = current_user.organization_id
 
@@ -384,39 +392,56 @@ async def get_agent_dashboard(
     paused = sum(1 for a in agents if a.status == "PAUSED" or not a.enabled)
     failed = sum(1 for a in agents if a.status == "FAILED")
 
-    open_findings = (await session.execute(
-        select(func.count()).select_from(AgentFindingModel).where(
-            AgentFindingModel.organization_id == org_id,
-            AgentFindingModel.finding_status == "OPEN",
+    open_findings = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentFindingModel)
+            .where(
+                AgentFindingModel.organization_id == org_id,
+                AgentFindingModel.finding_status == "OPEN",
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    unacked_alerts = (await session.execute(
-        select(func.count()).select_from(AgentAlertModel).where(
-            AgentAlertModel.organization_id == org_id,
-            AgentAlertModel.acknowledged_at.is_(None),
+    unacked_alerts = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentAlertModel)
+            .where(
+                AgentAlertModel.organization_id == org_id,
+                AgentAlertModel.acknowledged_at.is_(None),
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    critical_alerts = (await session.execute(
-        select(func.count()).select_from(AgentAlertModel).where(
-            AgentAlertModel.organization_id == org_id,
-            AgentAlertModel.severity == "CRITICAL",
-            AgentAlertModel.acknowledged_at.is_(None),
+    critical_alerts = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentAlertModel)
+            .where(
+                AgentAlertModel.organization_id == org_id,
+                AgentAlertModel.severity == "CRITICAL",
+                AgentAlertModel.acknowledged_at.is_(None),
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
-    pending_drafts = (await session.execute(
-        select(func.count()).select_from(RecommendationDraftModel).where(
-            RecommendationDraftModel.organization_id == org_id,
-            RecommendationDraftModel.draft_status == "PENDING",
+    pending_drafts = (
+        await session.execute(
+            select(func.count())
+            .select_from(RecommendationDraftModel)
+            .where(
+                RecommendationDraftModel.organization_id == org_id,
+                RecommendationDraftModel.draft_status == "PENDING",
+            )
         )
-    )).scalar_one()
+    ).scalar_one()
 
     recent_findings = await list_findings(org_id, limit=10, session=session)
     recent_alerts = await list_alerts(org_id, limit=10, session=session)
 
     from application.agent_monitoring.agent_service import get_agent_health_list
+
     health_list = await get_agent_health_list(session)
     per_agent_health = [AgentHealthInfo(**h) for h in health_list]
 

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 
@@ -14,7 +13,7 @@ from infrastructure.persistence.models.sustainability import (
     ClimateRiskAssessmentModel,
 )
 
-from .objective_service import SustainabilityError, _assert_org, _now
+from .objective_service import SustainabilityError, _now
 
 
 def _compute_overall_risk(transition: float, physical: float, regulatory: float) -> float:
@@ -49,7 +48,9 @@ def create_climate_risk_assessment(
     ]:
         if not (0.0 <= val <= 100.0):
             raise SustainabilityError(f"{name} must be between 0 and 100")
-    overall = _compute_overall_risk(transition_risk_score, physical_risk_score, regulatory_risk_score)
+    overall = _compute_overall_risk(
+        transition_risk_score, physical_risk_score, regulatory_risk_score
+    )
     now = _now()
     cra = ClimateRiskAssessmentModel(
         id=str(uuid.uuid4()),

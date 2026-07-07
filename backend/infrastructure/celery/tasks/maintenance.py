@@ -14,6 +14,7 @@ Both tasks are non-critical background monitors — they never mutate applicatio
 from __future__ import annotations
 
 import asyncio
+
 import structlog
 
 from infrastructure.celery.app import celery_app
@@ -52,7 +53,8 @@ def check_replication_lag() -> dict[str, object]:
 
 async def _check_backup_health_async() -> dict[str, object]:
     import os  # noqa: PLC0415
-    from datetime import datetime, UTC  # noqa: PLC0415
+    from datetime import UTC, datetime  # noqa: PLC0415
+
     from shared.config import settings  # noqa: PLC0415
 
     backup_dir = os.environ.get("BACKUP_DIR", "/var/backups/eios/postgres")
@@ -75,7 +77,9 @@ async def _check_backup_health_async() -> dict[str, object]:
                 )
                 return {"status": "stale", "last_backup": ts_str, "age_seconds": age_seconds}
 
-            logger.info("backup_healthy", last_backup=ts_str, age_hours=round(age_seconds / 3600, 1))
+            logger.info(
+                "backup_healthy", last_backup=ts_str, age_hours=round(age_seconds / 3600, 1)
+            )
             return {"status": "healthy", "last_backup": ts_str, "age_seconds": age_seconds}
         except Exception as exc:  # noqa: BLE001
             logger.warning("backup_marker_unreadable", path=marker_path, error=str(exc))
@@ -84,10 +88,12 @@ async def _check_backup_health_async() -> dict[str, object]:
     if settings.s3_enabled:
         try:
             from infrastructure.storage.s3 import download_file  # noqa: PLC0415
+
             s3_bucket_key = f"{settings.s3_bucket}/.last_backup_timestamp"
             content = await download_file(s3_bucket_key)
             ts_str = content.decode().strip()
-            from datetime import datetime, UTC  # noqa: PLC0415, F811
+            from datetime import UTC, datetime  # noqa: PLC0415, F811
+
             last_backup = datetime.strptime(ts_str, "%Y%m%dT%H%M%SZ").replace(tzinfo=UTC)
             age_seconds = (datetime.now(UTC) - last_backup).total_seconds()
             status = "stale" if age_seconds > _BACKUP_STALE_THRESHOLD_SECONDS else "healthy"
@@ -95,7 +101,12 @@ async def _check_backup_health_async() -> dict[str, object]:
                 logger.warning("backup_stale_s3", last_backup=ts_str, age_seconds=age_seconds)
             else:
                 logger.info("backup_healthy_s3", last_backup=ts_str)
-            return {"status": status, "last_backup": ts_str, "age_seconds": age_seconds, "source": "s3"}
+            return {
+                "status": status,
+                "last_backup": ts_str,
+                "age_seconds": age_seconds,
+                "source": "s3",
+            }
         except Exception as exc:  # noqa: BLE001
             logger.warning("backup_s3_marker_missing", error=str(exc))
 
@@ -105,11 +116,15 @@ async def _check_backup_health_async() -> dict[str, object]:
 
 async def _check_replication_lag_async() -> dict[str, object]:
     from sqlalchemy import text  # noqa: PLC0415
+
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from shared.config import settings  # noqa: PLC0415
 
     if not settings.database_readonly_url:
-        return {"status": "skipped", "detail": "No read replica configured (DATABASE_READONLY_URL not set)"}
+        return {
+            "status": "skipped",
+            "detail": "No read replica configured (DATABASE_READONLY_URL not set)",
+        }
 
     replication_sql = text("""
         SELECT

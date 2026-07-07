@@ -14,10 +14,9 @@ import hashlib
 import os
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 
 # ── Secret Provider Tests ─────────────────────────────────────────────────────
 
@@ -25,6 +24,7 @@ import pytest
 class TestInMemorySecretProvider:
     def _provider(self):
         from infrastructure.secrets.provider import InMemorySecretProvider
+
         return InMemorySecretProvider()
 
     def test_store_and_retrieve(self) -> None:
@@ -74,6 +74,7 @@ class TestInMemorySecretProvider:
 class TestEnvironmentSecretProvider:
     def _provider(self):
         from infrastructure.secrets.provider import EnvironmentSecretProvider
+
         return EnvironmentSecretProvider()
 
     def test_provider_name(self) -> None:
@@ -116,8 +117,8 @@ class TestSecretProviderRegistry:
             InMemorySecretProvider,
             get_secret_provider,
             set_secret_provider,
-            EnvironmentSecretProvider,
         )
+
         original = get_secret_provider()
         try:
             mem = InMemorySecretProvider()
@@ -127,13 +128,13 @@ class TestSecretProviderRegistry:
             set_secret_provider(original)
 
     def test_default_provider_is_environment(self) -> None:
-        from infrastructure.secrets.provider import (
-            EnvironmentSecretProvider,
-            get_secret_provider,
-        )
         # Default should be EnvironmentSecretProvider (may have been overridden in other tests)
         # Just check it's a SecretProvider subclass
-        from infrastructure.secrets.provider import SecretProvider
+        from infrastructure.secrets.provider import (
+            SecretProvider,
+            get_secret_provider,
+        )
+
         assert isinstance(get_secret_provider(), SecretProvider)
 
 
@@ -156,6 +157,7 @@ class TestProcessSSOLogin:
         region_id: str | None = None,
     ):
         from infrastructure.persistence.models.enterprise import GroupMappingModel
+
         m = MagicMock(spec=GroupMappingModel)
         m.idp_group = idp_group
         m.mapped_role = mapped_role
@@ -167,6 +169,7 @@ class TestProcessSSOLogin:
 
     def _make_user(self):
         from infrastructure.persistence.models.user import UserModel
+
         u = MagicMock(spec=UserModel)
         u.id = str(uuid.uuid4())
         u.role = "viewer"
@@ -178,6 +181,7 @@ class TestProcessSSOLogin:
 
     def _vi(self, idp_id: str, groups: list[str], user_id: str = "user-1"):
         from application.enterprise.sso_validation import ValidatedIdentity
+
         return ValidatedIdentity(
             external_id=user_id,
             email=f"{user_id}@corp.com",
@@ -428,7 +432,7 @@ class TestSCIMTokenService:
 
     @pytest.mark.asyncio
     async def test_create_hashes_token(self) -> None:
-        from application.enterprise.scim_token_service import create_scim_token, _hash_token
+        from application.enterprise.scim_token_service import _hash_token, create_scim_token
 
         session = self._make_session()
         raw, token = await create_scim_token(
@@ -498,7 +502,7 @@ class TestSCIMTokenService:
 
     @pytest.mark.asyncio
     async def test_verify_valid_token(self) -> None:
-        from application.enterprise.scim_token_service import verify_scim_token, _hash_token
+        from application.enterprise.scim_token_service import _hash_token, verify_scim_token
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         raw = "valid_raw_token_abc123"
@@ -517,7 +521,7 @@ class TestSCIMTokenService:
 
     @pytest.mark.asyncio
     async def test_verify_inactive_token_returns_none(self) -> None:
-        from application.enterprise.scim_token_service import verify_scim_token, _hash_token
+        from application.enterprise.scim_token_service import _hash_token, verify_scim_token
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         raw = "inactive_token"
@@ -532,7 +536,7 @@ class TestSCIMTokenService:
 
     @pytest.mark.asyncio
     async def test_verify_expired_token_returns_none(self) -> None:
-        from application.enterprise.scim_token_service import verify_scim_token, _hash_token
+        from application.enterprise.scim_token_service import _hash_token, verify_scim_token
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         raw = "expired_token"
@@ -661,8 +665,9 @@ class TestSecretLeakage:
 
     def test_orm_identity_provider_no_client_secret_column(self) -> None:
         """client_secret_encrypted column must be removed from the ORM model."""
-        from infrastructure.persistence.models.enterprise import IdentityProviderModel
         import sqlalchemy as sa
+
+        from infrastructure.persistence.models.enterprise import IdentityProviderModel
 
         cols = {c.name for c in sa.inspect(IdentityProviderModel).columns}
         assert "client_secret_encrypted" not in cols
@@ -670,8 +675,9 @@ class TestSecretLeakage:
 
     def test_secret_reference_model_has_no_value_column(self) -> None:
         """SecretReferenceModel must store (provider, identifier) only."""
-        from infrastructure.persistence.models.enterprise import SecretReferenceModel
         import sqlalchemy as sa
+
+        from infrastructure.persistence.models.enterprise import SecretReferenceModel
 
         cols = {c.name for c in sa.inspect(SecretReferenceModel).columns}
         assert "value" not in cols
@@ -694,6 +700,7 @@ class TestSecretLeakage:
 class TestSCIMIsolation:
     def test_scim_token_has_enterprise_id(self) -> None:
         import sqlalchemy as sa
+
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         cols = {c.name for c in sa.inspect(SCIMTokenModel).columns}
@@ -701,6 +708,7 @@ class TestSCIMIsolation:
 
     def test_scim_token_service_enterprise_id_in_create_signature(self) -> None:
         import inspect
+
         from application.enterprise.scim_token_service import create_scim_token
 
         sig = inspect.signature(create_scim_token)
@@ -708,6 +716,7 @@ class TestSCIMIsolation:
 
     def test_scim_token_service_enterprise_id_in_list_signature(self) -> None:
         import inspect
+
         from application.enterprise.scim_token_service import list_scim_tokens
 
         sig = inspect.signature(list_scim_tokens)
@@ -715,8 +724,9 @@ class TestSCIMIsolation:
 
     def test_scim_token_hash_unique(self) -> None:
         """token_hash must have a uniqueness constraint to prevent collisions."""
-        from infrastructure.persistence.models.enterprise import SCIMTokenModel
         import sqlalchemy as sa
+
+        from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         col = sa.inspect(SCIMTokenModel).columns["token_hash"]
         # Check the column is unique (either via unique=True on column or UniqueConstraint)
@@ -739,8 +749,9 @@ class TestM401ORMModels:
         assert SCIMTokenModel.__tablename__ == "scim_tokens"
 
     def test_identity_provider_has_secret_reference_id(self) -> None:
-        from infrastructure.persistence.models.enterprise import IdentityProviderModel
         import sqlalchemy as sa
+
+        from infrastructure.persistence.models.enterprise import IdentityProviderModel
 
         cols = {c.name for c in sa.inspect(IdentityProviderModel).columns}
         assert "secret_reference_id" in cols

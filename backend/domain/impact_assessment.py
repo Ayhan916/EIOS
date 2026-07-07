@@ -17,6 +17,7 @@ Severity levels:
   MEDIUM    ≥ 3.0
   LOW       < 3.0
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -28,16 +29,16 @@ class ImpactAssessment:
     id: str
     organization_id: str
     title: str
-    impact_type: str            # ImpactType
-    entity_type: str            # ImpactEntityType
-    entity_id: str | None       # UUID of linked finding/risk/supplier
-    gravity: int                # 1–5
-    scope: int                  # 1–5
-    remediability: int          # 1–5
-    likelihood: int             # 1–5
-    severity_score: float       # computed, 0–10
-    priority_score: float       # severity × (likelihood/5)
-    severity_level: str         # SeverityLevel
+    impact_type: str  # ImpactType
+    entity_type: str  # ImpactEntityType
+    entity_id: str | None  # UUID of linked finding/risk/supplier
+    gravity: int  # 1–5
+    scope: int  # 1–5
+    remediability: int  # 1–5
+    likelihood: int  # 1–5
+    severity_score: float  # computed, 0–10
+    priority_score: float  # severity × (likelihood/5)
+    severity_level: str  # SeverityLevel
     justification: str | None
     created_by: str
     created_at: datetime

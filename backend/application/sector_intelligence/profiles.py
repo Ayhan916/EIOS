@@ -366,6 +366,7 @@ def get_profile(nace_code: str) -> SectorESGProfile:
     # Numeric 2-digit code → resolve to section letter via taxonomy
     if cleaned[:1].isdigit():
         from application.sector_intelligence.nace_taxonomy import get_section
+
         result = get_section(cleaned)
         section = result[0] if result else cleaned[:1].upper()
     else:

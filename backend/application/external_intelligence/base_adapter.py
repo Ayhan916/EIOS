@@ -36,8 +36,7 @@ class RawDataset:
         same hash.
         """
         row_strings = sorted(
-            json.dumps(r, sort_keys=True, separators=(",", ":"), default=str)
-            for r in self.records
+            json.dumps(r, sort_keys=True, separators=(",", ":"), default=str) for r in self.records
         )
         canonical = json.dumps(row_strings, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()

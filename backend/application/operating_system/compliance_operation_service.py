@@ -51,15 +51,27 @@ def resolve_framework_name(
     return "UNKNOWN"
 
 
-async def _log_audit(session, action: str, entity_id: str, organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()), status="Active", version=1,
-        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
-        action=action, entity_type="ComplianceOperation", entity_id=entity_id,
-        actor_id=None, outcome="success", detail=detail,
-        event_metadata={"organization_id": organization_id},
-    ))
+
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type="ComplianceOperation",
+            entity_id=entity_id,
+            actor_id=None,
+            outcome="success",
+            detail=detail,
+            event_metadata={"organization_id": organization_id},
+        )
+    )
 
 
 async def create_compliance_operation(
@@ -71,28 +83,46 @@ async def create_compliance_operation(
     gap_count: int = 0,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ComplianceOperationModel
+
     now = datetime.now(UTC)
     op = ComplianceOperationModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, framework_name=framework_name,
-        coverage_percent=coverage_percent, gap_count=gap_count,
-        owner_user_id=owner_user_id, operation_status="IN_PROGRESS", actions=[],
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        framework_name=framework_name,
+        coverage_percent=coverage_percent,
+        gap_count=gap_count,
+        owner_user_id=owner_user_id,
+        operation_status="IN_PROGRESS",
+        actions=[],
     )
     session.add(op)
     await session.flush()
-    await _log_audit(session, "compliance_op.created", op.id, organization_id,
-                     detail=f"framework={framework_name}")
+    await _log_audit(
+        session,
+        "compliance_op.created",
+        op.id,
+        organization_id,
+        detail=f"framework={framework_name}",
+    )
     from application.operating_system.metrics import os_counters
+
     os_counters.record_compliance_op_created()
     return _to_dict(op)
 
 
 async def list_compliance_operations(
-    organization_id: str, session: AsyncSession,
-    framework_name: str | None = None, operation_status: str | None = None,
+    organization_id: str,
+    session: AsyncSession,
+    framework_name: str | None = None,
+    operation_status: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ComplianceOperationModel
+
     stmt = select(ComplianceOperationModel).where(
         ComplianceOperationModel.organization_id == organization_id
     )
@@ -109,6 +139,7 @@ async def get_compliance_operation(
     organization_id: str, operation_id: str, session: AsyncSession
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ComplianceOperationModel
+
     stmt = select(ComplianceOperationModel).where(
         ComplianceOperationModel.organization_id == organization_id,
         ComplianceOperationModel.id == operation_id,
@@ -121,6 +152,7 @@ async def update_compliance_operation(
     organization_id: str, operation_id: str, session: AsyncSession, **fields
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ComplianceOperationModel
+
     stmt = select(ComplianceOperationModel).where(
         ComplianceOperationModel.organization_id == organization_id,
         ComplianceOperationModel.id == operation_id,
@@ -150,10 +182,15 @@ async def sync_from_m31(
     coverage/gap_count, or creates a new one.  Emits compliance_op.synced.
     """
     from infrastructure.persistence.models.operating_system import ComplianceOperationModel
-    stmt = select(ComplianceOperationModel).where(
-        ComplianceOperationModel.organization_id == organization_id,
-        ComplianceOperationModel.framework_name == framework_name,
-    ).limit(1)
+
+    stmt = (
+        select(ComplianceOperationModel)
+        .where(
+            ComplianceOperationModel.organization_id == organization_id,
+            ComplianceOperationModel.framework_name == framework_name,
+        )
+        .limit(1)
+    )
     existing = (await session.execute(stmt)).scalar_one_or_none()
     now = datetime.now(UTC)
     if existing:
@@ -162,19 +199,37 @@ async def sync_from_m31(
         existing.last_synced_at = now
         existing.updated_at = now
         await session.flush()
-        await _log_audit(session, "compliance_op.synced", existing.id, organization_id,
-                         detail=f"framework={framework_name} coverage={coverage_percent} gaps={gap_count}")
+        await _log_audit(
+            session,
+            "compliance_op.synced",
+            existing.id,
+            organization_id,
+            detail=f"framework={framework_name} coverage={coverage_percent} gaps={gap_count}",
+        )
         return _to_dict(existing)
     op = ComplianceOperationModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, framework_name=framework_name,
-        coverage_percent=coverage_percent, gap_count=gap_count,
-        operation_status="IN_PROGRESS", actions=[], last_synced_at=now,
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        framework_name=framework_name,
+        coverage_percent=coverage_percent,
+        gap_count=gap_count,
+        operation_status="IN_PROGRESS",
+        actions=[],
+        last_synced_at=now,
     )
     session.add(op)
     await session.flush()
-    await _log_audit(session, "compliance_op.synced", op.id, organization_id,
-                     detail=f"framework={framework_name} coverage={coverage_percent} gaps={gap_count}")
+    await _log_audit(
+        session,
+        "compliance_op.synced",
+        op.id,
+        organization_id,
+        detail=f"framework={framework_name} coverage={coverage_percent} gaps={gap_count}",
+    )
     return _to_dict(op)
 
 

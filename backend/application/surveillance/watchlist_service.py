@@ -15,8 +15,8 @@ from application.surveillance.metrics import surveillance_counters
 
 logger = structlog.get_logger(__name__)
 
-_AUTO_ALERT_THRESHOLD = 3       # HIGH/CRITICAL alerts in last 30 days
-_SCORE_DROP_THRESHOLD = -15.0   # ESG drop >= 15 points
+_AUTO_ALERT_THRESHOLD = 3  # HIGH/CRITICAL alerts in last 30 days
+_SCORE_DROP_THRESHOLD = -15.0  # ESG drop >= 15 points
 
 
 async def _log_audit_event(
@@ -50,12 +50,11 @@ async def _log_audit_event(
         logger.warning("watchlist_audit_failed", action=action, error=str(exc))
 
 
-async def get_watchlist_entry(
-    organization_id: str, supplier_id: str, session
-) -> object | None:
+async def get_watchlist_entry(organization_id: str, supplier_id: str, session) -> object | None:
     """Return the ACTIVE watchlist entry for (org, supplier), or None."""
-    from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
 
     stmt = select(SupplierWatchlistModel).where(
         SupplierWatchlistModel.organization_id == organization_id,
@@ -69,8 +68,9 @@ async def _get_any_watchlist_entry(
     organization_id: str, supplier_id: str, session
 ) -> object | None:
     """Return any watchlist entry for (org, supplier) regardless of status."""
-    from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
 
     stmt = select(SupplierWatchlistModel).where(
         SupplierWatchlistModel.organization_id == organization_id,
@@ -206,8 +206,9 @@ async def list_watchlist(
     limit: int = 100,
     session,
 ) -> list:
-    from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
 
     stmt = select(SupplierWatchlistModel).where(
         SupplierWatchlistModel.organization_id == organization_id
@@ -224,17 +225,23 @@ async def auto_watchlist_from_alerts(
     session,
 ) -> object | None:
     """Auto-add to watchlist if supplier has >= threshold HIGH/CRITICAL alerts."""
-    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
-    from sqlalchemy import func, select
     from datetime import timedelta
 
+    from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
+
     cutoff = datetime.now(UTC) - timedelta(days=30)
-    count_stmt = select(func.count()).select_from(AgentAlertModel).where(
-        AgentAlertModel.organization_id == organization_id,
-        AgentAlertModel.supplier_id == supplier_id,
-        AgentAlertModel.severity.in_(["HIGH", "CRITICAL"]),
-        AgentAlertModel.created_at >= cutoff,
-        AgentAlertModel.acknowledged_at.is_(None),
+    count_stmt = (
+        select(func.count())
+        .select_from(AgentAlertModel)
+        .where(
+            AgentAlertModel.organization_id == organization_id,
+            AgentAlertModel.supplier_id == supplier_id,
+            AgentAlertModel.severity.in_(["HIGH", "CRITICAL"]),
+            AgentAlertModel.created_at >= cutoff,
+            AgentAlertModel.acknowledged_at.is_(None),
+        )
     )
     count = (await session.execute(count_stmt)).scalar_one()
     if count >= _AUTO_ALERT_THRESHOLD:

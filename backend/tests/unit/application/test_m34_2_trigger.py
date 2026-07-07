@@ -148,6 +148,4 @@ async def test_trigger_passes_trigger_source_to_connector_run():
     ):
         await trigger_connector_refresh("world_bank", session, trigger_source="manual")
 
-    mock_connector_instance.run.assert_called_once_with(
-        session, trigger_source="manual"
-    )
+    mock_connector_instance.run.assert_called_once_with(session, trigger_source="manual")

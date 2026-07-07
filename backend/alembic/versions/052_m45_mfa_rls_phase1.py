@@ -16,7 +16,6 @@ Create Date: 2026-06-22
 """
 
 from alembic import op
-import sqlalchemy as sa
 
 revision = "052"
 down_revision = "051"
@@ -50,16 +49,11 @@ _ORG_SCOPED_TABLES = [
 def upgrade() -> None:
     # ── 1. MFA columns on users ──────────────────────────────────────────────
     op.execute(
-        "ALTER TABLE users "
-        "ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE"
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE"
     )
+    op.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS encrypted_mfa_secret VARCHAR(512)")
     op.execute(
-        "ALTER TABLE users "
-        "ADD COLUMN IF NOT EXISTS encrypted_mfa_secret VARCHAR(512)"
-    )
-    op.execute(
-        "ALTER TABLE users "
-        "ADD COLUMN IF NOT EXISTS mfa_confirmed_at TIMESTAMP WITH TIME ZONE"
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_confirmed_at TIMESTAMP WITH TIME ZONE"
     )
 
     # ── 2. MFA backup codes table ────────────────────────────────────────────
@@ -73,8 +67,7 @@ def upgrade() -> None:
         )
     """)
     op.execute(
-        "CREATE INDEX IF NOT EXISTS ix_mfa_backup_codes_user_id "
-        "ON mfa_backup_codes (user_id)"
+        "CREATE INDEX IF NOT EXISTS ix_mfa_backup_codes_user_id ON mfa_backup_codes (user_id)"
     )
 
     # ── 3. RLS Phase 1 — PERMISSIVE (USING true, no filtering) ──────────────
@@ -82,10 +75,7 @@ def upgrade() -> None:
     # Phase 2 migration will tighten to actual org_id filtering.
     for table in _ORG_SCOPED_TABLES:
         op.execute(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
-        op.execute(
-            f"CREATE POLICY eios_rls_permissive ON {table} "
-            f"USING (true)"
-        )
+        op.execute(f"CREATE POLICY eios_rls_permissive ON {table} USING (true)")
 
 
 def downgrade() -> None:

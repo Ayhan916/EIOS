@@ -6,7 +6,6 @@ Reads from the event_log table. Written to by the Kafka consumer dispatch loop.
 from __future__ import annotations
 
 from datetime import datetime
-from uuid import uuid4
 
 import structlog
 from sqlalchemy import func, select
@@ -19,6 +18,7 @@ logger = structlog.get_logger(__name__)
 
 def _now() -> datetime:
     from datetime import UTC
+
     return datetime.now(UTC)
 
 

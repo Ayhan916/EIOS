@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.due_diligence.preventive_measures_engine import (
-    build_preventive_measures_report,
-    _classify_control,
     _assign_effectiveness,
+    _classify_control,
+    build_preventive_measures_report,
 )
 
 
@@ -81,10 +79,16 @@ class TestControlCategoryClassification:
         assert _classify_control({"title": "Human Rights Policy", "description": ""}) == "policy"
 
     def test_supplier_control_classified(self):
-        assert _classify_control({"title": "Supplier Due Diligence Process", "description": ""}) == "supplier_control"
+        assert (
+            _classify_control({"title": "Supplier Due Diligence Process", "description": ""})
+            == "supplier_control"
+        )
 
     def test_training_classified(self):
-        assert _classify_control({"title": "Employee Training Program", "description": ""}) == "training"
+        assert (
+            _classify_control({"title": "Employee Training Program", "description": ""})
+            == "training"
+        )
 
     def test_monitoring_classified(self):
         assert _classify_control({"title": "ESG KPI Monitoring", "description": ""}) == "monitoring"
@@ -93,7 +97,10 @@ class TestControlCategoryClassification:
         assert _classify_control({"title": "Annual Site Audit", "description": ""}) == "audit"
 
     def test_certification_classified(self):
-        assert _classify_control({"title": "ISO 14001 Certification", "description": ""}) == "certification"
+        assert (
+            _classify_control({"title": "ISO 14001 Certification", "description": ""})
+            == "certification"
+        )
 
     def test_unclassified_returns_other(self):
         assert _classify_control({"title": "General measure XYZ", "description": ""}) == "other"

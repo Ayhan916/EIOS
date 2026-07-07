@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.compliance.org_status import (
+    _COMPLIANT_THRESHOLD,
     compute_framework_status,
     compute_org_status,
-    _COMPLIANT_THRESHOLD,
-    _PARTIAL_THRESHOLD,
 )
 from domain.compliance_gap import ComplianceGap
 from domain.enums import EntityStatus
@@ -173,7 +170,7 @@ class TestComputeOrgStatus:
             open_gaps=[],
         )
         # CSDDD uncovered → Non-Compliant/Unknown should appear before Compliant CSRD
-        statuses = [f.status for f in status.frameworks]
+        [f.status for f in status.frameworks]
         csrd_idx = next(i for i, f in enumerate(status.frameworks) if f.regulation_code == "CSRD")
         csddd_idx = next(i for i, f in enumerate(status.frameworks) if f.regulation_code == "CSDDD")
         assert csddd_idx < csrd_idx  # non-compliant/unknown before compliant

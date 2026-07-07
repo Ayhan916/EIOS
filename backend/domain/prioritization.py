@@ -34,8 +34,8 @@ class PrioritizationDecision(BaseEntity):
     people_affected_weight: float = 0.0
 
     # Computed output
-    priority_score: float = 0.0   # severity*0.40 + probability*0.35 + people*0.25
-    priority_rank: int = 0        # 1 = highest priority within the org
+    priority_score: float = 0.0  # severity*0.40 + probability*0.35 + people*0.25
+    priority_rank: int = 0  # 1 = highest priority within the org
 
     # Capacity planning
     resource_capacity_per_quarter: int = 4  # how many audits/assessments the org can run

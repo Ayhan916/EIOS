@@ -4,6 +4,7 @@ Tables:
   product_carbon_footprints  — versioned PCF record per product computed from BOM × LCA
   scope3_inventories         — annual Scope 3 Cat. 1 aggregate across all product PCFs
 """
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -60,7 +61,8 @@ class Scope3InventoryModel(BaseModel):
     __tablename__ = "scope3_inventories"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "reporting_year",
+            "organization_id",
+            "reporting_year",
             name="uq_scope3_inventory_org_year",
         ),
         Index("ix_scope3_inv_org", "organization_id"),

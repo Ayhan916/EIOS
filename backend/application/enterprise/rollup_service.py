@@ -9,7 +9,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from infrastructure.persistence.models.enterprise import (
     BusinessUnitModel,
-    EnterpriseModel,
     RegionModel,
 )
 from infrastructure.persistence.models.finding import FindingModel
@@ -24,9 +23,7 @@ async def get_enterprise_rollup(enterprise_id: str, session: AsyncSession) -> di
     All queries use JOIN through organization.enterprise_id — no Python loops.
     """
     # Organizations in this enterprise
-    org_ids_q = select(OrganizationModel.id).where(
-        OrganizationModel.enterprise_id == enterprise_id
-    )
+    org_ids_q = select(OrganizationModel.id).where(OrganizationModel.enterprise_id == enterprise_id)
     org_ids = list((await session.execute(org_ids_q)).scalars().all())
 
     if not org_ids:
@@ -46,18 +43,14 @@ async def get_enterprise_rollup(enterprise_id: str, session: AsyncSession) -> di
     # Supplier count
     supplier_count = (
         await session.execute(
-            select(func.count(SupplierModel.id)).where(
-                SupplierModel.organization_id.in_(org_ids)
-            )
+            select(func.count(SupplierModel.id)).where(SupplierModel.organization_id.in_(org_ids))
         )
     ).scalar_one() or 0
 
     # Risk counts
     total_risks = (
         await session.execute(
-            select(func.count(RiskModel.id)).where(
-                RiskModel.organization_id.in_(org_ids)
-            )
+            select(func.count(RiskModel.id)).where(RiskModel.organization_id.in_(org_ids))
         )
     ).scalar_one() or 0
 
@@ -73,9 +66,7 @@ async def get_enterprise_rollup(enterprise_id: str, session: AsyncSession) -> di
     # Finding counts
     total_findings = (
         await session.execute(
-            select(func.count(FindingModel.id)).where(
-                FindingModel.organization_id.in_(org_ids)
-            )
+            select(func.count(FindingModel.id)).where(FindingModel.organization_id.in_(org_ids))
         )
     ).scalar_one() or 0
 
@@ -110,13 +101,17 @@ async def get_enterprise_rollup(enterprise_id: str, session: AsyncSession) -> di
 async def get_bu_rollups(enterprise_id: str, session: AsyncSession) -> list[dict]:
     """Return per-BusinessUnit rollup rows."""
     bus = (
-        await session.execute(
-            select(BusinessUnitModel).where(
-                BusinessUnitModel.enterprise_id == enterprise_id,
-                BusinessUnitModel.is_active.is_(True),
+        (
+            await session.execute(
+                select(BusinessUnitModel).where(
+                    BusinessUnitModel.enterprise_id == enterprise_id,
+                    BusinessUnitModel.is_active.is_(True),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     results = []
     for bu in bus:
@@ -128,7 +123,9 @@ async def get_bu_rollups(enterprise_id: str, session: AsyncSession) -> list[dict
                         OrganizationModel.business_unit_id == bu.id,
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         supplier_count = 0
         risk_count = 0
@@ -142,33 +139,37 @@ async def get_bu_rollups(enterprise_id: str, session: AsyncSession) -> list[dict
             ).scalar_one() or 0
             risk_count = (
                 await session.execute(
-                    select(func.count(RiskModel.id)).where(
-                        RiskModel.organization_id.in_(org_ids)
-                    )
+                    select(func.count(RiskModel.id)).where(RiskModel.organization_id.in_(org_ids))
                 )
             ).scalar_one() or 0
 
-        results.append({
-            "business_unit_id": bu.id,
-            "business_unit_name": bu.name,
-            "organization_count": len(org_ids),
-            "supplier_count": supplier_count,
-            "risk_count": risk_count,
-            "compliance_readiness": 0.0,
-        })
+        results.append(
+            {
+                "business_unit_id": bu.id,
+                "business_unit_name": bu.name,
+                "organization_count": len(org_ids),
+                "supplier_count": supplier_count,
+                "risk_count": risk_count,
+                "compliance_readiness": 0.0,
+            }
+        )
     return results
 
 
 async def get_region_rollups(enterprise_id: str, session: AsyncSession) -> list[dict]:
     """Return per-Region rollup rows."""
     regions = (
-        await session.execute(
-            select(RegionModel).where(
-                RegionModel.enterprise_id == enterprise_id,
-                RegionModel.is_active.is_(True),
+        (
+            await session.execute(
+                select(RegionModel).where(
+                    RegionModel.enterprise_id == enterprise_id,
+                    RegionModel.is_active.is_(True),
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
 
     results = []
     for region in regions:
@@ -180,7 +181,9 @@ async def get_region_rollups(enterprise_id: str, session: AsyncSession) -> list[
                         OrganizationModel.region_id == region.id,
                     )
                 )
-            ).scalars().all()
+            )
+            .scalars()
+            .all()
         )
         supplier_count = 0
         risk_count = 0
@@ -194,21 +197,21 @@ async def get_region_rollups(enterprise_id: str, session: AsyncSession) -> list[
             ).scalar_one() or 0
             risk_count = (
                 await session.execute(
-                    select(func.count(RiskModel.id)).where(
-                        RiskModel.organization_id.in_(org_ids)
-                    )
+                    select(func.count(RiskModel.id)).where(RiskModel.organization_id.in_(org_ids))
                 )
             ).scalar_one() or 0
 
-        results.append({
-            "region_id": region.id,
-            "region_name": region.name,
-            "region_code": region.code,
-            "data_residency": region.data_residency,
-            "organization_count": len(org_ids),
-            "supplier_count": supplier_count,
-            "risk_count": risk_count,
-        })
+        results.append(
+            {
+                "region_id": region.id,
+                "region_name": region.name,
+                "region_code": region.code,
+                "data_residency": region.data_residency,
+                "organization_count": len(org_ids),
+                "supplier_count": supplier_count,
+                "risk_count": risk_count,
+            }
+        )
     return results
 
 
@@ -226,14 +229,10 @@ def _score_from_rollup(rollup: dict) -> dict:
     compliance_score = min(rollup["compliance_readiness"], 100.0)
 
     total_risks = max(rollup["total_risks"], 1)
-    risk_posture_score = max(
-        0.0, (1.0 - rollup["critical_risks"] / total_risks) * 100
-    )
+    risk_posture_score = max(0.0, (1.0 - rollup["critical_risks"] / total_risks) * 100)
 
     total_findings = max(rollup["total_findings"], 1)
-    finding_score = max(
-        0.0, (1.0 - rollup["open_findings"] / total_findings) * 100
-    )
+    finding_score = max(0.0, (1.0 - rollup["open_findings"] / total_findings) * 100)
 
     supplier_score = 100.0 if rollup["supplier_count"] > 0 else 0.0
     governance_score = 80.0  # baseline until M41 governance data available
@@ -289,9 +288,7 @@ def _score_from_rollup(rollup: dict) -> dict:
     }
 
 
-async def compute_enterprise_health_score(
-    enterprise_id: str, session: AsyncSession
-) -> dict:
+async def compute_enterprise_health_score(enterprise_id: str, session: AsyncSession) -> dict:
     """Deterministic ESG health score (0–100) with explainability."""
     rollup = await get_enterprise_rollup(enterprise_id, session)
     return _score_from_rollup(rollup)

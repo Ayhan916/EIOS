@@ -38,32 +38,23 @@ async def retrieve_executive_context(
     risk_dist = {r.risk_band: r.count for r in ss_rows}
 
     # Critical/high finding count
-    finding_stmt = (
-        select(func.count())
-        .where(
-            FindingModel.organization_id == org_id,
-            FindingModel.severity.in_(list(_CRITICAL_SEVERITY)),
-        )
+    finding_stmt = select(func.count()).where(
+        FindingModel.organization_id == org_id,
+        FindingModel.severity.in_(list(_CRITICAL_SEVERITY)),
     )
     critical_findings = (await session.execute(finding_stmt)).scalar_one_or_none() or 0
 
     # Open risk count
-    risk_stmt = (
-        select(func.count())
-        .where(
-            RiskModel.organization_id == org_id,
-            RiskModel.risk_level.in_(list(_CRITICAL_SEVERITY)),
-        )
+    risk_stmt = select(func.count()).where(
+        RiskModel.organization_id == org_id,
+        RiskModel.risk_level.in_(list(_CRITICAL_SEVERITY)),
     )
     critical_risks = (await session.execute(risk_stmt)).scalar_one_or_none() or 0
 
     # Open recommendations
-    open_rec_stmt = (
-        select(func.count())
-        .where(
-            RecommendationModel.organization_id == org_id,
-            RecommendationModel.action_status.in_(list(_OPEN_STATUSES)),
-        )
+    open_rec_stmt = select(func.count()).where(
+        RecommendationModel.organization_id == org_id,
+        RecommendationModel.action_status.in_(list(_OPEN_STATUSES)),
     )
     open_recs = (await session.execute(open_rec_stmt)).scalar_one_or_none() or 0
 
@@ -97,7 +88,9 @@ async def retrieve_executive_context(
             "id": latest_assessment.id,
             "title": latest_assessment.title if hasattr(latest_assessment, "title") else "",
             "created_at": str(latest_assessment.created_at),
-        } if latest_assessment else None,
+        }
+        if latest_assessment
+        else None,
         "top_critical_findings": [
             {
                 "id": f.id,
@@ -109,7 +102,9 @@ async def retrieve_executive_context(
         ],
     }
 
-    source_ids = ([latest_assessment.id] if latest_assessment else []) + [f.id for f in top_findings]
+    source_ids = ([latest_assessment.id] if latest_assessment else []) + [
+        f.id for f in top_findings
+    ]
 
     retrieved_at = datetime.now(UTC).isoformat()
     freshness_metadata = [

@@ -4,6 +4,7 @@ import jwt
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import application.audit as audit_factory
 from domain.enums import EntityStatus, UserRole
@@ -23,7 +24,6 @@ from interfaces.api.deps import (
     require_admin,
 )
 from interfaces.api.schemas.auth import (
-    AccessTokenResponse,
     ExternalAccessRevokeRequest,
     ExternalAccessTokenRequest,
     ExternalAccessTokenResponse,
@@ -36,6 +36,7 @@ from interfaces.api.schemas.auth import (
     TokenResponse,
 )
 from interfaces.api.schemas.user import PatchMeRequest, UserResponse
+from shared.config import settings
 from shared.rate_limit import rate_limit_auth
 from shared.security import (
     blacklist_token,
@@ -47,8 +48,6 @@ from shared.security import (
     hash_password,
     verify_password,
 )
-from shared.config import settings
-from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger(__name__)
 
@@ -95,7 +94,9 @@ async def register(
         )
     )
 
-    logger.info("user_registered", user_id=saved.id, email=saved.email, organization_id=saved_org.id)
+    logger.info(
+        "user_registered", user_id=saved.id, email=saved.email, organization_id=saved_org.id
+    )
 
     return TokenResponse(
         access_token=create_access_token(saved.id, saved.email, saved.role),
@@ -125,11 +126,20 @@ async def login(
 
     # Update last_login_at
     updated = User(
-        id=user.id, email=user.email, display_name=user.display_name, role=user.role,
-        organization_id=user.organization_id, is_active=user.is_active, status=user.status,
-        version=user.version, owner=user.owner, created_by=user.created_by,
-        updated_by=user.updated_by, created_at=user.created_at,
-        updated_at=datetime.now(UTC), password_hash=user.password_hash,
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        role=user.role,
+        organization_id=user.organization_id,
+        is_active=user.is_active,
+        status=user.status,
+        version=user.version,
+        owner=user.owner,
+        created_by=user.created_by,
+        updated_by=user.updated_by,
+        created_at=user.created_at,
+        updated_at=datetime.now(UTC),
+        password_hash=user.password_hash,
         last_login_at=datetime.now(UTC),
     )
     saved = await repo.save(updated)
@@ -173,9 +183,7 @@ async def refresh_token(
         ) from exc
 
     if payload.get("type") != "refresh":
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
 
     user = await repo.get_by_id(payload["sub"])
     if user is None or not user.is_active:

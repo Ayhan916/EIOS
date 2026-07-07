@@ -39,22 +39,20 @@ def check_due_assessments_task(self) -> dict[str, object]:
 
 
 async def _run_schedule_check() -> dict[str, object]:
-    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
-    from infrastructure.persistence.models.m46_3 import AssessmentScheduleModel  # noqa: PLC0415
-    from infrastructure.persistence.models.assessment import AssessmentModel  # noqa: PLC0415
     from sqlalchemy import select  # noqa: PLC0415
+
+    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
+    from infrastructure.persistence.models.assessment import AssessmentModel  # noqa: PLC0415
+    from infrastructure.persistence.models.m46_3 import AssessmentScheduleModel  # noqa: PLC0415
 
     now = datetime.now(UTC)
     triggered = 0
     errors = 0
 
     async with AsyncSessionFactory() as session, session.begin():
-        stmt = (
-            select(AssessmentScheduleModel)
-            .where(
-                AssessmentScheduleModel.is_active.is_(True),
-                AssessmentScheduleModel.next_due_at <= now,
-            )
+        stmt = select(AssessmentScheduleModel).where(
+            AssessmentScheduleModel.is_active.is_(True),
+            AssessmentScheduleModel.next_due_at <= now,
         )
         result = await session.execute(stmt)
         schedules = list(result.scalars().all())
@@ -79,7 +77,7 @@ async def _run_schedule_check() -> dict[str, object]:
                     updated_at=now,
                     organization_id=schedule.organization_id,
                     supplier_id=schedule.supplier_id,
-                    title=f"Periodic Assessment — auto-scheduled",
+                    title="Periodic Assessment — auto-scheduled",
                     description=f"Auto-created by assessment schedule (frequency: {schedule.frequency_days} days).",
                     assessment_type="Periodic",
                     scope="",

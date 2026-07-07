@@ -14,8 +14,9 @@ Create Date: 2026-06-19
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "025"
 down_revision = "024"
@@ -62,8 +63,12 @@ def upgrade() -> None:
         sa.Column("obligation_type", sa.String(20), nullable=False, server_default="mandatory"),
         sa.Column("keywords", postgresql.JSON, nullable=False),
     )
-    op.create_index("ix_regulation_requirements_code", "regulation_requirements", ["code"], unique=True)
-    op.create_index("ix_regulation_requirements_regulation", "regulation_requirements", ["regulation_id"])
+    op.create_index(
+        "ix_regulation_requirements_code", "regulation_requirements", ["code"], unique=True
+    )
+    op.create_index(
+        "ix_regulation_requirements_regulation", "regulation_requirements", ["regulation_id"]
+    )
 
     op.create_table(
         "requirement_mappings",
@@ -87,7 +92,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_req_mappings_org", "requirement_mappings", ["organization_id"])
     op.create_index("ix_req_mappings_entity", "requirement_mappings", ["entity_type", "entity_id"])
-    op.create_index("ix_req_mappings_requirement", "requirement_mappings", ["regulation_requirement_id"])
+    op.create_index(
+        "ix_req_mappings_requirement", "requirement_mappings", ["regulation_requirement_id"]
+    )
 
     op.create_table(
         "compliance_gaps",
@@ -113,7 +120,9 @@ def upgrade() -> None:
         sa.Column("resolved_by", sa.String(36), nullable=True),
     )
     op.create_index("ix_compliance_gaps_org", "compliance_gaps", ["organization_id"])
-    op.create_index("ix_compliance_gaps_requirement", "compliance_gaps", ["regulation_requirement_id"])
+    op.create_index(
+        "ix_compliance_gaps_requirement", "compliance_gaps", ["regulation_requirement_id"]
+    )
     op.create_index("ix_compliance_gaps_supplier", "compliance_gaps", ["supplier_id"])
 
 

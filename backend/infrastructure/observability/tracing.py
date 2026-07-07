@@ -20,7 +20,6 @@ Graceful degradation:
 
 from __future__ import annotations
 
-import logging
 import os
 from typing import Any
 
@@ -41,16 +40,18 @@ def configure_tracing(app: Any | None = None) -> None:  # noqa: ANN401
     try:
         _setup_tracing(app)
     except ImportError:
-        logger.warning("otel_not_installed", detail="opentelemetry packages missing — tracing disabled")
+        logger.warning(
+            "otel_not_installed", detail="opentelemetry packages missing — tracing disabled"
+        )
     except Exception as exc:  # noqa: BLE001
         logger.warning("otel_setup_failed", error=str(exc))
 
 
 def _setup_tracing(app: Any | None) -> None:  # noqa: ANN401
     from opentelemetry import trace
+    from opentelemetry.sdk.resources import SERVICE_NAME, Resource
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
-    from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+    from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
     service_name = os.environ.get("OTEL_SERVICE_NAME", "eios-backend")
     resource = Resource.create({SERVICE_NAME: service_name})
@@ -60,11 +61,14 @@ def _setup_tracing(app: Any | None) -> None:  # noqa: ANN401
     otlp_endpoint = os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT", "")
     if otlp_endpoint:
         from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+
         exporter = OTLPSpanExporter(endpoint=f"{otlp_endpoint.rstrip('/')}/v1/traces")
         provider.add_span_processor(BatchSpanProcessor(exporter))
         logger.info("otel_tracing_enabled", endpoint=otlp_endpoint, service=service_name)
     else:
-        logger.info("otel_tracing_local_only", detail="Set OTEL_EXPORTER_OTLP_ENDPOINT to export traces")
+        logger.info(
+            "otel_tracing_local_only", detail="Set OTEL_EXPORTER_OTLP_ENDPOINT to export traces"
+        )
 
     trace.set_tracer_provider(provider)
 
@@ -72,6 +76,7 @@ def _setup_tracing(app: Any | None) -> None:  # noqa: ANN401
     if app is not None:
         try:
             from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
             FastAPIInstrumentor.instrument_app(
                 app,
                 tracer_provider=provider,
@@ -84,7 +89,9 @@ def _setup_tracing(app: Any | None) -> None:  # noqa: ANN401
     # ── SQLAlchemy async engine auto-instrumentation ──────────────────────────
     try:
         from opentelemetry.instrumentation.sqlalchemy import SQLAlchemyInstrumentor
+
         from infrastructure.persistence.database import engine as async_engine
+
         SQLAlchemyInstrumentor().instrument(
             engine=async_engine.sync_engine,
             tracer_provider=provider,
@@ -99,6 +106,7 @@ def get_trace_context() -> dict[str, str]:
     """Return current trace_id and span_id as hex strings (empty strings when no span active)."""
     try:
         from opentelemetry import trace
+
         span = trace.get_current_span()
         ctx = span.get_span_context()
         if ctx and ctx.is_valid:

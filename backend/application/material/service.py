@@ -27,7 +27,7 @@ from domain.material import (
     MaterialType,
     SourcingRisk,
 )
-from infrastructure.kafka.events import DomainEvent, MaterialEventType
+from infrastructure.kafka.events import DomainEvent
 from infrastructure.kafka.producer import KafkaEventProducer
 from infrastructure.persistence.models.material import (
     MaterialComplianceFlagModel,
@@ -49,6 +49,7 @@ def _uid() -> str:
 
 
 # ── Material Core (KAN-91) ────────────────────────────────────────────────────
+
 
 class MaterialService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -222,7 +223,9 @@ class MaterialService:
         await self._session.flush()
         return model
 
-    async def archive(self, organization_id: str, material_id: str, actor_id: str | None = None) -> bool:
+    async def archive(
+        self, organization_id: str, material_id: str, actor_id: str | None = None
+    ) -> bool:
         model = await self.get(organization_id, material_id)
         if model is None:
             return False
@@ -234,6 +237,7 @@ class MaterialService:
 
 
 # ── Composition / BOM (KAN-92) ────────────────────────────────────────────────
+
 
 class MaterialCompositionService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -294,6 +298,7 @@ class MaterialCompositionService:
 
 
 # ── Sourcing (KAN-93) ─────────────────────────────────────────────────────────
+
 
 class MaterialSourcingService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -374,6 +379,7 @@ class MaterialSourcingService:
 
 
 # ── Compliance Flags (KAN-94) ─────────────────────────────────────────────────
+
 
 class MaterialComplianceService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -464,6 +470,7 @@ class MaterialComplianceService:
 
 
 # ── Sustainability Metrics (KAN-95) ───────────────────────────────────────────
+
 
 class MaterialSustainabilityService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:

@@ -32,9 +32,10 @@ async def expand_watchlist_network(
     Idempotent: skips pairs that already exist (ON CONFLICT DO NOTHING semantics via
     scalar_one_or_none check). Returns only newly created entries.
     """
-    from infrastructure.persistence.models.network import NetworkWatchlistEntryModel
-    from application.network.graph_service import bfs_neighborhood
     from sqlalchemy import select
+
+    from application.network.graph_service import bfs_neighborhood
+    from infrastructure.persistence.models.network import NetworkWatchlistEntryModel
 
     neighbors = await bfs_neighborhood(
         organization_id, watched_supplier_id, max_depth=2, session=session
@@ -96,8 +97,9 @@ async def remove_watchlist_network(
     Called when the supplier is removed from SupplierWatchlistModel.
     Returns count of deleted rows.
     """
-    from infrastructure.persistence.models.network import NetworkWatchlistEntryModel
     from sqlalchemy import delete
+
+    from infrastructure.persistence.models.network import NetworkWatchlistEntryModel
 
     stmt = delete(NetworkWatchlistEntryModel).where(
         NetworkWatchlistEntryModel.organization_id == organization_id,
@@ -118,16 +120,15 @@ async def get_network_watchlist(
     has_active_alert is True when the related supplier has an ACTIVE HIGH/CRITICAL
     surveillance signal detected within the last 72 hours.
     """
-    from infrastructure.persistence.models.network import NetworkWatchlistEntryModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import NetworkWatchlistEntryModel
 
     stmt = select(NetworkWatchlistEntryModel).where(
         NetworkWatchlistEntryModel.organization_id == organization_id
     )
     if watched_supplier_id:
-        stmt = stmt.where(
-            NetworkWatchlistEntryModel.watched_supplier_id == watched_supplier_id
-        )
+        stmt = stmt.where(NetworkWatchlistEntryModel.watched_supplier_id == watched_supplier_id)
     stmt = stmt.order_by(
         NetworkWatchlistEntryModel.watched_supplier_id,
         NetworkWatchlistEntryModel.distance,
@@ -156,9 +157,7 @@ async def get_network_watchlist(
             )
             .distinct()
         )
-        alerted_suppliers = set(
-            (await session.execute(sig_stmt)).scalars().all()
-        )
+        alerted_suppliers = set((await session.execute(sig_stmt)).scalars().all())
     except Exception:
         pass  # surveillance table may not exist in test environments
 

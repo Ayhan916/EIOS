@@ -13,15 +13,14 @@ Tests:
 from __future__ import annotations
 
 import hashlib
-import time
 from datetime import UTC, datetime, timedelta
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import jwt
 import pytest
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _fake_secret() -> str:
     return "test-secret-key-for-board-portal"
@@ -37,6 +36,7 @@ def _make_token(
     with patch("shared.config.settings") as mock_settings:
         mock_settings.secret_key = _fake_secret()
         from application.commercial.board_portal import create_board_token
+
         return create_board_token(
             report_id=report_id,
             organization_id=org_id,
@@ -49,6 +49,7 @@ def _decode_token(token: str) -> dict:
     with patch("shared.config.settings") as mock_settings:
         mock_settings.secret_key = _fake_secret()
         from application.commercial.board_portal import decode_board_token
+
         return decode_board_token(token)
 
 
@@ -69,58 +70,78 @@ class TestESGHealthScoreLogic:
     ) -> tuple[float, str]:
         """Replicates the executive router's health score logic."""
         esg_component = min((avg_esg or 0) / 100, 1.0) * 40
-        low_risk_pct = (
-            (total_scored - critical - high) / total_scored
-            if total_scored > 0 else 0.5
-        )
+        low_risk_pct = (total_scored - critical - high) / total_scored if total_scored > 0 else 0.5
         risk_component = low_risk_pct * 30
         closure_rate = 1.0 - (open_recs / total_recs) if total_recs > 0 else 0.5
         closure_component = closure_rate * 30
 
         score = round(esg_component + risk_component + closure_component, 1)
         label = (
-            "Excellent" if score >= 80
-            else "Good" if score >= 65
-            else "Needs Attention" if score >= 50
+            "Excellent"
+            if score >= 80
+            else "Good"
+            if score >= 65
+            else "Needs Attention"
+            if score >= 50
             else "Critical"
         )
         return score, label
 
     def test_perfect_portfolio_scores_excellent(self):
         score, label = self._compute_health(
-            avg_esg=95.0, total_scored=20, critical=0, high=0,
-            total_recs=10, open_recs=0,
+            avg_esg=95.0,
+            total_scored=20,
+            critical=0,
+            high=0,
+            total_recs=10,
+            open_recs=0,
         )
         assert score >= 80
         assert label == "Excellent"
 
     def test_zero_esg_score_is_critical(self):
         score, label = self._compute_health(
-            avg_esg=0.0, total_scored=10, critical=10, high=0,
-            total_recs=10, open_recs=10,
+            avg_esg=0.0,
+            total_scored=10,
+            critical=10,
+            high=0,
+            total_recs=10,
+            open_recs=10,
         )
         assert score < 50
         assert label == "Critical"
 
     def test_score_bounded_0_to_100(self):
         score, _ = self._compute_health(
-            avg_esg=100.0, total_scored=1, critical=0, high=0,
-            total_recs=5, open_recs=0,
+            avg_esg=100.0,
+            total_scored=1,
+            critical=0,
+            high=0,
+            total_recs=5,
+            open_recs=0,
         )
         assert 0 <= score <= 100
 
     def test_no_suppliers_uses_neutral_risk_pct(self):
         score, _ = self._compute_health(
-            avg_esg=70.0, total_scored=0, critical=0, high=0,
-            total_recs=0, open_recs=0,
+            avg_esg=70.0,
+            total_scored=0,
+            critical=0,
+            high=0,
+            total_recs=0,
+            open_recs=0,
         )
         # With total_scored=0, low_risk_pct=0.5; total_recs=0, closure_rate=0.5
         assert score > 0
 
     def test_moderate_portfolio_scores_needs_attention(self):
         score, label = self._compute_health(
-            avg_esg=50.0, total_scored=10, critical=3, high=3,
-            total_recs=20, open_recs=10,
+            avg_esg=50.0,
+            total_scored=10,
+            critical=3,
+            high=3,
+            total_recs=20,
+            open_recs=10,
         )
         assert label in ("Needs Attention", "Critical", "Good")
         assert 0 <= score <= 100
@@ -142,37 +163,45 @@ class TestPriorityActions:
         """Replicates the command-center priority action builder."""
         actions = []
         if overdue_recs > 0:
-            actions.append({
-                "type": "overdue_actions",
-                "title": f"{overdue_recs} overdue recommendation{'s' if overdue_recs > 1 else ''}",
-                "severity": "critical" if overdue_recs >= 5 else "high",
-                "href": "/findings",
-                "count": overdue_recs,
-            })
+            actions.append(
+                {
+                    "type": "overdue_actions",
+                    "title": f"{overdue_recs} overdue recommendation{'s' if overdue_recs > 1 else ''}",
+                    "severity": "critical" if overdue_recs >= 5 else "high",
+                    "href": "/findings",
+                    "count": overdue_recs,
+                }
+            )
         if crit_findings > 0:
-            actions.append({
-                "type": "critical_findings",
-                "title": f"{crit_findings} critical finding{'s' if crit_findings > 1 else ''} open",
-                "severity": "critical",
-                "href": "/findings",
-                "count": crit_findings,
-            })
+            actions.append(
+                {
+                    "type": "critical_findings",
+                    "title": f"{crit_findings} critical finding{'s' if crit_findings > 1 else ''} open",
+                    "severity": "critical",
+                    "href": "/findings",
+                    "count": crit_findings,
+                }
+            )
         if critical_risks > 0:
-            actions.append({
-                "type": "critical_risks",
-                "title": f"{critical_risks} critical risk{'s' if critical_risks > 1 else ''} unmitigated",
-                "severity": "critical",
-                "href": "/risks",
-                "count": critical_risks,
-            })
+            actions.append(
+                {
+                    "type": "critical_risks",
+                    "title": f"{critical_risks} critical risk{'s' if critical_risks > 1 else ''} unmitigated",
+                    "severity": "critical",
+                    "href": "/risks",
+                    "count": critical_risks,
+                }
+            )
         if awaiting_review > 0:
-            actions.append({
-                "type": "assessments_pending",
-                "title": f"{awaiting_review} assessment{'s' if awaiting_review > 1 else ''} awaiting review",
-                "severity": "medium",
-                "href": "/assessments",
-                "count": awaiting_review,
-            })
+            actions.append(
+                {
+                    "type": "assessments_pending",
+                    "title": f"{awaiting_review} assessment{'s' if awaiting_review > 1 else ''} awaiting review",
+                    "severity": "medium",
+                    "href": "/assessments",
+                    "count": awaiting_review,
+                }
+            )
         return actions[:5]
 
     def test_no_issues_returns_empty_list(self):
@@ -279,6 +308,7 @@ class TestBoardPortalTokenService:
     def test_hash_token_is_deterministic_sha256(self):
         with patch("shared.config.settings"):
             from application.commercial.board_portal import hash_token
+
             t = "my.jwt.token"
             h1 = hash_token(t)
             h2 = hash_token(t)
@@ -288,6 +318,7 @@ class TestBoardPortalTokenService:
     def test_is_section_allowed_empty_means_all(self):
         with patch("shared.config.settings"):
             from application.commercial.board_portal import is_section_allowed
+
             payload = {"sections": []}
             assert is_section_allowed(payload, "portfolio") is True
             assert is_section_allowed(payload, "esg") is True
@@ -295,6 +326,7 @@ class TestBoardPortalTokenService:
     def test_is_section_allowed_restricts_when_set(self):
         with patch("shared.config.settings"):
             from application.commercial.board_portal import is_section_allowed
+
             payload = {"sections": ["portfolio"]}
             assert is_section_allowed(payload, "portfolio") is True
             assert is_section_allowed(payload, "esg") is False
@@ -309,11 +341,13 @@ class TestBoardPortalEndpointIntegration:
     def test_invalid_token_raises_401(self):
         """Any token with bad signature should raise 401."""
         import jwt as pyjwt
+
         bad_token = "not.a.real.jwt"
         # decode_board_token should raise on invalid token
         with patch("shared.config.settings") as ms:
             ms.secret_key = _fake_secret()
             from application.commercial.board_portal import decode_board_token
+
             with pytest.raises((pyjwt.InvalidTokenError, pyjwt.DecodeError)):
                 decode_board_token(bad_token)
 
@@ -341,6 +375,7 @@ class TestBoardPortalEndpointIntegration:
         with patch("shared.config.settings") as ms:
             ms.secret_key = _fake_secret()
             from application.commercial.board_portal import create_board_token
+
             with pytest.raises(ValueError):
                 create_board_token(report_id="r", organization_id="o", expires_in_hours=0)
             with pytest.raises(ValueError):
@@ -402,10 +437,25 @@ class TestCommandCenterPersonaData:
             "health_label": "Good",
             "priority_actions": [],
             "yoy": {"avg_esg_delta": 3.2, "prior_avg_esg": 68.0, "current_avg_esg": 71.2},
-            "ceo": {"total_scored_suppliers": 15, "critical_risk_suppliers": 2, "open_findings": 8, "overdue_actions": 3},
+            "ceo": {
+                "total_scored_suppliers": 15,
+                "critical_risk_suppliers": 2,
+                "open_findings": 8,
+                "overdue_actions": 3,
+            },
             "cfo": {"taxonomy_alignment_pct": 35.2, "green_revenue_pct": None},
-            "cso": {"latest_emissions_tco2e": None, "kpi_on_track": 0, "kpi_at_risk": 0, "kpi_missed": 0},
-            "cco": {"soc2_readiness_pct": None, "soc2_implemented": 0, "soc2_total": 0, "open_critical_findings": 2},
+            "cso": {
+                "latest_emissions_tco2e": None,
+                "kpi_on_track": 0,
+                "kpi_at_risk": 0,
+                "kpi_missed": 0,
+            },
+            "cco": {
+                "soc2_readiness_pct": None,
+                "soc2_implemented": 0,
+                "soc2_total": 0,
+                "open_critical_findings": 2,
+            },
         }
         assert response["esg_health_score"] == 74.5
         assert response["health_label"] in ("Excellent", "Good", "Needs Attention", "Critical")

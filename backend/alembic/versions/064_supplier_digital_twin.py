@@ -8,6 +8,7 @@ Create Date: 2026-06-25
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "064"
@@ -26,10 +27,18 @@ def upgrade() -> None:
         sa.Column("owner", sa.String(36), nullable=True),
         sa.Column("created_by", sa.String(36), nullable=True),
         sa.Column("updated_by", sa.String(36), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("NOW()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("NOW()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
         sa.Column("supplier_id", sa.String(36), nullable=False),
         sa.Column("organization_id", sa.String(36), nullable=False),
         # Health dimensions
@@ -49,8 +58,12 @@ def upgrade() -> None:
         sa.Column("event_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("critical_event_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("last_event_at", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("last_updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("NOW()")),
+        sa.Column(
+            "last_updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
         sa.Column("twin_version", sa.Integer, nullable=False, server_default="1"),
         sa.UniqueConstraint("supplier_id", "organization_id", name="uq_twin_supplier_org"),
     )
@@ -67,10 +80,18 @@ def upgrade() -> None:
         sa.Column("owner", sa.String(36), nullable=True),
         sa.Column("created_by", sa.String(36), nullable=True),
         sa.Column("updated_by", sa.String(36), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("NOW()")),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("NOW()")),
+        sa.Column(
+            "created_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
+        sa.Column(
+            "updated_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
         sa.Column("supplier_id", sa.String(36), nullable=False),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column("event_type", sa.String(50), nullable=False),
@@ -92,8 +113,12 @@ def upgrade() -> None:
         sa.Column("health_delta", sa.Float, nullable=False, server_default="0.0"),
         sa.Column("confidence", sa.Float, nullable=False, server_default="0.7"),
         sa.Column("occurred_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("processed_at", sa.DateTime(timezone=True), nullable=False,
-                  server_default=sa.text("NOW()")),
+        sa.Column(
+            "processed_at",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("NOW()"),
+        ),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
     )
     op.create_index("ix_ite_supplier_id", "intelligence_timeline_events", ["supplier_id"])

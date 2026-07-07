@@ -20,11 +20,11 @@ from infrastructure.persistence.models.sustainability import (
     CarbonInventoryModel,
     ClimateRiskAssessmentModel,
     ESGKPIModel,
-    KPIMeasurementModel,
+    ESGTargetModel,
     SustainabilityObjectiveModel,
     SustainabilityScorecardModel,
-    ESGTargetModel,
 )
+
 from .objective_service import SustainabilityError, _now
 
 EntityType = Literal["enterprise", "business_unit", "legal_entity", "region"]
@@ -106,11 +106,7 @@ def _org_ids_for_entity(
     }
     col_name = col_map[entity_type]
     col = getattr(OrganizationModel, col_name)
-    rows = (
-        session.query(OrganizationModel.id)
-        .filter(col == entity_id)
-        .all()
-    )
+    rows = session.query(OrganizationModel.id).filter(col == entity_id).all()
     return [r.id for r in rows]
 
 
@@ -120,7 +116,6 @@ def _emissions_rollup(org_ids: list[str], session: Session) -> EmissionsRollup:
         return EmissionsRollup()
 
     # Latest finalized inventory per org using subquery
-    from sqlalchemy import select as sa_select
 
     row = (
         session.query(
@@ -177,7 +172,8 @@ def _targets_rollup(org_ids: list[str], session: Session) -> TargetsRollup:
     total = (
         session.query(func.count(ESGTargetModel.id))
         .filter(ESGTargetModel.organization_id.in_(org_ids))
-        .scalar() or 0
+        .scalar()
+        or 0
     )
     with_measurements = (
         session.query(func.count(ESGTargetModel.id))
@@ -185,7 +181,8 @@ def _targets_rollup(org_ids: list[str], session: Session) -> TargetsRollup:
             ESGTargetModel.organization_id.in_(org_ids),
             ESGTargetModel.current_value.isnot(None),
         )
-        .scalar() or 0
+        .scalar()
+        or 0
     )
     attainment = round(with_measurements / total * 100, 1) if total else 0.0
     return TargetsRollup(
@@ -202,7 +199,8 @@ def _kpis_rollup(org_ids: list[str], session: Session) -> KPIsRollup:
     total = (
         session.query(func.count(ESGKPIModel.id))
         .filter(ESGKPIModel.organization_id.in_(org_ids))
-        .scalar() or 0
+        .scalar()
+        or 0
     )
     active = (
         session.query(func.count(ESGKPIModel.id))
@@ -210,7 +208,8 @@ def _kpis_rollup(org_ids: list[str], session: Session) -> KPIsRollup:
             ESGKPIModel.organization_id.in_(org_ids),
             ESGKPIModel.is_active == True,  # noqa: E712
         )
-        .scalar() or 0
+        .scalar()
+        or 0
     )
     return KPIsRollup(total=int(total), active=int(active))
 

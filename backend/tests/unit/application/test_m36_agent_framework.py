@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
-
+from unittest.mock import AsyncMock, MagicMock
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_session(scalar_one_or_none=None, scalars_all=None):
     session = AsyncMock()
@@ -59,6 +59,7 @@ def _make_run(run_id="run-1", agent_id="agent-1", started_at=None):
 
 
 # ── seed_monitoring_agents ─────────────────────────────────────────────────────
+
 
 class TestSeedMonitoringAgents:
     async def test_seeds_all_builtin_agents_when_none_exist(self) -> None:
@@ -116,6 +117,7 @@ class TestSeedMonitoringAgents:
 
 # ── get_agent / list_agents ────────────────────────────────────────────────────
 
+
 class TestAgentQueries:
     async def test_get_agent_returns_none_when_missing(self) -> None:
         from application.agent_monitoring.agent_service import get_agent
@@ -151,6 +153,7 @@ class TestAgentQueries:
 
 # ── set_agent_enabled ──────────────────────────────────────────────────────────
 
+
 class TestSetAgentEnabled:
     async def test_enable_sets_active(self) -> None:
         from application.agent_monitoring.agent_service import set_agent_enabled
@@ -184,6 +187,7 @@ class TestSetAgentEnabled:
 
 # ── get_due_agents ─────────────────────────────────────────────────────────────
 
+
 class TestGetDueAgents:
     async def test_returns_due_agents(self) -> None:
         from application.agent_monitoring.agent_service import get_due_agents
@@ -203,6 +207,7 @@ class TestGetDueAgents:
 
 # ── record_run_start ───────────────────────────────────────────────────────────
 
+
 class TestRecordRunStart:
     async def test_creates_run_record(self) -> None:
         from application.agent_monitoring.agent_service import record_run_start
@@ -221,6 +226,7 @@ class TestRecordRunStart:
 
     async def test_run_id_is_uuid(self) -> None:
         import re
+
         from application.agent_monitoring.agent_service import record_run_start
 
         session = AsyncMock()
@@ -232,6 +238,7 @@ class TestRecordRunStart:
 
 
 # ── record_run_completed ───────────────────────────────────────────────────────
+
 
 class TestRecordRunCompleted:
     async def test_marks_completed_and_updates_agent(self) -> None:
@@ -267,6 +274,7 @@ class TestRecordRunCompleted:
 
 
 # ── record_run_failed ──────────────────────────────────────────────────────────
+
 
 class TestRecordRunFailed:
     async def test_marks_failed_and_increments_counter(self) -> None:
@@ -373,6 +381,7 @@ class TestRecordRunFailed:
 
 # ── Finding Service ────────────────────────────────────────────────────────────
 
+
 class TestFindingService:
     async def test_create_finding_adds_to_session(self) -> None:
         from application.agent_monitoring.finding_service import create_finding
@@ -416,8 +425,9 @@ class TestFindingService:
         assert result.acknowledged_by == "user-1"
 
     async def test_acknowledge_non_open_finding_raises(self) -> None:
-        from application.agent_monitoring.finding_service import acknowledge_finding
         import pytest
+
+        from application.agent_monitoring.finding_service import acknowledge_finding
 
         finding = MagicMock()
         finding.id = "f-1"

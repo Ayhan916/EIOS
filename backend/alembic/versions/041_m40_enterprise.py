@@ -22,6 +22,7 @@ Create Date: 2026-06-20
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "041"
@@ -50,13 +51,12 @@ def upgrade() -> None:
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("hq_country", sa.String(10), nullable=True),
         sa.Column("industry", sa.String(255), nullable=True),
-        sa.Column("default_data_residency", sa.String(10), nullable=False,
-                  server_default="EU"),
-        sa.Column("default_data_classification", sa.String(20), nullable=False,
-                  server_default="INTERNAL"),
+        sa.Column("default_data_residency", sa.String(10), nullable=False, server_default="EU"),
+        sa.Column(
+            "default_data_classification", sa.String(20), nullable=False, server_default="INTERNAL"
+        ),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
-        sa.Column("settings", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="{}"),
+        sa.Column("settings", sa.dialects.postgresql.JSONB, nullable=False, server_default="{}"),
     )
     op.create_index("ix_enterprise_name", "enterprises", ["name"])
     op.create_index("ix_enterprise_active", "enterprises", ["is_active"])
@@ -65,8 +65,7 @@ def upgrade() -> None:
     op.create_table(
         "business_units",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("region_scope", sa.String(100), nullable=True),
@@ -80,8 +79,7 @@ def upgrade() -> None:
     op.create_table(
         "legal_entities",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("country", sa.String(10), nullable=True),
@@ -96,8 +94,7 @@ def upgrade() -> None:
     op.create_table(
         "enterprise_regions",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("code", sa.String(20), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
@@ -112,18 +109,17 @@ def upgrade() -> None:
     op.create_table(
         "identity_providers",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("provider_type", sa.String(20), nullable=False),
         sa.Column("issuer", sa.String(500), nullable=True),
         sa.Column("metadata_url", sa.String(500), nullable=True),
         sa.Column("client_id", sa.String(500), nullable=True),
         sa.Column("client_secret_encrypted", sa.Text, nullable=True),
-        sa.Column("certificates", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("config", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="{}"),
+        sa.Column(
+            "certificates", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column("config", sa.dialects.postgresql.JSONB, nullable=False, server_default="{}"),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
     )
     op.create_index("ix_idp_enterprise", "identity_providers", ["enterprise_id"])
@@ -134,8 +130,7 @@ def upgrade() -> None:
     op.create_table(
         "group_mappings",
         *_COMMON,
-        sa.Column("idp_id", sa.String(36),
-                  sa.ForeignKey("identity_providers.id"), nullable=False),
+        sa.Column("idp_id", sa.String(36), sa.ForeignKey("identity_providers.id"), nullable=False),
         sa.Column("enterprise_id", sa.String(36), nullable=False),
         sa.Column("idp_group", sa.String(500), nullable=False),
         sa.Column("mapped_role", sa.String(100), nullable=False),
@@ -152,13 +147,11 @@ def upgrade() -> None:
     op.create_table(
         "enterprise_policies",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("policy_type", sa.String(100), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
-        sa.Column("config", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="{}"),
+        sa.Column("config", sa.dialects.postgresql.JSONB, nullable=False, server_default="{}"),
         sa.Column("cascade_to_children", sa.Boolean, nullable=False, server_default="true"),
         sa.Column("scope", sa.String(50), nullable=False, server_default="all"),
         sa.Column("scope_id", sa.String(36), nullable=True),
@@ -172,8 +165,7 @@ def upgrade() -> None:
     op.create_table(
         "retention_rules",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("entity_type", sa.String(100), nullable=False),
         sa.Column("retention_days", sa.Integer, nullable=False, server_default="365"),
         sa.Column("cascade_to_children", sa.Boolean, nullable=False, server_default="true"),
@@ -189,15 +181,17 @@ def upgrade() -> None:
     op.create_table(
         "notification_policies",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("name", sa.String(255), nullable=False),
-        sa.Column("escalation_routes", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("regional_routes", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="{}"),
-        sa.Column("executive_routes", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column(
+            "escalation_routes", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "regional_routes", sa.dialects.postgresql.JSONB, nullable=False, server_default="{}"
+        ),
+        sa.Column(
+            "executive_routes", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
     )
     op.create_index("ix_notifpol_enterprise", "notification_policies", ["enterprise_id"])
@@ -207,8 +201,7 @@ def upgrade() -> None:
     op.create_table(
         "enterprise_risks",
         *_COMMON,
-        sa.Column("enterprise_id", sa.String(36),
-                  sa.ForeignKey("enterprises.id"), nullable=False),
+        sa.Column("enterprise_id", sa.String(36), sa.ForeignKey("enterprises.id"), nullable=False),
         sa.Column("title", sa.String(500), nullable=False),
         sa.Column("description", sa.Text, nullable=True),
         sa.Column("severity", sa.String(20), nullable=False, server_default="medium"),
@@ -216,14 +209,24 @@ def upgrade() -> None:
         sa.Column("esg_category", sa.String(50), nullable=True),
         sa.Column("owner_user_id", sa.String(36), nullable=True),
         sa.Column("mitigation_plan", sa.Text, nullable=True),
-        sa.Column("linked_region_ids", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_business_unit_ids", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_organization_ids", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_supplier_ids", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column(
+            "linked_region_ids", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_business_unit_ids",
+            sa.dialects.postgresql.JSONB,
+            nullable=False,
+            server_default="[]",
+        ),
+        sa.Column(
+            "linked_organization_ids",
+            sa.dialects.postgresql.JSONB,
+            nullable=False,
+            server_default="[]",
+        ),
+        sa.Column(
+            "linked_supplier_ids", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
     )
     op.create_index("ix_erisk_enterprise", "enterprise_risks", ["enterprise_id"])
     op.create_index("ix_erisk_severity", "enterprise_risks", ["severity"])
@@ -232,32 +235,24 @@ def upgrade() -> None:
     op.create_index("ix_erisk_owner", "enterprise_risks", ["owner_user_id"])
 
     # ── organizations: add enterprise hierarchy columns ───────────────────────
-    op.add_column("organizations",
-        sa.Column("enterprise_id", sa.String(36), nullable=True))
-    op.add_column("organizations",
-        sa.Column("business_unit_id", sa.String(36), nullable=True))
-    op.add_column("organizations",
-        sa.Column("legal_entity_id", sa.String(36), nullable=True))
-    op.add_column("organizations",
-        sa.Column("region_id", sa.String(36), nullable=True))
-    op.add_column("organizations",
-        sa.Column("data_residency", sa.String(10), nullable=True))
-    op.add_column("organizations",
-        sa.Column("data_classification", sa.String(20), nullable=True,
-                  server_default="INTERNAL"))
+    op.add_column("organizations", sa.Column("enterprise_id", sa.String(36), nullable=True))
+    op.add_column("organizations", sa.Column("business_unit_id", sa.String(36), nullable=True))
+    op.add_column("organizations", sa.Column("legal_entity_id", sa.String(36), nullable=True))
+    op.add_column("organizations", sa.Column("region_id", sa.String(36), nullable=True))
+    op.add_column("organizations", sa.Column("data_residency", sa.String(10), nullable=True))
+    op.add_column(
+        "organizations",
+        sa.Column("data_classification", sa.String(20), nullable=True, server_default="INTERNAL"),
+    )
     op.create_index("ix_org_enterprise", "organizations", ["enterprise_id"])
     op.create_index("ix_org_business_unit", "organizations", ["business_unit_id"])
     op.create_index("ix_org_region", "organizations", ["region_id"])
 
     # ── users: add enterprise scope columns ───────────────────────────────────
-    op.add_column("users",
-        sa.Column("enterprise_scope", sa.String(50), nullable=True))
-    op.add_column("users",
-        sa.Column("enterprise_id", sa.String(36), nullable=True))
-    op.add_column("users",
-        sa.Column("business_unit_id", sa.String(36), nullable=True))
-    op.add_column("users",
-        sa.Column("region_id", sa.String(36), nullable=True))
+    op.add_column("users", sa.Column("enterprise_scope", sa.String(50), nullable=True))
+    op.add_column("users", sa.Column("enterprise_id", sa.String(36), nullable=True))
+    op.add_column("users", sa.Column("business_unit_id", sa.String(36), nullable=True))
+    op.add_column("users", sa.Column("region_id", sa.String(36), nullable=True))
     op.create_index("ix_user_enterprise", "users", ["enterprise_id"])
     op.create_index("ix_user_enterprise_scope", "users", ["enterprise_scope"])
 

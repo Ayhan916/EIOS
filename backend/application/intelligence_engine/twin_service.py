@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
 from domain.supplier_digital_twin import SupplierDigitalTwin
+
 from .health_engine import compute_overall_health, compute_trend
 
 logger = structlog.get_logger(__name__)
@@ -69,6 +70,7 @@ async def update_twin_health(
 ) -> SupplierDigitalTwin:
     """Apply a health delta to one dimension and recompute overall health."""
     from infrastructure.persistence.models.supplier_digital_twin import SupplierDigitalTwinModel
+
     from .health_engine import apply_delta
 
     stmt = select(SupplierDigitalTwinModel).where(
@@ -77,7 +79,7 @@ async def update_twin_health(
     )
     row = (await session.execute(stmt)).scalar_one_or_none()
     if not row:
-        twin = await get_or_create_twin(supplier_id, organization_id, session)
+        await get_or_create_twin(supplier_id, organization_id, session)
         stmt = select(SupplierDigitalTwinModel).where(
             SupplierDigitalTwinModel.supplier_id == supplier_id,
             SupplierDigitalTwinModel.organization_id == organization_id,
@@ -95,9 +97,14 @@ async def update_twin_health(
     dimension_values = {
         d: getattr(row, d)
         for d in [
-            "esg_health", "compliance_health", "financial_health",
-            "geopolitical_health", "cyber_health", "human_rights_health",
-            "environmental_health", "operational_health",
+            "esg_health",
+            "compliance_health",
+            "financial_health",
+            "geopolitical_health",
+            "cyber_health",
+            "human_rights_health",
+            "environmental_health",
+            "operational_health",
         ]
     }
     row.overall_health = compute_overall_health(dimension_values)
@@ -138,6 +145,7 @@ async def list_at_risk_suppliers(
 
 def _domain_to_model(t: SupplierDigitalTwin):
     from infrastructure.persistence.models.supplier_digital_twin import SupplierDigitalTwinModel
+
     return SupplierDigitalTwinModel(
         id=t.id,
         status=t.status.value if hasattr(t.status, "value") else t.status,

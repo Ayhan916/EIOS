@@ -11,17 +11,35 @@ from __future__ import annotations
 
 _HR_CATEGORIES = frozenset(
     {
-        "human rights", "labour", "labor", "workforce", "social",
-        "child labour", "child labor", "forced labour", "forced labor",
-        "discrimination", "health", "safety", "freedom of association",
-        "living wage", "working conditions",
+        "human rights",
+        "labour",
+        "labor",
+        "workforce",
+        "social",
+        "child labour",
+        "child labor",
+        "forced labour",
+        "forced labor",
+        "discrimination",
+        "health",
+        "safety",
+        "freedom of association",
+        "living wage",
+        "working conditions",
     }
 )
 
 _ENV_CATEGORIES = frozenset(
     {
-        "environmental", "climate", "emissions", "pollution", "waste",
-        "biodiversity", "water", "greenhouse", "deforestation",
+        "environmental",
+        "climate",
+        "emissions",
+        "pollution",
+        "waste",
+        "biodiversity",
+        "water",
+        "greenhouse",
+        "deforestation",
     }
 )
 
@@ -94,22 +112,34 @@ def build_lksgg_report(
         if band in ("Critical", "High"):
             supplier_findings = [f for f in findings if f.get("supplier_id") == s["id"]]
             supplier_recs = [r for r in recommendations if r.get("supplier_id") == s["id"]]
-            overdue = sum(1 for r in supplier_recs if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False))
-            open_actions = sum(1 for r in supplier_recs if r.get("action_status") in ("open", "in_progress"))
-            critical_suppliers.append({
-                "supplier_id": s["id"],
-                "supplier_name": s.get("name", ""),
-                "country": s.get("country", ""),
-                "tier": s.get("tier", ""),
-                "risk_band": band,
-                "esg_score": score.get("esg_score", 100.0) if score else 100.0,
-                "risk_score": score.get("risk_score", 0.0) if score else 0.0,
-                "trend": score.get("trend", "Stable") if score else "Stable",
-                "critical_findings": sum(1 for f in supplier_findings if f.get("severity") == "Critical"),
-                "high_findings": sum(1 for f in supplier_findings if f.get("severity") == "High"),
-                "open_actions": open_actions,
-                "overdue_actions": overdue,
-            })
+            overdue = sum(
+                1
+                for r in supplier_recs
+                if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False)
+            )
+            open_actions = sum(
+                1 for r in supplier_recs if r.get("action_status") in ("open", "in_progress")
+            )
+            critical_suppliers.append(
+                {
+                    "supplier_id": s["id"],
+                    "supplier_name": s.get("name", ""),
+                    "country": s.get("country", ""),
+                    "tier": s.get("tier", ""),
+                    "risk_band": band,
+                    "esg_score": score.get("esg_score", 100.0) if score else 100.0,
+                    "risk_score": score.get("risk_score", 0.0) if score else 0.0,
+                    "trend": score.get("trend", "Stable") if score else "Stable",
+                    "critical_findings": sum(
+                        1 for f in supplier_findings if f.get("severity") == "Critical"
+                    ),
+                    "high_findings": sum(
+                        1 for f in supplier_findings if f.get("severity") == "High"
+                    ),
+                    "open_actions": open_actions,
+                    "overdue_actions": overdue,
+                }
+            )
     critical_suppliers.sort(key=lambda x: -x["risk_score"])
 
     # ── Human rights findings ───────────────────────────────────────────────
@@ -127,16 +157,22 @@ def build_lksgg_report(
     # ── Remediation ─────────────────────────────────────────────────────────
     open_recs = sum(1 for r in recommendations if r.get("action_status") == "open")
     in_progress_recs = sum(1 for r in recommendations if r.get("action_status") == "in_progress")
-    resolved_recs = sum(1 for r in recommendations if r.get("action_status") in ("resolved", "verified"))
-    overdue_recs = sum(1 for r in recommendations if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False))
+    resolved_recs = sum(
+        1 for r in recommendations if r.get("action_status") in ("resolved", "verified")
+    )
+    overdue_recs = sum(
+        1
+        for r in recommendations
+        if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False)
+    )
     total_recs = len(recommendations)
     closure_rate = round(resolved_recs / total_recs, 4) if total_recs else 0.0
 
     # ── Evidence coverage (simple ratio of items with high reliability) ─────
     if evidence_items:
-        avg_reliability = sum(
-            (e.get("reliability_score") or 0.5) for e in evidence_items
-        ) / len(evidence_items)
+        avg_reliability = sum((e.get("reliability_score") or 0.5) for e in evidence_items) / len(
+            evidence_items
+        )
         evidence_coverage = round(min(1.0, avg_reliability), 4)
     else:
         evidence_coverage = 0.0
@@ -155,12 +191,14 @@ def build_lksgg_report(
         score = supplier_scores.get(s["id"])
         band = (score.get("risk_band") if score else None) or "Low"
         if gap_count > 0 and band in ("Critical", "High"):
-            unresolved_suppliers.append({
-                "supplier_id": s["id"],
-                "supplier_name": s.get("name", ""),
-                "risk_band": band,
-                "unresolved_gaps": gap_count,
-            })
+            unresolved_suppliers.append(
+                {
+                    "supplier_id": s["id"],
+                    "supplier_name": s.get("name", ""),
+                    "risk_band": band,
+                    "unresolved_gaps": gap_count,
+                }
+            )
     unresolved_suppliers.sort(key=lambda x: -x["unresolved_gaps"])
 
     # ── Explainability ──────────────────────────────────────────────────────

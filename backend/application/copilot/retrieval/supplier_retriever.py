@@ -37,12 +37,9 @@ async def retrieve_supplier_context(
     scores = (await session.execute(ss_stmt)).scalars().all()
     supplier_ids = [s.supplier_id for s in scores]
 
-    suppliers_stmt = (
-        select(SupplierModel)
-        .where(
-            SupplierModel.organization_id == org_id,
-            SupplierModel.id.in_(supplier_ids),
-        )
+    suppliers_stmt = select(SupplierModel).where(
+        SupplierModel.organization_id == org_id,
+        SupplierModel.id.in_(supplier_ids),
     )
     suppliers = (await session.execute(suppliers_stmt)).scalars().all()
     supplier_map = {s.id: s for s in suppliers}
@@ -67,18 +64,20 @@ async def retrieve_supplier_context(
             for f in findings
             if f.supplier_id == sc.supplier_id
         ]
-        data.append({
-            "supplier_id": sc.supplier_id,
-            "supplier_name": sup.name if sup else sc.supplier_id,
-            "country": sup.country if sup else "",
-            "tier": sup.tier if sup else "",
-            "esg_score": sc.esg_score,
-            "risk_score": sc.risk_score,
-            "risk_band": sc.risk_band,
-            "trend": sc.trend if hasattr(sc, "trend") else "",
-            "critical_findings": [f for f in sup_findings if f["severity"] == "Critical"],
-            "high_findings": [f for f in sup_findings if f["severity"] == "High"],
-        })
+        data.append(
+            {
+                "supplier_id": sc.supplier_id,
+                "supplier_name": sup.name if sup else sc.supplier_id,
+                "country": sup.country if sup else "",
+                "tier": sup.tier if sup else "",
+                "esg_score": sc.esg_score,
+                "risk_score": sc.risk_score,
+                "risk_band": sc.risk_band,
+                "trend": sc.trend if hasattr(sc, "trend") else "",
+                "critical_findings": [f for f in sup_findings if f["severity"] == "Critical"],
+                "high_findings": [f for f in sup_findings if f["severity"] == "High"],
+            }
+        )
 
     retrieved_at = datetime.now(UTC).isoformat()
     freshness_metadata = [

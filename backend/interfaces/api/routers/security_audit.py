@@ -23,6 +23,7 @@ router = APIRouter(tags=["security-audit"])
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
 
+
 class Soc2ControlUpdate(BaseModel):
     status: str = Field(..., pattern="^(Not Started|In Progress|Implemented|Tested)$")
     evidence_notes: str | None = None
@@ -47,6 +48,7 @@ class ChecklistItemUpdate(BaseModel):
 
 # ── G-048: SOC 2 Controls ────────────────────────────────────────────────────
 
+
 @router.post(
     "/security/soc2/seed",
     summary="G-048: Seed all SOC 2 Trust Service Criteria controls for the organisation",
@@ -55,9 +57,10 @@ class ChecklistItemUpdate(BaseModel):
 async def seed_soc2_controls(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
+    from sqlalchemy import select
+
     from application.security.soc2_service import SOC2_CONTROLS, get_eios_evidence
     from infrastructure.persistence.models.soc2_control import Soc2ControlModel
-    from sqlalchemy import select
 
     async with AsyncSessionFactory() as session, session.begin():
         existing = await session.execute(
@@ -97,8 +100,9 @@ async def list_soc2_controls(
     category: str | None = Query(None),
     status: str | None = Query(None),
 ):
-    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
 
     async with AsyncSessionFactory() as session:
         q = select(Soc2ControlModel).where(
@@ -139,8 +143,9 @@ async def update_soc2_control(
     body: Soc2ControlUpdate,
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
-    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
 
     async with AsyncSessionFactory() as session, session.begin():
         result = await session.execute(
@@ -151,7 +156,9 @@ async def update_soc2_control(
         )
         ctrl = result.scalar_one_or_none()
         if not ctrl:
-            raise HTTPException(status_code=404, detail=f"Control {control_id} not found — run /seed first")
+            raise HTTPException(
+                status_code=404, detail=f"Control {control_id} not found — run /seed first"
+            )
         ctrl.status = body.status
         if body.evidence_notes is not None:
             ctrl.evidence_notes = body.evidence_notes
@@ -168,9 +175,10 @@ async def update_soc2_control(
 async def get_soc2_readiness(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
+    from sqlalchemy import select
+
     from application.security.soc2_service import compute_readiness_score
     from infrastructure.persistence.models.soc2_control import Soc2ControlModel
-    from sqlalchemy import select
 
     async with AsyncSessionFactory() as session:
         result = await session.execute(
@@ -195,6 +203,7 @@ async def get_soc2_readiness(
 
 # ── G-021: Pentest Findings ───────────────────────────────────────────────────
 
+
 @router.get(
     "/security/pentest/owasp",
     summary="G-021: OWASP Top 10 coverage assessment for EIOS",
@@ -203,6 +212,7 @@ async def get_owasp_assessment(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
     from application.security.pentest_readiness import assess_owasp_status
+
     return assess_owasp_status().to_dict()
 
 
@@ -233,7 +243,11 @@ async def create_pentest_finding(
     async with AsyncSessionFactory() as session, session.begin():
         session.add(finding)
 
-    return {"id": finding.id, "owasp_category": finding.owasp_category, "severity": finding.severity}
+    return {
+        "id": finding.id,
+        "owasp_category": finding.owasp_category,
+        "severity": finding.severity,
+    }
 
 
 @router.get(
@@ -245,8 +259,9 @@ async def list_pentest_findings(
     status: str | None = Query(None),
     severity: str | None = Query(None),
 ):
-    from infrastructure.persistence.models.pentest_finding import PentestFindingModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.pentest_finding import PentestFindingModel
 
     async with AsyncSessionFactory() as session:
         q = select(PentestFindingModel).where(
@@ -280,6 +295,7 @@ async def list_pentest_findings(
 
 # ── Production Checklist ──────────────────────────────────────────────────────
 
+
 @router.post(
     "/security/production-checklist/seed",
     summary="Seed production cutover checklist for the organisation",
@@ -288,9 +304,10 @@ async def list_pentest_findings(
 async def seed_production_checklist(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
+    from sqlalchemy import func, select
+
     from application.security.production_checklist_service import PRODUCTION_CHECKLIST
     from infrastructure.persistence.models.production_checklist import ProductionChecklistItemModel
-    from sqlalchemy import select, func
 
     async with AsyncSessionFactory() as session:
         count_result = await session.execute(
@@ -328,9 +345,10 @@ async def list_production_checklist(
     category: str | None = Query(None),
     status: str | None = Query(None),
 ):
+    from sqlalchemy import select
+
     from application.security.production_checklist_service import compute_checklist_summary
     from infrastructure.persistence.models.production_checklist import ProductionChecklistItemModel
-    from sqlalchemy import select
 
     async with AsyncSessionFactory() as session:
         q = select(ProductionChecklistItemModel).where(
@@ -340,7 +358,9 @@ async def list_production_checklist(
             q = q.where(ProductionChecklistItemModel.category == category)
         if status:
             q = q.where(ProductionChecklistItemModel.status == status)
-        result = await session.execute(q.order_by(ProductionChecklistItemModel.category, ProductionChecklistItemModel.priority))
+        result = await session.execute(
+            q.order_by(ProductionChecklistItemModel.category, ProductionChecklistItemModel.priority)
+        )
         items = result.scalars().all()
 
     item_dicts = [
@@ -390,6 +410,7 @@ async def update_checklist_item(
 
 # ── M50.2: Auditor Sign-off Package ──────────────────────────────────────────
 
+
 @router.get(
     "/security/auditor/sign-off",
     summary="M50.2: Generate auditor sign-off readiness package (JSON)",
@@ -402,13 +423,14 @@ async def get_auditor_sign_off_package(
     Aggregates SOC2 readiness, OWASP coverage, production checklist, and
     open pentest findings into a single auditor-facing JSON document.
     """
+    from sqlalchemy import select
+
     from application.security.pentest_readiness import assess_owasp_status
-    from application.security.soc2_service import compute_readiness_score
     from application.security.production_checklist_service import compute_checklist_summary
-    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
+    from application.security.soc2_service import compute_readiness_score
     from infrastructure.persistence.models.pentest_finding import PentestFindingModel
     from infrastructure.persistence.models.production_checklist import ProductionChecklistItemModel
-    from sqlalchemy import select
+    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
 
     async with AsyncSessionFactory() as session:
         soc2_res = await session.execute(
@@ -452,21 +474,42 @@ async def get_auditor_sign_off_package(
             )
         )
         checklist_items = [
-            {"category": i.category, "item_name": i.item_name, "status": i.status, "priority": i.priority, "owner": i.owner}
+            {
+                "category": i.category,
+                "item_name": i.item_name,
+                "status": i.status,
+                "priority": i.priority,
+                "owner": i.owner,
+            }
             for i in checklist_res.scalars().all()
         ]
 
     soc2_report = compute_readiness_score(
-        [{"organization_id": c["organization_id"], "control_id": c["control_id"], "category": c["category"],
-          "control_name": c["control_name"], "status": c["status"]} for c in soc2_controls]
+        [
+            {
+                "organization_id": c["organization_id"],
+                "control_id": c["control_id"],
+                "category": c["category"],
+                "control_name": c["control_name"],
+                "status": c["status"],
+            }
+            for c in soc2_controls
+        ]
     )
     owasp_assessment = assess_owasp_status()
     checklist_summary = compute_checklist_summary(
-        [{"category": i["category"], "status": i["status"], "priority": i["priority"]} for i in checklist_items]
+        [
+            {"category": i["category"], "status": i["status"], "priority": i["priority"]}
+            for i in checklist_items
+        ]
     )
 
-    critical_open = sum(1 for f in pentest_findings if f["severity"] == "CRITICAL" and f["status"] == "Open")
-    high_open = sum(1 for f in pentest_findings if f["severity"] == "HIGH" and f["status"] == "Open")
+    critical_open = sum(
+        1 for f in pentest_findings if f["severity"] == "CRITICAL" and f["status"] == "Open"
+    )
+    high_open = sum(
+        1 for f in pentest_findings if f["severity"] == "HIGH" and f["status"] == "Open"
+    )
     ga_ready = (
         soc2_report.overall_pct >= 80.0
         and owasp_assessment.overall_pct >= 80.0
@@ -505,6 +548,7 @@ async def get_auditor_sign_off_package(
 
 # ── Security Summary ──────────────────────────────────────────────────────────
 
+
 @router.get(
     "/security/audit-summary",
     summary="Complete security posture summary (SOC2 + OWASP + Checklist)",
@@ -512,13 +556,14 @@ async def get_auditor_sign_off_package(
 async def get_security_audit_summary(
     current_user: Annotated[UserResponse, Depends(get_current_user)],
 ):
+    from sqlalchemy import select
+
     from application.security.pentest_readiness import assess_owasp_status
-    from application.security.soc2_service import compute_readiness_score
     from application.security.production_checklist_service import compute_checklist_summary
-    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
+    from application.security.soc2_service import compute_readiness_score
     from infrastructure.persistence.models.pentest_finding import PentestFindingModel
     from infrastructure.persistence.models.production_checklist import ProductionChecklistItemModel
-    from sqlalchemy import select
+    from infrastructure.persistence.models.soc2_control import Soc2ControlModel
 
     async with AsyncSessionFactory() as session:
         soc2_res = await session.execute(
@@ -527,8 +572,13 @@ async def get_security_audit_summary(
             )
         )
         soc2_controls = [
-            {"organization_id": c.organization_id, "control_id": c.control_id,
-             "category": c.category, "control_name": c.control_name, "status": c.status}
+            {
+                "organization_id": c.organization_id,
+                "control_id": c.control_id,
+                "category": c.category,
+                "control_name": c.control_name,
+                "status": c.status,
+            }
             for c in soc2_res.scalars().all()
         ]
 

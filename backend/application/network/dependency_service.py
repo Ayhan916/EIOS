@@ -18,8 +18,6 @@ from datetime import UTC, datetime
 
 import structlog
 
-from application.network.metrics import network_counters
-
 logger = structlog.get_logger(__name__)
 
 
@@ -59,24 +57,26 @@ async def compute_dependency_analysis(
     supplier_id: str | None = None,
     session=None,
 ) -> object:
-    from infrastructure.persistence.models.supplier import SupplierModel
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.network import (
-        DependencyAnalysisModel,
         SupplierCriticalityModel,
     )
-    from sqlalchemy import func, select
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     now = datetime.now(UTC)
 
     if supplier_id:
-        return await _compute_supplier_dependency(
-            organization_id, supplier_id, session, now
-        )
+        return await _compute_supplier_dependency(organization_id, supplier_id, session, now)
 
     # Org-level
-    total_stmt = select(func.count()).select_from(SupplierModel).where(
-        SupplierModel.organization_id == organization_id,
-        SupplierModel.supplier_status == "Active",
+    total_stmt = (
+        select(func.count())
+        .select_from(SupplierModel)
+        .where(
+            SupplierModel.organization_id == organization_id,
+            SupplierModel.supplier_status == "Active",
+        )
     )
     total = (await session.execute(total_stmt)).scalar_one() or 1
 
@@ -88,16 +88,24 @@ async def compute_dependency_analysis(
     )
     distinct_countries = (await session.execute(country_stmt)).scalar_one() or 1
 
-    crit_stmt = select(func.count()).select_from(SupplierCriticalityModel).where(
-        SupplierCriticalityModel.organization_id == organization_id,
-        SupplierCriticalityModel.criticality.in_(["CRITICAL", "HIGH"]),
+    crit_stmt = (
+        select(func.count())
+        .select_from(SupplierCriticalityModel)
+        .where(
+            SupplierCriticalityModel.organization_id == organization_id,
+            SupplierCriticalityModel.criticality.in_(["CRITICAL", "HIGH"]),
+        )
     )
     critical_count = (await session.execute(crit_stmt)).scalar_one()
 
-    spof_stmt = select(func.count()).select_from(SupplierCriticalityModel).where(
-        SupplierCriticalityModel.organization_id == organization_id,
-        SupplierCriticalityModel.connected_component_size == 1,
-        SupplierCriticalityModel.criticality.in_(["CRITICAL", "HIGH"]),
+    spof_stmt = (
+        select(func.count())
+        .select_from(SupplierCriticalityModel)
+        .where(
+            SupplierCriticalityModel.organization_id == organization_id,
+            SupplierCriticalityModel.connected_component_size == 1,
+            SupplierCriticalityModel.criticality.in_(["CRITICAL", "HIGH"]),
+        )
     )
     spof_count = (await session.execute(spof_stmt)).scalar_one()
 
@@ -141,27 +149,35 @@ async def _compute_supplier_dependency(
     now: datetime,
 ) -> object:
     """Per-supplier dependency: how central is this supplier to the org?"""
-    from infrastructure.persistence.models.network import (
-        SupplierCriticalityModel,
-        SupplierRelationshipModel,
-    )
     from sqlalchemy import func, or_, select
 
+    from infrastructure.persistence.models.network import (
+        SupplierRelationshipModel,
+    )
+
     # How many suppliers depend on this one (inbound edges)
-    in_stmt = select(func.count()).select_from(SupplierRelationshipModel).where(
-        SupplierRelationshipModel.organization_id == organization_id,
-        SupplierRelationshipModel.related_supplier_id == supplier_id,
-        SupplierRelationshipModel.relationship_status == "ACTIVE",
+    in_stmt = (
+        select(func.count())
+        .select_from(SupplierRelationshipModel)
+        .where(
+            SupplierRelationshipModel.organization_id == organization_id,
+            SupplierRelationshipModel.related_supplier_id == supplier_id,
+            SupplierRelationshipModel.relationship_status == "ACTIVE",
+        )
     )
     inbound = (await session.execute(in_stmt)).scalar_one()
 
-    total_stmt = select(func.count()).select_from(SupplierRelationshipModel).where(
-        SupplierRelationshipModel.organization_id == organization_id,
-        or_(
-            SupplierRelationshipModel.supplier_id == supplier_id,
-            SupplierRelationshipModel.related_supplier_id == supplier_id,
-        ),
-        SupplierRelationshipModel.relationship_status == "ACTIVE",
+    total_stmt = (
+        select(func.count())
+        .select_from(SupplierRelationshipModel)
+        .where(
+            SupplierRelationshipModel.organization_id == organization_id,
+            or_(
+                SupplierRelationshipModel.supplier_id == supplier_id,
+                SupplierRelationshipModel.related_supplier_id == supplier_id,
+            ),
+            SupplierRelationshipModel.relationship_status == "ACTIVE",
+        )
     )
     total_degree = (await session.execute(total_stmt)).scalar_one()
 
@@ -201,8 +217,9 @@ async def _upsert_dependency(
     now: datetime,
     session,
 ) -> object:
-    from infrastructure.persistence.models.network import DependencyAnalysisModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import DependencyAnalysisModel
 
     stmt = select(DependencyAnalysisModel).where(
         DependencyAnalysisModel.organization_id == organization_id,
@@ -248,8 +265,9 @@ async def get_dependency_analysis(
     supplier_id: str | None = None,
     session=None,
 ) -> object | None:
-    from infrastructure.persistence.models.network import DependencyAnalysisModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import DependencyAnalysisModel
 
     stmt = select(DependencyAnalysisModel).where(
         DependencyAnalysisModel.organization_id == organization_id,

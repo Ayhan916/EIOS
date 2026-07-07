@@ -11,6 +11,7 @@ This tracks how representative the PCF is — a 40% coverage PCF is incomplete.
 
 Deterministic, auditable, no LLM involvement.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -85,15 +86,17 @@ class PCFCalculationService:
             select(
                 MaterialSustainabilityMetricModel.material_id,
                 MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg,
-            ).join(
+            )
+            .join(
                 subq,
                 (MaterialSustainabilityMetricModel.material_id == subq.c.material_id)
                 & (MaterialSustainabilityMetricModel.reporting_year == subq.c.max_year),
-            ).where(
-                MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg.isnot(None)
             )
+            .where(MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg.isnot(None))
         )
-        lca_rows = {row.material_id: row.carbon_footprint_kg_co2e_per_kg for row in lca_result.all()}
+        lca_rows = {
+            row.material_id: row.carbon_footprint_kg_co2e_per_kg for row in lca_result.all()
+        }
 
         # Lookup material names for breakdown
         name_result = await self._db.execute(
@@ -117,25 +120,30 @@ class PCFCalculationService:
                 contribution = (w / 100.0) * co2e_per_kg
                 pcf_sum += contribution
                 total_weight_with_lca += w
-                breakdown.append({
-                    "material_id": mid,
-                    "material_name": name_map.get(mid, ""),
-                    "weight_pct": w,
-                    "co2e_per_kg": co2e_per_kg,
-                    "contribution_kg_co2e": round(contribution, 6),
-                })
+                breakdown.append(
+                    {
+                        "material_id": mid,
+                        "material_name": name_map.get(mid, ""),
+                        "weight_pct": w,
+                        "co2e_per_kg": co2e_per_kg,
+                        "contribution_kg_co2e": round(contribution, 6),
+                    }
+                )
             else:
-                breakdown.append({
-                    "material_id": mid,
-                    "material_name": name_map.get(mid, ""),
-                    "weight_pct": w,
-                    "co2e_per_kg": None,
-                    "contribution_kg_co2e": None,
-                })
+                breakdown.append(
+                    {
+                        "material_id": mid,
+                        "material_name": name_map.get(mid, ""),
+                        "weight_pct": w,
+                        "co2e_per_kg": None,
+                        "contribution_kg_co2e": None,
+                    }
+                )
 
         weight_coverage = (
             round((total_weight_with_lca / total_weight_all) * 100, 2)
-            if total_weight_all > 0 else None
+            if total_weight_all > 0
+            else None
         )
         pcf_value = round(pcf_sum, 6) if lca_rows else None
 

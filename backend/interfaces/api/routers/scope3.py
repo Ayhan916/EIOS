@@ -9,6 +9,7 @@ Routes:
   GET  /scope3/inventory/{year}          — get inventory for a specific year
   GET  /scope3/summary                   — org-level Scope 3 summary (latest year)
 """
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

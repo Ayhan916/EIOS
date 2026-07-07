@@ -4,39 +4,115 @@ from __future__ import annotations
 
 from domain.enums import CopilotIntentType
 
-_RISK_KEYWORDS = frozenset({
-    "risk", "risks", "supplier risk", "deteriorat", "critical", "vulnerable",
-    "worst", "danger", "threat", "exposure", "vulnerable", "score", "band",
-})
+_RISK_KEYWORDS = frozenset(
+    {
+        "risk",
+        "risks",
+        "supplier risk",
+        "deteriorat",
+        "critical",
+        "vulnerable",
+        "worst",
+        "danger",
+        "threat",
+        "exposure",
+        "score",
+        "band",
+    }
+)
 
-_COMPLIANCE_KEYWORDS = frozenset({
-    "complian", "non-compliant", "gap", "gaps", "require", "regulation",
-    "csrd", "esrs", "issb", "gri", "tcfd", "uncovered", "missing evidence",
-    "evidence", "standard", "regulation",
-})
+_COMPLIANCE_KEYWORDS = frozenset(
+    {
+        "complian",
+        "non-compliant",
+        "gap",
+        "gaps",
+        "require",
+        "regulation",
+        "csrd",
+        "esrs",
+        "issb",
+        "gri",
+        "tcfd",
+        "uncovered",
+        "missing evidence",
+        "evidence",
+        "standard",
+    }
+)
 
-_DISCLOSURE_KEYWORDS = frozenset({
-    "disclosur", "publish", "publication", "ready", "weak", "strong",
-    "framework", "report package", "reporting package", "esrs", "datapoint",
-})
+_DISCLOSURE_KEYWORDS = frozenset(
+    {
+        "disclosur",
+        "publish",
+        "publication",
+        "ready",
+        "weak",
+        "strong",
+        "framework",
+        "report package",
+        "reporting package",
+        "esrs",
+        "datapoint",
+    }
+)
 
-_DUE_DILIGENCE_KEYWORDS = frozenset({
-    "due diligence", "lksgg", "lksg", "csddd", "supply chain", "supplier exposure",
-    "human rights", "environmental", "remediation", "overdue action",
-    "preventive", "german act",
-})
+_DUE_DILIGENCE_KEYWORDS = frozenset(
+    {
+        "due diligence",
+        "lksgg",
+        "lksg",
+        "csddd",
+        "supply chain",
+        "supplier exposure",
+        "human rights",
+        "environmental",
+        "remediation",
+        "overdue action",
+        "preventive",
+        "german act",
+    }
+)
 
-_EXECUTIVE_KEYWORDS = frozenset({
-    "board", "executive", "brief", "change", "changed", "month", "quarter",
-    "focus", "summary", "overview", "headline", "key", "this week",
-    "since last", "what happened",
-})
+_EXECUTIVE_KEYWORDS = frozenset(
+    {
+        "board",
+        "executive",
+        "brief",
+        "change",
+        "changed",
+        "month",
+        "quarter",
+        "focus",
+        "summary",
+        "overview",
+        "headline",
+        "key",
+        "this week",
+        "since last",
+        "what happened",
+    }
+)
 
-_ACTION_KEYWORDS = frozenset({
-    "action", "should", "next step", "priorit", "recommend", "what to do",
-    "fastest", "quickest", "reduce", "improve", "fix", "resolve",
-    "remediat", "address", "tackle",
-})
+_ACTION_KEYWORDS = frozenset(
+    {
+        "action",
+        "should",
+        "next step",
+        "priorit",
+        "recommend",
+        "what to do",
+        "fastest",
+        "quickest",
+        "reduce",
+        "improve",
+        "fix",
+        "resolve",
+        "remediat",
+        "address",
+        "tackle",
+    }
+)
 
 
 def detect_intent(question: str) -> CopilotIntentType:

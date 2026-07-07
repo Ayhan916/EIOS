@@ -8,7 +8,7 @@ All calculations are deterministic:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -17,12 +17,11 @@ from application.ai_governance._audit import emit_audit_event
 from application.sustainability.metrics import sustainability_counters
 from infrastructure.persistence.models.sustainability import (
     EMISSION_SCOPES,
-    INVENTORY_STATUSES,
     CarbonInventoryModel,
     EmissionSourceModel,
 )
 
-from .objective_service import SustainabilityError, SustainabilityConflict, _assert_org, _now
+from .objective_service import SustainabilityConflict, SustainabilityError, _assert_org, _now
 
 # Audit observability counter name
 _RECALC_COUNTER = "carbon_inventory_recalculations_total"

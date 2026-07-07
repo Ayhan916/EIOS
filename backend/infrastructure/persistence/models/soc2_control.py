@@ -10,8 +10,8 @@ class Soc2ControlModel(BaseModel):
     )
 
     organization_id = Column(String(36), nullable=False, index=True)
-    control_id = Column(String(20), nullable=False)        # e.g. "CC6.1"
-    category = Column(String(10), nullable=False)          # CC1-CC9, A1, C1
+    control_id = Column(String(20), nullable=False)  # e.g. "CC6.1"
+    category = Column(String(10), nullable=False)  # CC1-CC9, A1, C1
     control_name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     status = Column(String(30), nullable=False, default="Not Started")

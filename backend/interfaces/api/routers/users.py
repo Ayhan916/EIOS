@@ -87,10 +87,7 @@ async def update_user(
         other_active_admins = sum(
             1
             for u in org_users
-            if u.role == "admin"
-            and u.is_active
-            and u.id != target.id
-            and u.id != current_user.id
+            if u.role == "admin" and u.is_active and u.id != target.id and u.id != current_user.id
         )
         if other_active_admins == 0:
             raise HTTPException(

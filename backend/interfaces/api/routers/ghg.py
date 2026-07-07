@@ -131,7 +131,9 @@ async def calculate_ghg_bulk(
     Successful calculations are persisted and returned in `results`.
     """
     if not current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization"
+        )
 
     results = []
     errors = []

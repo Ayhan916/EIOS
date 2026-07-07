@@ -16,13 +16,11 @@ import pytest
 
 from application.enterprise.sso_validation import (
     SSOValidationError,
-    ValidatedIdentity,
     async_check_sso_rate_limit,
     check_sso_rate_limit,
 )
 from infrastructure.sso.oidc_validator import ProductionOIDCValidator
 from infrastructure.sso.saml_validator import ProductionSAMLValidator
-
 
 # ── OIDC Validator ────────────────────────────────────────────────────────────
 
@@ -175,7 +173,7 @@ class TestAsyncCheckSSORate:
         assert result is True  # first call is within limit
 
     def test_sync_fallback_blocks_after_limit(self) -> None:
-        from application.enterprise.sso_validation import _sso_rate_store, _SSO_MAX_PER_WINDOW
+        from application.enterprise.sso_validation import _SSO_MAX_PER_WINDOW, _sso_rate_store
 
         key = "testent-block:99.99.99.1"
         _sso_rate_store.clear()

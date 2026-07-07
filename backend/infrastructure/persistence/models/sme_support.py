@@ -1,4 +1,5 @@
 """SQLAlchemy persistence models — SME Support Tracker (CSDDD Art. 10)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,10 +24,14 @@ class SMEProfileModel(Base):
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     programs: Mapped[list[SupportProgramModel]] = relationship(
-        "SupportProgramModel", back_populates="sme_profile", cascade="all, delete-orphan",
+        "SupportProgramModel",
+        back_populates="sme_profile",
+        cascade="all, delete-orphan",
         foreign_keys="SupportProgramModel.supplier_id",
         primaryjoin="SMEProfileModel.supplier_id == SupportProgramModel.supplier_id",
         overlaps="sme_profile",
@@ -53,7 +58,9 @@ class SupportProgramModel(Base):
     spent_budget_eur: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     sme_profile: Mapped[SMEProfileModel | None] = relationship(
         "SMEProfileModel",
@@ -89,10 +96,12 @@ class SupportMeasureModel(Base):
     cost_eur: Mapped[float | None] = mapped_column(Float, nullable=True)
     impact_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-    program: Mapped[SupportProgramModel] = relationship("SupportProgramModel", back_populates="measures")
-
-    __table_args__ = (
-        Index("ix_sme_support_measures_program", "program_id"),
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+
+    program: Mapped[SupportProgramModel] = relationship(
+        "SupportProgramModel", back_populates="measures"
+    )
+
+    __table_args__ = (Index("ix_sme_support_measures_program", "program_id"),)

@@ -14,7 +14,17 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -24,15 +34,23 @@ from .base import BaseModel
 ESG_CATEGORIES = ("ENVIRONMENTAL", "SOCIAL", "GOVERNANCE")
 OBJECTIVE_STATUSES = ("DRAFT", "ACTIVE", "COMPLETED", "CANCELLED")
 KPI_CATEGORIES = (
-    "EMISSIONS", "SUPPLIER_COMPLIANCE", "AUDIT_COMPLETION",
-    "TRAINING_COMPLETION", "DIVERSITY", "INCIDENT_RATE", "CUSTOM",
+    "EMISSIONS",
+    "SUPPLIER_COMPLIANCE",
+    "AUDIT_COMPLETION",
+    "TRAINING_COMPLETION",
+    "DIVERSITY",
+    "INCIDENT_RATE",
+    "CUSTOM",
 )
 MEASUREMENT_FREQUENCIES = ("MONTHLY", "QUARTERLY", "ANNUAL")
 EMISSION_SCOPES = ("SCOPE1", "SCOPE2", "SCOPE3")
 INVENTORY_STATUSES = ("DRAFT", "FINALIZED")
 INITIATIVE_TYPES = (
-    "RENEWABLE_ENERGY", "LOGISTICS_OPTIMIZATION",
-    "SUPPLIER_TRANSITION", "FACILITY_UPGRADE", "OTHER",
+    "RENEWABLE_ENERGY",
+    "LOGISTICS_OPTIMIZATION",
+    "SUPPLIER_TRANSITION",
+    "FACILITY_UPGRADE",
+    "OTHER",
 )
 INITIATIVE_STATUSES = ("PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED")
 ROADMAP_STATUSES = ("DRAFT", "ACTIVE", "COMPLETED")
@@ -52,8 +70,10 @@ ALERT_TYPES = ("THRESHOLD_BREACH", "MISSED_TARGET", "DETERIORATING_TREND")
 FORECAST_TYPES = ("EMISSIONS", "KPI_ATTAINMENT", "TARGET_ACHIEVEMENT")
 FORECAST_METHODS = ("LINEAR_TREND", "MOVING_AVERAGE")
 SCENARIO_TYPES = (
-    "SUPPLIER_IMPROVEMENT", "RENEWABLE_TRANSITION",
-    "EMISSIONS_INTENSITY_REDUCTION", "CUSTOM",
+    "SUPPLIER_IMPROVEMENT",
+    "RENEWABLE_TRANSITION",
+    "EMISSIONS_INTENSITY_REDUCTION",
+    "CUSTOM",
 )
 SCENARIO_STATUSES = ("DRAFT", "COMPLETE")
 REPORT_TYPES = ("KPI_SUMMARY", "EMISSIONS_SUMMARY", "TARGET_PROGRESS", "FULL")
@@ -61,6 +81,7 @@ REPORT_RAG_STATUSES = ("GREEN", "AMBER", "RED")
 
 
 # ── ESG Objectives ─────────────────────────────────────────────────────────────
+
 
 class SustainabilityObjectiveModel(BaseModel):
     __tablename__ = "sustainability_objectives"
@@ -92,12 +113,15 @@ class ESGTargetModel(BaseModel):
     target_value: Mapped[float] = mapped_column(Float, nullable=False)
     target_unit: Mapped[str | None] = mapped_column(String(50), nullable=True)
     current_value: Mapped[float | None] = mapped_column(Float, nullable=True)
-    measurement_frequency: Mapped[str] = mapped_column(String(20), nullable=False, default="QUARTERLY")
+    measurement_frequency: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="QUARTERLY"
+    )
     target_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 # ── KPI Management ─────────────────────────────────────────────────────────────
+
 
 class ESGKPIModel(BaseModel):
     __tablename__ = "esg_kpis"
@@ -119,9 +143,7 @@ class ESGKPIModel(BaseModel):
 class KPIMeasurementModel(BaseModel):
     __tablename__ = "kpi_measurements"
 
-    kpi_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("esg_kpis.id"), nullable=False
-    )
+    kpi_id: Mapped[str] = mapped_column(String(36), ForeignKey("esg_kpis.id"), nullable=False)
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
@@ -134,6 +156,7 @@ class KPIMeasurementModel(BaseModel):
 
 
 # ── Sustainability Scorecards ──────────────────────────────────────────────────
+
 
 class SustainabilityScorecardModel(BaseModel):
     __tablename__ = "sustainability_scorecards"
@@ -153,6 +176,7 @@ class SustainabilityScorecardModel(BaseModel):
 
 
 # ── Carbon Accounting ─────────────────────────────────────────────────────────
+
 
 class EmissionSourceModel(BaseModel):
     __tablename__ = "emission_sources"
@@ -192,7 +216,9 @@ class CarbonInventoryModel(BaseModel):
     scope3_emissions: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     unit: Mapped[str] = mapped_column(String(20), nullable=False, default="tCO2e")
     inventory_status: Mapped[str] = mapped_column(String(20), nullable=False, default="DRAFT")
-    last_calculated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_calculated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     recalculation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     __table_args__ = (
@@ -201,6 +227,7 @@ class CarbonInventoryModel(BaseModel):
 
 
 # ── Decarbonization ───────────────────────────────────────────────────────────
+
 
 class DecarbonizationInitiativeModel(BaseModel):
     __tablename__ = "decarbonization_initiatives"
@@ -273,6 +300,7 @@ class ScienceBasedTargetModel(BaseModel):
 
 # ── Climate Risk ──────────────────────────────────────────────────────────────
 
+
 class ClimateRiskAssessmentModel(BaseModel):
     __tablename__ = "climate_risk_assessments"
 
@@ -297,6 +325,7 @@ class ClimateRiskAssessmentModel(BaseModel):
 
 # ── Sustainability Assurance ──────────────────────────────────────────────────
 
+
 class SustainabilityAssuranceRecordModel(BaseModel):
     __tablename__ = "sustainability_assurance_records"
 
@@ -315,15 +344,14 @@ class SustainabilityAssuranceRecordModel(BaseModel):
 
 # ── Regulatory Mappings ───────────────────────────────────────────────────────
 
+
 class CSRDPerformanceMappingModel(BaseModel):
     __tablename__ = "csrd_performance_mappings"
 
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
-    kpi_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("esg_kpis.id"), nullable=True
-    )
+    kpi_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("esg_kpis.id"), nullable=True)
     objective_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("esg_objectives.id"), nullable=True
     )
@@ -333,7 +361,9 @@ class CSRDPerformanceMappingModel(BaseModel):
     esrs_standard: Mapped[str] = mapped_column(String(10), nullable=False)
     disclosure_requirement: Mapped[str | None] = mapped_column(String(255), nullable=True)
     data_point_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    mapping_compliance_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_ASSESSED")
+    mapping_compliance_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="NOT_ASSESSED"
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
@@ -343,20 +373,21 @@ class ISSBSustainabilityMappingModel(BaseModel):
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
-    kpi_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("esg_kpis.id"), nullable=True
-    )
+    kpi_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("esg_kpis.id"), nullable=True)
     objective_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("esg_objectives.id"), nullable=True
     )
     issb_standard: Mapped[str] = mapped_column(String(10), nullable=False)
     disclosure_topic: Mapped[str | None] = mapped_column(String(255), nullable=True)
     metric_reference: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    mapping_compliance_status: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_ASSESSED")
+    mapping_compliance_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="NOT_ASSESSED"
+    )
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 # ── KPI Alerts ────────────────────────────────────────────────────────────────
+
 
 class KPIAlertModel(BaseModel):
     __tablename__ = "kpi_alerts"
@@ -364,9 +395,7 @@ class KPIAlertModel(BaseModel):
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
-    kpi_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("esg_kpis.id"), nullable=False
-    )
+    kpi_id: Mapped[str] = mapped_column(String(36), ForeignKey("esg_kpis.id"), nullable=False)
     alert_type: Mapped[str] = mapped_column(String(30), nullable=False)
     threshold_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     triggered_value: Mapped[float] = mapped_column(Float, nullable=False)
@@ -378,15 +407,14 @@ class KPIAlertModel(BaseModel):
 
 # ── Forecasting & Scenarios ───────────────────────────────────────────────────
 
+
 class PerformanceForecastModel(BaseModel):
     __tablename__ = "performance_forecasts"
 
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
-    kpi_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("esg_kpis.id"), nullable=True
-    )
+    kpi_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("esg_kpis.id"), nullable=True)
     forecast_type: Mapped[str] = mapped_column(String(30), nullable=False, default="KPI_ATTAINMENT")
     method: Mapped[str] = mapped_column(String(30), nullable=False, default="LINEAR_TREND")
     period_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -414,6 +442,7 @@ class ScenarioAnalysisModel(BaseModel):
 
 
 # ── Sustainability Reports ─────────────────────────────────────────────────────
+
 
 class SustainabilityPerformanceReportModel(BaseModel):
     __tablename__ = "sustainability_performance_reports"

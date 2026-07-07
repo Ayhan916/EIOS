@@ -1,9 +1,9 @@
 """Repositories for Scoping Study (CSDDD Art. 8 Abs. 3)."""
+
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from sqlalchemy.orm import Session
@@ -19,7 +19,7 @@ from infrastructure.persistence.models.supplier import SupplierModel
 from infrastructure.persistence.models.supplier_score import SupplierScoreModel
 
 
-def _loads(v: Optional[str]) -> list:
+def _loads(v: str | None) -> list:
     if not v:
         return []
     try:
@@ -70,15 +70,34 @@ def _study_to_domain(m: ScopingStudyModel) -> ScopingStudy:
 
 # Default best-practice config based on CSDDD guidelines
 DEFAULT_HIGH_RISK_COUNTRIES = [
-    "Bangladesh", "Myanmar", "Ethiopia", "Democratic Republic of Congo",
-    "Nigeria", "Pakistan", "Cambodia", "Uzbekistan", "Turkmenistan",
-    "Eritrea", "North Korea",
+    "Bangladesh",
+    "Myanmar",
+    "Ethiopia",
+    "Democratic Republic of Congo",
+    "Nigeria",
+    "Pakistan",
+    "Cambodia",
+    "Uzbekistan",
+    "Turkmenistan",
+    "Eritrea",
+    "North Korea",
 ]
 
 DEFAULT_HIGH_RISK_SECTORS = [
-    "textiles", "apparel", "garment", "mining", "cobalt", "palm oil",
-    "soy", "cattle", "cocoa", "coffee", "wood", "rubber",
-    "electronics", "construction",
+    "textiles",
+    "apparel",
+    "garment",
+    "mining",
+    "cobalt",
+    "palm oil",
+    "soy",
+    "cattle",
+    "cocoa",
+    "coffee",
+    "wood",
+    "rubber",
+    "electronics",
+    "construction",
 ]
 
 
@@ -86,7 +105,7 @@ class SQLScopingConfigRepository:
     def __init__(self, db: Session):
         self.db = db
 
-    def get_latest(self, org_id: UUID) -> Optional[ScopingConfig]:
+    def get_latest(self, org_id: UUID) -> ScopingConfig | None:
         m = (
             self.db.query(ScopingConfigModel)
             .filter(ScopingConfigModel.organization_id == org_id)
@@ -113,7 +132,9 @@ class SQLScopingConfigRepository:
             version=next_version,
             risk_score_threshold_p1=data.get("risk_score_threshold_p1", 7.0),
             risk_score_threshold_p2=data.get("risk_score_threshold_p2", 4.0),
-            high_risk_countries=_dumps(data.get("high_risk_countries", DEFAULT_HIGH_RISK_COUNTRIES)),
+            high_risk_countries=_dumps(
+                data.get("high_risk_countries", DEFAULT_HIGH_RISK_COUNTRIES)
+            ),
             high_risk_sectors=_dumps(data.get("high_risk_sectors", DEFAULT_HIGH_RISK_SECTORS)),
             revenue_threshold_pct=data.get("revenue_threshold_pct", 5.0),
             notes=data.get("notes", ""),
@@ -121,14 +142,16 @@ class SQLScopingConfigRepository:
         )
         self.db.add(m)
         # Audit log
-        self.db.add(ScopingConfigAuditLogModel(
-            id=uuid4(),
-            organization_id=org_id,
-            config_id=m.id,
-            action="created",
-            performed_by=created_by,
-            details=f"Version {next_version}",
-        ))
+        self.db.add(
+            ScopingConfigAuditLogModel(
+                id=uuid4(),
+                organization_id=org_id,
+                config_id=m.id,
+                action="created",
+                performed_by=created_by,
+                details=f"Version {next_version}",
+            )
+        )
         self.db.flush()
         return _config_to_domain(m)
 
@@ -155,7 +178,7 @@ class SQLScopingStudyRepository:
         self.db.flush()
         return _study_to_domain(m)
 
-    def get(self, study_id: UUID, org_id: UUID) -> Optional[ScopingStudy]:
+    def get(self, study_id: UUID, org_id: UUID) -> ScopingStudy | None:
         m = (
             self.db.query(ScopingStudyModel)
             .filter(ScopingStudyModel.id == study_id, ScopingStudyModel.organization_id == org_id)
@@ -168,12 +191,13 @@ class SQLScopingStudyRepository:
             self.db.query(ScopingStudyModel)
             .filter(ScopingStudyModel.organization_id == org_id)
             .order_by(ScopingStudyModel.report_year.desc(), ScopingStudyModel.created_at.desc())
-            .offset(skip).limit(limit)
+            .offset(skip)
+            .limit(limit)
             .all()
         )
         return [_study_to_domain(m) for m in rows]
 
-    def get_latest_approved(self, org_id: UUID) -> Optional[ScopingStudy]:
+    def get_latest_approved(self, org_id: UUID) -> ScopingStudy | None:
         m = (
             self.db.query(ScopingStudyModel)
             .filter(
@@ -185,7 +209,7 @@ class SQLScopingStudyRepository:
         )
         return _study_to_domain(m) if m else None
 
-    def update_notes(self, study_id: UUID, org_id: UUID, notes: str) -> Optional[ScopingStudy]:
+    def update_notes(self, study_id: UUID, org_id: UUID, notes: str) -> ScopingStudy | None:
         m = (
             self.db.query(ScopingStudyModel)
             .filter(ScopingStudyModel.id == study_id, ScopingStudyModel.organization_id == org_id)
@@ -197,7 +221,7 @@ class SQLScopingStudyRepository:
         self.db.flush()
         return _study_to_domain(m)
 
-    def submit(self, study_id: UUID, org_id: UUID, submitted_by: str) -> Optional[ScopingStudy]:
+    def submit(self, study_id: UUID, org_id: UUID, submitted_by: str) -> ScopingStudy | None:
         m = (
             self.db.query(ScopingStudyModel)
             .filter(ScopingStudyModel.id == study_id, ScopingStudyModel.organization_id == org_id)
@@ -206,14 +230,15 @@ class SQLScopingStudyRepository:
         if not m:
             return None
         m.status = ScopingStudyStatus.SUBMITTED.value
-        m.submitted_at = datetime.now(timezone.utc)
+        m.submitted_at = datetime.now(UTC)
         m.submitted_by = submitted_by
         self.db.flush()
         return _study_to_domain(m)
 
-    def approve(self, study_id: UUID, org_id: UUID, approved_by: str) -> Optional[ScopingStudy]:
+    def approve(self, study_id: UUID, org_id: UUID, approved_by: str) -> ScopingStudy | None:
         """HUMAN MANAGER/ADMIN ONLY — AI agents MUST NOT call this."""
         from dateutil.relativedelta import relativedelta
+
         m = (
             self.db.query(ScopingStudyModel)
             .filter(ScopingStudyModel.id == study_id, ScopingStudyModel.organization_id == org_id)
@@ -221,7 +246,7 @@ class SQLScopingStudyRepository:
         )
         if not m:
             return None
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         m.status = ScopingStudyStatus.APPROVED.value
         m.approved_at = now
         m.approved_by = approved_by
@@ -232,17 +257,26 @@ class SQLScopingStudyRepository:
     def review_status(self, org_id: UUID) -> dict:
         latest = self.get_latest_approved(org_id)
         if not latest:
-            return {"status": "no_study", "latest_approved_year": None, "next_review_due": None, "overdue": False}
-        now = datetime.now(timezone.utc)
+            return {
+                "status": "no_study",
+                "latest_approved_year": None,
+                "next_review_due": None,
+                "overdue": False,
+            }
+        now = datetime.now(UTC)
         overdue = latest.next_review_due is not None and latest.next_review_due < now
         days_until = None
         if latest.next_review_due:
             delta = latest.next_review_due - now
             days_until = delta.days
         return {
-            "status": "overdue" if overdue else ("due_soon" if days_until is not None and days_until <= 30 else "current"),
+            "status": "overdue"
+            if overdue
+            else ("due_soon" if days_until is not None and days_until <= 30 else "current"),
             "latest_approved_year": latest.report_year,
-            "next_review_due": latest.next_review_due.isoformat() if latest.next_review_due else None,
+            "next_review_due": latest.next_review_due.isoformat()
+            if latest.next_review_due
+            else None,
             "overdue": overdue,
             "days_until_review": days_until,
         }
@@ -255,11 +289,8 @@ class SQLScopingSupplierLoader:
         self.db = db
 
     def load(self, org_id: UUID) -> list[dict]:
-        from application.scoping.scoping_analyzer import SupplierInput
         suppliers = (
-            self.db.query(SupplierModel)
-            .filter(SupplierModel.organization_id == str(org_id))
-            .all()
+            self.db.query(SupplierModel).filter(SupplierModel.organization_id == str(org_id)).all()
         )
         results = []
         for s in suppliers:
@@ -269,12 +300,14 @@ class SQLScopingSupplierLoader:
                 .order_by(SupplierScoreModel.created_at.desc())
                 .first()
             )
-            results.append({
-                "supplier_id": str(s.id),
-                "supplier_name": s.name,
-                "country": s.country or "",
-                "industry": s.industry or "",
-                "risk_score": latest_score.risk_score if latest_score else 0.0,
-                "risk_band": latest_score.risk_band if latest_score else "Low",
-            })
+            results.append(
+                {
+                    "supplier_id": str(s.id),
+                    "supplier_name": s.name,
+                    "country": s.country or "",
+                    "industry": s.industry or "",
+                    "risk_score": latest_score.risk_score if latest_score else 0.0,
+                    "risk_band": latest_score.risk_band if latest_score else "Low",
+                }
+            )
         return results

@@ -28,20 +28,22 @@ async def _log_scim(
     detail: str = "",
     metadata: dict | None = None,
 ) -> None:
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        action=action,
-        entity_type="User",
-        entity_id=entity_id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=detail,
-        event_metadata=metadata or {},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type="User",
+            entity_id=entity_id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=detail,
+            event_metadata=metadata or {},
+        )
+    )
 
 
 async def scim_create_user(
@@ -113,9 +115,7 @@ async def scim_update_user(
     return user
 
 
-async def scim_deactivate_user(
-    user_id: str, actor_id: str | None, session: AsyncSession
-) -> bool:
+async def scim_deactivate_user(user_id: str, actor_id: str | None, session: AsyncSession) -> bool:
     """Deactivate (soft-delete) a user via SCIM provisioning."""
     result = await session.execute(select(UserModel).where(UserModel.id == user_id))
     user = result.scalar_one_or_none()

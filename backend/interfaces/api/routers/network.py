@@ -45,6 +45,7 @@ _ADMIN = Depends(require_admin)
 
 # ── Relationships ─────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/relationships",
     response_model=list[SupplierRelationshipResponse],
@@ -142,6 +143,7 @@ async def remove_relationship(
 
 # ── Suggested Relationships ───────────────────────────────────────────────────
 
+
 @router.get(
     "/suggested-relationships",
     response_model=list[SuggestedRelationshipResponse],
@@ -232,6 +234,7 @@ async def run_discovery(
 
 # ── Exposure Signals ──────────────────────────────────────────────────────────
 
+
 @router.get(
     "/exposure-signals",
     response_model=list[NetworkExposureSignalResponse],
@@ -275,6 +278,7 @@ async def detect_cascade(
 
 
 # ── Clusters ──────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/clusters",
@@ -356,6 +360,7 @@ async def detect_clusters(
 
 # ── Dependency Analysis ───────────────────────────────────────────────────────
 
+
 @router.get(
     "/dependency-analysis",
     response_model=DependencyAnalysisResponse,
@@ -398,6 +403,7 @@ async def get_supplier_dependency(
 
 # ── Resilience ────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/resilience",
     response_model=ResilienceAssessmentResponse,
@@ -439,6 +445,7 @@ async def get_supplier_resilience(
 
 
 # ── Centrality ────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/centrality",
@@ -498,6 +505,7 @@ async def get_supplier_criticality(
 
 # ── Graph Traversal ───────────────────────────────────────────────────────────
 
+
 @router.get(
     "/suppliers/{supplier_id}/neighborhood",
     response_model=NeighborhoodResponse,
@@ -541,6 +549,7 @@ async def get_shortest_path(
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 @router.get(
     "/dashboard",
     response_model=NetworkDashboard,
@@ -550,55 +559,77 @@ async def get_network_dashboard(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> NetworkDashboard:
+    from sqlalchemy import func, select
+
     from application.network.centrality_service import list_criticality
     from application.network.cluster_service import list_clusters
     from application.network.dependency_service import get_dependency_analysis
-    from application.network.discovery_engine import list_suggestions
     from application.network.resilience_service import get_resilience
     from application.network.risk_propagation import list_exposure_signals
     from infrastructure.persistence.models.network import SupplierRelationshipModel
-    from sqlalchemy import func, select
 
     org_id = current_user.organization_id
 
     from infrastructure.persistence.models.network import (
         IncidentClusterModel,
-        NetworkExposureSignalModel as _NExpModel,
         SuggestedRelationshipModel,
+    )
+    from infrastructure.persistence.models.network import (
+        NetworkExposureSignalModel as _NExpModel,
     )
 
     # Relationship count
-    rel_stmt = select(func.count()).select_from(SupplierRelationshipModel).where(
-        SupplierRelationshipModel.organization_id == org_id,
-        SupplierRelationshipModel.relationship_status == "ACTIVE",
+    rel_stmt = (
+        select(func.count())
+        .select_from(SupplierRelationshipModel)
+        .where(
+            SupplierRelationshipModel.organization_id == org_id,
+            SupplierRelationshipModel.relationship_status == "ACTIVE",
+        )
     )
     total_rels = (await session.execute(rel_stmt)).scalar_one()
 
     # Pending suggestions count
-    pend_stmt = select(func.count()).select_from(SuggestedRelationshipModel).where(
-        SuggestedRelationshipModel.organization_id == org_id,
-        SuggestedRelationshipModel.suggestion_status == "PENDING",
+    pend_stmt = (
+        select(func.count())
+        .select_from(SuggestedRelationshipModel)
+        .where(
+            SuggestedRelationshipModel.organization_id == org_id,
+            SuggestedRelationshipModel.suggestion_status == "PENDING",
+        )
     )
     pending_count = (await session.execute(pend_stmt)).scalar_one()
 
     # P0 M38.1 fix: true COUNT rather than len(limited list)
-    exp_count_stmt = select(func.count()).select_from(_NExpModel).where(
-        _NExpModel.organization_id == org_id,
-        _NExpModel.exposure_status == "ACTIVE",
+    exp_count_stmt = (
+        select(func.count())
+        .select_from(_NExpModel)
+        .where(
+            _NExpModel.organization_id == org_id,
+            _NExpModel.exposure_status == "ACTIVE",
+        )
     )
     active_exposure_count = (await session.execute(exp_count_stmt)).scalar_one()
 
     # Cluster count
-    cluster_count_stmt = select(func.count()).select_from(IncidentClusterModel).where(
-        IncidentClusterModel.organization_id == org_id,
-        IncidentClusterModel.cluster_status == "ACTIVE",
+    cluster_count_stmt = (
+        select(func.count())
+        .select_from(IncidentClusterModel)
+        .where(
+            IncidentClusterModel.organization_id == org_id,
+            IncidentClusterModel.cluster_status == "ACTIVE",
+        )
     )
     active_cluster_count = (await session.execute(cluster_count_stmt)).scalar_one()
 
     # Recent lists for detail cards
-    exposures = await list_exposure_signals(org_id, exposure_status="ACTIVE", limit=10, session=session)
+    exposures = await list_exposure_signals(
+        org_id, exposure_status="ACTIVE", limit=10, session=session
+    )
     clusters = await list_clusters(org_id, cluster_status="ACTIVE", limit=10, session=session)
-    critical = await list_criticality(org_id, criticality_level="CRITICAL", limit=10, session=session)
+    critical = await list_criticality(
+        org_id, criticality_level="CRITICAL", limit=10, session=session
+    )
     resilience = await get_resilience(org_id, session=session)
     dep = await get_dependency_analysis(org_id, session=session)
 
@@ -617,6 +648,7 @@ async def get_network_dashboard(
 
 
 # ── Network Watchlists (M38.1 / Spec Section 13) ─────────────────────────────
+
 
 @router.get(
     "/watchlists",

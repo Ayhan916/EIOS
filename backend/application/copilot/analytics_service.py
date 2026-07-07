@@ -39,7 +39,10 @@ async def get_analytics(
     session: AsyncSession,
 ) -> ConversationAnalytics:
     """Compute analytics for an organisation by querying copilot tables."""
-    from infrastructure.persistence.models.copilot import CopilotConversationModel, CopilotMessageModel
+    from infrastructure.persistence.models.copilot import (
+        CopilotConversationModel,
+        CopilotMessageModel,
+    )
     from infrastructure.persistence.models.copilot_audit import CopilotFeedbackModel
 
     analytics = ConversationAnalytics(organization_id=org_id)

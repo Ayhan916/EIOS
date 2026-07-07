@@ -42,15 +42,14 @@ async def refresh_for_dataset(
 
     Returns the number of enrichments refreshed.
     """
-    from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
 
     enrichment_stmt = select(SupplierEnrichmentModel)
 
     if connector_name in _COUNTRY_CONNECTORS:
-        enrichment_stmt = enrichment_stmt.where(
-            SupplierEnrichmentModel.country_code.isnot(None)
-        )
+        enrichment_stmt = enrichment_stmt.where(SupplierEnrichmentModel.country_code.isnot(None))
     elif connector_name in _SANCTIONS_CONNECTORS:
         enrichment_stmt = enrichment_stmt.where(
             SupplierEnrichmentModel.sanctions_exposure != "none"
@@ -62,8 +61,6 @@ async def refresh_for_dataset(
         return 0
 
     # H3: batch-load supplier scores in a single query
-    from infrastructure.persistence.models.supplier_score import SupplierScoreModel
-    from sqlalchemy import func
 
     supplier_ids = list({r.supplier_id for r in rows})
     scores_by_supplier = await _batch_load_supplier_scores(supplier_ids, session)
@@ -107,8 +104,9 @@ async def _batch_load_supplier_scores(
     if not supplier_ids:
         return {}
 
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.supplier_score import SupplierScoreModel
-    from sqlalchemy import select, func
 
     # Subquery: latest created_at per supplier_id
     subq = (
@@ -132,8 +130,9 @@ async def _batch_load_supplier_scores(
 
 async def refresh_all_enrichments(organization_id: str, session) -> int:
     """Re-run enrichment for every supplier in an organization."""
-    from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
 
     stmt = select(SupplierEnrichmentModel).where(
         SupplierEnrichmentModel.organization_id == organization_id
@@ -191,8 +190,9 @@ async def _refresh_single_enrichment_with_score(
 
 # Keep old signature for backward compatibility with existing call sites
 async def _refresh_single_enrichment(enrichment_row, dataset_id: str, session) -> None:
-    from infrastructure.persistence.models.supplier_score import SupplierScoreModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_score import SupplierScoreModel
 
     score_stmt = (
         select(SupplierScoreModel)
@@ -201,5 +201,9 @@ async def _refresh_single_enrichment(enrichment_row, dataset_id: str, session) -
         .limit(1)
     )
     score_row = (await session.execute(score_stmt)).scalar_one_or_none()
-    internal_esg = float(score_row.overall_score) if score_row else float(enrichment_row.benchmark_score or 50.0)
+    internal_esg = (
+        float(score_row.overall_score)
+        if score_row
+        else float(enrichment_row.benchmark_score or 50.0)
+    )
     await _refresh_single_enrichment_with_score(enrichment_row, dataset_id, internal_esg, session)

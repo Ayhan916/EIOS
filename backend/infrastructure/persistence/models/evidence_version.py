@@ -18,9 +18,7 @@ class EvidenceVersionModel(Base):
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    evidence_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("evidences.id"), nullable=False
-    )
+    evidence_id: Mapped[str] = mapped_column(String(36), ForeignKey("evidences.id"), nullable=False)
     version_number: Mapped[int] = mapped_column(Integer, nullable=False)
     s3_key: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     file_name: Mapped[str | None] = mapped_column(String(500), nullable=True)

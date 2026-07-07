@@ -44,6 +44,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[_empty_result()]),
         ):
             from application.copilot.copilot_service import ask
+
             _user, _assistant = await ask(
                 question="What are our risks?",
                 org_id="org-1",
@@ -66,6 +67,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[_empty_result()]),
         ):
             from application.copilot.copilot_service import ask
+
             _, assistant1 = await ask(
                 question="What are our risks?",
                 org_id="org-1",
@@ -96,6 +98,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[_empty_result()]),
         ):
             from application.copilot.copilot_service import ask
+
             _, assistant = await ask(
                 question="What are our risks?",
                 org_id="org-1",
@@ -118,6 +121,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[_empty_result()]),
         ):
             from application.copilot.copilot_service import ask
+
             _, assistant = await ask(
                 question="What are our risks?",
                 org_id="org-1",
@@ -140,6 +144,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[_empty_result()]),
         ):
             from application.copilot.copilot_service import ask
+
             _, assistant = await ask(
                 question="What are our risks?",
                 org_id="org-1",
@@ -173,6 +178,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[result_with_data]),
         ):
             from application.copilot.copilot_service import ask
+
             _, assistant = await ask(
                 question="What are our risks?",
                 org_id="org-1",
@@ -196,6 +202,7 @@ class TestEmptyContextGuard:
             new=AsyncMock(return_value=[_empty_result("supplier_retriever")]),
         ):
             from application.copilot.copilot_service import ask
+
             user_msg, _ = await ask(
                 question="What are our risks?",
                 org_id="org-1",

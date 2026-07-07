@@ -16,41 +16,41 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from unittest.mock import MagicMock, patch, call
+from datetime import UTC, datetime
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-# ── ensure M44 models are registered ──────────────────────────────────────────
+from infrastructure.persistence.models.base import Base
 
+# ── ensure M44 models are registered ──────────────────────────────────────────
 from infrastructure.persistence.models.strategy import (  # noqa: F401
-    EnterpriseDigitalTwinModel,
-    DigitalTwinSnapshotModel,
-    StrategicPlanModel,
-    StrategicObjectiveModel,
-    StrategyScenarioModel,
-    ScenarioAssumptionModel,
-    ScenarioExecutionModel,
+    BoardSimulationModel,
     ClimateStressTestModel,
-    SupplierShockScenarioModel,
+    DigitalTwinSnapshotModel,
+    EnterpriseDigitalTwinModel,
     FinancialStressTestModel,
-    TransitionPathwayModel,
-    NetZeroPathwayRecord,
-    StrategicRiskProjectionModel,
-    PortfolioOptimizationModel,
-    InvestmentScenarioModel,
     ForecastMethodologyRecordModel,
     ForecastModelRecord,
     ForecastResultModel,
-    BoardSimulationModel,
+    InvestmentScenarioModel,
+    NetZeroPathwayRecord,
+    PortfolioOptimizationModel,
+    ScenarioAssumptionModel,
+    ScenarioExecutionModel,
     StrategicForecastSummaryModel,
+    StrategicObjectiveModel,
+    StrategicPlanModel,
+    StrategicRiskProjectionModel,
     StrategicScenarioReportModel,
+    StrategyScenarioModel,
+    SupplierShockScenarioModel,
+    TransitionPathwayModel,
 )
-from infrastructure.persistence.models.base import Base
 
 
 def _now():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _uid():
@@ -82,6 +82,7 @@ def _make_model(cls, **kwargs):
 # Section 1: Migration integrity
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44Migration:
     """Validate table structure from ORM metadata."""
 
@@ -90,15 +91,26 @@ class TestM44Migration:
 
     def test_all_21_tables_exist(self):
         m44_tables = [
-            "enterprise_digital_twins", "digital_twin_snapshots",
-            "strategic_plans", "strategic_objectives",
-            "strategy_scenarios", "scenario_assumptions", "scenario_executions",
-            "climate_stress_tests", "supplier_shock_scenarios", "financial_stress_tests",
-            "transition_pathways", "net_zero_pathways",
+            "enterprise_digital_twins",
+            "digital_twin_snapshots",
+            "strategic_plans",
+            "strategic_objectives",
+            "strategy_scenarios",
+            "scenario_assumptions",
+            "scenario_executions",
+            "climate_stress_tests",
+            "supplier_shock_scenarios",
+            "financial_stress_tests",
+            "transition_pathways",
+            "net_zero_pathways",
             "strategic_risk_projections",
-            "portfolio_optimizations", "investment_scenarios",
-            "forecast_methodology_records", "forecast_models", "forecast_results",
-            "board_simulations", "strategic_forecast_summaries",
+            "portfolio_optimizations",
+            "investment_scenarios",
+            "forecast_methodology_records",
+            "forecast_models",
+            "forecast_results",
+            "board_simulations",
+            "strategic_forecast_summaries",
             "strategic_scenario_reports",
         ]
         for name in m44_tables:
@@ -106,8 +118,10 @@ class TestM44Migration:
 
     def test_all_tables_have_pk_id(self):
         for name in [
-            "enterprise_digital_twins", "strategy_scenarios",
-            "forecast_models", "board_simulations",
+            "enterprise_digital_twins",
+            "strategy_scenarios",
+            "forecast_models",
+            "board_simulations",
         ]:
             t = self._table(name)
             assert "id" in t.c, f"{name} missing id column"
@@ -115,9 +129,12 @@ class TestM44Migration:
 
     def test_all_tables_have_organization_id(self):
         for name in [
-            "enterprise_digital_twins", "digital_twin_snapshots",
-            "strategic_plans", "strategy_scenarios",
-            "climate_stress_tests", "forecast_results",
+            "enterprise_digital_twins",
+            "digital_twin_snapshots",
+            "strategic_plans",
+            "strategy_scenarios",
+            "climate_stress_tests",
+            "forecast_results",
         ]:
             t = self._table(name)
             assert "organization_id" in t.c, f"{name} missing organization_id"
@@ -146,9 +163,12 @@ class TestM44Migration:
 
     def test_is_final_on_output_tables(self):
         for name in [
-            "digital_twin_snapshots", "scenario_executions",
-            "climate_stress_tests", "forecast_results",
-            "board_simulations", "strategic_scenario_reports",
+            "digital_twin_snapshots",
+            "scenario_executions",
+            "climate_stress_tests",
+            "forecast_results",
+            "board_simulations",
+            "strategic_scenario_reports",
         ]:
             t = self._table(name)
             assert "is_final" in t.c, f"{name} missing is_final"
@@ -158,6 +178,7 @@ class TestM44Migration:
 # Section 2: Digital Twin
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44DigitalTwin:
     def test_create_digital_twin_sets_fields(self):
         from application.strategy import digital_twin_service
@@ -165,7 +186,10 @@ class TestM44DigitalTwin:
         session = _session()
         with patch("application.strategy.digital_twin_service.emit_audit_event"):
             twin = digital_twin_service.create_digital_twin(
-                "org-1", "EIOS Enterprise Twin", "actor-1", session,
+                "org-1",
+                "EIOS Enterprise Twin",
+                "actor-1",
+                session,
                 emissions_baseline_tco2e=50_000.0,
                 supplier_count=150,
                 kpi_count=42,
@@ -198,7 +222,12 @@ class TestM44DigitalTwin:
         session.get.return_value = twin
         with patch("application.strategy.digital_twin_service.emit_audit_event"):
             snap = digital_twin_service.create_snapshot(
-                "org-1", twin.id, "QUARTERLY", "2024-Q1", "actor-1", session,
+                "org-1",
+                twin.id,
+                "QUARTERLY",
+                "2024-Q1",
+                "actor-1",
+                session,
                 sustainability_state={"esg_score": 72.5},
             )
         assert snap.twin_id == twin.id
@@ -234,6 +263,7 @@ class TestM44DigitalTwin:
 # Section 3: Scenarios
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44Scenarios:
     def test_create_scenario_valid(self):
         from application.strategy import scenario_service
@@ -241,7 +271,11 @@ class TestM44Scenarios:
         session = _session()
         with patch("application.strategy.scenario_service.emit_audit_event"):
             sc = scenario_service.create_scenario(
-                "org-1", "2030 Carbon Price", "CLIMATE", "actor-1", session,
+                "org-1",
+                "2030 Carbon Price",
+                "CLIMATE",
+                "actor-1",
+                session,
                 time_horizon_years=7,
             )
         assert sc.name == "2030 Carbon Price"
@@ -261,13 +295,24 @@ class TestM44Scenarios:
         from application.strategy import scenario_service
 
         session = _session()
-        sc = _make_model(StrategyScenarioModel, name="S", scenario_type="CLIMATE",
-                         scenario_status="Draft", time_horizon_years=5,
-                         created_by_user="a", is_template=False)
+        sc = _make_model(
+            StrategyScenarioModel,
+            name="S",
+            scenario_type="CLIMATE",
+            scenario_status="Draft",
+            time_horizon_years=5,
+            created_by_user="a",
+            is_template=False,
+        )
         session.get.return_value = sc
         assumption = scenario_service.create_assumption(
-            "org-test", sc.id, "carbon_price_usd_per_tco2e", "Carbon Price",
-            120.0, "actor-1", session,
+            "org-test",
+            sc.id,
+            "carbon_price_usd_per_tco2e",
+            "Carbon Price",
+            120.0,
+            "actor-1",
+            session,
             unit="USD/tCO2e",
             source="IEA 2030 NZE",
         )
@@ -279,14 +324,23 @@ class TestM44Scenarios:
         from application.strategy import scenario_service
 
         session = _session()
-        sc = _make_model(StrategyScenarioModel, name="S", scenario_type="CLIMATE",
-                         scenario_status="Draft", time_horizon_years=5,
-                         created_by_user="a", is_template=False)
+        sc = _make_model(
+            StrategyScenarioModel,
+            name="S",
+            scenario_type="CLIMATE",
+            scenario_status="Draft",
+            time_horizon_years=5,
+            created_by_user="a",
+            is_template=False,
+        )
         session.get.return_value = sc
         session.query.return_value.filter.return_value.all.return_value = []
         with patch("application.strategy.scenario_service.emit_audit_event"):
             execution = scenario_service.execute_scenario(
-                "org-test", sc.id, "actor-1", session,
+                "org-test",
+                sc.id,
+                "actor-1",
+                session,
                 baseline_override={"emissions_tco2e": 10_000.0, "revenue": 1_000_000.0},
             )
         assert execution.execution_status == "Completed"
@@ -298,9 +352,15 @@ class TestM44Scenarios:
         from application.strategy import scenario_service
 
         session = _session()
-        sc = _make_model(StrategyScenarioModel, name="S", scenario_type="FINANCIAL",
-                         scenario_status="Draft", time_horizon_years=3,
-                         created_by_user="a", is_template=False)
+        sc = _make_model(
+            StrategyScenarioModel,
+            name="S",
+            scenario_type="FINANCIAL",
+            scenario_status="Draft",
+            time_horizon_years=3,
+            created_by_user="a",
+            is_template=False,
+        )
         session.get.return_value = sc
         assumption = _make_model(
             ScenarioAssumptionModel,
@@ -312,7 +372,10 @@ class TestM44Scenarios:
         session.query.return_value.filter.return_value.all.return_value = [assumption]
         with patch("application.strategy.scenario_service.emit_audit_event"):
             execution = scenario_service.execute_scenario(
-                "org-test", sc.id, "actor-1", session,
+                "org-test",
+                sc.id,
+                "actor-1",
+                session,
                 baseline_override={"emissions_tco2e": 1000.0, "revenue": 500_000.0},
             )
         assert execution.projected_financial["carbon_price_usd_per_tco2e"] == 150.0
@@ -322,9 +385,16 @@ class TestM44Scenarios:
         from application.strategy.digital_twin_service import StrategyError
 
         session = _session()
-        sc = _make_model(StrategyScenarioModel, name="S", scenario_type="CLIMATE",
-                         scenario_status="Draft", time_horizon_years=5,
-                         organization_id="org-A", created_by_user="a", is_template=False)
+        sc = _make_model(
+            StrategyScenarioModel,
+            name="S",
+            scenario_type="CLIMATE",
+            scenario_status="Draft",
+            time_horizon_years=5,
+            organization_id="org-A",
+            created_by_user="a",
+            is_template=False,
+        )
         session.get.return_value = sc
         with pytest.raises(StrategyError, match="not found"):
             scenario_service.execute_scenario("org-B", sc.id, "a", session)
@@ -334,11 +404,13 @@ class TestM44Scenarios:
 # Section 4: Stress Tests
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44StressTests:
     """Validate deterministic stress test calculation formulas."""
 
     def _climate(self, stress_type, **kwargs):
         from application.strategy.stress_test_service import _compute_climate_impacts
+
         return _compute_climate_impacts(
             stress_type,
             kwargs.get("carbon_price_shock_pct", 0.0),
@@ -358,9 +430,9 @@ class TestM44StressTests:
         assert em["emissions_change_pct"] == pytest.approx(-4.0)
 
     def test_transition_shock_formula(self):
-        risk, em, fin = self._climate("TRANSITION_SHOCK",
-                                      carbon_price_shock_pct=20.0,
-                                      transition_cost_pct=10.0)
+        risk, em, fin = self._climate(
+            "TRANSITION_SHOCK", carbon_price_shock_pct=20.0, transition_cost_pct=10.0
+        )
         # risk = 20*0.15 + 10*0.10 = 3+1 = 4
         assert risk["total_risk_increase_pct"] == pytest.approx(4.0)
         # fin_cost = 10 * 0.20 = 2.0
@@ -380,6 +452,7 @@ class TestM44StressTests:
 
     def test_supplier_shock_linear_propagation(self):
         from application.strategy.stress_test_service import _compute_supplier_impacts
+
         sc, fin, esg = _compute_supplier_impacts(0.6, "LINEAR")
         # disruption = 0.6 * 100 = 60
         assert sc["supply_disruption_pct"] == pytest.approx(60.0)
@@ -388,13 +461,17 @@ class TestM44StressTests:
 
     def test_supplier_shock_network_amplification(self):
         from application.strategy.stress_test_service import _compute_supplier_impacts
+
         _, fin_lin, _ = _compute_supplier_impacts(0.5, "LINEAR")
         _, fin_net, _ = _compute_supplier_impacts(0.5, "NETWORK")
         # Network = linear * 1.5
-        assert fin_net["financial_impact_pct"] == pytest.approx(fin_lin["financial_impact_pct"] * 1.5)
+        assert fin_net["financial_impact_pct"] == pytest.approx(
+            fin_lin["financial_impact_pct"] * 1.5
+        )
 
     def test_financial_stress_financing_cost(self):
         from application.strategy.stress_test_service import _compute_financial_stress_impacts
+
         fin, esg = _compute_financial_stress_impacts("FINANCING_COST", 200.0, 0.0, 0.0, 0)
         # cost = 200 / 100 = 2.0%
         assert fin["cost_increase_pct"] == pytest.approx(2.0)
@@ -402,6 +479,7 @@ class TestM44StressTests:
 
     def test_financial_stress_carbon_tax(self):
         from application.strategy.stress_test_service import _compute_financial_stress_impacts
+
         fin, _ = _compute_financial_stress_impacts("CARBON_TAX", 0.0, 0.0, 30.0, 0)
         # cost = 30 * 0.5 = 15.0%
         assert fin["cost_increase_pct"] == pytest.approx(15.0)
@@ -411,38 +489,45 @@ class TestM44StressTests:
 # Section 5: Forecasts
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44Forecasts:
     """Validate deterministic forecast algorithms."""
 
     def test_linear_trend_projection(self):
         from application.strategy.forecast_service import _linear_trend
+
         # f(3) = 100 + 5 * 3 = 115
         assert _linear_trend(100.0, 5.0, 3) == pytest.approx(115.0)
 
     def test_linear_trend_zero_slope(self):
         from application.strategy.forecast_service import _linear_trend
+
         assert _linear_trend(200.0, 0.0, 10) == pytest.approx(200.0)
 
     def test_weighted_moving_average(self):
         from application.strategy.forecast_service import _weighted_moving_average
+
         # WMA([100, 110, 120], [1, 2, 3]) = (100*1 + 110*2 + 120*3) / 6 = 680/6 ≈ 113.33
         result = _weighted_moving_average([100.0, 110.0, 120.0], [1.0, 2.0, 3.0])
         assert result == pytest.approx(113.333, rel=1e-3)
 
     def test_weighted_moving_average_zero_weights_raises(self):
-        from application.strategy.forecast_service import _weighted_moving_average
         from application.strategy.digital_twin_service import StrategyError
+        from application.strategy.forecast_service import _weighted_moving_average
+
         with pytest.raises(StrategyError, match="non-zero"):
             _weighted_moving_average([100.0], [0.0])
 
     def test_scenario_projection_compound(self):
         from application.strategy.forecast_service import _scenario_projection
+
         # baseline=100, +5% for 3 years = 100 * 1.05^3 ≈ 115.7625
         result = _scenario_projection(100.0, 5.0, 3)
         assert result == pytest.approx(115.7625, rel=1e-4)
 
     def test_scenario_projection_decline(self):
         from application.strategy.forecast_service import _scenario_projection
+
         # baseline=1000, -10% for 2 years = 1000 * 0.9^2 = 810
         result = _scenario_projection(1000.0, -10.0, 2)
         assert result == pytest.approx(810.0)
@@ -453,7 +538,11 @@ class TestM44Forecasts:
         session = _session()
         with patch("application.strategy.forecast_service.emit_audit_event"):
             model = forecast_service.create_forecast_model(
-                "org-1", "Emissions Linear", "LINEAR_TREND", "actor-1", session,
+                "org-1",
+                "Emissions Linear",
+                "LINEAR_TREND",
+                "actor-1",
+                session,
                 parameters={"slope": -500.0},
             )
         assert model.methodology == "LINEAR_TREND"
@@ -476,8 +565,14 @@ class TestM44Forecasts:
         session.get.return_value = fm
         with patch("application.strategy.forecast_service.emit_audit_event"):
             result = forecast_service.run_forecast(
-                "org-test", fm.id, "EMISSIONS", "scope_1_tco2e",
-                2030, 50_000.0, "actor-1", session,
+                "org-test",
+                fm.id,
+                "EMISSIONS",
+                "scope_1_tco2e",
+                2030,
+                50_000.0,
+                "actor-1",
+                session,
             )
         assert result.forecast_type == "EMISSIONS"
         assert result.forecast_value is not None
@@ -489,6 +584,7 @@ class TestM44Forecasts:
 # Section 6: Pathways
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44Pathways:
     def test_create_pathway_computes_reduction_pct(self):
         from application.strategy import pathway_service
@@ -496,7 +592,12 @@ class TestM44Pathways:
         session = _session()
         with patch("application.strategy.pathway_service.emit_audit_event"):
             pathway = pathway_service.create_pathway(
-                "org-1", "Net Zero 2050", "ACCELERATED", 2050, "actor-1", session,
+                "org-1",
+                "Net Zero 2050",
+                "ACCELERATED",
+                2050,
+                "actor-1",
+                session,
                 baseline_emissions_tco2e=100_000.0,
                 target_emissions_tco2e=0.0,
             )
@@ -508,7 +609,12 @@ class TestM44Pathways:
         session = _session()
         with patch("application.strategy.pathway_service.emit_audit_event"):
             pathway = pathway_service.create_pathway(
-                "org-1", "Conservative 2040", "CONSERVATIVE", 2040, "actor-1", session,
+                "org-1",
+                "Conservative 2040",
+                "CONSERVATIVE",
+                2040,
+                "actor-1",
+                session,
                 baseline_emissions_tco2e=10_000.0,
                 target_emissions_tco2e=2_000.0,
             )
@@ -534,13 +640,20 @@ class TestM44Pathways:
         session = _session()
         pathway = _make_model(
             TransitionPathwayModel,
-            pathway_name="P", pathway_type="EXPECTED",
-            target_year=2050, is_primary=True, is_final=False,
+            pathway_name="P",
+            pathway_type="EXPECTED",
+            target_year=2050,
+            is_primary=True,
+            is_final=False,
         )
         session.get.return_value = pathway
         with patch("application.strategy.pathway_service.emit_audit_event"):
             nz = pathway_service.create_net_zero_pathway(
-                "org-test", pathway.id, 2048, "actor-1", session,
+                "org-test",
+                pathway.id,
+                2048,
+                "actor-1",
+                session,
                 interim_targets=[{"year": 2035, "reduction_pct": 50}],
                 methodology="SBTi_1.5C",
             )
@@ -555,9 +668,13 @@ class TestM44Pathways:
 
         session = _session()
         pathway = _make_model(
-            TransitionPathwayModel, organization_id="org-A",
-            pathway_name="P", pathway_type="EXPECTED",
-            target_year=2050, is_primary=False, is_final=False,
+            TransitionPathwayModel,
+            organization_id="org-A",
+            pathway_name="P",
+            pathway_type="EXPECTED",
+            target_year=2050,
+            is_primary=False,
+            is_final=False,
         )
         session.get.return_value = pathway
         with pytest.raises(StrategyError, match="not found"):
@@ -568,22 +685,30 @@ class TestM44Pathways:
 # Section 7: Board Simulation
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44BoardSimulation:
     def test_create_board_simulation_no_executions(self):
         from application.strategy import board_simulation_service
 
         session = _session()
-        session.query.return_value.filter.return_value.order_by.return_value.first.return_value = None
+        session.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
+            None
+        )
         with patch("application.strategy.board_simulation_service.emit_audit_event"):
             sim = board_simulation_service.create_board_simulation(
-                "org-1", "2030 Strategic Choices", "actor-1", session,
+                "org-1",
+                "2030 Strategic Choices",
+                "actor-1",
+                session,
                 scenario_a_id="sc-A",
                 scenario_b_id="sc-B",
             )
         assert sim.simulation_name == "2030 Strategic Choices"
         assert sim.scenario_a_id == "sc-A"
         assert sim.scenario_a_results == {"scenario_id": "sc-A", "status": "no_execution"}
-        assert sim.comparison_dimensions == {"dimensions": ["risk", "esg_score", "emissions", "value_creation", "financial_outcomes"]}
+        assert sim.comparison_dimensions == {
+            "dimensions": ["risk", "esg_score", "emissions", "value_creation", "financial_outcomes"]
+        }
 
     def test_create_board_simulation_with_execution(self):
         from application.strategy import board_simulation_service
@@ -602,10 +727,15 @@ class TestM44BoardSimulation:
             execution_metadata={},
             is_final=False,
         )
-        session.query.return_value.filter.return_value.order_by.return_value.first.return_value = exec_rec
+        session.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
+            exec_rec
+        )
         with patch("application.strategy.board_simulation_service.emit_audit_event"):
             sim = board_simulation_service.create_board_simulation(
-                "org-1", "Exec Compare", "actor-1", session,
+                "org-1",
+                "Exec Compare",
+                "actor-1",
+                session,
                 scenario_a_id="sc-A",
             )
         assert sim.scenario_a_results["projected_kpis"] == {"revenue": 2_000_000}
@@ -615,7 +745,9 @@ class TestM44BoardSimulation:
         from application.strategy.metrics import strategy_counters
 
         session = _session()
-        session.query.return_value.filter.return_value.order_by.return_value.first.return_value = None
+        session.query.return_value.filter.return_value.order_by.return_value.first.return_value = (
+            None
+        )
         before = strategy_counters.board_simulations_total
         with patch("application.strategy.board_simulation_service.emit_audit_event"):
             board_simulation_service.create_board_simulation("org-1", "X", "a", session)
@@ -628,12 +760,20 @@ class TestM44BoardSimulation:
         sim = _make_model(
             BoardSimulationModel,
             simulation_name="Sim",
-            scenario_a_id=None, scenario_b_id=None, scenario_c_id=None,
-            comparison_dimensions={}, scenario_a_results={},
-            scenario_b_results={}, scenario_c_results={},
-            recommendation=None, simulated_by="a", is_final=False,
+            scenario_a_id=None,
+            scenario_b_id=None,
+            scenario_c_id=None,
+            comparison_dimensions={},
+            scenario_a_results={},
+            scenario_b_results={},
+            scenario_c_results={},
+            recommendation=None,
+            simulated_by="a",
+            is_final=False,
         )
-        session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [sim]
+        session.query.return_value.filter.return_value.order_by.return_value.all.return_value = [
+            sim
+        ]
         result = board_simulation_service.list_board_simulations("org-1", session)
         assert result == [sim]
 
@@ -641,6 +781,7 @@ class TestM44BoardSimulation:
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section 8: Rollup
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestM44Rollup:
     def test_rollup_returns_correct_keys(self):
@@ -650,7 +791,22 @@ class TestM44Rollup:
         session.query.return_value.filter.return_value.scalar.return_value = 5
         # 9 original + 7 new M44.1 aggregate queries (avg values + template/methodology/comparison counts)
         session.query.return_value.filter.return_value.scalar.side_effect = [
-            3, 7, 12, 2, 4, 8, 1, 5, 0, None, None, None, 0, 0, 0, 0
+            3,
+            7,
+            12,
+            2,
+            4,
+            8,
+            1,
+            5,
+            0,
+            None,
+            None,
+            None,
+            0,
+            0,
+            0,
+            0,
         ]
         result = rollup_service.strategy_rollup("org-1", session)
         assert "digital_twins" in result
@@ -678,19 +834,25 @@ class TestM44Rollup:
 
         session = _session()
         call_idx = [0]
+
         def side_effect(*args, **kwargs):
             vals = [0, 0, 0, 3, 5, 0, 0, 0, 0]  # climate=3, financial=5
             v = vals[call_idx[0] % len(vals)]
             call_idx[0] += 1
             return v
+
         session.query.return_value.filter.return_value.scalar.side_effect = side_effect
         result = rollup_service.strategy_rollup("org-1", session)
-        assert result["total_stress_tests"] == result["climate_stress_tests"] + result["financial_stress_tests"]
+        assert (
+            result["total_stress_tests"]
+            == result["climate_stress_tests"] + result["financial_stress_tests"]
+        )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Section 9: Reporting
 # ═══════════════════════════════════════════════════════════════════════════════
+
 
 class TestM44Reporting:
     def test_generate_report_captures_snapshots(self):
@@ -701,7 +863,11 @@ class TestM44Reporting:
         session.query.return_value.filter.return_value.order_by.return_value.limit.return_value.all.return_value = []
         with patch("application.strategy.reporting_service.emit_audit_event"):
             report = reporting_service.generate_strategic_report(
-                "org-1", "Annual Strategy 2025", "2025", "actor-1", session,
+                "org-1",
+                "Annual Strategy 2025",
+                "2025",
+                "actor-1",
+                session,
                 included_scenario_ids=["sc-1", "sc-2"],
             )
         assert report.report_title == "Annual Strategy 2025"
@@ -719,12 +885,18 @@ class TestM44Reporting:
         session = _session()
         report = _make_model(
             StrategicScenarioReportModel,
-            report_title="Rep", report_period="2025",
-            included_scenarios={}, assumptions_snapshot={},
-            forecasts_snapshot={}, stress_tests_snapshot={},
-            pathway_outcomes={}, board_comparison=None,
-            report_methodology="det", is_final=False,
-            finalized_at=None, finalized_by=None,
+            report_title="Rep",
+            report_period="2025",
+            included_scenarios={},
+            assumptions_snapshot={},
+            forecasts_snapshot={},
+            stress_tests_snapshot={},
+            pathway_outcomes={},
+            board_comparison=None,
+            report_methodology="det",
+            is_final=False,
+            finalized_at=None,
+            finalized_by=None,
         )
         session.get.return_value = report
         with patch("application.strategy.reporting_service.emit_audit_event"):
@@ -740,12 +912,18 @@ class TestM44Reporting:
         session = _session()
         report = _make_model(
             StrategicScenarioReportModel,
-            report_title="R", report_period="2025",
-            included_scenarios={}, assumptions_snapshot={},
-            forecasts_snapshot={}, stress_tests_snapshot={},
-            pathway_outcomes={}, board_comparison=None,
-            report_methodology="det", is_final=True,
-            finalized_at=_now(), finalized_by="actor-1",
+            report_title="R",
+            report_period="2025",
+            included_scenarios={},
+            assumptions_snapshot={},
+            forecasts_snapshot={},
+            stress_tests_snapshot={},
+            pathway_outcomes={},
+            board_comparison=None,
+            report_methodology="det",
+            is_final=True,
+            finalized_at=_now(),
+            finalized_by="actor-1",
         )
         session.get.return_value = report
         with pytest.raises(StrategyError, match="already finalized"):
@@ -766,22 +944,36 @@ class TestM44Reporting:
         session = _session()
         r1 = _make_model(
             ForecastResultModel,
-            forecast_model_id="m1", forecast_type="EMISSIONS",
-            target_metric="scope_1", forecast_year=2030,
-            baseline_value=10_000.0, forecast_value=7_000.0,
-            lower_bound=6_000.0, upper_bound=8_000.0,
-            confidence_level=0.85, scenario_id=None, is_final=False,
+            forecast_model_id="m1",
+            forecast_type="EMISSIONS",
+            target_metric="scope_1",
+            forecast_year=2030,
+            baseline_value=10_000.0,
+            forecast_value=7_000.0,
+            lower_bound=6_000.0,
+            upper_bound=8_000.0,
+            confidence_level=0.85,
+            scenario_id=None,
+            is_final=False,
         )
         r2 = _make_model(
             ForecastResultModel,
-            forecast_model_id="m1", forecast_type="EMISSIONS",
-            target_metric="scope_2", forecast_year=2030,
-            baseline_value=5_000.0, forecast_value=3_000.0,
-            lower_bound=2_500.0, upper_bound=3_500.0,
-            confidence_level=0.80, scenario_id=None, is_final=False,
+            forecast_model_id="m1",
+            forecast_type="EMISSIONS",
+            target_metric="scope_2",
+            forecast_year=2030,
+            baseline_value=5_000.0,
+            forecast_value=3_000.0,
+            lower_bound=2_500.0,
+            upper_bound=3_500.0,
+            confidence_level=0.80,
+            scenario_id=None,
+            is_final=False,
         )
         session.query.return_value.filter.return_value.all.return_value = [r1, r2]
-        summary = reporting_service.generate_forecast_summary("org-1", "2025-Q4", "actor-1", session)
+        summary = reporting_service.generate_forecast_summary(
+            "org-1", "2025-Q4", "actor-1", session
+        )
         assert summary.summary_period == "2025-Q4"
         # avg EMISSIONS = (7000 + 3000) / 2 = 5000
         assert summary.forecast_emissions_tco2e == pytest.approx(5000.0)
@@ -803,6 +995,7 @@ class TestM44Reporting:
 # Section 10: Observability
 # ═══════════════════════════════════════════════════════════════════════════════
 
+
 class TestM44Observability:
     def test_create_scenario_increments_counter(self):
         from application.strategy import scenario_service
@@ -819,9 +1012,15 @@ class TestM44Observability:
         from application.strategy.metrics import strategy_counters
 
         session = _session()
-        sc = _make_model(StrategyScenarioModel, name="S", scenario_type="CLIMATE",
-                         scenario_status="Draft", time_horizon_years=5,
-                         created_by_user="a", is_template=False)
+        sc = _make_model(
+            StrategyScenarioModel,
+            name="S",
+            scenario_type="CLIMATE",
+            scenario_status="Draft",
+            time_horizon_years=5,
+            created_by_user="a",
+            is_template=False,
+        )
         session.get.return_value = sc
         session.query.return_value.filter.return_value.all.return_value = []
         before = strategy_counters.scenario_executions_total
@@ -837,7 +1036,11 @@ class TestM44Observability:
         before = strategy_counters.climate_stress_tests_total
         with patch("application.strategy.stress_test_service.emit_audit_event"):
             stress_test_service.create_climate_stress_test(
-                "org-1", "T", "CARBON_PRICE", "a", session,
+                "org-1",
+                "T",
+                "CARBON_PRICE",
+                "a",
+                session,
                 carbon_price_shock_pct=30.0,
             )
         assert strategy_counters.climate_stress_tests_total == before + 1
@@ -849,10 +1052,13 @@ class TestM44Observability:
         session = _session()
         fm = _make_model(
             ForecastModelRecord,
-            model_name="M", methodology="SCENARIO_PROJECTION",
+            model_name="M",
+            methodology="SCENARIO_PROJECTION",
             parameters={"annual_change_pct": -5.0},
-            model_version="1.0.0", is_approved=False,
-            approved_by=None, methodology_record_id=None,
+            model_version="1.0.0",
+            is_approved=False,
+            approved_by=None,
+            methodology_record_id=None,
         )
         session.get.return_value = fm
         before = strategy_counters.forecasts_total
@@ -864,6 +1070,7 @@ class TestM44Observability:
 
     def test_metrics_to_prometheus_lines(self):
         from application.strategy.metrics import strategy_counters
+
         lines = strategy_counters.to_prometheus_lines("test")
         assert any("eios_digital_twins_total" in l for l in lines)
         assert any("eios_scenario_executions_total" in l for l in lines)

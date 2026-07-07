@@ -116,8 +116,18 @@ class TestAnalyzeFreshness:
             source_ids=["x", "y"],
             citation_type="Supplier",
             freshness_metadata=[
-                {"object_id": "x", "object_type": "S", "updated_at": _ts(4), "retrieved_at": retrieved_at},
-                {"object_id": "y", "object_type": "S", "updated_at": _ts(6), "retrieved_at": retrieved_at},
+                {
+                    "object_id": "x",
+                    "object_type": "S",
+                    "updated_at": _ts(4),
+                    "retrieved_at": retrieved_at,
+                },
+                {
+                    "object_id": "y",
+                    "object_type": "S",
+                    "updated_at": _ts(6),
+                    "retrieved_at": retrieved_at,
+                },
             ],
         )
         report = analyze_freshness([result])
@@ -163,6 +173,7 @@ class TestFreshnessSummaryDict:
 
     def test_values_are_serializable(self):
         import json
+
         result = _result_with_freshness("supplier_retriever", days_old=5)
         report = analyze_freshness([result])
         d = freshness_summary_dict(report)

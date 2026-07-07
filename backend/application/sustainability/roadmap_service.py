@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -24,10 +24,10 @@ from infrastructure.persistence.models.sustainability import (
     ScienceBasedTargetModel,
 )
 
-from .objective_service import SustainabilityConflict, SustainabilityError, _assert_org, _now
-
+from .objective_service import SustainabilityError, _assert_org, _now
 
 # ── Decarbonization Initiatives ───────────────────────────────────────────────
+
 
 def create_initiative(
     organization_id: str,
@@ -74,7 +74,11 @@ def create_initiative(
         actor_id=actor_id,
         resource_type="decarbonization_initiative",
         resource_id=init.id,
-        details={"name": name, "initiative_type": initiative_type, "expected_reduction": expected_reduction},
+        details={
+            "name": name,
+            "initiative_type": initiative_type,
+            "expected_reduction": expected_reduction,
+        },
     )
     sustainability_counters.record_initiative_created()
     return init
@@ -125,10 +129,16 @@ def list_initiatives(
         q = q.filter(DecarbonizationInitiativeModel.roadmap_id == roadmap_id)
     if status:
         q = q.filter(DecarbonizationInitiativeModel.initiative_status == status)
-    return q.order_by(DecarbonizationInitiativeModel.created_at.desc()).limit(limit).offset(offset).all()
+    return (
+        q.order_by(DecarbonizationInitiativeModel.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )
 
 
 # ── Net Zero Roadmaps ─────────────────────────────────────────────────────────
+
 
 def _compute_target_emissions(baseline: float, reduction_pct: float) -> float:
     """target = baseline × (1 - reduction_pct / 100)"""
@@ -294,6 +304,7 @@ def update_roadmap_status(
 
 
 # ── Science Based Targets ─────────────────────────────────────────────────────
+
 
 def create_science_based_target(
     organization_id: str,

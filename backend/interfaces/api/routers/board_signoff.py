@@ -15,10 +15,11 @@ Security:
   - approve / reject → require_analyst (board member or admin role)
   - KI-Agenten DÜRFEN approve/reject NIEMALS aufrufen (Art. 22 explizit menschliche Verantwortung)
 """
+
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -31,26 +32,43 @@ from interfaces.api.deps import get_current_user, get_sync_db, require_analyst
 
 router = APIRouter(prefix="/board-signoff", tags=["board-signoff"])
 
-VALID_TYPES = {"dd_policy", "dd_strategy", "annual_report", "scoping_study", "cap_plan", "remedy_settlement", "other"}
-VALID_ROLES = {"ceo", "cfo", "cso", "board_member", "supervisory_board", "compliance_officer", "other"}
+VALID_TYPES = {
+    "dd_policy",
+    "dd_strategy",
+    "annual_report",
+    "scoping_study",
+    "cap_plan",
+    "remedy_settlement",
+    "other",
+}
+VALID_ROLES = {
+    "ceo",
+    "cfo",
+    "cso",
+    "board_member",
+    "supervisory_board",
+    "compliance_officer",
+    "other",
+}
 
 
 # ── Schemas ───────────────────────────────────────────────────────────────────
+
 
 class SignoffRequestCreate(BaseModel):
     title: str = Field(min_length=3, max_length=255)
     signoff_type: str = Field(default="other")
     description: str = Field(default="", max_length=10000)
-    entity_type: Optional[str] = Field(default=None, max_length=30)
-    entity_id: Optional[UUID] = None
-    due_date: Optional[datetime] = None
-    document_ref: Optional[str] = Field(default=None, max_length=500)
+    entity_type: str | None = Field(default=None, max_length=30)
+    entity_id: UUID | None = None
+    due_date: datetime | None = None
+    document_ref: str | None = Field(default=None, max_length=500)
 
 
 class ApproveBody(BaseModel):
     approved_by: str = Field(min_length=1, max_length=255)
     approved_by_role: str = Field(default="board_member")
-    comment: Optional[str] = Field(default=None, max_length=2000)
+    comment: str | None = Field(default=None, max_length=2000)
 
 
 class RejectBody(BaseModel):
@@ -64,18 +82,18 @@ class SignoffRequestResponse(BaseModel):
     organization_id: UUID
     title: str
     signoff_type: str
-    entity_type: Optional[str]
-    entity_id: Optional[UUID]
+    entity_type: str | None
+    entity_id: UUID | None
     description: str
     status: str
     requested_by: str
     requested_at: Any
-    due_date: Optional[Any]
-    approved_at: Optional[Any]
-    approved_by: Optional[str]
-    approved_by_role: Optional[str]
-    rejection_reason: Optional[str]
-    document_ref: Optional[str]
+    due_date: Any | None
+    approved_at: Any | None
+    approved_by: str | None
+    approved_by_role: str | None
+    rejection_reason: str | None
+    document_ref: str | None
     created_at: Any
     updated_at: Any
 
@@ -88,7 +106,7 @@ class DecisionResponse(BaseModel):
     decision: str
     decided_by: str
     decided_by_role: str
-    comment: Optional[str]
+    comment: str | None
     decided_at: Any
 
     model_config = ConfigDict(from_attributes=True)
@@ -108,8 +126,8 @@ def get_dashboard(
 
 @router.get("/", response_model=list[SignoffRequestResponse])
 def list_requests(
-    status: Optional[str] = Query(default=None),
-    signoff_type: Optional[str] = Query(default=None),
+    status: str | None = Query(default=None),
+    signoff_type: str | None = Query(default=None),
     db: Session = Depends(get_sync_db),
     user: User = Depends(get_current_user),
 ):
@@ -164,7 +182,9 @@ def approve_request(
     """HUMAN BOARD MEMBER / ADMIN ONLY — KI-Agenten DÜRFEN diesen Endpunkt NICHT aufrufen.
     Records formal board approval per CSDDD Art. 22 Abs. 1 lit. a."""
     if body.approved_by_role not in VALID_ROLES:
-        raise HTTPException(status_code=422, detail=f"approved_by_role must be one of {VALID_ROLES}")
+        raise HTTPException(
+            status_code=422, detail=f"approved_by_role must be one of {VALID_ROLES}"
+        )
     repo = SQLBoardSignoffRepository(db)
     r = repo.approve(
         str(request_id),
@@ -188,7 +208,9 @@ def reject_request(
 ):
     """HUMAN BOARD MEMBER / ADMIN ONLY — KI-Agenten DÜRFEN diesen Endpunkt NICHT aufrufen."""
     if body.rejected_by_role not in VALID_ROLES:
-        raise HTTPException(status_code=422, detail=f"rejected_by_role must be one of {VALID_ROLES}")
+        raise HTTPException(
+            status_code=422, detail=f"rejected_by_role must be one of {VALID_ROLES}"
+        )
     repo = SQLBoardSignoffRepository(db)
     r = repo.reject(
         str(request_id),

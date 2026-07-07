@@ -19,13 +19,13 @@ SCENARIO_PROJECTION:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.strategy.metrics import strategy_counters
 from application.strategy.digital_twin_service import StrategyError
+from application.strategy.metrics import strategy_counters
 from infrastructure.persistence.models.strategy import (
     FORECAST_METHODOLOGIES,
     FORECAST_TYPES,
@@ -36,7 +36,7 @@ from infrastructure.persistence.models.strategy import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -45,6 +45,7 @@ def _assert_org(record, organization_id: str, label: str = "resource") -> None:
 
 
 # ── Deterministic forecast algorithms ────────────────────────────────────────
+
 
 def _linear_trend(baseline_value: float, slope: float, years_ahead: int) -> float:
     """f(t) = baseline + slope * t"""
@@ -61,10 +62,12 @@ def _weighted_moving_average(historical_values: list[float], weights: list[float
     total_w = sum(wts)
     if total_w == 0:
         raise StrategyError("weights must sum to non-zero")
-    return round(sum(w * v for w, v in zip(wts, vals)) / total_w, 6)
+    return round(sum(w * v for w, v in zip(wts, vals, strict=False)) / total_w, 6)
 
 
-def _scenario_projection(baseline_value: float, annual_change_pct: float, years_ahead: int) -> float:
+def _scenario_projection(
+    baseline_value: float, annual_change_pct: float, years_ahead: int
+) -> float:
     """Compound: baseline * (1 + rate)^n"""
     return round(baseline_value * ((1 + annual_change_pct / 100) ** years_ahead), 6)
 
@@ -77,7 +80,8 @@ def _run_forecast_algorithm(
 ) -> tuple[float, float, float, float]:
     """Returns (forecast_value, lower_bound, upper_bound, confidence_level)."""
     import datetime as _dt
-    current_year = _dt.datetime.now(_dt.timezone.utc).year
+
+    current_year = _dt.datetime.now(_dt.UTC).year
     years_ahead = max(1, forecast_year - current_year)
 
     if methodology == "LINEAR_TREND":
@@ -108,6 +112,7 @@ def _run_forecast_algorithm(
 
 
 # ── Forecast Methodology Record (AI Governance integration) ───────────────────
+
 
 def create_forecast_methodology(
     organization_id: str,
@@ -147,6 +152,7 @@ def create_forecast_methodology(
 
 
 # ── Forecast Model ────────────────────────────────────────────────────────────
+
 
 def create_forecast_model(
     organization_id: str,
@@ -194,6 +200,7 @@ def create_forecast_model(
 
 
 # ── Forecast Run ──────────────────────────────────────────────────────────────
+
 
 def run_forecast(
     organization_id: str,
@@ -306,8 +313,9 @@ def create_forecast_window_policy(
     *,
     applicable_methodology: str = "WEIGHTED_MOVING_AVERAGE",
 ):
-    from infrastructure.persistence.models.strategy import ForecastWindowPolicyModel
     import uuid as _uuid
+
+    from infrastructure.persistence.models.strategy import ForecastWindowPolicyModel
 
     if min_window < 1:
         raise StrategyError("min_window must be >= 1")

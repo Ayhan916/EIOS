@@ -7,26 +7,37 @@ All endpoints enforce tenant isolation — users only see their own org's suppli
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
-
 import asyncio
 import re
+from datetime import UTC, datetime
 
 import httpx
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    Depends,
+    File,
+    HTTPException,
+    Query,
+    UploadFile,
+    status,
+)
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import application.audit as audit_events
-from domain.enums import EntityStatus, SupplierStatus, SupplierTier
+from domain.enums import EntityStatus, SupplierStatus
 from domain.supplier import Supplier
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.models.risk import RiskModel
+from infrastructure.persistence.models.supplier import SupplierModel
+from infrastructure.persistence.models.supplier_score import SupplierScoreModel
 from infrastructure.persistence.repositories import (
     SQLAssessmentRepository,
     SQLAuditEventRepository,
@@ -39,7 +50,6 @@ from interfaces.api.deps import (
     get_db,
     get_supplier_repo,
     require_analyst,
-    require_admin,
     scope_gate,
 )
 from interfaces.api.routers.api_platform import dispatch_webhook_event
@@ -56,7 +66,10 @@ logger = structlog.get_logger(__name__)
 router = APIRouter(
     prefix="/suppliers",
     tags=["suppliers"],
-    dependencies=[Depends(get_current_user), Depends(scope_gate("suppliers:read", "suppliers:write"))],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(scope_gate("suppliers:read", "suppliers:write")),
+    ],
 )
 
 
@@ -70,87 +83,87 @@ _GLEIF_FUZZY_URL = "https://api.gleif.org/api/v1/fuzzycompletions"
 
 # Abbreviation → full legal form (German + international)
 _LEGAL_ABBREV: dict[str, str] = {
-    "AG":     "Aktiengesellschaft",
-    "GMBH":   "GmbH",
-    "SE":     "SE",
-    "KGAA":   "KGaA",
-    "KG":     "KG",
-    "OHG":    "OHG",
-    "EV":     "e.V.",
-    "LLC":    "LLC",
-    "INC":    "Inc",
-    "LTD":    "Limited",
-    "CORP":   "Corp",
-    "BV":     "B.V.",
-    "NV":     "N.V.",
-    "SAS":    "SAS",
-    "SRL":    "S.r.l.",
-    "SA":     "S.A.",
-    "PLC":    "PLC",
-    "AB":     "Aktiebolag",          # Swedish AG
-    "AS":     "Aksjeselskap",        # Norwegian AS
-    "OY":     "Oy",                  # Finnish
-    "OYJ":    "Oyj",                 # Finnish listed
-    "OÜ":     "OÜ",                  # Estonian
-    "SIA":    "SIA",                 # Latvian
+    "AG": "Aktiengesellschaft",
+    "GMBH": "GmbH",
+    "SE": "SE",
+    "KGAA": "KGaA",
+    "KG": "KG",
+    "OHG": "OHG",
+    "EV": "e.V.",
+    "LLC": "LLC",
+    "INC": "Inc",
+    "LTD": "Limited",
+    "CORP": "Corp",
+    "BV": "B.V.",
+    "NV": "N.V.",
+    "SAS": "SAS",
+    "SRL": "S.r.l.",
+    "SA": "S.A.",
+    "PLC": "PLC",
+    "AB": "Aktiebolag",  # Swedish AG
+    "AS": "Aksjeselskap",  # Norwegian AS
+    "OY": "Oy",  # Finnish
+    "OYJ": "Oyj",  # Finnish listed
+    "OÜ": "OÜ",  # Estonian
+    "SIA": "SIA",  # Latvian
 }
 
 
 # Brand/trade name → GLEIF legal name (full query replacement when query matches exactly)
 _BRAND_ALIASES: dict[str, str] = {
-    "BMW":          "Bayerische Motoren Werke",
-    "VW":           "Volkswagen",
-    "MERCEDES":     "Mercedes-Benz",
-    "DAIMLER":      "Mercedes-Benz Group",
-    "DB":           "Deutsche Bahn",
-    "DHL":          "Deutsche Post",
-    "TELEKOM":      "Deutsche Telekom",
-    "BAYER":        "Bayer",
-    "MAN":          "MAN SE",
-    "PORSCHE":      "Porsche",
-    "AUDI":         "AUDI",
-    "OPEL":         "Opel",
-    "CONTINENTAL":  "Continental",
-    "ZF":           "ZF Friedrichshafen",
-    "SCHAEFFLER":   "Schaeffler",
-    "MAHLE":        "MAHLE",
-    "HELLA":        "HELLA",
-    "BYD":          "BYD",
-    "TESLA":        "Tesla",
-    "CATL":         "Contemporary Amperex Technology",
-    "TSMC":         "Taiwan Semiconductor Manufacturing",
-    "SAMSUNG":      "Samsung",
-    "LG":           "LG Electronics",
-    "SONY":         "Sony",
-    "TOYOTA":       "Toyota",
-    "HONDA":        "Honda",
-    "NISSAN":       "Nissan",
-    "HYUNDAI":      "Hyundai",
-    "KIA":          "Kia",
-    "VOLVO":        "Volvo",
-    "RENAULT":      "Renault",
-    "PSA":          "Stellantis",
-    "STELLANTIS":   "Stellantis",
-    "FIAT":         "Stellantis",
-    "P&G":          "Procter & Gamble",
-    "J&J":          "Johnson & Johnson",
-    "3M":           "3M",
-    "GE":           "General Electric",
-    "GM":           "General Motors",
-    "IBM":          "International Business Machines",
-    "ABB":          "ABB",
-    "SKF":          "SKF",
-    "HENKEL":       "Henkel",
-    "FRESENIUS":    "Fresenius",
-    "EON":          "E.ON",
-    "RWE":          "RWE",
-    "ENBW":         "EnBW",
-    "VATTENFALL":   "Vattenfall",
-    "ALLIANZ":      "Allianz",
-    "MUNICH RE":    "Münchener Rückversicherungs",
-    "MUNICHRE":     "Münchener Rückversicherungs",
-    "DZ BANK":      "DZ BANK",
-    "COMMERZBANK":  "Commerzbank",
+    "BMW": "Bayerische Motoren Werke",
+    "VW": "Volkswagen",
+    "MERCEDES": "Mercedes-Benz",
+    "DAIMLER": "Mercedes-Benz Group",
+    "DB": "Deutsche Bahn",
+    "DHL": "Deutsche Post",
+    "TELEKOM": "Deutsche Telekom",
+    "BAYER": "Bayer",
+    "MAN": "MAN SE",
+    "PORSCHE": "Porsche",
+    "AUDI": "AUDI",
+    "OPEL": "Opel",
+    "CONTINENTAL": "Continental",
+    "ZF": "ZF Friedrichshafen",
+    "SCHAEFFLER": "Schaeffler",
+    "MAHLE": "MAHLE",
+    "HELLA": "HELLA",
+    "BYD": "BYD",
+    "TESLA": "Tesla",
+    "CATL": "Contemporary Amperex Technology",
+    "TSMC": "Taiwan Semiconductor Manufacturing",
+    "SAMSUNG": "Samsung",
+    "LG": "LG Electronics",
+    "SONY": "Sony",
+    "TOYOTA": "Toyota",
+    "HONDA": "Honda",
+    "NISSAN": "Nissan",
+    "HYUNDAI": "Hyundai",
+    "KIA": "Kia",
+    "VOLVO": "Volvo",
+    "RENAULT": "Renault",
+    "PSA": "Stellantis",
+    "STELLANTIS": "Stellantis",
+    "FIAT": "Stellantis",
+    "P&G": "Procter & Gamble",
+    "J&J": "Johnson & Johnson",
+    "3M": "3M",
+    "GE": "General Electric",
+    "GM": "General Motors",
+    "IBM": "International Business Machines",
+    "ABB": "ABB",
+    "SKF": "SKF",
+    "HENKEL": "Henkel",
+    "FRESENIUS": "Fresenius",
+    "EON": "E.ON",
+    "RWE": "RWE",
+    "ENBW": "EnBW",
+    "VATTENFALL": "Vattenfall",
+    "ALLIANZ": "Allianz",
+    "MUNICH RE": "Münchener Rückversicherungs",
+    "MUNICHRE": "Münchener Rückversicherungs",
+    "DZ BANK": "DZ BANK",
+    "COMMERZBANK": "Commerzbank",
 }
 
 
@@ -184,6 +197,8 @@ def _brand_expand(q: str) -> str | None:
         if base in _BRAND_ALIASES:
             return f"{_BRAND_ALIASES[base]} {suffix}"
     return None
+
+
 _LEGAL_FORM_RE = re.compile(
     r"\b(GmbH|AG|SE|KGaA|KG|OHG|GbR|Inc\.?|Ltd\.?|Corp\.?|S\.A\.?|B\.V\.?|NV|PLC|LLC|LP|LLP|SAS|SRL|SpA)\b\.?\s*$",
     re.IGNORECASE,
@@ -194,45 +209,99 @@ _LEGAL_FORM_RE = re.compile(
 # Verified via GLEIF API — these are the official HQ parent entities.
 _CANONICAL: dict[str, tuple[str, str, str, str]] = {
     # key (upper, stripped)        LEI                        country  city            full legal name
-    "VOLKSWAGEN":                  ("529900NNUPAGGOMPXZ31",   "DE",    "Wolfsburg",    "VOLKSWAGEN AKTIENGESELLSCHAFT"),
-    "VW":                          ("529900NNUPAGGOMPXZ31",   "DE",    "Wolfsburg",    "VOLKSWAGEN AKTIENGESELLSCHAFT"),
-    "BMW":                         ("YEH5ZCD6E441RHVHD759",   "DE",    "Munich",       "Bayerische Motoren Werke Aktiengesellschaft"),
-    "BAYERISCHE MOTOREN WERKE":    ("YEH5ZCD6E441RHVHD759",   "DE",    "Munich",       "Bayerische Motoren Werke Aktiengesellschaft"),
-    "MERCEDES":                    ("529900R27DL06UVNT076",   "DE",    "Stuttgart",    "Mercedes-Benz Group AG"),
-    "MERCEDES-BENZ":               ("529900R27DL06UVNT076",   "DE",    "Stuttgart",    "Mercedes-Benz Group AG"),
-    "SIEMENS":                     ("W38RGI023J3WT1HWRP32",   "DE",    "Munich",       "Siemens Aktiengesellschaft"),
-    "SAP":                         ("529900D6BF99LW9R2E68",   "DE",    "Walldorf",     "SAP SE"),
-    "BASF":                        ("529900PM64WH8AF1E917",   "DE",    "Ludwigshafen", "BASF SE"),
-    "BAYER":                       ("549300J4U55H3WP1XT59",   "DE",    "Leverkusen",   "Bayer Aktiengesellschaft"),
-    "DEUTSCHE BANK":               ("529900IH9V4I3VHQVO92",   "DE",    "Frankfurt",    "Deutsche Bank Aktiengesellschaft"),
-    "ALLIANZ":                     ("529900K9B0N5BT694847",   "DE",    "Munich",       "Allianz SE"),
-    "DEUTSCHE TELEKOM":            ("549300V9QSIG4WX4GJ96",   "DE",    "Bonn",         "DEUTSCHE TELEKOM AG"),
-    "TELEKOM":                     ("549300V9QSIG4WX4GJ96",   "DE",    "Bonn",         "DEUTSCHE TELEKOM AG"),
-    "LUFTHANSA":                   ("529900PH63HYJ86ASW55",   "DE",    "Frankfurt",    "Deutsche Lufthansa Aktiengesellschaft"),
-    "DEUTSCHE LUFTHANSA":          ("529900PH63HYJ86ASW55",   "DE",    "Frankfurt",    "Deutsche Lufthansa Aktiengesellschaft"),
-    "CONTINENTAL":                 ("529900A7YD9C0LLXC421",   "DE",    "Hanover",      "Continental Aktiengesellschaft"),
-    "AIRBUS":                      ("MINO79WLOO247M1IL051",   "NL",    "Leiden",       "AIRBUS SE"),
-    "HENKEL":                      ("549300VZCL1HTH4O4Y49",   "DE",    "Düsseldorf",   "Henkel AG & Co. KGaA"),
-    "INFINEON":                    ("TSI2PJM6EPETEQ4X1U25",   "DE",    "Neubiberg",    "Infineon Technologies AG"),
-    "FRESENIUS":                   ("XDFJ0CYCOO1FXRFTQS51",   "DE",    "Bad Homburg",  "Fresenius SE & Co. KGaA"),
-    "COMMERZBANK":                 ("851WYGNLUQLFZBSYGB56",   "DE",    "Frankfurt",    "COMMERZBANK Aktiengesellschaft"),
-    "PORSCHE":                     ("529900EWEX125AULXI58",   "DE",    "Stuttgart",    "Dr. Ing. h.c. F. Porsche Aktiengesellschaft"),
-    "DAIMLER TRUCK":               ("529900PW78JIYOUBSR24",   "DE",    "Stuttgart",    "Daimler Truck Holding AG"),
-    "HEIDELBERG MATERIALS":        ("LZ2C6E0W5W7LQMX5ZI37",   "DE",    "Heidelberg",   "Heidelberg Materials AG"),
-    "BEIERSDORF":                  ("L47NHHI0Z9X22DV46U41",   "DE",    "Hamburg",      "Beiersdorf Aktiengesellschaft"),
-    "BOSCH":                       ("9845006FDEADE15CA138",   "DE",    "Stuttgart",    "Robert Bosch GmbH"),
-    "ROBERT BOSCH":                ("9845006FDEADE15CA138",   "DE",    "Stuttgart",    "Robert Bosch GmbH"),
+    "VOLKSWAGEN": ("529900NNUPAGGOMPXZ31", "DE", "Wolfsburg", "VOLKSWAGEN AKTIENGESELLSCHAFT"),
+    "VW": ("529900NNUPAGGOMPXZ31", "DE", "Wolfsburg", "VOLKSWAGEN AKTIENGESELLSCHAFT"),
+    "BMW": ("YEH5ZCD6E441RHVHD759", "DE", "Munich", "Bayerische Motoren Werke Aktiengesellschaft"),
+    "BAYERISCHE MOTOREN WERKE": (
+        "YEH5ZCD6E441RHVHD759",
+        "DE",
+        "Munich",
+        "Bayerische Motoren Werke Aktiengesellschaft",
+    ),
+    "MERCEDES": ("529900R27DL06UVNT076", "DE", "Stuttgart", "Mercedes-Benz Group AG"),
+    "MERCEDES-BENZ": ("529900R27DL06UVNT076", "DE", "Stuttgart", "Mercedes-Benz Group AG"),
+    "SIEMENS": ("W38RGI023J3WT1HWRP32", "DE", "Munich", "Siemens Aktiengesellschaft"),
+    "SAP": ("529900D6BF99LW9R2E68", "DE", "Walldorf", "SAP SE"),
+    "BASF": ("529900PM64WH8AF1E917", "DE", "Ludwigshafen", "BASF SE"),
+    "BAYER": ("549300J4U55H3WP1XT59", "DE", "Leverkusen", "Bayer Aktiengesellschaft"),
+    "DEUTSCHE BANK": (
+        "529900IH9V4I3VHQVO92",
+        "DE",
+        "Frankfurt",
+        "Deutsche Bank Aktiengesellschaft",
+    ),
+    "ALLIANZ": ("529900K9B0N5BT694847", "DE", "Munich", "Allianz SE"),
+    "DEUTSCHE TELEKOM": ("549300V9QSIG4WX4GJ96", "DE", "Bonn", "DEUTSCHE TELEKOM AG"),
+    "TELEKOM": ("549300V9QSIG4WX4GJ96", "DE", "Bonn", "DEUTSCHE TELEKOM AG"),
+    "LUFTHANSA": (
+        "529900PH63HYJ86ASW55",
+        "DE",
+        "Frankfurt",
+        "Deutsche Lufthansa Aktiengesellschaft",
+    ),
+    "DEUTSCHE LUFTHANSA": (
+        "529900PH63HYJ86ASW55",
+        "DE",
+        "Frankfurt",
+        "Deutsche Lufthansa Aktiengesellschaft",
+    ),
+    "CONTINENTAL": ("529900A7YD9C0LLXC421", "DE", "Hanover", "Continental Aktiengesellschaft"),
+    "AIRBUS": ("MINO79WLOO247M1IL051", "NL", "Leiden", "AIRBUS SE"),
+    "HENKEL": ("549300VZCL1HTH4O4Y49", "DE", "Düsseldorf", "Henkel AG & Co. KGaA"),
+    "INFINEON": ("TSI2PJM6EPETEQ4X1U25", "DE", "Neubiberg", "Infineon Technologies AG"),
+    "FRESENIUS": ("XDFJ0CYCOO1FXRFTQS51", "DE", "Bad Homburg", "Fresenius SE & Co. KGaA"),
+    "COMMERZBANK": ("851WYGNLUQLFZBSYGB56", "DE", "Frankfurt", "COMMERZBANK Aktiengesellschaft"),
+    "PORSCHE": (
+        "529900EWEX125AULXI58",
+        "DE",
+        "Stuttgart",
+        "Dr. Ing. h.c. F. Porsche Aktiengesellschaft",
+    ),
+    "DAIMLER TRUCK": ("529900PW78JIYOUBSR24", "DE", "Stuttgart", "Daimler Truck Holding AG"),
+    "HEIDELBERG MATERIALS": ("LZ2C6E0W5W7LQMX5ZI37", "DE", "Heidelberg", "Heidelberg Materials AG"),
+    "BEIERSDORF": ("L47NHHI0Z9X22DV46U41", "DE", "Hamburg", "Beiersdorf Aktiengesellschaft"),
+    "BOSCH": ("9845006FDEADE15CA138", "DE", "Stuttgart", "Robert Bosch GmbH"),
+    "ROBERT BOSCH": ("9845006FDEADE15CA138", "DE", "Stuttgart", "Robert Bosch GmbH"),
 }
 
 # Words in company names that signal a subsidiary (not the main HQ entity)
-_SUBSIDIARY_KEYWORDS = frozenset({
-    "finance", "financial", "leasing", "holding", "holdings", "capital",
-    "insurance", "bank", "versicherung", "kredit", "invest", "investments",
-    "asset", "fund", "realty", "properties", "real estate", "solutions",
-    "services", "service", "consulting", "research", "ventures", "venture",
-    "trading", "international", "global", "logistics", "distribution",
-    "manufacturing", "production", "procurement", "purchasing",
-})
+_SUBSIDIARY_KEYWORDS = frozenset(
+    {
+        "finance",
+        "financial",
+        "leasing",
+        "holding",
+        "holdings",
+        "capital",
+        "insurance",
+        "bank",
+        "versicherung",
+        "kredit",
+        "invest",
+        "investments",
+        "asset",
+        "fund",
+        "realty",
+        "properties",
+        "real estate",
+        "solutions",
+        "services",
+        "service",
+        "consulting",
+        "research",
+        "ventures",
+        "venture",
+        "trading",
+        "international",
+        "global",
+        "logistics",
+        "distribution",
+        "manufacturing",
+        "production",
+        "procurement",
+        "purchasing",
+    }
+)
 
 
 def _gleif_score(name: str, q: str, category: str = "") -> int:
@@ -310,20 +379,20 @@ async def _gleif_search(
         attrs = r.get("attributes", {})
         entity = attrs.get("entity", {})
         addr = entity.get("legalAddress", {})
-        out.append({
-            "lei": attrs.get("lei", ""),
-            "name": entity.get("legalName", {}).get("name", ""),
-            "country": addr.get("country", ""),
-            "city": addr.get("city", ""),
-            "jurisdiction": entity.get("legalJurisdiction", ""),
-            "category": entity.get("category", ""),
-        })
+        out.append(
+            {
+                "lei": attrs.get("lei", ""),
+                "name": entity.get("legalName", {}).get("name", ""),
+                "country": addr.get("country", ""),
+                "city": addr.get("city", ""),
+                "jurisdiction": entity.get("legalJurisdiction", ""),
+                "category": entity.get("category", ""),
+            }
+        )
     return out
 
 
-async def _gleif_fuzzy_search(
-    client: httpx.AsyncClient, q: str, size: int = 15
-) -> list[dict]:
+async def _gleif_fuzzy_search(client: httpx.AsyncClient, q: str, size: int = 15) -> list[dict]:
     """
     Uses GLEIF's fuzzy-completions endpoint — finds 'Siemens Aktiengesellschaft'
     even when the user types 'Siemens AG', handles abbreviations and typos.
@@ -412,9 +481,12 @@ async def company_search(
             lei, c_country, c_city, c_name = _CANONICAL[ck]
             if not country_filter or country_filter == c_country:
                 canonical_hit = {
-                    "lei": lei, "name": c_name,
-                    "country": c_country, "city": c_city,
-                    "jurisdiction": c_country, "category": "GENERAL",
+                    "lei": lei,
+                    "name": c_name,
+                    "country": c_country,
+                    "city": c_city,
+                    "jurisdiction": c_country,
+                    "category": "GENERAL",
                 }
             break
 
@@ -423,7 +495,9 @@ async def company_search(
             use_brand = bool(brand_q and brand_q.lower() != fuzzy_q.lower())
             coros = [
                 _gleif_fuzzy_search(client, fuzzy_q),
-                _gleif_search(client, effective_q, country=country_filter, category=category or None),
+                _gleif_search(
+                    client, effective_q, country=country_filter, category=category or None
+                ),
                 *([_gleif_fuzzy_search(client, _expand_abbrevs(brand_q))] if use_brand else []),
             ]
             results = await asyncio.gather(*coros)
@@ -457,7 +531,9 @@ async def company_search(
                 stripped_q = _LEGAL_FORM_RE.sub("", effective_q).strip()
                 if stripped_q != effective_q and len(stripped_q) >= 2:
                     filter_results, fuzzy_results = await asyncio.gather(
-                        _gleif_search(client, stripped_q, country=country_filter, category=category or None),
+                        _gleif_search(
+                            client, stripped_q, country=country_filter, category=category or None
+                        ),
                         _gleif_fuzzy_search(client, _expand_abbrevs(stripped_q)),
                     )
                     lei_data = {r["lei"]: r for r in filter_results}
@@ -469,26 +545,31 @@ async def company_search(
             # Enrich top hits missing country/city — also fetches category
             to_enrich = [r for r in merged if not r["country"]][:5]
             if to_enrich:
-                enriched = await asyncio.gather(*[_gleif_enrich_lei(client, r["lei"]) for r in to_enrich])
-                for r, extra in zip(to_enrich, enriched):
+                enriched = await asyncio.gather(
+                    *[_gleif_enrich_lei(client, r["lei"]) for r in to_enrich]
+                )
+                for r, extra in zip(to_enrich, enriched, strict=False):
                     r.update(extra)
 
             if country_filter:
                 # Keep canonical even if country unknown; filter the rest
-                merged = [
-                    r for r in merged
-                    if not r["country"] or r["country"] == country_filter
-                ]
+                merged = [r for r in merged if not r["country"] or r["country"] == country_filter]
 
     except Exception:
         raise HTTPException(status_code=503, detail="Company search service unavailable")
 
     # Sort: canonical stays at [0] (already pinned), rest sorted by score
     if canonical_hit and merged and merged[0]["lei"] == canonical_hit["lei"]:
-        rest = sorted(merged[1:], key=lambda r: _gleif_score(r["name"], effective_q, r.get("category", "")), reverse=True)
+        rest = sorted(
+            merged[1:],
+            key=lambda r: _gleif_score(r["name"], effective_q, r.get("category", "")),
+            reverse=True,
+        )
         merged = [merged[0]] + rest
     else:
-        merged.sort(key=lambda r: _gleif_score(r["name"], effective_q, r.get("category", "")), reverse=True)
+        merged.sort(
+            key=lambda r: _gleif_score(r["name"], effective_q, r.get("category", "")), reverse=True
+        )
 
     return merged[:20]
 
@@ -543,14 +624,16 @@ async def company_detail(
             a = r.get("attributes", {})
             e = a.get("entity", {})
             addr = e.get("legalAddress", {})
-            children.append({
-                "lei": a.get("lei", ""),
-                "name": e.get("legalName", {}).get("name", ""),
-                "country": addr.get("country", ""),
-                "city": addr.get("city", ""),
-                "status": e.get("status", "ACTIVE"),
-                "category": e.get("category", ""),
-            })
+            children.append(
+                {
+                    "lei": a.get("lei", ""),
+                    "name": e.get("legalName", {}).get("name", ""),
+                    "country": addr.get("country", ""),
+                    "city": addr.get("city", ""),
+                    "status": e.get("status", "ACTIVE"),
+                    "category": e.get("category", ""),
+                }
+            )
         children.sort(key=lambda x: (x["country"], x["name"]))
 
     return {"company": company, "children": children, "total_children": total_children}
@@ -563,20 +646,20 @@ _WD_HEADERS = {"User-Agent": "EIOS-Compliance/1.0 (contact@eios.io)"}
 # Only QIDs verified via Wikidata API (label confirmed correct).
 _NACE_BY_QID: dict[str, tuple[str, str]] = {
     # Manufacturing C — verified
-    "Q43035":    ("C27",    "Herstellung von elektrischen Ausrüstungen"),       # Elektrotechnik
-    "Q609131":   ("C28",    "Maschinenbau"),                                    # Antriebstechnik
-    "Q327092":   ("C26.60", "Herstellung von medizinischen Instrumenten"),      # Medizintechnik
-    "Q1786253":  ("C27",    "Herstellung von elektrischen Ausrüstungen"),       # Kraftwerkstechnik
-    "Q101333":   ("C28",    "Maschinenbau"),                                    # Maschinenbau
-    "Q17177506": ("C27.40", "Herstellung von Beleuchtungskörpern"),             # Lichttechnik
-    "Q2986369":  ("C26.11", "Herstellung von elektronischen Bauelementen"),     # Halbleiterindustrie
-    "Q3477381":  ("C29.32", "Herst. sonstiger Teile/Zubehör für Kraftwagen"),  # Autozulieferer
-    "Q56604188": ("C27.51", "Herstellung von elektrischen Haushaltsgeräten"),   # Hausgeräteindustrie
-    "Q190117":   ("C29",    "Herstellung von Kraftwagen und Kraftwagenteilen"), # Automobilindustrie
-    "Q207652":   ("C20",    "Herstellung von chemischen Erzeugnissen"),         # Chemische Industrie
-    "Q1349660":  ("B06",    "Gewinnung von Erdöl und Erdgas"),                  # Erdölgewinnung
-    "Q1944497":  ("A01.61", "Pflanzliche Erzeugnisse"),                         # Pflanzenschutz
-    "Q507443":   ("C21",    "Herst. von pharmazeutischen Erzeugnissen"),        # Pharmaindustrie
+    "Q43035": ("C27", "Herstellung von elektrischen Ausrüstungen"),  # Elektrotechnik
+    "Q609131": ("C28", "Maschinenbau"),  # Antriebstechnik
+    "Q327092": ("C26.60", "Herstellung von medizinischen Instrumenten"),  # Medizintechnik
+    "Q1786253": ("C27", "Herstellung von elektrischen Ausrüstungen"),  # Kraftwerkstechnik
+    "Q101333": ("C28", "Maschinenbau"),  # Maschinenbau
+    "Q17177506": ("C27.40", "Herstellung von Beleuchtungskörpern"),  # Lichttechnik
+    "Q2986369": ("C26.11", "Herstellung von elektronischen Bauelementen"),  # Halbleiterindustrie
+    "Q3477381": ("C29.32", "Herst. sonstiger Teile/Zubehör für Kraftwagen"),  # Autozulieferer
+    "Q56604188": ("C27.51", "Herstellung von elektrischen Haushaltsgeräten"),  # Hausgeräteindustrie
+    "Q190117": ("C29", "Herstellung von Kraftwagen und Kraftwagenteilen"),  # Automobilindustrie
+    "Q207652": ("C20", "Herstellung von chemischen Erzeugnissen"),  # Chemische Industrie
+    "Q1349660": ("B06", "Gewinnung von Erdöl und Erdgas"),  # Erdölgewinnung
+    "Q1944497": ("A01.61", "Pflanzliche Erzeugnisse"),  # Pflanzenschutz
+    "Q507443": ("C21", "Herst. von pharmazeutischen Erzeugnissen"),  # Pharmaindustrie
 }
 
 # Industry label keyword → NACE fallback (when QID not in mapping above).
@@ -584,80 +667,80 @@ _NACE_BY_QID: dict[str, tuple[str, str]] = {
 # KEY FIX: use "chemi" not "chemie" — "Chemische Industrie" contains "chemi" but not "chemie"
 _NACE_BY_KEYWORD: list[tuple[str, str, str]] = [
     # Manufacturing (most specific first)
-    ("medizintechnik",  "C26.60", "Herstellung von medizinischen Instrumenten"),
-    ("halbleiter",      "C26.11", "Herstellung von elektronischen Bauelementen"),
-    ("semiconductor",   "C26.11", "Herstellung von elektronischen Bauelementen"),
-    ("autozulieferer",  "C29.32", "Herst. sonstiger Teile/Zubehör für Kraftwagen"),
-    ("hausgerät",       "C27.51", "Herstellung von elektrischen Haushaltsgeräten"),
-    ("luft- und raum",  "C30.30", "Luft- und Raumfahrzeugbau"),
-    ("aerospace",       "C30.30", "Luft- und Raumfahrzeugbau"),
-    ("raumfahrt",       "C30.30", "Luft- und Raumfahrzeugbau"),
-    ("pharma",          "C21",    "Herst. von pharmazeutischen Erzeugnissen"),
-    ("elektrotechnik",  "C27",    "Herstellung von elektrischen Ausrüstungen"),
-    ("elektrisch",      "C27",    "Herstellung von elektrischen Ausrüstungen"),
-    ("antriebstechnik", "C28",    "Maschinenbau"),
-    ("maschinenbau",    "C28",    "Maschinenbau"),
-    ("automobil",       "C29",    "Herstellung von Kraftwagen und Kraftwagenteilen"),
-    ("automotive",      "C29",    "Herstellung von Kraftwagen und Kraftwagenteilen"),
-    ("fahrzeugbau",     "C29",    "Herstellung von Kraftwagen und Kraftwagenteilen"),
-    ("elektronik",      "C26",    "Herst. von Datenverarbeitungsger./elektr. Optik"),
-    ("electronic",      "C26",    "Herst. von Datenverarbeitungsger./elektr. Optik"),
-    ("software",        "J62",    "Erbringung von IT-Dienstleistungen"),
+    ("medizintechnik", "C26.60", "Herstellung von medizinischen Instrumenten"),
+    ("halbleiter", "C26.11", "Herstellung von elektronischen Bauelementen"),
+    ("semiconductor", "C26.11", "Herstellung von elektronischen Bauelementen"),
+    ("autozulieferer", "C29.32", "Herst. sonstiger Teile/Zubehör für Kraftwagen"),
+    ("hausgerät", "C27.51", "Herstellung von elektrischen Haushaltsgeräten"),
+    ("luft- und raum", "C30.30", "Luft- und Raumfahrzeugbau"),
+    ("aerospace", "C30.30", "Luft- und Raumfahrzeugbau"),
+    ("raumfahrt", "C30.30", "Luft- und Raumfahrzeugbau"),
+    ("pharma", "C21", "Herst. von pharmazeutischen Erzeugnissen"),
+    ("elektrotechnik", "C27", "Herstellung von elektrischen Ausrüstungen"),
+    ("elektrisch", "C27", "Herstellung von elektrischen Ausrüstungen"),
+    ("antriebstechnik", "C28", "Maschinenbau"),
+    ("maschinenbau", "C28", "Maschinenbau"),
+    ("automobil", "C29", "Herstellung von Kraftwagen und Kraftwagenteilen"),
+    ("automotive", "C29", "Herstellung von Kraftwagen und Kraftwagenteilen"),
+    ("fahrzeugbau", "C29", "Herstellung von Kraftwagen und Kraftwagenteilen"),
+    ("elektronik", "C26", "Herst. von Datenverarbeitungsger./elektr. Optik"),
+    ("electronic", "C26", "Herst. von Datenverarbeitungsger./elektr. Optik"),
+    ("software", "J62", "Erbringung von IT-Dienstleistungen"),
     ("informationstechnolog", "J62", "Erbringung von IT-Dienstleistungen"),
-    ("chemi",           "C20",    "Herstellung von chemischen Erzeugnissen"),    # matches "Chemische", "Chemie"
-    ("chemical",        "C20",    "Herstellung von chemischen Erzeugnissen"),
-    ("stahlindustrie",  "C24",    "Metallerzeugung und -bearbeitung"),
-    ("stahl",           "C24",    "Metallerzeugung und -bearbeitung"),
-    ("metallindustrie", "C25",    "Herstellung von Metallerzeugnissen"),
-    ("kunststoff",      "C22",    "Herstellung von Gummi- und Kunststoffwaren"),
-    ("nahrungsmittel",  "C10",    "Ernährungsgewerbe"),
-    ("lebensmittel",    "C10",    "Ernährungsgewerbe"),
-    ("food",            "C10",    "Ernährungsgewerbe"),
-    ("getränk",         "C11",    "Getränkeherstellung"),
-    ("textil",          "C13",    "Herstellung von Textilien"),
-    ("bekleidung",      "C14",    "Herstellung von Bekleidung"),
-    ("papier",          "C17",    "Papiergewerbe"),
-    ("erdöl",           "B06",    "Gewinnung von Erdöl und Erdgas"),
-    ("petroleum",       "B06",    "Gewinnung von Erdöl und Erdgas"),
+    ("chemi", "C20", "Herstellung von chemischen Erzeugnissen"),  # matches "Chemische", "Chemie"
+    ("chemical", "C20", "Herstellung von chemischen Erzeugnissen"),
+    ("stahlindustrie", "C24", "Metallerzeugung und -bearbeitung"),
+    ("stahl", "C24", "Metallerzeugung und -bearbeitung"),
+    ("metallindustrie", "C25", "Herstellung von Metallerzeugnissen"),
+    ("kunststoff", "C22", "Herstellung von Gummi- und Kunststoffwaren"),
+    ("nahrungsmittel", "C10", "Ernährungsgewerbe"),
+    ("lebensmittel", "C10", "Ernährungsgewerbe"),
+    ("food", "C10", "Ernährungsgewerbe"),
+    ("getränk", "C11", "Getränkeherstellung"),
+    ("textil", "C13", "Herstellung von Textilien"),
+    ("bekleidung", "C14", "Herstellung von Bekleidung"),
+    ("papier", "C17", "Papiergewerbe"),
+    ("erdöl", "B06", "Gewinnung von Erdöl und Erdgas"),
+    ("petroleum", "B06", "Gewinnung von Erdöl und Erdgas"),
     # Energy D
-    ("energieversorgu", "D35",    "Energieversorgung"),
-    ("energiewirtschaft","D35",   "Energieversorgung"),
-    ("energie",         "D35",    "Energieversorgung"),
-    ("energy",          "D35",    "Energieversorgung"),
+    ("energieversorgu", "D35", "Energieversorgung"),
+    ("energiewirtschaft", "D35", "Energieversorgung"),
+    ("energie", "D35", "Energieversorgung"),
+    ("energy", "D35", "Energieversorgung"),
     # Construction F
-    ("bauwirtschaft",   "F41",    "Hochbau"),
-    ("construction",    "F41",    "Hochbau"),
+    ("bauwirtschaft", "F41", "Hochbau"),
+    ("construction", "F41", "Hochbau"),
     # Trade G
-    ("einzelhandel",    "G47",    "Einzelhandel"),
-    ("großhandel",      "G46",    "Großhandel"),
-    ("handel",          "G46",    "Großhandel"),
+    ("einzelhandel", "G47", "Einzelhandel"),
+    ("großhandel", "G46", "Großhandel"),
+    ("handel", "G46", "Großhandel"),
     # Transport H
-    ("luftfahrt",       "H51",    "Luftfahrt"),
-    ("schifffahrt",     "H50",    "Schifffahrt"),
-    ("logistik",        "H52",    "Lagerei sowie sonstige Dienstleistungen"),
-    ("transport",       "H49",    "Landverkehr und Transport"),
+    ("luftfahrt", "H51", "Luftfahrt"),
+    ("schifffahrt", "H50", "Schifffahrt"),
+    ("logistik", "H52", "Lagerei sowie sonstige Dienstleistungen"),
+    ("transport", "H49", "Landverkehr und Transport"),
     # Finance K
-    ("bankwesen",       "K64",    "Erbringung von Finanzdienstleistungen"),
-    ("bank",            "K64",    "Erbringung von Finanzdienstleistungen"),
+    ("bankwesen", "K64", "Erbringung von Finanzdienstleistungen"),
+    ("bank", "K64", "Erbringung von Finanzdienstleistungen"),
     ("finanzdienstleistung", "K64", "Erbringung von Finanzdienstleistungen"),
-    ("versicherung",    "K65",    "Versicherungen, Rückversicherungen"),
-    ("insurance",       "K65",    "Versicherungen, Rückversicherungen"),
+    ("versicherung", "K65", "Versicherungen, Rückversicherungen"),
+    ("insurance", "K65", "Versicherungen, Rückversicherungen"),
     # Real Estate L
-    ("immobilien",      "L68",    "Grundstücks- und Wohnungswesen"),
-    ("real estate",     "L68",    "Grundstücks- und Wohnungswesen"),
+    ("immobilien", "L68", "Grundstücks- und Wohnungswesen"),
+    ("real estate", "L68", "Grundstücks- und Wohnungswesen"),
     # Professional M
-    ("forschung",       "M72",    "Forschung und Entwicklung"),
-    ("research",        "M72",    "Forschung und Entwicklung"),
+    ("forschung", "M72", "Forschung und Entwicklung"),
+    ("research", "M72", "Forschung und Entwicklung"),
     ("unternehmensberatung", "M70", "Verwaltung und Führung von Unternehmen"),
-    ("consulting",      "M70",    "Verwaltung und Führung von Unternehmen"),
-    ("ingenieur",       "M71",    "Architektur- und Ingenieurbüros"),
+    ("consulting", "M70", "Verwaltung und Führung von Unternehmen"),
+    ("ingenieur", "M71", "Architektur- und Ingenieurbüros"),
     # Healthcare Q
-    ("gesundheitswesen","Q86",    "Gesundheitswesen"),
-    ("gesundheit",      "Q86",    "Gesundheitswesen"),
-    ("health care",     "Q86",    "Gesundheitswesen"),
+    ("gesundheitswesen", "Q86", "Gesundheitswesen"),
+    ("gesundheit", "Q86", "Gesundheitswesen"),
+    ("health care", "Q86", "Gesundheitswesen"),
     # Agriculture A
-    ("landwirtschaft",  "A01",    "Landwirtschaft"),
-    ("pflanzenschutz",  "A01.61", "Pflanzliche Erzeugnisse"),
+    ("landwirtschaft", "A01", "Landwirtschaft"),
+    ("pflanzenschutz", "A01.61", "Pflanzliche Erzeugnisse"),
 ]
 
 
@@ -697,8 +780,14 @@ async def _find_wikidata_qid(client: httpx.AsyncClient, lei: str, name: str) -> 
         try:
             resp = await client.get(
                 _WD_API,
-                params={"action": "wbsearchentities", "search": search_term,
-                        "language": "de", "type": "item", "format": "json", "limit": "1"},
+                params={
+                    "action": "wbsearchentities",
+                    "search": search_term,
+                    "language": "de",
+                    "type": "item",
+                    "format": "json",
+                    "limit": "1",
+                },
                 headers=_WD_HEADERS,
                 timeout=5.0,
             )
@@ -713,9 +802,11 @@ async def _find_wikidata_qid(client: httpx.AsyncClient, lei: str, name: str) -> 
 
 async def _fetch_entity(client: httpx.AsyncClient, qid: str) -> dict:
     # Build URL manually so pipe separators stay literal (httpx would encode them)
-    url = (f"{_WD_API}?action=wbgetentities&ids={qid}"
-           "&props=claims|descriptions|sitelinks"
-           "&languages=de|en&sitefilter=dewiki|enwiki&format=json")
+    url = (
+        f"{_WD_API}?action=wbgetentities&ids={qid}"
+        "&props=claims|descriptions|sitelinks"
+        "&languages=de|en&sitefilter=dewiki|enwiki&format=json"
+    )
     resp = await client.get(url, headers=_WD_HEADERS, timeout=6.0)
     resp.raise_for_status()
     return resp.json().get("entities", {}).get(qid, {})
@@ -726,8 +817,13 @@ async def _label_for_qids(client: httpx.AsyncClient, qids: list[str]) -> str:
         return ""
     resp = await client.get(
         _WD_API,
-        params={"action": "wbgetentities", "ids": "|".join(qids[:3]),
-                "props": "labels", "languages": "de|en", "format": "json"},
+        params={
+            "action": "wbgetentities",
+            "ids": "|".join(qids[:3]),
+            "props": "labels",
+            "languages": "de|en",
+            "format": "json",
+        },
         headers=_WD_HEADERS,
         timeout=4.0,
     )
@@ -737,8 +833,9 @@ async def _label_for_qids(client: httpx.AsyncClient, qids: list[str]) -> str:
     labels = []
     for qid in qids[:3]:
         ent = entities.get(qid, {})
-        lbl = (ent.get("labels", {}).get("de", {}).get("value", "")
-               or ent.get("labels", {}).get("en", {}).get("value", ""))
+        lbl = ent.get("labels", {}).get("de", {}).get("value", "") or ent.get("labels", {}).get(
+            "en", {}
+        ).get("value", "")
         if lbl:
             labels.append(lbl)
     return ", ".join(labels)
@@ -843,11 +940,15 @@ async def company_enrich(
 
             # Description
             descs = entity.get("descriptions", {})
-            description = descs.get("de", {}).get("value", "") or descs.get("en", {}).get("value", "")
+            description = descs.get("de", {}).get("value", "") or descs.get("en", {}).get(
+                "value", ""
+            )
 
             # Wikipedia sitelink title
             sl = entity.get("sitelinks", {})
-            wiki_title = sl.get("dewiki", {}).get("title", "") or sl.get("enwiki", {}).get("title", "")
+            wiki_title = sl.get("dewiki", {}).get("title", "") or sl.get("enwiki", {}).get(
+                "title", ""
+            )
             wiki_lang = "de" if sl.get("dewiki") else "en"
 
             # Parallel: industry labels + Wikipedia extract
@@ -861,14 +962,9 @@ async def company_enrich(
                 if enwiki_title:
                     wiki_summary = await _wiki_extract(client, enwiki_title, "en")
 
-            # NACE: check P1581 first, then derive from P452 QIDs + industry label
-            nace_code = ""
-            nace_label = ""
-            p1581 = claims.get("P1581", [])
-            if p1581:
-                nace_code = p1581[0].get("mainsnak", {}).get("datavalue", {}).get("value", "")
-            if not nace_code:
-                nace_code, nace_label = _resolve_nace(industry_qids, industry_label)
+            # NACE: derive from P452 (industry) QIDs + label keyword mapping
+            # P1581 is Wikidata's "official blog" (a URL property) — never use it for NACE
+            nace_code, nace_label = _resolve_nace(industry_qids, industry_label)
 
             return {
                 "website": website,
@@ -911,23 +1007,32 @@ async def bulk_import_suppliers(
     - `dry_run=true`: validates and counts without writing to the database.
     """
     if not current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization"
+        )
 
     if not file.filename or not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="File must be a CSV")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="File must be a CSV"
+        )
 
     content_bytes = await file.read()
     try:
         csv_content = content_bytes.decode("utf-8-sig")  # strip BOM if present
     except UnicodeDecodeError:
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="CSV must be UTF-8 encoded")
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="CSV must be UTF-8 encoded"
+        )
 
     # Count rows to decide sync vs async
-    import csv, io  # noqa: PLC0415
+    import csv
+    import io  # noqa: PLC0415
+
     row_count = sum(1 for _ in csv.reader(io.StringIO(csv_content))) - 1  # subtract header
 
     if row_count <= _MAX_SYNC_ROWS or dry_run:
         from infrastructure.celery.tasks.bulk_import import process_csv_sync  # noqa: PLC0415
+
         result = process_csv_sync(
             csv_content=csv_content,
             organization_id=current_user.organization_id,
@@ -937,7 +1042,10 @@ async def bulk_import_suppliers(
         logger.info("bulk_import_sync", **{k: v for k, v in result.items() if k != "errors"})
         return result
     else:
-        from infrastructure.celery.tasks.bulk_import import bulk_import_suppliers_task  # noqa: PLC0415
+        from infrastructure.celery.tasks.bulk_import import (
+            bulk_import_suppliers_task,  # noqa: PLC0415
+        )
+
         task = bulk_import_suppliers_task.delay(
             csv_content=csv_content,
             organization_id=current_user.organization_id,
@@ -958,6 +1066,7 @@ async def get_bulk_import_status(
 ) -> dict:
     """Poll the result of an async bulk import task."""
     from celery.result import AsyncResult  # noqa: PLC0415
+
     from infrastructure.celery.app import celery_app  # noqa: PLC0415
 
     result = AsyncResult(task_id, app=celery_app)
@@ -1043,7 +1152,10 @@ async def create_supplier(
     )
     # Auto-enrich: generate country risk signals + enrichment score in background
     if saved.country:
-        from application.external_intelligence.signal_generator import auto_enrich_supplier_background
+        from application.external_intelligence.signal_generator import (
+            auto_enrich_supplier_background,
+        )
+
         background_tasks.add_task(
             auto_enrich_supplier_background,
             saved.id,
@@ -1227,7 +1339,9 @@ async def list_supplier_assessments(
     )
     from interfaces.api.schemas.assessment import AssessmentResponse  # noqa: PLC0415
 
-    items_raw, total = await assessment_repo._execute_paged(stmt, pagination.page, pagination.page_size)
+    items_raw, total = await assessment_repo._execute_paged(
+        stmt, pagination.page, pagination.page_size
+    )
     return Page(
         items=[AssessmentResponse.model_validate(a).model_dump() for a in items_raw],
         total=total,
@@ -1336,9 +1450,7 @@ async def get_supplier_risk_profile(
     for row in rec_rows:
         action_counts[row.action_status] = row.cnt
 
-    open_recommendations = sum(
-        v for k, v in action_counts.items() if k not in _CLOSED
-    )
+    open_recommendations = sum(v for k, v in action_counts.items() if k not in _CLOSED)
     open_actions = action_counts.get("open", 0) + action_counts.get("in_progress", 0)
 
     overdue_row = await session.execute(
@@ -1367,4 +1479,105 @@ async def get_supplier_risk_profile(
         open_recommendations=open_recommendations,
         open_actions=open_actions,
         overdue_actions=overdue_actions,
+    )
+
+
+# ── Supplier Benchmark ────────────────────────────────────────────────────────
+
+class SupplierBenchmarkResponse(BaseModel):
+    supplier_id: str
+    supplier_name: str
+    risk_score: float
+    risk_band: str
+    sector_percentile: float | None
+    peer_comparison: str
+    peers_evaluated: int
+    industry: str
+
+
+@router.get("/{supplier_id}/benchmark", response_model=SupplierBenchmarkResponse)
+async def get_supplier_benchmark(
+    supplier_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> SupplierBenchmarkResponse:
+    """Compare supplier ESG risk score against same-industry peers in the org."""
+    if not current_user.organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No organisation")
+
+    # Load this supplier
+    sup_row = await session.execute(
+        select(SupplierModel).where(
+            SupplierModel.id == supplier_id,
+            SupplierModel.organization_id == current_user.organization_id,
+        )
+    )
+    supplier = sup_row.scalar_one_or_none()
+    if supplier is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+
+    # Latest score for this supplier
+    score_row = await session.execute(
+        select(SupplierScoreModel)
+        .where(SupplierScoreModel.supplier_id == supplier_id)
+        .order_by(SupplierScoreModel.created_at.desc())
+        .limit(1)
+    )
+    score = score_row.scalar_one_or_none()
+
+    risk_score = score.risk_score if score else 0.0
+    risk_band = score.risk_band if score else "Low"
+    stored_percentile = score.sector_percentile if score else None
+
+    # Peer scores in the same industry within this org (latest per supplier)
+    from sqlalchemy import text
+    peer_stmt = text(
+        """
+        SELECT ss.risk_score
+        FROM supplier_scores ss
+        JOIN suppliers s ON s.id = ss.supplier_id
+        WHERE s.organization_id = :org_id
+          AND s.industry = :industry
+          AND s.id != :supplier_id
+          AND ss.created_at = (
+              SELECT MAX(ss2.created_at)
+              FROM supplier_scores ss2
+              WHERE ss2.supplier_id = ss.supplier_id
+          )
+        """
+    )
+    peer_rows = await session.execute(
+        peer_stmt,
+        {"org_id": current_user.organization_id, "industry": supplier.industry, "supplier_id": supplier_id},
+    )
+    peer_scores = [r[0] for r in peer_rows.fetchall()]
+    peers_evaluated = len(peer_scores)
+
+    # Compute percentile: % of peers with a higher risk score (lower = better)
+    if stored_percentile is not None:
+        sector_percentile = stored_percentile
+    elif peers_evaluated > 0:
+        better_than = sum(1 for p in peer_scores if p >= risk_score)
+        sector_percentile = round((better_than / peers_evaluated) * 100, 1)
+    else:
+        sector_percentile = None
+
+    if peers_evaluated == 0:
+        peer_comparison = "No peers in the same industry yet."
+    elif sector_percentile is not None and sector_percentile >= 75:
+        peer_comparison = f"Better than {sector_percentile:.0f}% of {peers_evaluated} peers in {supplier.industry}."
+    elif sector_percentile is not None and sector_percentile >= 50:
+        peer_comparison = f"Above average among {peers_evaluated} peers in {supplier.industry}."
+    else:
+        peer_comparison = f"Below average among {peers_evaluated} peers in {supplier.industry}."
+
+    return SupplierBenchmarkResponse(
+        supplier_id=supplier_id,
+        supplier_name=supplier.name,
+        risk_score=round(risk_score, 1),
+        risk_band=risk_band,
+        sector_percentile=sector_percentile,
+        peer_comparison=peer_comparison,
+        peers_evaluated=peers_evaluated,
+        industry=supplier.industry or "",
     )

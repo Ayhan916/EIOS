@@ -7,10 +7,11 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from domain.product import ProductStatus, ProductType, TargetMarket
+
 from .base import EntityResponse
 
-
 # ── Product ───────────────────────────────────────────────────────────────────
+
 
 class ProductCreate(BaseModel):
     name: str = Field(min_length=1, max_length=500)
@@ -66,7 +67,7 @@ class ProductResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "ProductResponse":
+    def from_model(cls, m: Any) -> ProductResponse:
         return cls(
             id=m.id,
             status=m.status,
@@ -101,6 +102,7 @@ class ProductListResponse(BaseModel):
 
 # ── BOM Item ──────────────────────────────────────────────────────────────────
 
+
 class ProductBOMItemCreate(BaseModel):
     material_id: str
     weight_pct: float | None = Field(default=None, ge=0, le=100)
@@ -121,7 +123,7 @@ class ProductBOMItemResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "ProductBOMItemResponse":
+    def from_model(cls, m: Any) -> ProductBOMItemResponse:
         return cls(
             id=m.id,
             status=m.status,
@@ -140,6 +142,7 @@ class ProductBOMItemResponse(EntityResponse):
 
 
 # ── Aggregated views ──────────────────────────────────────────────────────────
+
 
 class ProductComplianceSummary(BaseModel):
     regulation: str

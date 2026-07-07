@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
 
@@ -30,7 +29,9 @@ class GenerateDueDiligenceReportRequest(BaseModel):
     report_type: str = Field(
         description="One of: lksgg_annual, csddd, human_rights, environmental, preventive_measures, remediation"
     )
-    reporting_year: int | None = Field(default=None, description="Reporting year (for LkSG annual report)")
+    reporting_year: int | None = Field(
+        default=None, description="Reporting year (for LkSG annual report)"
+    )
 
 
 class DueDiligenceReportSummary(BaseModel):

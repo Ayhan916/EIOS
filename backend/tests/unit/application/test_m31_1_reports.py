@@ -4,16 +4,13 @@ from __future__ import annotations
 
 import hashlib
 
-import pytest
-
 from domain.compliance_report import ComplianceReport
 from domain.enums import EntityStatus
 from infrastructure.reporting.compliance_pdf_renderer import (
-    render_csrd_gap_report,
     render_csddd_due_diligence_report,
+    render_csrd_gap_report,
     render_esrs_readiness_report,
 )
-
 
 # ── Snapshot fixtures ─────────────────────────────────────────────────────────
 
@@ -95,12 +92,8 @@ class TestComplianceReportDomain:
         assert report.generated_by == "user-2"
 
     def test_report_id_is_auto_generated(self):
-        r1 = ComplianceReport(
-            organization_id="o", report_type="t", status=EntityStatus.ACTIVE
-        )
-        r2 = ComplianceReport(
-            organization_id="o", report_type="t", status=EntityStatus.ACTIVE
-        )
+        r1 = ComplianceReport(organization_id="o", report_type="t", status=EntityStatus.ACTIVE)
+        r2 = ComplianceReport(organization_id="o", report_type="t", status=EntityStatus.ACTIVE)
         assert r1.id != r2.id
 
 
@@ -146,7 +139,7 @@ class TestPdfReproducibility:
         )
         stored_hash = hashlib.sha256(pdf_bytes).hexdigest()
         # Simulate re-render from same snapshot
-        rerendered_bytes = render_csrd_gap_report(
+        render_csrd_gap_report(
             org_name="Acme Corp",
             frameworks=_FW_SNAPSHOT,
             gaps=_GAP_SNAPSHOT,
@@ -159,10 +152,22 @@ class TestPdfReproducibility:
 
     def test_different_snapshot_produces_different_pdf(self):
         """Changing snapshot data changes the PDF content."""
-        snapshot_v1 = [{"requirement_code": "CSRD-Art-19a", "gap_type": "missing_disclosure",
-                        "severity": "Critical", "description": "No report."}]
-        snapshot_v2 = [{"requirement_code": "CSRD-Art-19a", "gap_type": "missing_disclosure",
-                        "severity": "High", "description": "Partial report."}]
+        snapshot_v1 = [
+            {
+                "requirement_code": "CSRD-Art-19a",
+                "gap_type": "missing_disclosure",
+                "severity": "Critical",
+                "description": "No report.",
+            }
+        ]
+        snapshot_v2 = [
+            {
+                "requirement_code": "CSRD-Art-19a",
+                "gap_type": "missing_disclosure",
+                "severity": "High",
+                "description": "Partial report.",
+            }
+        ]
 
         pdf1 = render_csrd_gap_report(org_name="Org", frameworks=_FW_SNAPSHOT, gaps=snapshot_v1)
         pdf2 = render_csrd_gap_report(org_name="Org", frameworks=_FW_SNAPSHOT, gaps=snapshot_v2)

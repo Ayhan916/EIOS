@@ -114,7 +114,12 @@ async def _scored_org(email_prefix: str) -> tuple[str, str, str]:
     ) as c:
         sup_r = await c.post(
             SUPPLIERS + "/",
-            json={"name": f"SupplierFor-{email_prefix}", "country": "DE", "industry": "Energy", "supplier_tier": "Tier 1"},
+            json={
+                "name": f"SupplierFor-{email_prefix}",
+                "country": "DE",
+                "industry": "Energy",
+                "supplier_tier": "Tier 1",
+            },
         )
         assert sup_r.status_code == 201, sup_r.text
         supplier_id = sup_r.json()["id"]
@@ -558,10 +563,14 @@ async def test_delete_report_admin_succeeds():
         headers={"Authorization": f"Bearer {tok}"},
     ) as c:
         # First create a supplier/score so report can be generated
-        sup_r = await c.post(SUPPLIERS + "/", json={"name": "Sup", "country": "UK", "industry": "Finance"})
+        sup_r = await c.post(
+            SUPPLIERS + "/", json={"name": "Sup", "country": "UK", "industry": "Finance"}
+        )
         assert sup_r.status_code == 201
         sid = sup_r.json()["id"]
-        assess_r = await c.post(ASSESS + "/", json={"title": "A", "description": "d", "supplier_id": sid})
+        assess_r = await c.post(
+            ASSESS + "/", json={"title": "A", "description": "d", "supplier_id": sid}
+        )
         assert assess_r.status_code == 201
         await c.get(SUPPLIERS + f"/{sid}/intelligence")
 
@@ -687,7 +696,11 @@ async def test_tenant_isolation_reports():
     ) as c:
         cr = await c.post(
             EXEC + "/reports",
-            json={"title": "Org A Report", "period_start": "2026-01-01", "period_end": "2026-03-31"},
+            json={
+                "title": "Org A Report",
+                "period_start": "2026-01-01",
+                "period_end": "2026-03-31",
+            },
         )
         assert cr.status_code == 201
         report_id_a = cr.json()["id"]
@@ -784,7 +797,11 @@ async def test_executive_summary_is_non_empty_text():
     ) as c:
         r = await c.post(
             EXEC + "/reports",
-            json={"title": "Summary Test", "period_start": "2026-01-01", "period_end": "2026-03-31"},
+            json={
+                "title": "Summary Test",
+                "period_start": "2026-01-01",
+                "period_end": "2026-03-31",
+            },
         )
     assert r.status_code == 201
     summary = r.json()["executive_summary"]
@@ -803,7 +820,11 @@ async def test_report_data_contains_all_sections():
     ) as c:
         r = await c.post(
             EXEC + "/reports",
-            json={"title": "Section Test", "period_start": "2026-01-01", "period_end": "2026-03-31"},
+            json={
+                "title": "Section Test",
+                "period_start": "2026-01-01",
+                "period_end": "2026-03-31",
+            },
         )
     assert r.status_code == 201
     rd = r.json()["report_data"]
@@ -912,9 +933,7 @@ async def test_l2_action_effectiveness_shape_in_report():
     assert required == set(ae.keys()), f"Unexpected keys: {set(ae.keys()) ^ required}"
     # All counts must be non-negative integers
     for field in ("opened_this_period", "closed_this_period", "total_open", "total_overdue"):
-        assert isinstance(ae[field], int) and ae[field] >= 0, (
-            f"{field} = {ae[field]!r} is invalid"
-        )
+        assert isinstance(ae[field], int) and ae[field] >= 0, f"{field} = {ae[field]!r} is invalid"
 
 
 @pytest.mark.asyncio
@@ -1009,8 +1028,9 @@ async def test_l4_pdf_bytes_unchanged_after_org_rename():
     rename must not change the output.  If the PDF were reading from the live DB,
     the bytes would differ because the header embeds the org name.
     """
-    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from sqlalchemy import text as sa_text  # noqa: PLC0415
+
+    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
 
     tok, _, org_id = await _register("m291-l4-rename@eios.dev", "admin")
     async with AsyncClient(
@@ -1071,7 +1091,11 @@ async def test_l4_meta_contains_org_name_not_empty():
     ) as c:
         r = await c.post(
             EXEC + "/reports",
-            json={"title": "Org Name Test", "period_start": "2026-01-01", "period_end": "2026-03-31"},
+            json={
+                "title": "Org Name Test",
+                "period_start": "2026-01-01",
+                "period_end": "2026-03-31",
+            },
         )
     assert r.status_code == 201
     org_name = r.json()["report_data"]["meta"]["organization_name"]

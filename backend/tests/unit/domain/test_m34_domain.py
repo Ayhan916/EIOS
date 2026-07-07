@@ -1,7 +1,6 @@
 """M34 Domain entity tests."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 from domain.enums import (
     CountryRiskLevel,
@@ -27,6 +26,7 @@ def _now():
 
 
 # ── ExternalDataset ────────────────────────────────────────────────────────────
+
 
 class TestExternalDataset:
     def test_create_minimal(self):
@@ -64,6 +64,7 @@ class TestExternalDataset:
 
 
 # ── CountryRiskProfile ─────────────────────────────────────────────────────────
+
 
 class TestCountryRiskProfile:
     def test_create(self):
@@ -111,6 +112,7 @@ class TestCountryRiskProfile:
 
 # ── SectorBenchmark ────────────────────────────────────────────────────────────
 
+
 class TestSectorBenchmark:
     def _make(self, **kwargs):
         defaults = dict(
@@ -142,10 +144,13 @@ class TestSectorBenchmark:
 
     def test_percentile_spread(self):
         b = self._make()
-        assert b.p10_esg_score < b.p25_esg_score < b.p50_esg_score < b.p75_esg_score < b.p90_esg_score
+        assert (
+            b.p10_esg_score < b.p25_esg_score < b.p50_esg_score < b.p75_esg_score < b.p90_esg_score
+        )
 
 
 # ── ExternalRiskSignal ─────────────────────────────────────────────────────────
+
 
 class TestExternalRiskSignal:
     def test_create(self):
@@ -178,6 +183,7 @@ class TestExternalRiskSignal:
 
 
 # ── SupplierEnrichment ─────────────────────────────────────────────────────────
+
 
 class TestSupplierEnrichment:
     def test_create(self):

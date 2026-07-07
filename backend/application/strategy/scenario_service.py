@@ -3,15 +3,14 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.strategy.metrics import strategy_counters
 from application.strategy.digital_twin_service import StrategyError
+from application.strategy.metrics import strategy_counters
 from infrastructure.persistence.models.strategy import (
-    SCENARIO_STATUSES,
     SCENARIO_TYPES,
     DigitalTwinSnapshotModel,
     EnterpriseDigitalTwinModel,
@@ -22,7 +21,7 @@ from infrastructure.persistence.models.strategy import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -49,7 +48,9 @@ def _project_from_assumptions(
 
     projected_emissions = round(base_emissions * ((1 + emissions_growth / 100) ** horizon_years), 4)
     projected_revenue = round(base_revenue * ((1 + revenue_growth / 100) ** horizon_years), 4)
-    projected_risk = round(min(10.0, base_risk_score * ((1 + risk_change / 100) ** horizon_years)), 4)
+    projected_risk = round(
+        min(10.0, base_risk_score * ((1 + risk_change / 100) ** horizon_years)), 4
+    )
     projected_carbon_cost = round(projected_emissions * carbon_price, 4)
 
     projected_kpis = {

@@ -135,8 +135,12 @@ async def test_submit_for_review_invalid_transition(setup_test_schema: None) -> 
 
 
 async def test_assign_reviewer_admin_only(setup_test_schema: None) -> None:
-    tok_admin, uid_admin, org = await _register("collab-admin@eios.dev", "Org AssignReviewer", "admin")
-    tok_analyst, uid_reviewer, _ = await _register("collab-rev@eios.dev", "Org AssignReviewer", "reviewer")
+    tok_admin, uid_admin, org = await _register(
+        "collab-admin@eios.dev", "Org AssignReviewer", "admin"
+    )
+    tok_analyst, uid_reviewer, _ = await _register(
+        "collab-rev@eios.dev", "Org AssignReviewer", "reviewer"
+    )
 
     # promote the second user to same org and reviewer role
     async with AsyncSessionFactory() as session, session.begin():
@@ -165,7 +169,9 @@ async def test_assign_reviewer_admin_only(setup_test_schema: None) -> None:
 
 async def test_review_action_approve(setup_test_schema: None) -> None:
     tok_analyst, uid_a, org = await _register("collab-approv-a@eios.dev", "Org Approve", "analyst")
-    tok_reviewer, uid_r, _ = await _register("collab-approv-r@eios.dev", "Org Approve Rev", "reviewer")
+    tok_reviewer, uid_r, _ = await _register(
+        "collab-approv-r@eios.dev", "Org Approve Rev", "reviewer"
+    )
 
     # Move reviewer to same org
     async with AsyncSessionFactory() as session, session.begin():
@@ -256,7 +262,9 @@ async def test_review_action_request_changes(setup_test_schema: None) -> None:
 
 async def test_review_action_blocked_if_not_in_review(setup_test_schema: None) -> None:
     tok_analyst, uid_a, org = await _register("collab-notinrev@eios.dev", "Org NotInRev", "analyst")
-    tok_reviewer, uid_r, _ = await _register("collab-notinrev-r@eios.dev", "Org NotInRev R", "reviewer")
+    tok_reviewer, uid_r, _ = await _register(
+        "collab-notinrev-r@eios.dev", "Org NotInRev R", "reviewer"
+    )
 
     async with AsyncSessionFactory() as session, session.begin():
         repo = SQLUserRepository(session)
@@ -480,7 +488,11 @@ async def test_deleted_comment_hidden_in_list(setup_test_schema: None) -> None:
     ) as c:
         create_r = await c.post(
             COMMENTS + "/",
-            json={"entity_type": "Assessment", "entity_id": aid, "content": "Visible then deleted."},
+            json={
+                "entity_type": "Assessment",
+                "entity_id": aid,
+                "content": "Visible then deleted.",
+            },
         )
         cid = create_r.json()["id"]
         await c.delete(COMMENTS + f"/{cid}")

@@ -95,7 +95,7 @@ class ExecutiveRankingEntry(BaseModel):
 
 
 class HeatmapCell(BaseModel):
-    pillar: str    # Environmental | Social | Governance
+    pillar: str  # Environmental | Social | Governance
     severity: str  # Critical | High | Medium | Low
     count: int
 

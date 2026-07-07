@@ -26,10 +26,10 @@ Security:
 
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -50,24 +50,24 @@ router = APIRouter(prefix="/effectiveness", tags=["effectiveness"])
 
 class IndicatorCreate(BaseModel):
     name: str = Field(min_length=3, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=2000)
+    description: str | None = Field(default=None, max_length=2000)
     indicator_type: str = "qualitative"
     unit: str = Field(default="", max_length=100)
     data_source: str = "manual"
     csddd_article: str = Field(default="", max_length=50)
-    risk_category: Optional[str] = Field(default=None, max_length=100)
+    risk_category: str | None = Field(default=None, max_length=100)
 
 
 class IndicatorResponse(BaseModel):
     id: UUID
-    organization_id: Optional[UUID]
+    organization_id: UUID | None
     name: str
-    description: Optional[str]
+    description: str | None
     indicator_type: str
     unit: str
     data_source: str
     csddd_article: str
-    risk_category: Optional[str]
+    risk_category: str | None
     is_active: bool
     created_at: Any
 
@@ -79,26 +79,26 @@ class ReviewCreate(BaseModel):
     title: str = Field(min_length=3, max_length=255)
     period_start: Any
     period_end: Any
-    overall_rating: Optional[int] = Field(default=None, ge=1, le=5)
-    key_findings: Optional[str] = Field(default=None, max_length=10000)
-    improvement_actions: Optional[str] = Field(default=None, max_length=10000)
+    overall_rating: int | None = Field(default=None, ge=1, le=5)
+    key_findings: str | None = Field(default=None, max_length=10000)
+    improvement_actions: str | None = Field(default=None, max_length=10000)
 
 
 class ReviewUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=255)
-    period_start: Optional[Any] = None
-    period_end: Optional[Any] = None
-    overall_rating: Optional[int] = Field(default=None, ge=1, le=5)
-    key_findings: Optional[str] = Field(default=None, max_length=10000)
-    improvement_actions: Optional[str] = Field(default=None, max_length=10000)
+    title: str | None = Field(default=None, max_length=255)
+    period_start: Any | None = None
+    period_end: Any | None = None
+    overall_rating: int | None = Field(default=None, ge=1, le=5)
+    key_findings: str | None = Field(default=None, max_length=10000)
+    improvement_actions: str | None = Field(default=None, max_length=10000)
 
 
 class ReviewLineUpsert(BaseModel):
     indicator_id: UUID
     indicator_name: str = Field(default="", max_length=255)
-    measured_value: Optional[float] = None
-    measured_text: Optional[str] = Field(default=None, max_length=2000)
-    comment: Optional[str] = Field(default=None, max_length=2000)
+    measured_value: float | None = None
+    measured_text: str | None = Field(default=None, max_length=2000)
+    comment: str | None = Field(default=None, max_length=2000)
     auto_populated: bool = False
 
 
@@ -107,9 +107,9 @@ class ReviewLineResponse(BaseModel):
     review_id: UUID
     indicator_id: UUID
     indicator_name: str
-    measured_value: Optional[float]
-    measured_text: Optional[str]
-    comment: Optional[str]
+    measured_value: float | None
+    measured_text: str | None
+    comment: str | None
     auto_populated: bool
 
     class Config:
@@ -122,14 +122,14 @@ class ReviewResponse(BaseModel):
     title: str
     period_start: Any
     period_end: Any
-    overall_rating: Optional[int]
-    key_findings: Optional[str]
-    improvement_actions: Optional[str]
+    overall_rating: int | None
+    key_findings: str | None
+    improvement_actions: str | None
     status: str
-    submitted_at: Optional[Any]
-    submitted_by: Optional[str]
-    approved_at: Optional[Any]
-    approved_by: Optional[str]
+    submitted_at: Any | None
+    submitted_by: str | None
+    approved_at: Any | None
+    approved_by: str | None
     lines: list[ReviewLineResponse]
     created_at: Any
     updated_at: Any
@@ -144,6 +144,7 @@ class ScoreInput(BaseModel):
 
 # ── Indicator Library ─────────────────────────────────────────────────────────
 
+
 def _ind_repo(db: Session = Depends(get_sync_db)) -> SQLEffectivenessIndicatorRepository:
     repo = SQLEffectivenessIndicatorRepository(db)
     repo.seed_if_empty()
@@ -156,7 +157,7 @@ def _rev_repo(db: Session = Depends(get_sync_db)) -> SQLEffectivenessReviewRepos
 
 @router.get("/indicators/", response_model=list[IndicatorResponse])
 def list_indicators(
-    risk_category: Optional[str] = None,
+    risk_category: str | None = None,
     user: User = Depends(get_current_user),
     repo: SQLEffectivenessIndicatorRepository = Depends(_ind_repo),
 ):
@@ -188,6 +189,7 @@ def get_indicator(
 
 
 # ── Reviews ───────────────────────────────────────────────────────────────────
+
 
 @router.post("/reviews/", response_model=ReviewResponse, status_code=201)
 def create_review(
@@ -295,6 +297,7 @@ def close_review(
 
 # ── CAP Snapshots ─────────────────────────────────────────────────────────────
 
+
 @router.get("/cap/{cap_id}/snapshot")
 def get_cap_snapshot(
     cap_id: str,
@@ -338,6 +341,7 @@ def set_cap_closed_score(
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/dashboard")
 def effectiveness_dashboard(
     user: User = Depends(get_current_user),
@@ -347,6 +351,7 @@ def effectiveness_dashboard(
 
 
 # ── Serialization helpers ─────────────────────────────────────────────────────
+
 
 def _ind(i: Any) -> dict:
     return {

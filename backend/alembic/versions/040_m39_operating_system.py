@@ -25,6 +25,7 @@ Create Date: 2026-06-20
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "040"
@@ -58,8 +59,7 @@ def upgrade() -> None:
         sa.Column("current_value", sa.Float, nullable=True),
         sa.Column("unit", sa.String(50), nullable=True),
         sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("objective_status", sa.String(20), nullable=False,
-                  server_default="NOT_STARTED"),
+        sa.Column("objective_status", sa.String(20), nullable=False, server_default="NOT_STARTED"),
     )
     op.create_index("ix_esg_obj_org", "esg_objectives", ["organization_id"])
     op.create_index("ix_esg_obj_category", "esg_objectives", ["category"])
@@ -93,14 +93,18 @@ def upgrade() -> None:
         sa.Column("owner_user_id", sa.String(36), nullable=True),
         sa.Column("initiative_status", sa.String(20), nullable=False, server_default="PLANNED"),
         sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
-        sa.Column("linked_objectives", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_suppliers", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_findings", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_risks", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column(
+            "linked_objectives", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_suppliers", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_findings", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_risks", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
     )
     op.create_index("ix_esg_init_org", "esg_initiatives", ["organization_id"])
     op.create_index("ix_esg_init_status", "esg_initiatives", ["initiative_status"])
@@ -134,12 +138,15 @@ def upgrade() -> None:
         sa.Column("title", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=False, server_default=""),
         sa.Column("program_status", sa.String(20), nullable=False, server_default="ACTIVE"),
-        sa.Column("linked_objectives", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_initiatives", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_suppliers", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column(
+            "linked_objectives", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_initiatives", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_suppliers", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
     )
     op.create_index("ix_esg_prog_org", "esg_programs", ["organization_id"])
     op.create_index("ix_esg_prog_status", "esg_programs", ["program_status"])
@@ -154,8 +161,9 @@ def upgrade() -> None:
         sa.Column("owner_user_id", sa.String(36), nullable=True),
         sa.Column("frequency", sa.String(30), nullable=False, server_default="ANNUAL"),
         sa.Column("evidence_required", sa.Boolean, nullable=False, server_default="false"),
-        sa.Column("effectiveness_status", sa.String(25), nullable=False,
-                  server_default="NOT_TESTED"),
+        sa.Column(
+            "effectiveness_status", sa.String(25), nullable=False, server_default="NOT_TESTED"
+        ),
     )
     op.create_index("ix_esg_ctrl_org", "esg_controls", ["organization_id"])
     op.create_index("ix_esg_ctrl_type", "esg_controls", ["control_type"])
@@ -186,10 +194,8 @@ def upgrade() -> None:
         sa.Column("coverage_percent", sa.Float, nullable=False, server_default="0"),
         sa.Column("gap_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("owner_user_id", sa.String(36), nullable=True),
-        sa.Column("operation_status", sa.String(20), nullable=False,
-                  server_default="NOT_STARTED"),
-        sa.Column("actions", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column("operation_status", sa.String(20), nullable=False, server_default="NOT_STARTED"),
+        sa.Column("actions", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"),
         sa.Column("last_synced_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_compop_org", "compliance_operations", ["organization_id"])
@@ -209,8 +215,9 @@ def upgrade() -> None:
         sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("action_status", sa.String(20), nullable=False, server_default="OPEN"),
         sa.Column("priority", sa.String(10), nullable=False, server_default="MEDIUM"),
-        sa.Column("linked_objectives", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column(
+            "linked_objectives", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
     )
     op.create_index("ix_esg_act_org", "esg_actions", ["organization_id"])
     op.create_index("ix_esg_act_status", "esg_actions", ["action_status"])
@@ -233,8 +240,7 @@ def upgrade() -> None:
         sa.Column("assignment_status", sa.String(10), nullable=False, server_default="ACTIVE"),
     )
     op.create_index("ix_acct_org", "accountability_assignments", ["organization_id"])
-    op.create_index("ix_acct_entity", "accountability_assignments",
-                    ["entity_type", "entity_id"])
+    op.create_index("ix_acct_entity", "accountability_assignments", ["entity_type", "entity_id"])
     op.create_index("ix_acct_user", "accountability_assignments", ["assigned_to_user_id"])
     op.create_index("ix_acct_role", "accountability_assignments", ["role"])
 
@@ -246,12 +252,13 @@ def upgrade() -> None:
         sa.Column("title", sa.String(255), nullable=False),
         sa.Column("description", sa.Text, nullable=False, server_default=""),
         sa.Column("playbook_type", sa.String(30), nullable=False),
-        sa.Column("steps", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("escalation_rules", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("evidence_required", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column("steps", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"),
+        sa.Column(
+            "escalation_rules", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "evidence_required", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
         sa.Column("playbook_status", sa.String(10), nullable=False, server_default="ACTIVE"),
     )
     op.create_index("ix_esg_pb_org", "esg_playbooks", ["organization_id"])
@@ -267,12 +274,13 @@ def upgrade() -> None:
         sa.Column("workflow_type", sa.String(50), nullable=False),
         sa.Column("current_step", sa.Integer, nullable=False, server_default="0"),
         sa.Column("total_steps", sa.Integer, nullable=False, server_default="0"),
-        sa.Column("execution_status", sa.String(20), nullable=False,
-                  server_default="PENDING"),
-        sa.Column("steps_completed", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("pending_approvals", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column("execution_status", sa.String(20), nullable=False, server_default="PENDING"),
+        sa.Column(
+            "steps_completed", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "pending_approvals", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
         sa.Column("initiated_by", sa.String(36), nullable=True),
         sa.Column("linked_entity_type", sa.String(50), nullable=True),
         sa.Column("linked_entity_id", sa.String(36), nullable=True),
@@ -312,8 +320,9 @@ def upgrade() -> None:
         sa.Column("due_diligence_score", sa.Float, nullable=False),
         sa.Column("remediation_score", sa.Float, nullable=False),
         sa.Column("governance_score", sa.Float, nullable=False),
-        sa.Column("calculation_inputs", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="{}"),
+        sa.Column(
+            "calculation_inputs", sa.dialects.postgresql.JSONB, nullable=False, server_default="{}"
+        ),
         sa.Column("formula_version", sa.String(10), nullable=False, server_default="1.0"),
         sa.Column("calculated_at", sa.DateTime(timezone=True), nullable=False),
     )
@@ -333,14 +342,21 @@ def upgrade() -> None:
         sa.Column("impact", sa.String(10), nullable=False, server_default="MEDIUM"),
         sa.Column("risk_status", sa.String(15), nullable=False, server_default="IDENTIFIED"),
         sa.Column("owner_user_id", sa.String(36), nullable=True),
-        sa.Column("linked_suppliers", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_objectives", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_initiatives", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
-        sa.Column("linked_compliance_programs", sa.dialects.postgresql.JSONB, nullable=False,
-                  server_default="[]"),
+        sa.Column(
+            "linked_suppliers", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_objectives", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_initiatives", sa.dialects.postgresql.JSONB, nullable=False, server_default="[]"
+        ),
+        sa.Column(
+            "linked_compliance_programs",
+            sa.dialects.postgresql.JSONB,
+            nullable=False,
+            server_default="[]",
+        ),
     )
     op.create_index("ix_strat_risk_org", "strategic_risks", ["organization_id"])
     op.create_index("ix_strat_risk_level", "strategic_risks", ["risk_level"])

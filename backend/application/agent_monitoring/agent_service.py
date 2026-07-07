@@ -55,9 +55,10 @@ async def _log_audit_event(
 
 async def seed_monitoring_agents(session) -> None:
     """Seed the 6 built-in monitoring agents.  Idempotent — skips existing."""
+    from sqlalchemy import select
+
     from domain.agent_monitoring import BUILTIN_AGENTS, AgentStatus
     from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
-    from sqlalchemy import select
 
     now = datetime.now(UTC)
     for spec in BUILTIN_AGENTS:
@@ -94,32 +95,36 @@ async def seed_monitoring_agents(session) -> None:
 
 
 async def get_agent(agent_id: str, session) -> object | None:
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
     stmt = select(MonitoringAgentModel).where(MonitoringAgentModel.id == agent_id)
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
 async def get_agent_by_type(agent_type: str, session) -> object | None:
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
     stmt = select(MonitoringAgentModel).where(MonitoringAgentModel.agent_type == agent_type)
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
 async def list_agents(session) -> list:
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
     stmt = select(MonitoringAgentModel).order_by(MonitoringAgentModel.agent_type)
     return list((await session.execute(stmt)).scalars().all())
 
 
 async def set_agent_enabled(agent_id: str, enabled: bool, session) -> object | None:
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
     stmt = select(MonitoringAgentModel).where(MonitoringAgentModel.id == agent_id)
     agent = (await session.execute(stmt)).scalar_one_or_none()
@@ -136,8 +141,9 @@ async def set_agent_enabled(agent_id: str, enabled: bool, session) -> object | N
 
 async def get_due_agents(session) -> list:
     """Return all enabled agents whose next_run_at is in the past."""
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentModel
 
     now = datetime.now(UTC)
     stmt = select(MonitoringAgentModel).where(
@@ -194,8 +200,9 @@ async def check_and_start_run(
     if a RUNNING record already exists so that the caller can skip or surface
     a 409.
     """
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentRunModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentRunModel
 
     # Lock the row(s) so a concurrent caller waits before reading the same set.
     existing_stmt = (
@@ -209,9 +216,7 @@ async def check_and_start_run(
     )
     existing = (await session.execute(existing_stmt)).scalar_one_or_none()
     if existing is not None:
-        raise ValueError(
-            f"Agent {agent_id} is already running for organization {organization_id}"
-        )
+        raise ValueError(f"Agent {agent_id} is already running for organization {organization_id}")
 
     return await record_run_start(agent_id, organization_id, session)
 
@@ -225,11 +230,12 @@ async def record_run_completed(
     session,
 ) -> None:
     """Finalize a run and update the agent's schedule metadata."""
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.agent_monitoring import (
         MonitoringAgentModel,
         MonitoringAgentRunModel,
     )
-    from sqlalchemy import select
 
     now = datetime.now(UTC)
 
@@ -260,6 +266,7 @@ async def record_run_completed(
 
     # Metrics
     from application.agent_monitoring.metrics import agent_counters
+
     runtime_ms = run.execution_time_ms if run else None
     agent_counters.record_run_completed(runtime_ms=runtime_ms)
 
@@ -298,11 +305,12 @@ async def record_run_failed(
     org's failures — one tenant's data issues must not disable monitoring for
     all organisations.  Admins disable agents explicitly via set_agent_enabled().
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.agent_monitoring import (
         MonitoringAgentModel,
         MonitoringAgentRunModel,
     )
-    from sqlalchemy import select
 
     now = datetime.now(UTC)
 
@@ -344,10 +352,7 @@ async def record_run_failed(
             .limit(_PER_ORG_FAILURE_THRESHOLD)
         )
         recent = list((await session.execute(recent_stmt)).scalars().all())
-        if (
-            len(recent) >= _PER_ORG_FAILURE_THRESHOLD
-            and all(s == "FAILED" for s in recent)
-        ):
+        if len(recent) >= _PER_ORG_FAILURE_THRESHOLD and all(s == "FAILED" for s in recent):
             logger.warning(
                 "agent_org_repeated_failure",
                 agent_id=agent_id,
@@ -358,6 +363,7 @@ async def record_run_failed(
 
     # Metrics
     from application.agent_monitoring.metrics import agent_counters
+
     runtime_ms = run.execution_time_ms if run else None
     agent_counters.record_run_failed(runtime_ms=runtime_ms)
 
@@ -386,11 +392,11 @@ async def get_agent_health_list(session) -> list[dict]:
       - avg_runtime_ms (average execution_time_ms of COMPLETED runs, last 30)
       - success_rate (agent.success_count / agent.run_count)
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.agent_monitoring import (
-        MonitoringAgentModel,
         MonitoringAgentRunModel,
     )
-    from sqlalchemy import func, select
 
     agents = await list_agents(session)
     health = []
@@ -441,18 +447,20 @@ async def get_agent_health_list(session) -> list[dict]:
         if agent.run_count > 0:
             success_rate = round(agent.success_count / agent.run_count, 3)
 
-        health.append({
-            "agent_id": agent.id,
-            "agent_type": agent.agent_type,
-            "name": agent.name,
-            "status": agent.status,
-            "enabled": agent.enabled,
-            "last_successful_run": last_successful_run,
-            "consecutive_failures": consecutive_failures,
-            "avg_runtime_ms": avg_runtime_ms,
-            "success_rate": success_rate,
-            "backlog_count": 0,  # populated by dashboard if needed
-        })
+        health.append(
+            {
+                "agent_id": agent.id,
+                "agent_type": agent.agent_type,
+                "name": agent.name,
+                "status": agent.status,
+                "enabled": agent.enabled,
+                "last_successful_run": last_successful_run,
+                "consecutive_failures": consecutive_failures,
+                "avg_runtime_ms": avg_runtime_ms,
+                "success_rate": success_rate,
+                "backlog_count": 0,  # populated by dashboard if needed
+            }
+        )
 
     return health
 
@@ -463,8 +471,9 @@ async def list_runs(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentRunModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import MonitoringAgentRunModel
 
     stmt = select(MonitoringAgentRunModel)
     if agent_id:

@@ -9,15 +9,27 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-async def _log_audit(session, action: str, entity_id: str, organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()), status="Active", version=1,
-        created_at=datetime.now(UTC), updated_at=datetime.now(UTC),
-        action=action, entity_type="GovernanceCalendarEvent", entity_id=entity_id,
-        actor_id=None, outcome="success", detail=detail,
-        event_metadata={"organization_id": organization_id},
-    ))
+
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type="GovernanceCalendarEvent",
+            entity_id=entity_id,
+            actor_id=None,
+            outcome="success",
+            detail=detail,
+            event_metadata={"organization_id": organization_id},
+        )
+    )
 
 
 async def create_event(
@@ -33,30 +45,49 @@ async def create_event(
     notes: str = "",
 ) -> dict:
     from infrastructure.persistence.models.operating_system import GovernanceCalendarEventModel
+
     now = datetime.now(UTC)
     evt = GovernanceCalendarEventModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, title=title, event_type=event_type,
-        scheduled_at=scheduled_at, recurrence_rule=recurrence_rule,
-        reminder_days=reminder_days, event_status="SCHEDULED",
-        linked_entity_type=linked_entity_type, linked_entity_id=linked_entity_id,
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        title=title,
+        event_type=event_type,
+        scheduled_at=scheduled_at,
+        recurrence_rule=recurrence_rule,
+        reminder_days=reminder_days,
+        event_status="SCHEDULED",
+        linked_entity_type=linked_entity_type,
+        linked_entity_id=linked_entity_id,
         notes=notes,
     )
     session.add(evt)
     await session.flush()
-    await _log_audit(session, "calendar.event_created", evt.id, organization_id,
-                     detail=f"type={event_type} scheduled_at={scheduled_at.isoformat()}")
+    await _log_audit(
+        session,
+        "calendar.event_created",
+        evt.id,
+        organization_id,
+        detail=f"type={event_type} scheduled_at={scheduled_at.isoformat()}",
+    )
     from application.operating_system.metrics import os_counters
+
     os_counters.record_calendar_event_created()
     return _to_dict(evt)
 
 
 async def list_events(
-    organization_id: str, session: AsyncSession,
-    event_type: str | None = None, event_status: str | None = None,
+    organization_id: str,
+    session: AsyncSession,
+    event_type: str | None = None,
+    event_status: str | None = None,
     limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import GovernanceCalendarEventModel
+
     stmt = select(GovernanceCalendarEventModel).where(
         GovernanceCalendarEventModel.organization_id == organization_id
     )
@@ -69,10 +100,9 @@ async def list_events(
     return [_to_dict(r) for r in rows]
 
 
-async def get_event(
-    organization_id: str, event_id: str, session: AsyncSession
-) -> dict | None:
+async def get_event(organization_id: str, event_id: str, session: AsyncSession) -> dict | None:
     from infrastructure.persistence.models.operating_system import GovernanceCalendarEventModel
+
     stmt = select(GovernanceCalendarEventModel).where(
         GovernanceCalendarEventModel.organization_id == organization_id,
         GovernanceCalendarEventModel.id == event_id,
@@ -85,6 +115,7 @@ async def update_event(
     organization_id: str, event_id: str, session: AsyncSession, **fields
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import GovernanceCalendarEventModel
+
     stmt = select(GovernanceCalendarEventModel).where(
         GovernanceCalendarEventModel.organization_id == organization_id,
         GovernanceCalendarEventModel.id == event_id,
@@ -101,10 +132,9 @@ async def update_event(
     return _to_dict(row)
 
 
-async def delete_event(
-    organization_id: str, event_id: str, session: AsyncSession
-) -> bool:
+async def delete_event(organization_id: str, event_id: str, session: AsyncSession) -> bool:
     from infrastructure.persistence.models.operating_system import GovernanceCalendarEventModel
+
     stmt = select(GovernanceCalendarEventModel).where(
         GovernanceCalendarEventModel.organization_id == organization_id,
         GovernanceCalendarEventModel.id == event_id,

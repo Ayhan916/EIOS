@@ -10,17 +10,41 @@ _TOPIC_KEYWORDS: dict[str, list[str]] = {
     "child_labour": ["child labour", "child labor", "child work", "underage", "minor worker"],
     "forced_labour": ["forced labour", "forced labor", "slavery", "trafficking", "bonded labour"],
     "discrimination": ["discriminat", "equalit", "harassment", "bias", "prejudice"],
-    "health_safety": ["health", "safety", "accident", "injury", "hazard", "ppe", "protective equipment"],
-    "freedom_of_association": ["union", "association", "collective bargain", "strike", "freedom of assembly"],
+    "health_safety": [
+        "health",
+        "safety",
+        "accident",
+        "injury",
+        "hazard",
+        "ppe",
+        "protective equipment",
+    ],
+    "freedom_of_association": [
+        "union",
+        "association",
+        "collective bargain",
+        "strike",
+        "freedom of assembly",
+    ],
     "living_wage": ["wage", "salary", "compensation", "minimum wage", "living wage", "pay gap"],
-    "working_conditions": ["overtime", "working hours", "rest period", "dormitory", "work conditions"],
+    "working_conditions": [
+        "overtime",
+        "working hours",
+        "rest period",
+        "dormitory",
+        "work conditions",
+    ],
 }
 
 
 def _classify_finding(finding: dict) -> list[str]:
     """Return all HR topics this finding belongs to."""
     text = (
-        (finding.get("title") or "") + " " + (finding.get("category") or "") + " " + (finding.get("description") or "")
+        (finding.get("title") or "")
+        + " "
+        + (finding.get("category") or "")
+        + " "
+        + (finding.get("description") or "")
     ).lower()
     matched = [topic for topic, kws in _TOPIC_KEYWORDS.items() if any(kw in text for kw in kws)]
     return matched or ["other"]
@@ -73,16 +97,18 @@ def build_human_rights_report(
         suppliers = {f.get("supplier_id") for f in t_findings if f.get("supplier_id")}
         suppliers |= {r.get("supplier_id") for r in t_risks if r.get("supplier_id")}
 
-        topic_summaries.append({
-            "topic": topic,
-            "display_name": topic.replace("_", " ").title(),
-            "finding_count": len(t_findings),
-            "critical_findings": sum(1 for f in t_findings if f.get("severity") == "Critical"),
-            "high_findings": sum(1 for f in t_findings if f.get("severity") == "High"),
-            "risk_count": len(t_risks),
-            "suppliers_impacted": len(suppliers),
-            "keywords": kws,
-        })
+        topic_summaries.append(
+            {
+                "topic": topic,
+                "display_name": topic.replace("_", " ").title(),
+                "finding_count": len(t_findings),
+                "critical_findings": sum(1 for f in t_findings if f.get("severity") == "Critical"),
+                "high_findings": sum(1 for f in t_findings if f.get("severity") == "High"),
+                "risk_count": len(t_risks),
+                "suppliers_impacted": len(suppliers),
+                "keywords": kws,
+            }
+        )
 
     # Sort by total findings descending
     topic_summaries.sort(key=lambda x: -(x["finding_count"] + x["risk_count"]))
@@ -102,19 +128,28 @@ def build_human_rights_report(
     open_recs = sum(1 for r in recommendations if r.get("action_status") == "open")
     in_progress = sum(1 for r in recommendations if r.get("action_status") == "in_progress")
     resolved = sum(1 for r in recommendations if r.get("action_status") in ("resolved", "verified"))
-    overdue = sum(1 for r in recommendations if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False))
+    overdue = sum(
+        1
+        for r in recommendations
+        if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False)
+    )
 
     # ── HR controls ─────────────────────────────────────────────────────────
-    hr_controls = [c for c in controls if any(
-        kw in (c.get("title") or "").lower()
-        for kw in ["human rights", "labour", "social", "health", "safety", "discrimination"]
-    )]
+    hr_controls = [
+        c
+        for c in controls
+        if any(
+            kw in (c.get("title") or "").lower()
+            for kw in ["human rights", "labour", "social", "health", "safety", "discrimination"]
+        )
+    ]
 
     # ── Evidence ────────────────────────────────────────────────────────────
     evidence_count = len(evidence_items)
     avg_reliability = (
         sum((e.get("reliability_score") or 0.5) for e in evidence_items) / evidence_count
-        if evidence_count else 0.0
+        if evidence_count
+        else 0.0
     )
 
     return {
@@ -124,7 +159,14 @@ def build_human_rights_report(
         },
         "summary": {
             "total_hr_findings": len(unique_hr_finding_ids),
-            "total_hr_risks": len({r.get("id") for t in _TOPIC_KEYWORDS for r in topic_risks.get(t, []) if r.get("id")}),
+            "total_hr_risks": len(
+                {
+                    r.get("id")
+                    for t in _TOPIC_KEYWORDS
+                    for r in topic_risks.get(t, [])
+                    if r.get("id")
+                }
+            ),
             "suppliers_impacted": len(all_suppliers),
             "open_remediation_actions": open_recs + in_progress,
             "overdue_actions": overdue,

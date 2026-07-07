@@ -38,7 +38,9 @@ class RemediationMilestoneModel(Base):
 class AssessmentScheduleModel(Base):
     __tablename__ = "assessment_schedules"
     __table_args__ = (
-        UniqueConstraint("organization_id", "supplier_id", name="uq_assessment_schedule_org_supplier"),
+        UniqueConstraint(
+            "organization_id", "supplier_id", name="uq_assessment_schedule_org_supplier"
+        ),
         Index("ix_assessment_schedules_org", "organization_id"),
         Index("ix_assessment_schedules_supplier", "supplier_id"),
         Index("ix_assessment_schedules_next_due", "next_due_at"),
@@ -48,11 +50,11 @@ class AssessmentScheduleModel(Base):
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
-    supplier_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("suppliers.id"), nullable=False
-    )
+    supplier_id: Mapped[str] = mapped_column(String(36), ForeignKey("suppliers.id"), nullable=False)
     frequency_days: Mapped[int] = mapped_column(Integer, nullable=False)
-    last_triggered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_triggered_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     next_due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     template_assessment_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("assessments.id"), nullable=True
@@ -72,9 +74,7 @@ class SupplierCertificateModel(Base):
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    supplier_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("suppliers.id"), nullable=False
-    )
+    supplier_id: Mapped[str] = mapped_column(String(36), ForeignKey("suppliers.id"), nullable=False)
     organization_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("organizations.id"), nullable=False
     )
@@ -83,7 +83,9 @@ class SupplierCertificateModel(Base):
     issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     alert_days_before: Mapped[int] = mapped_column(Integer, nullable=False, default=30)
-    last_alert_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_alert_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     issuer: Mapped[str | None] = mapped_column(String(500), nullable=True)
     certificate_number: Mapped[str | None] = mapped_column(String(200), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

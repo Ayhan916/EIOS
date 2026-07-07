@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -33,19 +34,19 @@ class CopilotMessage(BaseEntity):
     role: str  # CopilotMessageRole value
     content: str
     intent: str = ""
-    citations: list = field(default_factory=list)
-    retrieved_sources: dict = field(default_factory=dict)
+    citations: list[Any] = field(default_factory=list)
+    retrieved_sources: dict[str, Any] = field(default_factory=dict)
     model_used: str = ""
     generation_ms: int | None = None
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     # M33.1 — full audit snapshot so historical answers are reproducible
-    retrieval_snapshot: dict = field(default_factory=dict)
+    retrieval_snapshot: dict[str, Any] = field(default_factory=dict)
     assembled_context: str = ""
     system_prompt_snapshot: str = ""
     # M33.2 — enterprise hardening fields
     confidence_level: str = ""
-    confidence_factors: dict = field(default_factory=dict)
+    confidence_factors: dict[str, Any] = field(default_factory=dict)
     contradiction_count: int = 0
     context_budget_used: int = 0
     context_truncated: bool = False
-    freshness_summary: dict = field(default_factory=dict)
+    freshness_summary: dict[str, Any] = field(default_factory=dict)

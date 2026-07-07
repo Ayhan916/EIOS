@@ -3,11 +3,13 @@
 Revision ID: 073
 Revises: 072
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSON
+
+from alembic import op
 
 revision = "073"
 down_revision = "072"
@@ -67,7 +69,9 @@ def upgrade() -> None:
         sa.Column("calc_version", sa.String(10), nullable=False, server_default="1.0"),
         sa.Column("calculated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("calculated_by", sa.String(36), nullable=True),
-        sa.UniqueConstraint("organization_id", "reporting_year", name="uq_scope3_inventory_org_year"),
+        sa.UniqueConstraint(
+            "organization_id", "reporting_year", name="uq_scope3_inventory_org_year"
+        ),
     )
     op.create_index("ix_scope3_inv_org", "scope3_inventories", ["organization_id"])
     op.create_index("ix_scope3_inv_year", "scope3_inventories", ["reporting_year"])

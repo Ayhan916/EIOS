@@ -15,8 +15,9 @@ Create Date: 2026-06-19
 """
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects import postgresql
+
+from alembic import op
 
 revision = "029"
 down_revision = "028"
@@ -49,8 +50,12 @@ def upgrade() -> None:
         sa.Column("report_hash", sa.String(64), nullable=False, server_default=""),
     )
     op.create_index("ix_dd_reports_org", "due_diligence_reports", ["organization_id"])
-    op.create_index("ix_dd_reports_org_type", "due_diligence_reports", ["organization_id", "report_type"])
-    op.create_index("ix_dd_reports_org_framework", "due_diligence_reports", ["organization_id", "framework"])
+    op.create_index(
+        "ix_dd_reports_org_type", "due_diligence_reports", ["organization_id", "report_type"]
+    )
+    op.create_index(
+        "ix_dd_reports_org_framework", "due_diligence_reports", ["organization_id", "framework"]
+    )
 
     # Immutability trigger — same pattern as compliance_reports, reporting_packages, board_reports
     op.execute("""

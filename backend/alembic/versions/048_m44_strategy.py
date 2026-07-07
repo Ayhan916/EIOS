@@ -37,6 +37,7 @@ Migration integrity:
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "048"
@@ -83,7 +84,9 @@ def upgrade() -> None:
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="1"),
         sa.Column("is_final", sa.Boolean, nullable=False, server_default="0"),
     )
-    op.create_index("ix_enterprise_digital_twins_org", "enterprise_digital_twins", ["organization_id"])
+    op.create_index(
+        "ix_enterprise_digital_twins_org", "enterprise_digital_twins", ["organization_id"]
+    )
 
     # ── 2: digital_twin_snapshots (child of enterprise_digital_twins) ────────
     op.create_table(
@@ -91,7 +94,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "twin_id", sa.String(36),
+            "twin_id",
+            sa.String(36),
             sa.ForeignKey("enterprise_digital_twins.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -132,7 +136,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "plan_id", sa.String(36),
+            "plan_id",
+            sa.String(36),
             sa.ForeignKey("strategic_plans.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -173,7 +178,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "scenario_id", sa.String(36),
+            "scenario_id",
+            sa.String(36),
             sa.ForeignKey("strategy_scenarios.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -194,7 +200,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "scenario_id", sa.String(36),
+            "scenario_id",
+            sa.String(36),
             sa.ForeignKey("strategy_scenarios.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -248,7 +255,9 @@ def upgrade() -> None:
         sa.Column("recovery_timeline_months", sa.Integer, nullable=True),
         sa.Column("is_final", sa.Boolean, nullable=False, server_default="0"),
     )
-    op.create_index("ix_supplier_shock_scenarios_org", "supplier_shock_scenarios", ["organization_id"])
+    op.create_index(
+        "ix_supplier_shock_scenarios_org", "supplier_shock_scenarios", ["organization_id"]
+    )
 
     # ── 10: financial_stress_tests ────────────────────────────────────────────
     op.create_table(
@@ -292,7 +301,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "pathway_id", sa.String(36),
+            "pathway_id",
+            sa.String(36),
             sa.ForeignKey("transition_pathways.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -321,7 +331,9 @@ def upgrade() -> None:
         sa.Column("scenario_id", sa.String(36), nullable=True),
         sa.Column("methodology", sa.Text, nullable=True),
     )
-    op.create_index("ix_strategic_risk_projections_org", "strategic_risk_projections", ["organization_id"])
+    op.create_index(
+        "ix_strategic_risk_projections_org", "strategic_risk_projections", ["organization_id"]
+    )
 
     # ── 14: portfolio_optimizations ───────────────────────────────────────────
     op.create_table(
@@ -340,7 +352,9 @@ def upgrade() -> None:
         sa.Column("methodology", sa.Text, nullable=True),
         sa.Column("is_final", sa.Boolean, nullable=False, server_default="0"),
     )
-    op.create_index("ix_portfolio_optimizations_org", "portfolio_optimizations", ["organization_id"])
+    op.create_index(
+        "ix_portfolio_optimizations_org", "portfolio_optimizations", ["organization_id"]
+    )
 
     # ── 15: investment_scenarios (child of portfolio_optimizations) ───────────
     op.create_table(
@@ -348,7 +362,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "optimization_id", sa.String(36),
+            "optimization_id",
+            sa.String(36),
             sa.ForeignKey("portfolio_optimizations.id", ondelete="SET NULL"),
             nullable=True,
         ),
@@ -380,7 +395,9 @@ def upgrade() -> None:
         sa.Column("approved_by", sa.String(36), nullable=True),
         sa.Column("review_date", sa.DateTime(timezone=True), nullable=True),
     )
-    op.create_index("ix_forecast_methodology_records_org", "forecast_methodology_records", ["organization_id"])
+    op.create_index(
+        "ix_forecast_methodology_records_org", "forecast_methodology_records", ["organization_id"]
+    )
 
     # ── 17: forecast_models (child of forecast_methodology_records) ───────────
     op.create_table(
@@ -395,13 +412,16 @@ def upgrade() -> None:
         sa.Column("is_approved", sa.Boolean, nullable=False, server_default="0"),
         sa.Column("approved_by", sa.String(36), nullable=True),
         sa.Column(
-            "methodology_record_id", sa.String(36),
+            "methodology_record_id",
+            sa.String(36),
             sa.ForeignKey("forecast_methodology_records.id", ondelete="SET NULL"),
             nullable=True,
         ),
     )
     op.create_index("ix_forecast_models_org", "forecast_models", ["organization_id"])
-    op.create_index("ix_forecast_models_methodology_rec", "forecast_models", ["methodology_record_id"])
+    op.create_index(
+        "ix_forecast_models_methodology_rec", "forecast_models", ["methodology_record_id"]
+    )
 
     # ── 18: forecast_results (child of forecast_models) ──────────────────────
     op.create_table(
@@ -409,7 +429,8 @@ def upgrade() -> None:
         *_base(),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column(
-            "forecast_model_id", sa.String(36),
+            "forecast_model_id",
+            sa.String(36),
             sa.ForeignKey("forecast_models.id", ondelete="CASCADE"),
             nullable=False,
         ),
@@ -462,7 +483,9 @@ def upgrade() -> None:
         sa.Column("generated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("is_final", sa.Boolean, nullable=False, server_default="0"),
     )
-    op.create_index("ix_strategic_forecast_summaries_org", "strategic_forecast_summaries", ["organization_id"])
+    op.create_index(
+        "ix_strategic_forecast_summaries_org", "strategic_forecast_summaries", ["organization_id"]
+    )
 
     # ── 21: strategic_scenario_reports ───────────────────────────────────────
     op.create_table(
@@ -482,7 +505,9 @@ def upgrade() -> None:
         sa.Column("finalized_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("finalized_by", sa.String(36), nullable=True),
     )
-    op.create_index("ix_strategic_scenario_reports_org", "strategic_scenario_reports", ["organization_id"])
+    op.create_index(
+        "ix_strategic_scenario_reports_org", "strategic_scenario_reports", ["organization_id"]
+    )
 
 
 def downgrade() -> None:

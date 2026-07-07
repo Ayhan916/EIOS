@@ -11,10 +11,8 @@ Security:
 from __future__ import annotations
 
 from typing import Any
-from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from domain.user import User
@@ -71,16 +69,18 @@ def get_visualization_data(
     edges = []
 
     # Center node = the company itself
-    nodes.append({
-        "id": "company",
-        "type": "company",
-        "label": "Mein Unternehmen",
-        "chain_direction": "both",
-        "tier": 0,
-        "risk_score": None,
-        "risk_band": None,
-        "color": "#3b82f6",
-    })
+    nodes.append(
+        {
+            "id": "company",
+            "type": "company",
+            "label": "Mein Unternehmen",
+            "chain_direction": "both",
+            "tier": 0,
+            "risk_score": None,
+            "risk_band": None,
+            "color": "#3b82f6",
+        }
+    )
 
     for s in suppliers:
         sid = str(s.id)
@@ -95,27 +95,31 @@ def get_visualization_data(
         except (ValueError, AttributeError):
             tier_num = 1
 
-        nodes.append({
-            "id": sid,
-            "type": direction,
-            "label": s.name,
-            "chain_direction": direction,
-            "downstream_type": getattr(s, "downstream_type", None),
-            "tier": tier_num,
-            "country": s.country,
-            "industry": s.industry,
-            "risk_score": score_data.get("risk_score"),
-            "risk_band": risk_band,
-            "color": color,
-        })
+        nodes.append(
+            {
+                "id": sid,
+                "type": direction,
+                "label": s.name,
+                "chain_direction": direction,
+                "downstream_type": getattr(s, "downstream_type", None),
+                "tier": tier_num,
+                "country": s.country,
+                "industry": s.industry,
+                "risk_score": score_data.get("risk_score"),
+                "risk_band": risk_band,
+                "color": color,
+            }
+        )
 
         # Edge from company to tier-1, else from tier (N-1) placeholder to tier N
-        edges.append({
-            "id": f"e-{sid}",
-            "source": "company",
-            "target": sid,
-            "direction": direction,
-        })
+        edges.append(
+            {
+                "id": f"e-{sid}",
+                "source": "company",
+                "target": sid,
+                "direction": direction,
+            }
+        )
 
     upstream = [n for n in nodes if n["chain_direction"] == "upstream"]
     downstream = [n for n in nodes if n["chain_direction"] == "downstream"]
@@ -149,9 +153,21 @@ def get_chain_stats(
         .all()
     )
 
-    upstream = [s for s in all_suppliers if (getattr(s, "chain_direction", "upstream") or "upstream") == "upstream"]
-    downstream = [s for s in all_suppliers if (getattr(s, "chain_direction", "upstream") or "upstream") == "downstream"]
-    both = [s for s in all_suppliers if (getattr(s, "chain_direction", "upstream") or "upstream") == "both"]
+    upstream = [
+        s
+        for s in all_suppliers
+        if (getattr(s, "chain_direction", "upstream") or "upstream") == "upstream"
+    ]
+    downstream = [
+        s
+        for s in all_suppliers
+        if (getattr(s, "chain_direction", "upstream") or "upstream") == "downstream"
+    ]
+    both = [
+        s
+        for s in all_suppliers
+        if (getattr(s, "chain_direction", "upstream") or "upstream") == "both"
+    ]
 
     # Downstream type breakdown
     type_breakdown: dict[str, int] = {}
@@ -164,6 +180,8 @@ def get_chain_stats(
         "upstream_count": len(upstream),
         "downstream_count": len(downstream),
         "both_count": len(both),
-        "downstream_coverage_pct": round(len(downstream) / len(all_suppliers) * 100, 1) if all_suppliers else 0.0,
+        "downstream_coverage_pct": round(len(downstream) / len(all_suppliers) * 100, 1)
+        if all_suppliers
+        else 0.0,
         "downstream_type_breakdown": type_breakdown,
     }

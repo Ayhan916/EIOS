@@ -22,8 +22,8 @@ from interfaces.api.deps import (
 )
 from interfaces.api.schemas.evidence import (
     DocumentUploadResponse,
-    EvidenceDownloadResponse,
     EvidenceCreate,
+    EvidenceDownloadResponse,
     EvidenceResponse,
     IngestionStatusResponse,
 )
@@ -174,8 +174,9 @@ async def upload_document(
     # ── Async path (S3 enabled): store → dispatch Celery task → 202 ──────────
     if settings.s3_enabled:
         import uuid as _uuid  # noqa: PLC0415
-        from infrastructure.storage.s3 import upload_file  # noqa: PLC0415
+
         from infrastructure.celery.tasks.ingestion import ingest_evidence_task  # noqa: PLC0415
+        from infrastructure.storage.s3 import upload_file  # noqa: PLC0415
 
         s3_key = (
             f"{evidence.organization_id or 'global'}/evidences"
@@ -286,8 +287,10 @@ async def get_ingestion_status(
     task_result = None
 
     if task_id and settings.s3_enabled:
-        from infrastructure.celery.app import celery_app  # noqa: PLC0415
         from celery.result import AsyncResult  # noqa: PLC0415
+
+        from infrastructure.celery.app import celery_app  # noqa: PLC0415
+
         ar = AsyncResult(task_id, app=celery_app)
         task_state = ar.state
         if ar.successful():
@@ -341,6 +344,7 @@ async def download_evidence_file(
         )
 
     from infrastructure.storage.s3 import generate_presigned_url  # noqa: PLC0415
+
     presigned_url = await generate_presigned_url(s3_key)
 
     return EvidenceDownloadResponse(
@@ -393,6 +397,7 @@ async def delete_evidence(
 
 # ── Document version history (G-045) ─────────────────────────────────────────
 
+
 @router.get("/{evidence_id}/versions", response_model=list[dict])
 async def list_evidence_versions(
     evidence_id: str,
@@ -404,9 +409,11 @@ async def list_evidence_versions(
     Each version corresponds to a file that was previously the current version.
     The current file is in the evidence record itself; prior versions are here.
     """
-    from infrastructure.persistence.models.evidence_version import EvidenceVersionModel  # noqa: PLC0415
-    from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from sqlalchemy import select  # noqa: PLC0415
+
+    from infrastructure.persistence.models.evidence_version import (
+        EvidenceVersionModel,  # noqa: PLC0415
+    )
 
     evidence = await repo.get_by_id(evidence_id)
     if evidence is None:
@@ -419,7 +426,6 @@ async def list_evidence_versions(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Evidence not found")
 
     # Access via the repo session (injected through get_evidence_repo → get_db)
-    from interfaces.api.deps import get_db  # noqa: PLC0415
     stmt = (
         select(EvidenceVersionModel)
         .where(EvidenceVersionModel.evidence_id == evidence_id)

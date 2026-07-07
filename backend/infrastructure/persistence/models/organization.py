@@ -23,9 +23,7 @@ class OrganizationModel(BaseModel):
     # EU | UK | US | APAC
     data_residency: Mapped[str | None] = mapped_column(String(10), nullable=True)
     # PUBLIC | INTERNAL | CONFIDENTIAL | RESTRICTED
-    data_classification: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="INTERNAL"
-    )
+    data_classification: Mapped[str] = mapped_column(String(20), nullable=False, default="INTERNAL")
 
     users: Mapped[list[UserModel]] = relationship(back_populates="organization")
     sectors: Mapped[list[SectorModel]] = relationship(back_populates="organization")

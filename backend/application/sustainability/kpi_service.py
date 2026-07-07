@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
-from typing import Any
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -85,9 +84,7 @@ def list_kpis(
     limit: int = 50,
     offset: int = 0,
 ) -> list[ESGKPIModel]:
-    q = session.query(ESGKPIModel).filter(
-        ESGKPIModel.organization_id == organization_id
-    )
+    q = session.query(ESGKPIModel).filter(ESGKPIModel.organization_id == organization_id)
     if category:
         q = q.filter(ESGKPIModel.category == category)
     if active_only:
@@ -259,9 +256,7 @@ def list_alerts(
     limit: int = 50,
     offset: int = 0,
 ) -> list[KPIAlertModel]:
-    q = session.query(KPIAlertModel).filter(
-        KPIAlertModel.organization_id == organization_id
-    )
+    q = session.query(KPIAlertModel).filter(KPIAlertModel.organization_id == organization_id)
     if kpi_id:
         q = q.filter(KPIAlertModel.kpi_id == kpi_id)
     if unresolved_only:

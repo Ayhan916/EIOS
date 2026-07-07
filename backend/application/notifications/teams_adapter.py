@@ -61,18 +61,22 @@ def build_adaptive_card(
     ]
 
     if facts:
-        card_body.append({
-            "type": "FactSet",
-            "facts": facts,
-        })
+        card_body.append(
+            {
+                "type": "FactSet",
+                "facts": facts,
+            }
+        )
 
     actions = []
     if action_url:
-        actions.append({
-            "type": "Action.OpenUrl",
-            "title": "View in EIOS",
-            "url": action_url,
-        })
+        actions.append(
+            {
+                "type": "Action.OpenUrl",
+                "title": "View in EIOS",
+                "url": action_url,
+            }
+        )
 
     payload: dict[str, Any] = {
         "type": "message",

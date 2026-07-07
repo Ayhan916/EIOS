@@ -13,9 +13,7 @@ class CopilotConversationModel(BaseModel):
     """Persistent conversation thread between a user and the Copilot."""
 
     __tablename__ = "copilot_conversations"
-    __table_args__ = (
-        Index("ix_copilot_convs_org_user", "organization_id", "user_id"),
-    )
+    __table_args__ = (Index("ix_copilot_convs_org_user", "organization_id", "user_id"),)
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)

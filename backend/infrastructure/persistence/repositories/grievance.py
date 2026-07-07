@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import GrievanceCategory, GrievanceStatus
 from domain.supplier_portal import GrievanceReport
 from infrastructure.persistence.models.supplier_portal import GrievanceReportModel
 from infrastructure.persistence.repositories.base import BaseRepository
@@ -82,9 +81,8 @@ class SQLGrievanceRepository(BaseRepository[GrievanceReport, GrievanceReportMode
         limit: int = 50,
         offset: int = 0,
     ) -> list[GrievanceReport]:
-        stmt = (
-            select(GrievanceReportModel)
-            .where(GrievanceReportModel.organization_id == organization_id)
+        stmt = select(GrievanceReportModel).where(
+            GrievanceReportModel.organization_id == organization_id
         )
         if status_filter:
             stmt = stmt.where(GrievanceReportModel.grievance_status == status_filter)
@@ -105,6 +103,7 @@ class SQLGrievanceRepository(BaseRepository[GrievanceReport, GrievanceReportMode
     async def count_by_org(self, organization_id: str) -> dict[str, int]:
         """Return counts grouped by status for summary reporting."""
         from sqlalchemy import func
+
         stmt = (
             select(GrievanceReportModel.grievance_status, func.count().label("n"))
             .where(GrievanceReportModel.organization_id == organization_id)

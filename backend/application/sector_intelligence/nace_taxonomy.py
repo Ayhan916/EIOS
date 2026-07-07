@@ -231,6 +231,7 @@ def normalize_nace(raw: str) -> str | None:
     Returns: zero-padded 2-digit string like "29" or "01", or None if unknown.
     """
     import re
+
     cleaned = re.sub(r"[^0-9]", "", raw.strip())
     if not cleaned:
         return None

@@ -57,9 +57,7 @@ class SQLNotificationRepository(BaseRepository[Notification, NotificationModel])
             dedupe_key=model.dedupe_key,
         )
 
-    async def list_for_user(
-        self, user_id: str, limit: int = 50
-    ) -> list[Notification]:
+    async def list_for_user(self, user_id: str, limit: int = 50) -> list[Notification]:
         stmt = (
             select(NotificationModel)
             .where(NotificationModel.user_id == user_id)
@@ -102,8 +100,6 @@ class SQLNotificationRepository(BaseRepository[Notification, NotificationModel])
         await self._session.flush()
 
     async def exists_by_dedupe_key(self, dedupe_key: str) -> bool:
-        stmt = select(NotificationModel).where(
-            NotificationModel.dedupe_key == dedupe_key
-        )
+        stmt = select(NotificationModel).where(NotificationModel.dedupe_key == dedupe_key)
         result = await self._session.execute(stmt)
         return result.scalar_one_or_none() is not None

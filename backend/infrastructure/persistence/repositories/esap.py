@@ -1,7 +1,8 @@
 """Repository — ESAP Submissions (CSDDD-009)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -13,7 +14,7 @@ from infrastructure.persistence.models.esap import ESAPSubmissionModel
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _to_domain(m: ESAPSubmissionModel) -> ESAPSubmission:
@@ -37,9 +38,11 @@ class SQLESAPRepository:
         self._s = session
 
     def list_org(self, organization_id: str) -> list[ESAPSubmission]:
-        stmt = select(ESAPSubmissionModel).where(
-            ESAPSubmissionModel.organization_id == organization_id
-        ).order_by(ESAPSubmissionModel.report_year.desc())
+        stmt = (
+            select(ESAPSubmissionModel)
+            .where(ESAPSubmissionModel.organization_id == organization_id)
+            .order_by(ESAPSubmissionModel.report_year.desc())
+        )
         return [_to_domain(m) for m in self._s.execute(stmt).scalars().all()]
 
     def get(self, submission_id: str, organization_id: str) -> ESAPSubmission | None:

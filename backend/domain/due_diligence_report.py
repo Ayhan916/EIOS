@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -21,5 +22,5 @@ class DueDiligenceReport(BaseEntity):
     framework_version: str = ""  # e.g. "2023"
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     generated_by: str = ""
-    report_data: dict = field(default_factory=dict)
+    report_data: dict[str, Any] = field(default_factory=dict)
     report_hash: str = ""

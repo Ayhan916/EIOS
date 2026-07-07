@@ -30,7 +30,6 @@ from datetime import UTC, datetime
 
 import structlog
 from fastapi import Depends, HTTPException, Request, Response, status
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -45,6 +44,7 @@ _SKIP_PATHS = frozenset({"/health", "/metrics", "/docs", "/redoc", "/openapi.jso
 # ─────────────────────────────────────────────────────────────────────────────
 # Advisory middleware — post-handler audit logging
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class RegionEnforcementMiddleware(BaseHTTPMiddleware):
     """Log cross-region access events AFTER the handler completes."""
@@ -100,6 +100,7 @@ class RegionEnforcementMiddleware(BaseHTTPMiddleware):
 # Strict enforcement — FastAPI dependency (opt-in per router)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def enforce_data_residency(
     request: Request,
     session: AsyncSession = Depends(lambda: None),  # real dep injected at use site
@@ -148,6 +149,7 @@ async def enforce_data_residency(
 # Background DB write
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 async def _write_audit_log(
     *,
     org_id: str | None,
@@ -162,7 +164,9 @@ async def _write_audit_log(
 ) -> None:
     try:
         from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
-        from infrastructure.persistence.models.region import DataResidencyAuditLogModel  # noqa: PLC0415
+        from infrastructure.persistence.models.region import (
+            DataResidencyAuditLogModel,  # noqa: PLC0415
+        )
 
         now = datetime.now(UTC)
         entry = DataResidencyAuditLogModel(

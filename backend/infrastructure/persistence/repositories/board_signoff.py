@@ -1,7 +1,8 @@
 """Repositories — Board Sign-off Trail (CSDDD Art. 22)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
@@ -9,11 +10,14 @@ from sqlalchemy.orm import Session
 
 from domain.board_signoff import BoardDecision, BoardSignoffRequest
 from domain.enums import BoardSignoffStatus
-from infrastructure.persistence.models.board_signoff import BoardDecisionModel, BoardSignoffRequestModel
+from infrastructure.persistence.models.board_signoff import (
+    BoardDecisionModel,
+    BoardSignoffRequestModel,
+)
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _request_to_domain(m: BoardSignoffRequestModel) -> BoardSignoffRequest:
@@ -132,16 +136,18 @@ class SQLBoardSignoffRepository:
         m.approved_by = approved_by
         m.approved_by_role = approved_by_role
         m.updated_at = _now()
-        self._s.add(BoardDecisionModel(
-            id=str(uuid4()),
-            organization_id=organization_id,
-            request_id=request_id,
-            decision="approved",
-            decided_by=approved_by,
-            decided_by_role=approved_by_role,
-            comment=comment,
-            decided_at=_now(),
-        ))
+        self._s.add(
+            BoardDecisionModel(
+                id=str(uuid4()),
+                organization_id=organization_id,
+                request_id=request_id,
+                decision="approved",
+                decided_by=approved_by,
+                decided_by_role=approved_by_role,
+                comment=comment,
+                decided_at=_now(),
+            )
+        )
         self._s.flush()
         return _request_to_domain(m)
 
@@ -160,16 +166,18 @@ class SQLBoardSignoffRepository:
         m.status = BoardSignoffStatus.REJECTED.value
         m.rejection_reason = reason
         m.updated_at = _now()
-        self._s.add(BoardDecisionModel(
-            id=str(uuid4()),
-            organization_id=organization_id,
-            request_id=request_id,
-            decision="rejected",
-            decided_by=rejected_by,
-            decided_by_role=rejected_by_role,
-            comment=reason,
-            decided_at=_now(),
-        ))
+        self._s.add(
+            BoardDecisionModel(
+                id=str(uuid4()),
+                organization_id=organization_id,
+                request_id=request_id,
+                decision="rejected",
+                decided_by=rejected_by,
+                decided_by_role=rejected_by_role,
+                comment=reason,
+                decided_at=_now(),
+            )
+        )
         self._s.flush()
         return _request_to_domain(m)
 
@@ -198,10 +206,7 @@ class SQLBoardSignoffRepository:
         pending = [r for r in all_r if r.status == BoardSignoffStatus.PENDING.value]
         approved = [r for r in all_r if r.status == BoardSignoffStatus.APPROVED.value]
         rejected = [r for r in all_r if r.status == BoardSignoffStatus.REJECTED.value]
-        overdue = [
-            r for r in pending
-            if r.due_date and r.due_date < _now()
-        ]
+        overdue = [r for r in pending if r.due_date and r.due_date < _now()]
         return {
             "total": len(all_r),
             "pending": len(pending),
@@ -210,7 +215,8 @@ class SQLBoardSignoffRepository:
             "overdue": len(overdue),
             "approval_rate_pct": round(
                 (len(approved) / (len(approved) + len(rejected)) * 100)
-                if (approved or rejected) else 0.0,
+                if (approved or rejected)
+                else 0.0,
                 1,
             ),
         }

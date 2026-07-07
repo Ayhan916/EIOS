@@ -21,7 +21,7 @@ from __future__ import annotations
 import time
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus
@@ -54,9 +54,11 @@ def _token_cost(model: str | None, input_tokens: int, output_tokens: int) -> flo
 # ── Benchmark suite ───────────────────────────────────────────────────────────
 # Each case: (name, module, dimension, run_fn) where run_fn() → (passed, score, expected, actual)
 
+
 def _bm_credibility_high() -> tuple[bool, float, str, str]:
     from application.intelligence_engine.source_credibility import get_credibility
-    r = get_credibility("eu_sanctions")   # official EU sanctions registry → High
+
+    r = get_credibility("eu_sanctions")  # official EU sanctions registry → High
     expected = "High"
     passed = r.level == expected
     return passed, 1.0 if passed else 0.0, expected, r.level
@@ -64,6 +66,7 @@ def _bm_credibility_high() -> tuple[bool, float, str, str]:
 
 def _bm_credibility_low() -> tuple[bool, float, str, str]:
     from application.intelligence_engine.source_credibility import get_credibility
+
     r = get_credibility("__completely_unknown_source_xyz__")  # unknown → Low (default)
     expected = "Low"
     passed = r.level == expected
@@ -72,7 +75,8 @@ def _bm_credibility_low() -> tuple[bool, float, str, str]:
 
 def _bm_credibility_news() -> tuple[bool, float, str, str]:
     from application.intelligence_engine.source_credibility import get_credibility
-    r = get_credibility("gdelt_news")   # GDELT news feed → Low (raw news)
+
+    r = get_credibility("gdelt_news")  # GDELT news feed → Low (raw news)
     expected = "Low"
     passed = r.level == expected
     return passed, 1.0 if passed else 0.0, expected, r.level
@@ -80,19 +84,22 @@ def _bm_credibility_news() -> tuple[bool, float, str, str]:
 
 def _bm_prio_ordering() -> tuple[bool, float, str, str]:
     from application.due_diligence.prioritization_engine import compute_prioritization
+
     suppliers = [
-        {"id": "s1", "name": "Alpha",  "supplier_tier": "Tier 1"},
-        {"id": "s2", "name": "Beta",   "supplier_tier": "Tier 1"},
-        {"id": "s3", "name": "Gamma",  "supplier_tier": "Tier 1"},
+        {"id": "s1", "name": "Alpha", "supplier_tier": "Tier 1"},
+        {"id": "s2", "name": "Beta", "supplier_tier": "Tier 1"},
+        {"id": "s3", "name": "Gamma", "supplier_tier": "Tier 1"},
     ]
     scores = {
         "s1": {"risk_band": "Critical", "risk_score": 90},
-        "s2": {"risk_band": "High",     "risk_score": 60},
-        "s3": {"risk_band": "Low",      "risk_score": 5},
+        "s2": {"risk_band": "High", "risk_score": 60},
+        "s3": {"risk_band": "Low", "risk_score": 5},
     }
     result = compute_prioritization(
-        organization_id="test", suppliers=suppliers,
-        supplier_scores=scores, finding_counts={},
+        organization_id="test",
+        suppliers=suppliers,
+        supplier_scores=scores,
+        finding_counts={},
     )
     expected = "s1,s2,s3"
     actual = ",".join(r["supplier_id"] for r in result)
@@ -102,11 +109,14 @@ def _bm_prio_ordering() -> tuple[bool, float, str, str]:
 
 def _bm_prio_severity_weight() -> tuple[bool, float, str, str]:
     from application.due_diligence.prioritization_engine import compute_prioritization
+
     suppliers = [{"id": "x", "name": "X", "supplier_tier": "Tier 1"}]
     scores = {"x": {"risk_band": "Critical", "risk_score": 100}}
     result = compute_prioritization(
-        organization_id="test", suppliers=suppliers,
-        supplier_scores=scores, finding_counts={"x": 15},
+        organization_id="test",
+        suppliers=suppliers,
+        supplier_scores=scores,
+        finding_counts={"x": 15},
     )
     score = result[0]["priority_score"]
     # Critical(4)*0.40 + 4.0*0.35 + 4.0*0.25 = 4.0; tier_factor=1.0 → 4.0
@@ -118,11 +128,20 @@ def _bm_prio_severity_weight() -> tuple[bool, float, str, str]:
 
 def _bm_lksg_sections() -> tuple[bool, float, str, str]:
     from application.due_diligence.lksg_statement_engine import build_lksg_statement
+
     result = build_lksg_statement(
-        organization_id="test", organization_name="Test GmbH", reporting_year=2025,
-        suppliers=[], supplier_scores={}, findings=[], risks=[],
-        recommendations=[], compliance_gaps=[], controls=[],
-        evidence_items=[], grievances=[],
+        organization_id="test",
+        organization_name="Test GmbH",
+        reporting_year=2025,
+        suppliers=[],
+        supplier_scores={},
+        findings=[],
+        risks=[],
+        recommendations=[],
+        compliance_gaps=[],
+        controls=[],
+        evidence_items=[],
+        grievances=[],
     )
     sections = [k for k in result if k.startswith("section_")]
     expected = "6"
@@ -133,6 +152,7 @@ def _bm_lksg_sections() -> tuple[bool, float, str, str]:
 
 def _bm_impact_summary_format() -> tuple[bool, float, str, str]:
     from application.regulatory.change_scanner import build_impact_summary
+
     result = build_impact_summary(
         framework_code="CSDDD",
         assessment_count=3,
@@ -147,6 +167,7 @@ def _bm_impact_summary_format() -> tuple[bool, float, str, str]:
 
 def _bm_regulatory_seed_count() -> tuple[bool, float, str, str]:
     from application.regulatory.change_scanner import REGULATORY_CHANGE_SEED
+
     expected = "5"
     actual = str(len(REGULATORY_CHANGE_SEED))
     passed = len(REGULATORY_CHANGE_SEED) >= 5
@@ -154,14 +175,14 @@ def _bm_regulatory_seed_count() -> tuple[bool, float, str, str]:
 
 
 _BENCHMARK_SUITE: list[tuple[str, str, str, object]] = [
-    ("CREDIBILITY_HIGH_SOURCE",    "source_credibility",  "accuracy", _bm_credibility_high),
-    ("CREDIBILITY_LOW_SOURCE",     "source_credibility",  "accuracy", _bm_credibility_low),
-    ("CREDIBILITY_NEWS_AGENCY",    "source_credibility",  "accuracy", _bm_credibility_news),
-    ("PRIORITIZATION_ORDERING",    "prioritization",      "accuracy", _bm_prio_ordering),
-    ("PRIORITIZATION_MAX_SCORE",   "prioritization",      "accuracy", _bm_prio_severity_weight),
-    ("LKSG_STATEMENT_SECTIONS",    "lksg_statement",      "accuracy", _bm_lksg_sections),
-    ("IMPACT_SUMMARY_FORMAT",      "regulatory_changes",  "accuracy", _bm_impact_summary_format),
-    ("REGULATORY_SEED_COUNT",      "regulatory_changes",  "accuracy", _bm_regulatory_seed_count),
+    ("CREDIBILITY_HIGH_SOURCE", "source_credibility", "accuracy", _bm_credibility_high),
+    ("CREDIBILITY_LOW_SOURCE", "source_credibility", "accuracy", _bm_credibility_low),
+    ("CREDIBILITY_NEWS_AGENCY", "source_credibility", "accuracy", _bm_credibility_news),
+    ("PRIORITIZATION_ORDERING", "prioritization", "accuracy", _bm_prio_ordering),
+    ("PRIORITIZATION_MAX_SCORE", "prioritization", "accuracy", _bm_prio_severity_weight),
+    ("LKSG_STATEMENT_SECTIONS", "lksg_statement", "accuracy", _bm_lksg_sections),
+    ("IMPACT_SUMMARY_FORMAT", "regulatory_changes", "accuracy", _bm_impact_summary_format),
+    ("REGULATORY_SEED_COUNT", "regulatory_changes", "accuracy", _bm_regulatory_seed_count),
 ]
 
 
@@ -199,9 +220,8 @@ def _run_benchmarks(evaluation_run_id: str, now: datetime) -> list[BenchmarkResu
 
 # ── Live metric computation ───────────────────────────────────────────────────
 
-async def _compute_live_metrics(
-    session: AsyncSession, window_days: int
-) -> dict:
+
+async def _compute_live_metrics(session: AsyncSession, window_days: int) -> dict:
     """Query agent_runs for the evaluation window and compute quality metrics."""
     now = datetime.now(UTC)
     cutoff_all = now - timedelta(days=window_days)
@@ -239,9 +259,7 @@ async def _compute_live_metrics(
 
     # Hallucination proxy: runs where confidence > 0.8 AND error is set
     # (overconfident but wrong)
-    high_conf_errors = sum(
-        1 for r in rows if r.error and (r.confidence or 0) > 0.8
-    )
+    high_conf_errors = sum(1 for r in rows if r.error and (r.confidence or 0) > 0.8)
     hallucination_rate = high_conf_errors / total if total else 0.0
 
     # Cost
@@ -264,6 +282,7 @@ async def _compute_live_metrics(
 
 
 # ── Public entry point ────────────────────────────────────────────────────────
+
 
 async def run_evaluation(
     session: AsyncSession,
@@ -289,6 +308,7 @@ async def run_evaluation(
 
     # 2 — Benchmarks
     from uuid import uuid4
+
     run_id = str(uuid4())
     bm_results = _run_benchmarks(run_id, now)
 

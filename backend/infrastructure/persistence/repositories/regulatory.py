@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from datetime import datetime
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -64,20 +62,22 @@ class SQLRegulationRepository(BaseRepository[Regulation, RegulationModel]):
 
     async def get_by_code(self, code: str) -> Regulation | None:
         row = (
-            await self._session.execute(
-                select(RegulationModel).where(RegulationModel.code == code)
-            )
+            await self._session.execute(select(RegulationModel).where(RegulationModel.code == code))
         ).scalar_one_or_none()
         return self._to_domain(row) if row else None
 
     async def list_active(self) -> list[Regulation]:
         rows = (
-            await self._session.execute(
-                select(RegulationModel)
-                .where(RegulationModel.reg_status == "active")
-                .order_by(RegulationModel.code)
+            (
+                await self._session.execute(
+                    select(RegulationModel)
+                    .where(RegulationModel.reg_status == "active")
+                    .order_by(RegulationModel.code)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
 
@@ -134,47 +134,55 @@ class SQLRegulationRequirementRepository(
     async def get_by_code(self, code: str) -> RegulationRequirement | None:
         row = (
             await self._session.execute(
-                select(RegulationRequirementModel).where(
-                    RegulationRequirementModel.code == code
-                )
+                select(RegulationRequirementModel).where(RegulationRequirementModel.code == code)
             )
         ).scalar_one_or_none()
         return self._to_domain(row) if row else None
 
     async def list_for_regulation(self, regulation_id: str) -> list[RegulationRequirement]:
         rows = (
-            await self._session.execute(
-                select(RegulationRequirementModel)
-                .where(RegulationRequirementModel.regulation_id == regulation_id)
-                .order_by(RegulationRequirementModel.code)
+            (
+                await self._session.execute(
+                    select(RegulationRequirementModel)
+                    .where(RegulationRequirementModel.regulation_id == regulation_id)
+                    .order_by(RegulationRequirementModel.code)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
     async def list_all_active(self) -> list[RegulationRequirement]:
         rows = (
-            await self._session.execute(
-                select(RegulationRequirementModel).order_by(RegulationRequirementModel.code)
+            (
+                await self._session.execute(
+                    select(RegulationRequirementModel).order_by(RegulationRequirementModel.code)
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
     async def list_by_codes(self, codes: list[str]) -> list[RegulationRequirement]:
         if not codes:
             return []
         rows = (
-            await self._session.execute(
-                select(RegulationRequirementModel).where(
-                    RegulationRequirementModel.code.in_(codes)
+            (
+                await self._session.execute(
+                    select(RegulationRequirementModel).where(
+                        RegulationRequirementModel.code.in_(codes)
+                    )
                 )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]
 
 
-class SQLRequirementMappingRepository(
-    BaseRepository[RequirementMapping, RequirementMappingModel]
-):
+class SQLRequirementMappingRepository(BaseRepository[RequirementMapping, RequirementMappingModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, RequirementMappingModel)
 
@@ -243,9 +251,7 @@ class SQLRequirementMappingRepository(
         if entity_id:
             stmt = stmt.where(RequirementMappingModel.entity_id == entity_id)
         if requirement_id:
-            stmt = stmt.where(
-                RequirementMappingModel.regulation_requirement_id == requirement_id
-            )
+            stmt = stmt.where(RequirementMappingModel.regulation_requirement_id == requirement_id)
         if supplier_id:
             stmt = stmt.where(RequirementMappingModel.supplier_id == supplier_id)
         if assessment_id:
@@ -256,12 +262,16 @@ class SQLRequirementMappingRepository(
 
     async def get_covered_requirement_ids(self, organization_id: str) -> set[str]:
         rows = (
-            await self._session.execute(
-                select(RequirementMappingModel.regulation_requirement_id)
-                .where(RequirementMappingModel.organization_id == organization_id)
-                .distinct()
+            (
+                await self._session.execute(
+                    select(RequirementMappingModel.regulation_requirement_id)
+                    .where(RequirementMappingModel.organization_id == organization_id)
+                    .distinct()
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return set(rows)
 
     async def exists(
@@ -364,9 +374,7 @@ class SQLComplianceGapRepository(BaseRepository[ComplianceGap, ComplianceGapMode
         if gap_type:
             stmt = stmt.where(ComplianceGapModel.gap_type == gap_type)
         if requirement_id:
-            stmt = stmt.where(
-                ComplianceGapModel.regulation_requirement_id == requirement_id
-            )
+            stmt = stmt.where(ComplianceGapModel.regulation_requirement_id == requirement_id)
         if not include_resolved:
             stmt = stmt.where(ComplianceGapModel.is_resolved.is_(False))
         stmt = stmt.order_by(ComplianceGapModel.calculated_at.desc()).limit(limit)
@@ -376,6 +384,7 @@ class SQLComplianceGapRepository(BaseRepository[ComplianceGap, ComplianceGapMode
     async def delete_unresolved_for_org(self, organization_id: str) -> int:
         """Remove open (unresolved) gaps before a recalculation run."""
         from sqlalchemy import delete  # noqa: PLC0415
+
         result = await self._session.execute(
             delete(ComplianceGapModel).where(
                 ComplianceGapModel.organization_id == organization_id,

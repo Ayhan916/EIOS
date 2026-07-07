@@ -70,13 +70,10 @@ _POLICY_SQL = (
 def upgrade() -> None:
     for table in _ORG_SCOPED_TABLES:
         op.execute(
-            f"CREATE POLICY eios_rls_org_isolation ON {table} AS RESTRICTIVE "
-            f"USING ({_POLICY_SQL})"
+            f"CREATE POLICY eios_rls_org_isolation ON {table} AS RESTRICTIVE USING ({_POLICY_SQL})"
         )
 
 
 def downgrade() -> None:
     for table in reversed(_ORG_SCOPED_TABLES):
-        op.execute(
-            f"DROP POLICY IF EXISTS eios_rls_org_isolation ON {table}"
-        )
+        op.execute(f"DROP POLICY IF EXISTS eios_rls_org_isolation ON {table}")

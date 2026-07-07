@@ -33,5 +33,7 @@ class BoardAccessTokenModel(Base):
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)
     # Optional: email of the person the link was shared with (for audit trail)
     shared_with_email: Mapped[str | None] = mapped_column(String(254), nullable=True)
-    last_accessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_accessed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     access_count: Mapped[int] = mapped_column(nullable=False, default=0)

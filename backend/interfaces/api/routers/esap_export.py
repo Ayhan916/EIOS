@@ -9,9 +9,10 @@ GET  /esap/submissions/{id}      get submission
 POST /esap/submissions/{id}/ready   mark ready
 POST /esap/submissions/{id}/submit  record ESAP submission (manual)
 """
+
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, ConfigDict, Field
@@ -37,9 +38,9 @@ class SubmissionOut(BaseModel):
     report_year: int
     export_format: str
     status: str
-    submitted_at: Optional[Any]
-    submitted_by: Optional[str]
-    confirmation_reference: Optional[str]
+    submitted_at: Any | None
+    submitted_by: str | None
+    confirmation_reference: str | None
     notes: str
     created_at: Any
     updated_at: Any
@@ -76,7 +77,10 @@ def export_report(
     if fmt == "xml":
         xml_str = to_xml(bundle)
         return Response(content=xml_str, media_type="application/xml")
-    return {"export": to_json(bundle), "validation": {"is_valid": bundle.is_valid, "missing_fields": bundle.missing_fields}}
+    return {
+        "export": to_json(bundle),
+        "validation": {"is_valid": bundle.is_valid, "missing_fields": bundle.missing_fields},
+    }
 
 
 @router.get("/validate")
@@ -163,7 +167,9 @@ def record_submission(
 ):
     """Record that the ESAP submission was made manually (no direct API yet)."""
     repo = SQLESAPRepository(db)
-    s = repo.mark_submitted(submission_id, user.organization_id, body.submitted_by, body.confirmation_reference)
+    s = repo.mark_submitted(
+        submission_id, user.organization_id, body.submitted_by, body.confirmation_reference
+    )
     if not s:
         raise HTTPException(status_code=404, detail="Submission not found")
     db.commit()

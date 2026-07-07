@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import time
 from unittest.mock import AsyncMock, patch
 
@@ -27,9 +26,7 @@ async def test_retry_exponential_backoff_delays():
 
     # Use very small base_delay for test speed
     with patch("asyncio.sleep", new_callable=AsyncMock) as mock_sleep:
-        result = await run_with_retry(
-            coro_factory, max_retries=3, base_delay=1.0
-        )
+        result = await run_with_retry(coro_factory, max_retries=3, base_delay=1.0)
 
     assert result == "done"
     # asyncio.sleep called twice (after attempt 0 and attempt 1)
@@ -90,7 +87,7 @@ async def test_retry_succeeds_on_last_attempt():
         nonlocal call_count
         call_count += 1
         if call_count < 4:
-            raise IOError("transient")
+            raise OSError("transient")
         return "ok"
 
     with patch("asyncio.sleep", new_callable=AsyncMock):

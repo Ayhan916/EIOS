@@ -27,19 +27,75 @@ logger = structlog.get_logger(__name__)
 # Legal suffixes to strip before comparison
 _LEGAL_SUFFIXES = {
     # Legal entity forms
-    "gmbh", "ag", "bv", "ltd", "llc", "inc", "corp", "sa", "sas", "spa",
-    "nv", "plc", "co", "pty", "pte", "ab", "as", "oy", "kk", "srl", "sl",
-    "bvba", "mbh", "se", "ug", "kg", "ohg", "gbr", "eg", "ev", "vvag",
+    "gmbh",
+    "ag",
+    "bv",
+    "ltd",
+    "llc",
+    "inc",
+    "corp",
+    "sa",
+    "sas",
+    "spa",
+    "nv",
+    "plc",
+    "co",
+    "pty",
+    "pte",
+    "ab",
+    "as",
+    "oy",
+    "kk",
+    "srl",
+    "sl",
+    "bvba",
+    "mbh",
+    "se",
+    "ug",
+    "kg",
+    "ohg",
+    "gbr",
+    "eg",
+    "ev",
+    "vvag",
     # Generic organizational words
-    "holding", "holdings", "group", "international", "industries", "industrial",
-    "technologies", "technology", "solutions", "services", "europe", "global",
-    "supply", "chain", "automotive", "manufacturing",
+    "holding",
+    "holdings",
+    "group",
+    "international",
+    "industries",
+    "industrial",
+    "technologies",
+    "technology",
+    "solutions",
+    "services",
+    "europe",
+    "global",
+    "supply",
+    "chain",
+    "automotive",
+    "manufacturing",
     # Common industry domain words — too generic to uniquely identify a company
     # Without these, "PISHGAM ENERGY INDUSTRIES" falsely matches "Siemens Energy AG"
     # (shared token: "energy"; Jaccard 0.5 ≥ threshold 0.45)
-    "energy", "systems", "engineering", "motors", "electric", "electronics",
-    "components", "parts", "chemicals", "chemical", "materials", "resources",
-    "power", "gas", "oil", "trading", "enterprise", "enterprises",
+    "energy",
+    "systems",
+    "engineering",
+    "motors",
+    "electric",
+    "electronics",
+    "components",
+    "parts",
+    "chemicals",
+    "chemical",
+    "materials",
+    "resources",
+    "power",
+    "gas",
+    "oil",
+    "trading",
+    "enterprise",
+    "enterprises",
 }
 
 _MATCH_THRESHOLD = 0.45  # token overlap needed for a match
@@ -105,18 +161,17 @@ def match_entity_name(
 
         confidence = min(1.0, overlap + country_boost)
 
-        if confidence >= threshold:
-            if best is None or confidence > best.confidence:
-                reason = f"token_overlap={overlap:.2f} shared={sorted(shared)}"
-                if country_boost:
-                    reason += f" country_match={entity_country}"
-                best = MatchResult(
-                    supplier_id=supplier["id"],
-                    supplier_name=supplier["name"],
-                    entity_name=entity_name,
-                    confidence=confidence,
-                    match_reason=reason,
-                )
+        if confidence >= threshold and (best is None or confidence > best.confidence):
+            reason = f"token_overlap={overlap:.2f} shared={sorted(shared)}"
+            if country_boost:
+                reason += f" country_match={entity_country}"
+            best = MatchResult(
+                supplier_id=supplier["id"],
+                supplier_name=supplier["name"],
+                entity_name=entity_name,
+                confidence=confidence,
+                match_reason=reason,
+            )
 
     return best
 
@@ -135,4 +190,7 @@ async def load_org_suppliers(org_id: str, session: AsyncSession) -> list[dict[st
         SupplierModel.status == "Active",
     )
     rows = (await session.execute(stmt)).all()
-    return [{"id": str(r.id), "name": r.name, "country": r.country or "", "industry": r.industry or ""} for r in rows]
+    return [
+        {"id": str(r.id), "name": r.name, "country": r.country or "", "industry": r.industry or ""}
+        for r in rows
+    ]

@@ -9,8 +9,8 @@ from __future__ import annotations
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_supplier(supplier_id="s-1", name="Acme Corp", status="Active", org_id="org-1"):
     s = MagicMock()
@@ -88,6 +88,7 @@ def _session_with_suppliers_and_scores(suppliers, score=None, open_count=0):
 
 # ── Risk Monitor — Detection Rules ────────────────────────────────────────────
 
+
 class TestRiskMonitorDetection:
     async def test_critical_risk_score_creates_critical_finding(self) -> None:
         from application.agent_monitoring import risk_monitor
@@ -111,12 +112,15 @@ class TestRiskMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch(
-            "application.agent_monitoring.risk_monitor.create_finding",
-            side_effect=_fake_create_finding,
-        ), patch(
-            "application.agent_monitoring.risk_monitor._maybe_escalate",
-            new_callable=lambda: lambda *a, **kw: AsyncMock(return_value=None)(),
+        with (
+            patch(
+                "application.agent_monitoring.risk_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch(
+                "application.agent_monitoring.risk_monitor._maybe_escalate",
+                new_callable=lambda: lambda *a, **kw: AsyncMock(return_value=None)(),
+            ),
         ):
             count = await risk_monitor.run(
                 agent_id="agent-1",
@@ -150,8 +154,13 @@ class TestRiskMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.risk_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch(
+                "application.agent_monitoring.risk_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()),
+        ):
             count = await risk_monitor.run("agent-1", "run-1", "org-1", session)
 
         assert count >= 1
@@ -165,8 +174,10 @@ class TestRiskMonitorDetection:
         score = _make_score(risk_score=40.0, esg_score=70.0, sector_percentile=60.0)
         session = _session_with_suppliers_and_scores([supplier], score=score, open_count=0)
 
-        with patch("application.agent_monitoring.risk_monitor.create_finding", new=AsyncMock()) as mock_create, \
-             patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch("application.agent_monitoring.risk_monitor.create_finding", new=AsyncMock()),
+            patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()),
+        ):
             count = await risk_monitor.run("agent-1", "run-1", "org-1", session)
 
         assert count == 0
@@ -197,9 +208,14 @@ class TestRiskMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.risk_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()):
-            count = await risk_monitor.run("agent-1", "run-1", "org-1", session)
+        with (
+            patch(
+                "application.agent_monitoring.risk_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()),
+        ):
+            await risk_monitor.run("agent-1", "run-1", "org-1", session)
 
         esg_findings = [f for f in created_findings if f.category == "esg_deterioration"]
         assert len(esg_findings) >= 1
@@ -226,8 +242,13 @@ class TestRiskMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.risk_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch(
+                "application.agent_monitoring.risk_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()),
+        ):
             await risk_monitor.run("agent-1", "run-1", "org-1", session)
 
         perc_findings = [f for f in created_findings if f.category == "benchmark_underperformance"]
@@ -255,8 +276,13 @@ class TestRiskMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.risk_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch(
+                "application.agent_monitoring.risk_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()),
+        ):
             await risk_monitor.run("agent-1", "run-1", "org-1", session)
 
         vol_findings = [f for f in created_findings if f.category == "findings_accumulation"]
@@ -281,14 +307,17 @@ class TestRiskMonitorDetection:
         # score = None for this supplier
         session = _session_with_suppliers_and_scores([supplier], score=None, open_count=0)
 
-        with patch("application.agent_monitoring.risk_monitor.create_finding", new=AsyncMock()) as mock_create, \
-             patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch("application.agent_monitoring.risk_monitor.create_finding", new=AsyncMock()),
+            patch("application.agent_monitoring.risk_monitor._maybe_escalate", new=AsyncMock()),
+        ):
             count = await risk_monitor.run("agent-1", "run-1", "org-1", session)
 
         assert count == 0
 
 
 # ── Remediation Monitor — Detection Rules ─────────────────────────────────────
+
 
 class TestRemediationMonitorDetection:
     def _session_remediation(self, suppliers, plans):
@@ -336,10 +365,20 @@ class TestRemediationMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.remediation_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()), \
-             patch("application.agent_monitoring.remediation_monitor._create_draft", new=AsyncMock(return_value=MagicMock())):
-            count = await remediation_monitor.run("agent-1", "run-1", "org-1", session)
+        with (
+            patch(
+                "application.agent_monitoring.remediation_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._create_draft",
+                new=AsyncMock(return_value=MagicMock()),
+            ),
+        ):
+            await remediation_monitor.run("agent-1", "run-1", "org-1", session)
 
         critical = [f for f in created_findings if f.severity == "CRITICAL"]
         assert len(critical) >= 1
@@ -369,10 +408,20 @@ class TestRemediationMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.remediation_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()), \
-             patch("application.agent_monitoring.remediation_monitor._create_draft", new=AsyncMock(return_value=None)):
-            count = await remediation_monitor.run("agent-1", "run-1", "org-1", session)
+        with (
+            patch(
+                "application.agent_monitoring.remediation_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._create_draft",
+                new=AsyncMock(return_value=None),
+            ),
+        ):
+            await remediation_monitor.run("agent-1", "run-1", "org-1", session)
 
         high_findings = [f for f in created_findings if f.severity == "HIGH"]
         assert len(high_findings) >= 1
@@ -388,8 +437,14 @@ class TestRemediationMonitorDetection:
         )
         session = self._session_remediation([supplier], [plan])
 
-        with patch("application.agent_monitoring.remediation_monitor.create_finding", new=AsyncMock()) as mock_create, \
-             patch("application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch(
+                "application.agent_monitoring.remediation_monitor.create_finding", new=AsyncMock()
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()
+            ),
+        ):
             count = await remediation_monitor.run("agent-1", "run-1", "org-1", session)
 
         # 1 plan is not >= _OPEN_PLANS_HIGH (10), so no volume finding either
@@ -421,9 +476,19 @@ class TestRemediationMonitorDetection:
             draft_calls.append(kwargs)
             return MagicMock()
 
-        with patch("application.agent_monitoring.remediation_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()), \
-             patch("application.agent_monitoring.remediation_monitor._create_draft", side_effect=_fake_create_draft):
+        with (
+            patch(
+                "application.agent_monitoring.remediation_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._create_draft",
+                side_effect=_fake_create_draft,
+            ),
+        ):
             await remediation_monitor.run("agent-1", "run-1", "org-1", session)
 
         assert len(draft_calls) >= 1
@@ -459,8 +524,15 @@ class TestRemediationMonitorDetection:
             created_findings.append(f)
             return f
 
-        with patch("application.agent_monitoring.remediation_monitor.create_finding", side_effect=_fake_create_finding), \
-             patch("application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()):
+        with (
+            patch(
+                "application.agent_monitoring.remediation_monitor.create_finding",
+                side_effect=_fake_create_finding,
+            ),
+            patch(
+                "application.agent_monitoring.remediation_monitor._maybe_escalate", new=AsyncMock()
+            ),
+        ):
             await remediation_monitor.run("agent-1", "run-1", "org-1", session)
 
         volume_findings = [f for f in created_findings if f.category == "remediation_volume"]
@@ -470,10 +542,12 @@ class TestRemediationMonitorDetection:
 
 # ── Human approval boundary ────────────────────────────────────────────────────
 
+
 class TestHumanApprovalBoundary:
     def test_risk_monitor_has_no_approve_calls(self) -> None:
         """Verify risk_monitor source does not call approve_draft or close anything."""
         import inspect
+
         from application.agent_monitoring import risk_monitor
 
         src = inspect.getsource(risk_monitor)
@@ -483,6 +557,7 @@ class TestHumanApprovalBoundary:
 
     def test_remediation_monitor_has_no_approve_calls(self) -> None:
         import inspect
+
         from application.agent_monitoring import remediation_monitor
 
         src = inspect.getsource(remediation_monitor)
@@ -491,6 +566,7 @@ class TestHumanApprovalBoundary:
 
     def test_scheduler_has_no_approve_calls(self) -> None:
         import inspect
+
         from application.agent_monitoring import scheduler
 
         src = inspect.getsource(scheduler)

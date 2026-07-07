@@ -12,7 +12,7 @@ so no separate stored entity is needed in M3.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
@@ -52,7 +52,7 @@ class Product:
     # Commercial identifiers
     sku: str | None
     internal_code: str | None
-    gtin: str | None                    # EAN / barcode
+    gtin: str | None  # EAN / barcode
     # Classification
     category: str | None
     brand: str | None
@@ -61,7 +61,7 @@ class Product:
     weight_kg: float | None
     country_of_manufacture: str | None
     # Regulatory scope
-    is_regulated_product: bool          # subject to DPP / labelling obligations
+    is_regulated_product: bool  # subject to DPP / labelling obligations
     target_market: TargetMarket | None
     # Free text
     description: str | None
@@ -81,11 +81,11 @@ class ProductBOMItem:
     product_id: str
     material_id: str
     # Quantity fields (either weight_pct OR quantity+unit — both optional)
-    weight_pct: float | None            # % by weight of this material in the product
-    quantity: float | None              # absolute quantity
+    weight_pct: float | None  # % by weight of this material in the product
+    quantity: float | None  # absolute quantity
     unit: str | None
     # Flags
-    is_substance_of_concern: bool       # e.g. SVHC listed
+    is_substance_of_concern: bool  # e.g. SVHC listed
     # Notes
     notes: str | None
     # Audit

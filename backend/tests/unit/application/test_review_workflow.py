@@ -16,8 +16,7 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
-
+from application.collaboration.mentions import extract_mention_handles
 from domain.comment import Comment
 from domain.enums import (
     EntityStatus,
@@ -26,7 +25,6 @@ from domain.enums import (
     is_valid_review_transition,
 )
 from domain.review_action import ReviewAction
-from application.collaboration.mentions import extract_mention_handles
 
 
 class TestReviewStatusTransitions:
@@ -59,9 +57,7 @@ class TestReviewStatusTransitions:
         assert not is_valid_review_transition(ReviewStatus.DRAFT, ReviewStatus.CHANGES_REQUESTED)
 
     def test_changes_requested_to_approved_is_invalid(self) -> None:
-        assert not is_valid_review_transition(
-            ReviewStatus.CHANGES_REQUESTED, ReviewStatus.APPROVED
-        )
+        assert not is_valid_review_transition(ReviewStatus.CHANGES_REQUESTED, ReviewStatus.APPROVED)
 
 
 class TestMentionExtraction:

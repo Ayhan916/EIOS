@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -14,7 +14,7 @@ from infrastructure.persistence.models.strategy import StrategyMethodologyModel
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -114,9 +114,7 @@ def deprecate_methodology(
     return methodology
 
 
-def list_methodologies(
-    organization_id: str, session: Session
-) -> list[StrategyMethodologyModel]:
+def list_methodologies(organization_id: str, session: Session) -> list[StrategyMethodologyModel]:
     return (
         session.query(StrategyMethodologyModel)
         .filter(StrategyMethodologyModel.organization_id == organization_id)

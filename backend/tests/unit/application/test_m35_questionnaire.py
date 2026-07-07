@@ -100,7 +100,7 @@ class TestSaveAnswer:
 
         session.execute = AsyncMock(side_effect=execute_side_effect)
 
-        answer = await save_answer(
+        await save_answer(
             assignment_id="assign-1",
             question_id="q-1",
             supplier_user_id="u-1",

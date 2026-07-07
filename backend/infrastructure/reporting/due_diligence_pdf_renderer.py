@@ -7,7 +7,7 @@ Cursor drift fix applied: set_x(l_margin) + explicit val_w on multi_cell.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from fpdf import FPDF
@@ -16,7 +16,7 @@ from fpdf.enums import XPos, YPos
 _DARK = (30, 40, 55)
 _MID = (80, 95, 110)
 _LIGHT = (245, 247, 249)
-_ACCENT = (20, 110, 60)   # dark green for due diligence brand
+_ACCENT = (20, 110, 60)  # dark green for due diligence brand
 _WHITE = (255, 255, 255)
 _GREEN = (40, 130, 60)
 _AMBER = (180, 130, 0)
@@ -29,13 +29,20 @@ _BAND_COLOURS: dict[str, tuple[int, int, int]] = {
     "Low": _GREEN,
 }
 
-_UNICODE_MAP = str.maketrans({
-    "—": " - ", "–": "-",
-    "‘": "'", "’": "'",
-    "“": '"', "”": '"',
-    "…": "...", "•": "*",
-    " ": " ", "→": "->",
-})
+_UNICODE_MAP = str.maketrans(
+    {
+        "—": " - ",
+        "–": "-",
+        "‘": "'",
+        "’": "'",
+        "“": '"',
+        "”": '"',
+        "…": "...",
+        "•": "*",
+        " ": " ",
+        "→": "->",
+    }
+)
 
 
 def _latin1(text: str) -> str:
@@ -76,7 +83,8 @@ class _DueDiligencePDF(FPDF):
         self.set_font("Helvetica", "", 7)
         self.set_text_color(*_MID)
         self.cell(
-            0, 5,
+            0,
+            5,
             f"Page {self.page_no()}  |  EIOS Due Diligence Report  |  CONFIDENTIAL",
             align="C",
         )
@@ -97,7 +105,9 @@ class _DueDiligencePDF(FPDF):
         self.cell(0, 7, _safe(self._org), align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
         self.set_font("Helvetica", "", 9)
         self.set_text_color(*_MID)
-        self.cell(0, 6, f"Generated: {generated_at}", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT)
+        self.cell(
+            0, 6, f"Generated: {generated_at}", align="C", new_x=XPos.LMARGIN, new_y=YPos.NEXT
+        )
 
     def section_heading(self, title: str) -> None:
         self.ln(4)
@@ -173,7 +183,7 @@ def render_due_diligence_report(
     framework = meta.get("framework", "")
     framework_version = meta.get("framework_version", "")
     report_type = meta.get("report_type", "")
-    organization_id = meta.get("organization_id", "")
+    meta.get("organization_id", "")
     generated_at = meta.get("generated_at", _now_str())
     reporting_year = meta.get("reporting_year", "")
 
@@ -207,7 +217,10 @@ def render_due_diligence_report(
     supplier_section = report.get("supplier_inventory") or report.get("supply_chain")
     if supplier_section:
         pdf.section_heading("Supply Chain Overview")
-        pdf.metric_row("Total Suppliers", str(supplier_section.get("total", supplier_section.get("total_suppliers", 0))))
+        pdf.metric_row(
+            "Total Suppliers",
+            str(supplier_section.get("total", supplier_section.get("total_suppliers", 0))),
+        )
         for tier, count in (supplier_section.get("by_tier") or {}).items():
             pdf.metric_row(f"  {tier}", str(count))
 
@@ -217,14 +230,22 @@ def render_due_diligence_report(
         pdf.section_heading("Risk Classification")
         for band, val in risk_class.items():
             label = band.replace("_", " ").title()
-            colour = "Critical" if "critical" in band.lower() else ("High" if "high" in band.lower() else None)
+            colour = (
+                "Critical"
+                if "critical" in band.lower()
+                else ("High" if "high" in band.lower() else None)
+            )
             pdf.metric_row(label, str(val), band=colour)
 
     # ── Human rights ──────────────────────────────────────────────────────
     hr = report.get("human_rights")
     if hr:
         pdf.section_heading("Human Rights Findings")
-        pdf.metric_row("Total HR Findings", str(hr.get("total_findings", 0)), band="Critical" if hr.get("critical_findings", 0) > 0 else None)
+        pdf.metric_row(
+            "Total HR Findings",
+            str(hr.get("total_findings", 0)),
+            band="Critical" if hr.get("critical_findings", 0) > 0 else None,
+        )
         pdf.metric_row("Critical HR Findings", str(hr.get("critical_findings", 0)))
         pdf.metric_row("Suppliers Impacted", str(hr.get("suppliers_impacted", 0)))
 
@@ -254,7 +275,11 @@ def render_due_diligence_report(
     severe = report.get("severe_impacts")
     if severe:
         pdf.section_heading("Severe Adverse Impacts")
-        pdf.metric_row("Total Severe Impacts", str(severe.get("total", 0)), band="Critical" if severe.get("critical", 0) > 0 else None)
+        pdf.metric_row(
+            "Total Severe Impacts",
+            str(severe.get("total", 0)),
+            band="Critical" if severe.get("critical", 0) > 0 else None,
+        )
         pdf.metric_row("  Human Rights", str(severe.get("human_rights", 0)))
         pdf.metric_row("  Environmental", str(severe.get("environmental", 0)))
 
@@ -289,7 +314,12 @@ def render_due_diligence_report(
             pdf.cell(90, 5, _safe(s.get("supplier_name", ""), 50))
             pdf.set_font("Helvetica", "", 8)
             pdf.set_text_color(*_MID)
-            pdf.cell(0, 5, f"Risk: {s.get('risk_score', 0):.1f}  ESG: {s.get('esg_score', 100):.1f}", align="R")
+            pdf.cell(
+                0,
+                5,
+                f"Risk: {s.get('risk_score', 0):.1f}  ESG: {s.get('esg_score', 100):.1f}",
+                align="R",
+            )
             pdf.ln()
 
     # ── Explainability ────────────────────────────────────────────────────
@@ -302,4 +332,4 @@ def render_due_diligence_report(
 
 
 def _now_str() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")

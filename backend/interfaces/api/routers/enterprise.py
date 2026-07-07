@@ -19,8 +19,6 @@ Provides /api/v1/enterprise endpoints for:
 
 from __future__ import annotations
 
-from typing import Any
-
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -39,11 +37,11 @@ from interfaces.api.deps import get_current_user, get_db, require_admin, require
 from interfaces.api.schemas.enterprise import (
     AssignEnterpriseRoleRequest,
     AssignEnterpriseRoleResponse,
-    BusinessUnitCreate,
-    BusinessUnitResponse,
     BulkOperationResult,
     BulkRiskUpdate,
     BulkSupplierUpdate,
+    BusinessUnitCreate,
+    BusinessUnitResponse,
     EnterpriseCreate,
     EnterpriseDashboard,
     EnterpriseHealthScore,
@@ -70,14 +68,13 @@ from interfaces.api.schemas.enterprise import (
     RetentionRuleCreate,
     RetentionRuleResponse,
     SAMLCallbackRequest,
+    SCIMPerIdpUsage,
     SCIMTokenCreate,
     SCIMTokenCreateResponse,
     SCIMTokenResponse,
     SCIMTokenRotateResponse,
     SCIMUsageResponse,
-    SCIMPerIdpUsage,
     ScimUserCreate,
-    ScimUserResponse,
     SecretHealthResponse,
     SecretRotateRequest,
     SecretRotateResponse,
@@ -342,8 +339,11 @@ async def list_identity_providers(
     return result
 
 
-@router.post("/{enterprise_id}/identity/{idp_id}/group-mappings",
-             response_model=GroupMappingResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/{enterprise_id}/identity/{idp_id}/group-mappings",
+    response_model=GroupMappingResponse,
+    status_code=status.HTTP_201_CREATED,
+)
 async def create_group_mapping(
     enterprise_id: str,
     idp_id: str,
@@ -366,8 +366,9 @@ async def create_group_mapping(
     return GroupMappingResponse.model_validate(mapping)
 
 
-@router.get("/{enterprise_id}/identity/{idp_id}/group-mappings",
-            response_model=list[GroupMappingResponse])
+@router.get(
+    "/{enterprise_id}/identity/{idp_id}/group-mappings", response_model=list[GroupMappingResponse]
+)
 async def list_group_mappings(
     enterprise_id: str,
     idp_id: str,
@@ -407,6 +408,7 @@ async def rotate_identity_provider_secret(
 ) -> SecretRotateResponse:
     """Rotate the client_secret for an Identity Provider."""
     from datetime import UTC, datetime  # noqa: PLC0415
+
     try:
         ref = await sso_service.rotate_identity_provider_secret(
             idp_id=idp_id,
@@ -433,6 +435,7 @@ async def secrets_health(
 ) -> SecretHealthResponse:
     """Check secret provider connectivity. Admin only."""
     from datetime import UTC, datetime  # noqa: PLC0415
+
     from infrastructure.secrets.provider import get_secret_provider  # noqa: PLC0415
 
     provider = get_secret_provider()
@@ -466,12 +469,16 @@ async def saml_callback(
     via the injected SAMLAssertionValidator before any group claims are trusted.
     Groups come ONLY from the validated assertion — never from request body fields.
     """
-    from application.enterprise.sso_validation import (  # noqa: PLC0415
-        MockSAMLValidator, SSOValidationError, ValidatedIdentity, async_check_sso_rate_limit
-    )
-    from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
     import uuid as _uuid  # noqa: PLC0415
     from datetime import UTC, datetime  # noqa: PLC0415
+
+    from application.enterprise.sso_validation import (  # noqa: PLC0415
+        MockSAMLValidator,
+        SSOValidationError,
+        ValidatedIdentity,
+        async_check_sso_rate_limit,
+    )
+    from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
 
     client_ip = request.client.host if request.client else "unknown"
     if not await async_check_sso_rate_limit(enterprise_id, client_ip):
@@ -509,19 +516,26 @@ async def saml_callback(
         )
         validated.idp_id = body.idp_id  # production validator leaves this empty
     except SSOValidationError as exc:
-        session.add(AuditEventModel(
-            id=str(_uuid.uuid4()),
-            status="Active", version=1, created_at=now, updated_at=now,
-            action="sso.assertion.invalid",
-            entity_type="IdentityProvider",
-            entity_id=body.idp_id,
-            actor_id=None,
-            outcome="failure",
-            detail=str(exc),
-            event_metadata={"enterprise_id": enterprise_id, "idp_id": body.idp_id},
-        ))
+        session.add(
+            AuditEventModel(
+                id=str(_uuid.uuid4()),
+                status="Active",
+                version=1,
+                created_at=now,
+                updated_at=now,
+                action="sso.assertion.invalid",
+                entity_type="IdentityProvider",
+                entity_id=body.idp_id,
+                actor_id=None,
+                outcome="failure",
+                detail=str(exc),
+                event_metadata={"enterprise_id": enterprise_id, "idp_id": body.idp_id},
+            )
+        )
         await session.commit()
-        raise HTTPException(status_code=400, detail=f"SAML assertion invalid: {exc.reason}") from exc
+        raise HTTPException(
+            status_code=400, detail=f"SAML assertion invalid: {exc.reason}"
+        ) from exc
 
     result = await sso_service.process_sso_login(
         enterprise_id=enterprise_id,
@@ -540,7 +554,7 @@ async def saml_callback(
 async def oidc_callback(
     enterprise_id: str,
     body: OIDCCallbackRequest,
-    request: "Request",  # noqa: F821
+    request: Request,  # noqa: F821
     session: AsyncSession = Depends(get_db),
 ) -> SSOLoginResponse:
     """OIDC ID token callback endpoint.
@@ -548,12 +562,16 @@ async def oidc_callback(
     Validates the ID token via the injected OIDCTokenValidator before
     trusting any group claims.  Groups come ONLY from validated token claims.
     """
-    from application.enterprise.sso_validation import (  # noqa: PLC0415
-        MockOIDCValidator, SSOValidationError, ValidatedIdentity, async_check_sso_rate_limit
-    )
-    from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
     import uuid as _uuid  # noqa: PLC0415
     from datetime import UTC, datetime  # noqa: PLC0415
+
+    from application.enterprise.sso_validation import (  # noqa: PLC0415
+        MockOIDCValidator,
+        SSOValidationError,
+        ValidatedIdentity,
+        async_check_sso_rate_limit,
+    )
+    from infrastructure.persistence.models.audit_event import AuditEventModel  # noqa: PLC0415
 
     client_ip = request.client.host if request.client else "unknown"
     if not await async_check_sso_rate_limit(enterprise_id, client_ip):
@@ -591,17 +609,22 @@ async def oidc_callback(
         )
         validated.idp_id = body.idp_id  # production validator leaves this empty
     except SSOValidationError as exc:
-        session.add(AuditEventModel(
-            id=str(_uuid.uuid4()),
-            status="Active", version=1, created_at=now, updated_at=now,
-            action="sso.token.invalid",
-            entity_type="IdentityProvider",
-            entity_id=body.idp_id,
-            actor_id=None,
-            outcome="failure",
-            detail=str(exc),
-            event_metadata={"enterprise_id": enterprise_id, "idp_id": body.idp_id},
-        ))
+        session.add(
+            AuditEventModel(
+                id=str(_uuid.uuid4()),
+                status="Active",
+                version=1,
+                created_at=now,
+                updated_at=now,
+                action="sso.token.invalid",
+                entity_type="IdentityProvider",
+                entity_id=body.idp_id,
+                actor_id=None,
+                outcome="failure",
+                detail=str(exc),
+                event_metadata={"enterprise_id": enterprise_id, "idp_id": body.idp_id},
+            )
+        )
         await session.commit()
         raise HTTPException(status_code=400, detail=f"OIDC token invalid: {exc.reason}") from exc
 
@@ -821,7 +844,6 @@ async def get_enterprise_dashboard(
 
     from interfaces.api.schemas.enterprise import (
         BURollupItem,
-        EnterpriseHealthScore,
         RegionRollupItem,
     )
 
@@ -863,6 +885,7 @@ async def global_search(
         session=session,
     )
     from interfaces.api.schemas.enterprise import GlobalSearchHit
+
     return GlobalSearchResponse(
         query=result["query"],
         total_hits=result["total_hits"],
@@ -885,17 +908,18 @@ async def get_enterprise_audit(
     Returns audit events from all organizations in this enterprise.
     """
     from sqlalchemy import select
+
     from infrastructure.persistence.models.audit_event import AuditEventModel
     from infrastructure.persistence.models.organization import OrganizationModel
 
-    org_ids = list(
+    list(
         (
             await session.execute(
-                select(OrganizationModel.id).where(
-                    OrganizationModel.enterprise_id == enterprise_id
-                )
+                select(OrganizationModel.id).where(OrganizationModel.enterprise_id == enterprise_id)
             )
-        ).scalars().all()
+        )
+        .scalars()
+        .all()
     )
 
     stmt = select(AuditEventModel).order_by(AuditEventModel.created_at.desc()).limit(limit)
@@ -1064,6 +1088,7 @@ async def scim_usage(
 ) -> SCIMUsageResponse:
     """Per-enterprise SCIM token usage summary."""
     from application.enterprise import scim_token_service as _sts  # noqa: PLC0415
+
     data = await _sts.get_scim_usage(enterprise_id, session)
     return SCIMUsageResponse(
         enterprise_id=data["enterprise_id"],
@@ -1078,9 +1103,12 @@ async def scim_usage(
 # ── SCIM Provisioning (M40.1 — uses dedicated SCIM bearer token) ─────────────
 
 
-@router.post("/{enterprise_id}/scim/users",
-             response_model=dict, status_code=status.HTTP_201_CREATED,
-             dependencies=[])  # Override router-level require_admin for SCIM auth
+@router.post(
+    "/{enterprise_id}/scim/users",
+    response_model=dict,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[],
+)  # Override router-level require_admin for SCIM auth
 async def scim_create_user(
     enterprise_id: str,
     body: ScimUserCreate,
@@ -1169,18 +1197,24 @@ async def bulk_update_suppliers(
     current_user=Depends(get_current_user),
 ) -> BulkOperationResult:
     """Bulk update suppliers. Audits the operation."""
-    from sqlalchemy import select, update as sa_update
-    from infrastructure.persistence.models.supplier import SupplierModel
-    from infrastructure.persistence.models.audit_event import AuditEventModel
     import uuid
     from datetime import UTC, datetime
+
+    from sqlalchemy import update as sa_update
+
+    from infrastructure.persistence.models.audit_event import AuditEventModel
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     allowed_fields = {"risk_tier", "status", "country", "industry", "esg_score"}
     update_data = {k: v for k, v in body.updates.items() if k in allowed_fields}
 
     if not update_data:
-        return BulkOperationResult(total=len(body.supplier_ids), succeeded=0, failed=len(body.supplier_ids),
-                                   errors=["No valid update fields provided"])
+        return BulkOperationResult(
+            total=len(body.supplier_ids),
+            succeeded=0,
+            failed=len(body.supplier_ids),
+            errors=["No valid update fields provided"],
+        )
 
     succeeded = 0
     errors = []
@@ -1196,18 +1230,22 @@ async def bulk_update_suppliers(
             errors.append(f"{sid}: {e!s}")
 
     now = datetime.now(UTC)
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active", version=1,
-        created_at=now, updated_at=now,
-        action="bulk.suppliers_updated",
-        entity_type="SupplierBulk",
-        entity_id=enterprise_id,
-        actor_id=current_user.id,
-        outcome="success",
-        detail=f"Bulk updated {succeeded}/{len(body.supplier_ids)} suppliers",
-        event_metadata={"enterprise_id": enterprise_id, "fields": list(update_data.keys())},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action="bulk.suppliers_updated",
+            entity_type="SupplierBulk",
+            entity_id=enterprise_id,
+            actor_id=current_user.id,
+            outcome="success",
+            detail=f"Bulk updated {succeeded}/{len(body.supplier_ids)} suppliers",
+            event_metadata={"enterprise_id": enterprise_id, "fields": list(update_data.keys())},
+        )
+    )
     await session.commit()
     return BulkOperationResult(
         total=len(body.supplier_ids),
@@ -1225,18 +1263,24 @@ async def bulk_update_risks(
     current_user=Depends(get_current_user),
 ) -> BulkOperationResult:
     """Bulk update risks. Audits the operation."""
-    from sqlalchemy import update as sa_update
-    from infrastructure.persistence.models.risk import RiskModel
-    from infrastructure.persistence.models.audit_event import AuditEventModel
     import uuid
     from datetime import UTC, datetime
+
+    from sqlalchemy import update as sa_update
+
+    from infrastructure.persistence.models.audit_event import AuditEventModel
+    from infrastructure.persistence.models.risk import RiskModel
 
     allowed_fields = {"severity", "status", "likelihood", "impact"}
     update_data = {k: v for k, v in body.updates.items() if k in allowed_fields}
 
     if not update_data:
-        return BulkOperationResult(total=len(body.risk_ids), succeeded=0, failed=len(body.risk_ids),
-                                   errors=["No valid update fields provided"])
+        return BulkOperationResult(
+            total=len(body.risk_ids),
+            succeeded=0,
+            failed=len(body.risk_ids),
+            errors=["No valid update fields provided"],
+        )
 
     succeeded = 0
     errors = []
@@ -1252,18 +1296,22 @@ async def bulk_update_risks(
             errors.append(f"{rid}: {e!s}")
 
     now = datetime.now(UTC)
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active", version=1,
-        created_at=now, updated_at=now,
-        action="bulk.risks_updated",
-        entity_type="RiskBulk",
-        entity_id=enterprise_id,
-        actor_id=current_user.id,
-        outcome="success",
-        detail=f"Bulk updated {succeeded}/{len(body.risk_ids)} risks",
-        event_metadata={"enterprise_id": enterprise_id},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action="bulk.risks_updated",
+            entity_type="RiskBulk",
+            entity_id=enterprise_id,
+            actor_id=current_user.id,
+            outcome="success",
+            detail=f"Bulk updated {succeeded}/{len(body.risk_ids)} risks",
+            event_metadata={"enterprise_id": enterprise_id},
+        )
+    )
     await session.commit()
     return BulkOperationResult(
         total=len(body.risk_ids),

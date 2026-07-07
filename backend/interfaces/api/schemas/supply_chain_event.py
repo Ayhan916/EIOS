@@ -24,7 +24,7 @@ class EventLogResponse(BaseModel):
     processed_at: datetime | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "EventLogResponse":
+    def from_model(cls, m: Any) -> EventLogResponse:
         return cls(
             id=m.id,
             organization_id=m.organization_id,
@@ -64,7 +64,7 @@ class EventOutboxResponse(BaseModel):
     failed_at: datetime | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "EventOutboxResponse":
+    def from_model(cls, m: Any) -> EventOutboxResponse:
         return cls(
             id=m.id,
             organization_id=m.organization_id,

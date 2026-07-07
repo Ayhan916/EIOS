@@ -26,10 +26,11 @@ Security:
   - confirm / activate / complete → analyst/admin only; KI-Agenten DÜRFEN diese
     Endpunkte NICHT aufrufen
 """
+
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -52,9 +53,9 @@ router = APIRouter(prefix="/sme-support", tags=["sme-support"])
 
 class SMEProfileUpsert(BaseModel):
     supplier_id: UUID
-    employee_count: Optional[int] = Field(default=None, ge=0)
-    annual_revenue_eur: Optional[float] = Field(default=None, ge=0)
-    notes: Optional[str] = Field(default=None, max_length=2000)
+    employee_count: int | None = Field(default=None, ge=0)
+    annual_revenue_eur: float | None = Field(default=None, ge=0)
+    notes: str | None = Field(default=None, max_length=2000)
 
 
 class SMEProfileResponse(BaseModel):
@@ -62,12 +63,12 @@ class SMEProfileResponse(BaseModel):
     organization_id: UUID
     supplier_id: UUID
     classification: str
-    employee_count: Optional[int]
-    annual_revenue_eur: Optional[float]
+    employee_count: int | None
+    annual_revenue_eur: float | None
     is_confirmed: bool
-    confirmed_by: Optional[str]
-    confirmed_at: Optional[Any]
-    notes: Optional[str]
+    confirmed_by: str | None
+    confirmed_at: Any | None
+    notes: str | None
     created_at: Any
     updated_at: Any
 
@@ -79,19 +80,19 @@ class ProgramCreate(BaseModel):
     supplier_id: UUID
     title: str = Field(min_length=3, max_length=255)
     description: str = Field(default="", max_length=5000)
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    responsible_user: Optional[str] = Field(default=None, max_length=255)
-    total_budget_eur: Optional[float] = Field(default=None, ge=0)
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    responsible_user: str | None = Field(default=None, max_length=255)
+    total_budget_eur: float | None = Field(default=None, ge=0)
 
 
 class ProgramUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
-    start_date: Optional[datetime] = None
-    end_date: Optional[datetime] = None
-    responsible_user: Optional[str] = Field(default=None, max_length=255)
-    total_budget_eur: Optional[float] = Field(default=None, ge=0)
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    start_date: datetime | None = None
+    end_date: datetime | None = None
+    responsible_user: str | None = Field(default=None, max_length=255)
+    total_budget_eur: float | None = Field(default=None, ge=0)
 
 
 class ProgramResponse(BaseModel):
@@ -101,10 +102,10 @@ class ProgramResponse(BaseModel):
     title: str
     description: str
     status: str
-    start_date: Optional[Any]
-    end_date: Optional[Any]
-    responsible_user: Optional[str]
-    total_budget_eur: Optional[float]
+    start_date: Any | None
+    end_date: Any | None
+    responsible_user: str | None
+    total_budget_eur: float | None
     spent_budget_eur: float
     created_by: str
     created_at: Any
@@ -117,13 +118,13 @@ class ProgramResponse(BaseModel):
 class MeasureCreate(BaseModel):
     title: str = Field(min_length=3, max_length=255)
     support_type: str = Field(default="training")
-    description: Optional[str] = Field(default=None, max_length=5000)
-    due_date: Optional[datetime] = None
-    cost_eur: Optional[float] = Field(default=None, ge=0)
+    description: str | None = Field(default=None, max_length=5000)
+    due_date: datetime | None = None
+    cost_eur: float | None = Field(default=None, ge=0)
 
 
 class MeasureCompleteBody(BaseModel):
-    impact_notes: Optional[str] = Field(default=None, max_length=2000)
+    impact_notes: str | None = Field(default=None, max_length=2000)
 
 
 class MeasureStatusUpdate(BaseModel):
@@ -137,11 +138,11 @@ class MeasureResponse(BaseModel):
     title: str
     support_type: str
     status: str
-    description: Optional[str]
-    due_date: Optional[Any]
-    completed_at: Optional[Any]
-    cost_eur: Optional[float]
-    impact_notes: Optional[str]
+    description: str | None
+    due_date: Any | None
+    completed_at: Any | None
+    cost_eur: float | None
+    impact_notes: str | None
     created_at: Any
     updated_at: Any
 
@@ -228,8 +229,8 @@ def confirm_profile(
 
 @router.get("/programs/", response_model=list[ProgramResponse])
 def list_programs(
-    supplier_id: Optional[UUID] = Query(default=None),
-    status: Optional[str] = Query(default=None),
+    supplier_id: UUID | None = Query(default=None),
+    status: str | None = Query(default=None),
     db: Session = Depends(get_sync_db),
     user: User = Depends(get_current_user),
 ):

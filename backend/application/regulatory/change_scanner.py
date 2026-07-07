@@ -123,9 +123,7 @@ def build_impact_summary(
     gap_count: int,
     affected_sectors: list[str],
 ) -> str:
-    sector_text = (
-        f" in sectors {', '.join(affected_sectors)}" if affected_sectors else ""
-    )
+    sector_text = f" in sectors {', '.join(affected_sectors)}" if affected_sectors else ""
     parts: list[str] = []
     if assessment_count:
         parts.append(f"{assessment_count} assessment(s) flagged for re-review")

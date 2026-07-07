@@ -11,10 +11,12 @@ Revision ID: 098
 Revises: 097
 Create Date: 2026-07-06
 """
+
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "098"
 down_revision = "097"
@@ -57,7 +59,9 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_company_profiles_org", "company_profiles", ["organization_id"])
-    op.create_unique_constraint("uq_company_profiles_org_year", "company_profiles", ["organization_id", "fiscal_year"])
+    op.create_unique_constraint(
+        "uq_company_profiles_org_year", "company_profiles", ["organization_id", "fiscal_year"]
+    )
 
     # CSDDD-014 — Regulatory sources
     op.create_table(
@@ -100,8 +104,14 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
         sa.Column("url_hash", sa.String(64), nullable=False, server_default=""),
     )
-    op.create_index("ix_csddd_regulatory_changes_org", "csddd_regulatory_changes", ["organization_id"])
-    op.create_index("ix_csddd_regulatory_changes_org_status", "csddd_regulatory_changes", ["organization_id", "status"])
+    op.create_index(
+        "ix_csddd_regulatory_changes_org", "csddd_regulatory_changes", ["organization_id"]
+    )
+    op.create_index(
+        "ix_csddd_regulatory_changes_org_status",
+        "csddd_regulatory_changes",
+        ["organization_id", "status"],
+    )
 
     # CSDDD-014 — Feed entries (deduplication)
     op.create_table(
@@ -117,7 +127,9 @@ def upgrade() -> None:
         sa.Column("converted_to_change_id", sa.String(36), nullable=True),
     )
     op.create_index("ix_regulatory_feed_entries_source", "regulatory_feed_entries", ["source_id"])
-    op.create_unique_constraint("uq_regulatory_feed_entries_url_hash", "regulatory_feed_entries", ["url_hash"])
+    op.create_unique_constraint(
+        "uq_regulatory_feed_entries_url_hash", "regulatory_feed_entries", ["url_hash"]
+    )
 
 
 def downgrade() -> None:

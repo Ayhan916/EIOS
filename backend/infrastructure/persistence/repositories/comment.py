@@ -29,7 +29,9 @@ class SQLCommentRepository(BaseRepository[Comment, CommentModel]):
             content=entity.content,
             edited_at=entity.edited_at,
             deleted_at=entity.deleted_at,
-            mentioned_user_ids=",".join(entity.mentioned_user_ids) if entity.mentioned_user_ids else None,
+            mentioned_user_ids=",".join(entity.mentioned_user_ids)
+            if entity.mentioned_user_ids
+            else None,
         )
 
     def _to_domain(self, model: CommentModel) -> Comment:
@@ -74,6 +76,7 @@ class SQLCommentRepository(BaseRepository[Comment, CommentModel]):
 
     async def count_by_entity(self, entity_type: str, entity_id: str) -> int:
         from sqlalchemy import func
+
         stmt = select(func.count(CommentModel.id)).where(
             CommentModel.entity_type == entity_type,
             CommentModel.entity_id == entity_id,

@@ -13,6 +13,7 @@ Create Date: 2026-06-29
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "069"
@@ -27,8 +28,12 @@ _AUDIT_COLS = [
     sa.Column("owner", sa.String(36), nullable=True),
     sa.Column("created_by", sa.String(36), nullable=True),
     sa.Column("updated_by", sa.String(36), nullable=True),
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+    sa.Column(
+        "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    ),
+    sa.Column(
+        "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    ),
 ]
 
 
@@ -57,7 +62,9 @@ def upgrade() -> None:
         sa.Column("renewable_content_pct", sa.Float, nullable=True),
         # Computed aggregates
         sa.Column("substances_of_concern_count", sa.Integer, nullable=False, server_default="0"),
-        sa.Column("non_compliant_regulations_count", sa.Integer, nullable=False, server_default="0"),
+        sa.Column(
+            "non_compliant_regulations_count", sa.Integer, nullable=False, server_default="0"
+        ),
         # Manufacturer
         sa.Column("manufacturer_name", sa.String(300), nullable=True),
         sa.Column("manufacturer_country", sa.String(100), nullable=True),

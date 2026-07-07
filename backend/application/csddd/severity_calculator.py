@@ -2,6 +2,7 @@
 
 No LLM. Reproducible for any combination of (gravity, scope, remediability, likelihood).
 """
+
 from __future__ import annotations
 
 from domain.enums import SeverityLevel

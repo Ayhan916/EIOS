@@ -11,7 +11,7 @@ import asyncio
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query
 
 import application.audit as audit_factory
 from application.api_platform.key_service import generate_api_key
@@ -22,6 +22,7 @@ from application.api_platform.webhook_service import (
 from domain.api_key import ApiKey
 from domain.enums import EntityStatus
 from domain.service_account import ServiceAccount
+from domain.user import User
 from domain.webhook_delivery import WebhookDelivery
 from domain.webhook_subscription import WebhookSubscription
 from infrastructure.persistence.repositories import (
@@ -34,7 +35,6 @@ from infrastructure.persistence.repositories import (
 from interfaces.api.deps import (
     get_api_key_repo,
     get_audit_event_repo,
-    get_current_user,
     get_service_account_repo,
     get_webhook_delivery_repo,
     get_webhook_subscription_repo,
@@ -52,7 +52,6 @@ from interfaces.api.schemas.api_platform import (
     WebhookResponse,
     WebhookUpdate,
 )
-from domain.user import User
 
 log = structlog.get_logger()
 

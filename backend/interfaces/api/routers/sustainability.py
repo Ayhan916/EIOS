@@ -6,8 +6,6 @@ All governance actions are attributed to the authenticated user (actor_id from J
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
-
 import jwt as _jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +17,7 @@ from application.sustainability import (
     objective_service,
     reporting_service,
     roadmap_service,
+    rollup_service,
     scoring_service,
 )
 from application.sustainability.objective_service import (
@@ -61,6 +60,7 @@ from interfaces.api.schemas.sustainability import (
     NetZeroMilestoneResponse,
     NetZeroRoadmapCreate,
     NetZeroRoadmapResponse,
+    RollupSummaryResponse,
     SBTStatusUpdate,
     ScenarioCreate,
     ScenarioResponse,
@@ -71,9 +71,7 @@ from interfaces.api.schemas.sustainability import (
     SustainabilityReportCreate,
     SustainabilityReportResponse,
     SustainabilityScorecardResponse,
-    RollupSummaryResponse,
 )
-from application.sustainability import rollup_service
 from shared.security import decode_token
 
 router = APIRouter(prefix="/sustainability", tags=["sustainability"])
@@ -91,14 +89,22 @@ def _require_actor(request: Request) -> str:
     try:
         payload = decode_token(token)
     except _jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Token expired", headers={"WWW-Authenticate": "Bearer"}
+        )
     except _jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"}
+        )
     if payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid token type", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Invalid token type", headers={"WWW-Authenticate": "Bearer"}
+        )
     sub = payload.get("sub")
     if not sub:
-        raise HTTPException(status_code=401, detail="Token missing subject", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Token missing subject", headers={"WWW-Authenticate": "Bearer"}
+        )
     return sub
 
 
@@ -112,6 +118,7 @@ def _conflict(exc: SustainabilityConflict) -> HTTPException:
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/{organization_id}/dashboard", response_model=SustainabilityDashboard)
 async def get_dashboard(
     organization_id: str,
@@ -123,31 +130,54 @@ async def get_dashboard(
             CarbonInventoryModel,
             DecarbonizationInitiativeModel,
             ESGKPIModel,
-            SustainabilityObjectiveModel,
             KPIAlertModel,
             ScienceBasedTargetModel,
+            SustainabilityObjectiveModel,
             SustainabilityScorecardModel,
         )
-        total_obj = s.query(SustainabilityObjectiveModel).filter(SustainabilityObjectiveModel.organization_id == organization_id).count()
-        active_obj = s.query(SustainabilityObjectiveModel).filter(
-            SustainabilityObjectiveModel.organization_id == organization_id,
-            SustainabilityObjectiveModel.objective_status == "ACTIVE",
-        ).count()
-        completed_obj = s.query(SustainabilityObjectiveModel).filter(
-            SustainabilityObjectiveModel.organization_id == organization_id,
-            SustainabilityObjectiveModel.objective_status == "COMPLETED",
-        ).count()
-        total_kpis = s.query(ESGKPIModel).filter(ESGKPIModel.organization_id == organization_id).count()
-        active_kpis = s.query(ESGKPIModel).filter(
-            ESGKPIModel.organization_id == organization_id, ESGKPIModel.is_active == True
-        ).count()
-        open_alerts = s.query(KPIAlertModel).filter(
-            KPIAlertModel.organization_id == organization_id, KPIAlertModel.is_resolved == False
-        ).count()
-        active_init = s.query(DecarbonizationInitiativeModel).filter(
-            DecarbonizationInitiativeModel.organization_id == organization_id,
-            DecarbonizationInitiativeModel.initiative_status == "IN_PROGRESS",
-        ).count()
+
+        total_obj = (
+            s.query(SustainabilityObjectiveModel)
+            .filter(SustainabilityObjectiveModel.organization_id == organization_id)
+            .count()
+        )
+        active_obj = (
+            s.query(SustainabilityObjectiveModel)
+            .filter(
+                SustainabilityObjectiveModel.organization_id == organization_id,
+                SustainabilityObjectiveModel.objective_status == "ACTIVE",
+            )
+            .count()
+        )
+        completed_obj = (
+            s.query(SustainabilityObjectiveModel)
+            .filter(
+                SustainabilityObjectiveModel.organization_id == organization_id,
+                SustainabilityObjectiveModel.objective_status == "COMPLETED",
+            )
+            .count()
+        )
+        total_kpis = (
+            s.query(ESGKPIModel).filter(ESGKPIModel.organization_id == organization_id).count()
+        )
+        active_kpis = (
+            s.query(ESGKPIModel)
+            .filter(ESGKPIModel.organization_id == organization_id, ESGKPIModel.is_active)
+            .count()
+        )
+        open_alerts = (
+            s.query(KPIAlertModel)
+            .filter(KPIAlertModel.organization_id == organization_id, not KPIAlertModel.is_resolved)
+            .count()
+        )
+        active_init = (
+            s.query(DecarbonizationInitiativeModel)
+            .filter(
+                DecarbonizationInitiativeModel.organization_id == organization_id,
+                DecarbonizationInitiativeModel.initiative_status == "IN_PROGRESS",
+            )
+            .count()
+        )
         latest_inv = (
             s.query(CarbonInventoryModel)
             .filter(
@@ -163,18 +193,38 @@ async def get_dashboard(
             .order_by(SustainabilityScorecardModel.period_end.desc())
             .first()
         )
-        active_sbts = s.query(ScienceBasedTargetModel).filter(
-            ScienceBasedTargetModel.organization_id == organization_id,
-            ScienceBasedTargetModel.sbt_status == "ACTIVE",
-        ).count()
+        active_sbts = (
+            s.query(ScienceBasedTargetModel)
+            .filter(
+                ScienceBasedTargetModel.organization_id == organization_id,
+                ScienceBasedTargetModel.sbt_status == "ACTIVE",
+            )
+            .count()
+        )
         return (
-            total_obj, active_obj, completed_obj, total_kpis, active_kpis,
-            open_alerts, active_init, latest_inv, latest_sc, active_sbts,
+            total_obj,
+            active_obj,
+            completed_obj,
+            total_kpis,
+            active_kpis,
+            open_alerts,
+            active_init,
+            latest_inv,
+            latest_sc,
+            active_sbts,
         )
 
     (
-        total_obj, active_obj, completed_obj, total_kpis, active_kpis,
-        open_alerts, active_init, latest_inv, latest_sc, active_sbts,
+        total_obj,
+        active_obj,
+        completed_obj,
+        total_kpis,
+        active_kpis,
+        open_alerts,
+        active_init,
+        latest_inv,
+        latest_sc,
+        active_sbts,
     ) = await db.run_sync(_query)
 
     return SustainabilityDashboard(
@@ -194,6 +244,7 @@ async def get_dashboard(
 
 
 # ── ESG Objectives ─────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/objectives",
@@ -239,7 +290,8 @@ async def list_objectives(
 ):
     return await db.run_sync(
         lambda s: objective_service.list_objectives(
-            organization_id, s,
+            organization_id,
+            s,
             category=category,
             status=status_filter,
             limit=limit,
@@ -273,6 +325,7 @@ async def update_objective_status(
 
 # ── ESG Targets ───────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/objectives/{objective_id}/targets",
     response_model=ESGTargetResponse,
@@ -305,7 +358,9 @@ async def create_target(
     except SustainabilityError as exc:
         raise _err(exc)
     resp = ESGTargetResponse.model_validate(t)
-    resp.progress_percent = objective_service.compute_progress(t.baseline_value, t.target_value, t.current_value)
+    resp.progress_percent = objective_service.compute_progress(
+        t.baseline_value, t.target_value, t.current_value
+    )
     return resp
 
 
@@ -378,6 +433,7 @@ async def update_target_value(
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/kpis",
     response_model=ESGKPIResponse,
@@ -423,7 +479,12 @@ async def list_kpis(
 ):
     return await db.run_sync(
         lambda s: kpi_service.list_kpis(
-            organization_id, s, category=category, active_only=active_only, limit=limit, offset=offset
+            organization_id,
+            s,
+            category=category,
+            active_only=active_only,
+            limit=limit,
+            offset=offset,
         )
     )
 
@@ -521,7 +582,8 @@ async def list_alerts(
 ):
     return await db.run_sync(
         lambda s: kpi_service.list_alerts(
-            organization_id, s,
+            organization_id,
+            s,
             kpi_id=kpi_id,
             unresolved_only=unresolved_only,
             limit=limit,
@@ -539,7 +601,9 @@ async def resolve_alert(
 ):
     try:
         alert = await db.run_sync(
-            lambda s: kpi_service.resolve_alert(alert_id, actor_id, s, organization_id=organization_id)
+            lambda s: kpi_service.resolve_alert(
+                alert_id, actor_id, s, organization_id=organization_id
+            )
         )
         await db.refresh(alert)
     except SustainabilityError as exc:
@@ -548,6 +612,7 @@ async def resolve_alert(
 
 
 # ── Scorecards ────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/scorecards",
@@ -586,6 +651,7 @@ async def list_scorecards(
 
 
 # ── Emission Sources ──────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/emissions",
@@ -636,12 +702,18 @@ async def list_emission_sources(
 ):
     return await db.run_sync(
         lambda s: carbon_service.list_emission_sources(
-            organization_id, s, reporting_year=reporting_year, scope=scope, limit=limit, offset=offset
+            organization_id,
+            s,
+            reporting_year=reporting_year,
+            scope=scope,
+            limit=limit,
+            offset=offset,
         )
     )
 
 
 # ── Carbon Inventory ──────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/inventory",
@@ -726,6 +798,7 @@ async def finalize_inventory(
 
 # ── Decarbonization Initiatives ───────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/initiatives",
     response_model=DecarbonizationInitiativeResponse,
@@ -775,7 +848,12 @@ async def list_initiatives(
 ):
     return await db.run_sync(
         lambda s: roadmap_service.list_initiatives(
-            organization_id, s, roadmap_id=roadmap_id, status=status_filter, limit=limit, offset=offset
+            organization_id,
+            s,
+            roadmap_id=roadmap_id,
+            status=status_filter,
+            limit=limit,
+            offset=offset,
         )
     )
 
@@ -794,7 +872,11 @@ async def update_initiative(
     try:
         init = await db.run_sync(
             lambda s: roadmap_service.update_initiative_progress(
-                initiative_id, body.actual_reduction, body.status, actor_id, s,
+                initiative_id,
+                body.actual_reduction,
+                body.status,
+                actor_id,
+                s,
                 organization_id=organization_id,
             )
         )
@@ -805,6 +887,7 @@ async def update_initiative(
 
 
 # ── Net Zero Roadmaps ─────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/roadmaps",
@@ -914,6 +997,7 @@ async def update_milestone(
 
 # ── Science Based Targets ─────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/sbts",
     response_model=ScienceBasedTargetResponse,
@@ -957,7 +1041,9 @@ async def list_sbts(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: roadmap_service.list_science_based_targets(organization_id, s, limit=limit, offset=offset)
+        lambda s: roadmap_service.list_science_based_targets(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
@@ -972,7 +1058,10 @@ async def update_sbt_status(
     try:
         sbt = await db.run_sync(
             lambda s: roadmap_service.update_sbt_status(
-                sbt_id, body.status, actor_id, s,
+                sbt_id,
+                body.status,
+                actor_id,
+                s,
                 organization_id=organization_id,
                 approval_date=body.approval_date,
             )
@@ -984,6 +1073,7 @@ async def update_sbt_status(
 
 
 # ── Climate Risk ──────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/climate-risk",
@@ -1042,6 +1132,7 @@ async def list_climate_risk(
 
 # ── Assurance ─────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/assurance",
     response_model=AssuranceRecordResponse,
@@ -1083,11 +1174,14 @@ async def list_assurance(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: reporting_service.list_assurance_records(organization_id, s, limit=limit, offset=offset)
+        lambda s: reporting_service.list_assurance_records(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── CSRD Mappings ─────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/csrd-mappings",
@@ -1140,6 +1234,7 @@ async def list_csrd_mappings(
 
 # ── ISSB Mappings ─────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/issb-mappings",
     response_model=ISSBMappingResponse,
@@ -1189,6 +1284,7 @@ async def list_issb_mappings(
 
 
 # ── Forecasts ─────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/forecasts",
@@ -1241,6 +1337,7 @@ async def list_forecasts(
 
 # ── Scenario Analysis ─────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/scenarios",
     response_model=ScenarioResponse,
@@ -1285,6 +1382,7 @@ async def list_scenarios(
 
 
 # ── Sustainability Reports ─────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/reports",
@@ -1370,15 +1468,17 @@ async def finalize_report(
 
 # ── Rollup helpers ─────────────────────────────────────────────────────────────
 
+
 def _rollup_to_response(r: rollup_service.RollupSummary) -> RollupSummaryResponse:
     from interfaces.api.schemas.sustainability import (
-        EmissionsRollupSchema,
-        ObjectivesRollupSchema,
-        TargetsRollupSchema,
-        KPIsRollupSchema,
-        ScoreRollupSchema,
         ClimateRiskRollupSchema,
+        EmissionsRollupSchema,
+        KPIsRollupSchema,
+        ObjectivesRollupSchema,
+        ScoreRollupSchema,
+        TargetsRollupSchema,
     )
+
     return RollupSummaryResponse(
         entity_type=r.entity_type,
         entity_id=r.entity_id,
@@ -1424,6 +1524,7 @@ def _rollup_to_response(r: rollup_service.RollupSummary) -> RollupSummaryRespons
 
 
 # ── Rollup endpoints ───────────────────────────────────────────────────────────
+
 
 @router.get("/rollups/enterprise/{entity_id}", response_model=RollupSummaryResponse)
 async def rollup_enterprise(

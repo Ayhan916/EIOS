@@ -14,7 +14,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 _TCFD_PILLARS = [
     {
         "code": "governance",
@@ -28,9 +27,18 @@ _TCFD_PILLARS = [
         "code": "strategy",
         "name": "Strategy",
         "disclosures": [
-            {"id": "a", "label": "Climate-related risks and opportunities over short, medium, and long term"},
-            {"id": "b", "label": "Impact of climate risks on the organization's businesses, strategy, financial planning"},
-            {"id": "c", "label": "Resilience of the organization's strategy under different climate scenarios"},
+            {
+                "id": "a",
+                "label": "Climate-related risks and opportunities over short, medium, and long term",
+            },
+            {
+                "id": "b",
+                "label": "Impact of climate risks on the organization's businesses, strategy, financial planning",
+            },
+            {
+                "id": "c",
+                "label": "Resilience of the organization's strategy under different climate scenarios",
+            },
         ],
     },
     {
@@ -39,7 +47,10 @@ _TCFD_PILLARS = [
         "disclosures": [
             {"id": "a", "label": "Processes for identifying and assessing climate-related risks"},
             {"id": "b", "label": "Processes for managing climate-related risks"},
-            {"id": "c", "label": "Integration of climate risk processes into overall risk management"},
+            {
+                "id": "c",
+                "label": "Integration of climate risk processes into overall risk management",
+            },
         ],
     },
     {
@@ -84,24 +95,26 @@ def build_tcfd_report(
     pillars = []
 
     # ── Governance ─────────────────────────────────────────────────────────────
-    pillars.append({
-        "code": "governance",
-        "name": "Governance",
-        "disclosures": [
-            {
-                "id": "a",
-                "label": "Board oversight of climate-related risks and opportunities",
-                "narrative": board_oversight_narrative or "Not yet disclosed.",
-                "status": "reported" if board_oversight_narrative else "omitted",
-            },
-            {
-                "id": "b",
-                "label": "Management's role in assessing and managing climate risks",
-                "narrative": management_role_narrative or "Not yet disclosed.",
-                "status": "reported" if management_role_narrative else "omitted",
-            },
-        ],
-    })
+    pillars.append(
+        {
+            "code": "governance",
+            "name": "Governance",
+            "disclosures": [
+                {
+                    "id": "a",
+                    "label": "Board oversight of climate-related risks and opportunities",
+                    "narrative": board_oversight_narrative or "Not yet disclosed.",
+                    "status": "reported" if board_oversight_narrative else "omitted",
+                },
+                {
+                    "id": "b",
+                    "label": "Management's role in assessing and managing climate risks",
+                    "narrative": management_role_narrative or "Not yet disclosed.",
+                    "status": "reported" if management_role_narrative else "omitted",
+                },
+            ],
+        }
+    )
 
     # ── Strategy ───────────────────────────────────────────────────────────────
     risk_table = [
@@ -114,44 +127,49 @@ def build_tcfd_report(
         }
         for r in (climate_risks or [])
     ]
-    pillars.append({
-        "code": "strategy",
-        "name": "Strategy",
-        "disclosures": [
-            {
-                "id": "a",
-                "label": "Climate-related risks and opportunities",
-                "risks": risk_table,
-                "status": "reported" if risk_table else "partial",
-            },
-            {
-                "id": "c",
-                "label": "Scenario analysis and resilience",
-                "narrative": scenario_analysis_narrative or "Scenario analysis not yet completed.",
-                "status": "reported" if scenario_analysis_narrative else "partial",
-            },
-        ],
-    })
+    pillars.append(
+        {
+            "code": "strategy",
+            "name": "Strategy",
+            "disclosures": [
+                {
+                    "id": "a",
+                    "label": "Climate-related risks and opportunities",
+                    "risks": risk_table,
+                    "status": "reported" if risk_table else "partial",
+                },
+                {
+                    "id": "c",
+                    "label": "Scenario analysis and resilience",
+                    "narrative": scenario_analysis_narrative
+                    or "Scenario analysis not yet completed.",
+                    "status": "reported" if scenario_analysis_narrative else "partial",
+                },
+            ],
+        }
+    )
 
     # ── Risk Management ────────────────────────────────────────────────────────
-    pillars.append({
-        "code": "risk_management",
-        "name": "Risk Management",
-        "disclosures": [
-            {
-                "id": "a",
-                "label": "Risk identification and assessment process",
-                "narrative": risk_identification_narrative or "Not yet disclosed.",
-                "status": "reported" if risk_identification_narrative else "omitted",
-            },
-            {
-                "id": "c",
-                "label": "Integration into enterprise risk management",
-                "narrative": risk_integration_narrative or "Not yet disclosed.",
-                "status": "reported" if risk_integration_narrative else "omitted",
-            },
-        ],
-    })
+    pillars.append(
+        {
+            "code": "risk_management",
+            "name": "Risk Management",
+            "disclosures": [
+                {
+                    "id": "a",
+                    "label": "Risk identification and assessment process",
+                    "narrative": risk_identification_narrative or "Not yet disclosed.",
+                    "status": "reported" if risk_identification_narrative else "omitted",
+                },
+                {
+                    "id": "c",
+                    "label": "Integration into enterprise risk management",
+                    "narrative": risk_integration_narrative or "Not yet disclosed.",
+                    "status": "reported" if risk_integration_narrative else "omitted",
+                },
+            ],
+        }
+    )
 
     # ── Metrics & Targets ─────────────────────────────────────────────────────
     ghg_snapshot = None
@@ -175,24 +193,26 @@ def build_tcfd_report(
         for t in (climate_targets or [])
     ]
 
-    pillars.append({
-        "code": "metrics_targets",
-        "name": "Metrics & Targets",
-        "disclosures": [
-            {
-                "id": "b",
-                "label": "GHG Emissions (Scope 1/2/3)",
-                "ghg_snapshot": ghg_snapshot,
-                "status": "reported" if ghg_snapshot else "omitted",
-            },
-            {
-                "id": "c",
-                "label": "Climate targets and progress",
-                "targets": target_list,
-                "status": "reported" if target_list else "partial",
-            },
-        ],
-    })
+    pillars.append(
+        {
+            "code": "metrics_targets",
+            "name": "Metrics & Targets",
+            "disclosures": [
+                {
+                    "id": "b",
+                    "label": "GHG Emissions (Scope 1/2/3)",
+                    "ghg_snapshot": ghg_snapshot,
+                    "status": "reported" if ghg_snapshot else "omitted",
+                },
+                {
+                    "id": "c",
+                    "label": "Climate targets and progress",
+                    "targets": target_list,
+                    "status": "reported" if target_list else "partial",
+                },
+            ],
+        }
+    )
 
     # Overall completeness
     all_disclosures = [d for p in pillars for d in p["disclosures"]]

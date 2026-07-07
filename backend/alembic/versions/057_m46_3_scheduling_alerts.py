@@ -12,8 +12,9 @@ Revises: 056
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "057"
 down_revision = "056"
@@ -45,17 +46,23 @@ def upgrade() -> None:
     op.create_table(
         "assessment_schedules",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("supplier_id", sa.String(36), sa.ForeignKey("suppliers.id"), nullable=False),
         sa.Column("frequency_days", sa.Integer, nullable=False),
         sa.Column("last_triggered_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("next_due_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("template_assessment_id", sa.String(36), sa.ForeignKey("assessments.id"), nullable=True),
+        sa.Column(
+            "template_assessment_id", sa.String(36), sa.ForeignKey("assessments.id"), nullable=True
+        ),
         sa.Column("is_active", sa.Boolean, nullable=False, server_default="true"),
         sa.Column("created_by", sa.String(36), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("organization_id", "supplier_id", name="uq_assessment_schedule_org_supplier"),
+        sa.UniqueConstraint(
+            "organization_id", "supplier_id", name="uq_assessment_schedule_org_supplier"
+        ),
     )
     op.create_index("ix_assessment_schedules_org", "assessment_schedules", ["organization_id"])
     op.create_index("ix_assessment_schedules_supplier", "assessment_schedules", ["supplier_id"])
@@ -66,7 +73,9 @@ def upgrade() -> None:
         "supplier_certificates",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("supplier_id", sa.String(36), sa.ForeignKey("suppliers.id"), nullable=False),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("name", sa.String(500), nullable=False),
         sa.Column("cert_type", sa.String(100), nullable=False),
         sa.Column("issued_at", sa.DateTime(timezone=True), nullable=True),
@@ -90,7 +99,9 @@ def upgrade() -> None:
     op.create_table(
         "risk_drafts",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False),
+        sa.Column(
+            "organization_id", sa.String(36), sa.ForeignKey("organizations.id"), nullable=False
+        ),
         sa.Column("supplier_id", sa.String(36), sa.ForeignKey("suppliers.id"), nullable=True),
         sa.Column("signal_id", sa.String(36), nullable=True),
         sa.Column("draft_title", sa.String(500), nullable=False),

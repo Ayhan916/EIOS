@@ -7,6 +7,7 @@ Art. 2 CSDDD thresholds (EU 2024/1760):
 
 Borderline: <20% below a threshold on EITHER dimension.
 """
+
 from __future__ import annotations
 
 from domain.enums import CSDDDThresholdLevel

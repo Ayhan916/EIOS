@@ -12,38 +12,42 @@ Endpoints:
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, date
+from datetime import UTC, date, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
-from sqlalchemy import select, update as sa_update
+from sqlalchemy import select
+from sqlalchemy import update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import application.notification_service as notification_service
 from application.regulatory.change_scanner import (
-    REGULATORY_CHANGE_SEED,
     _REVIEW_STATUS_FLAG,
+    REGULATORY_CHANGE_SEED,
     build_impact_summary,
 )
-from domain.enums import EntityStatus, NotificationType, RegulatoryChangeSeverity, RegulatoryChangeStatus
+from domain.enums import (
+    EntityStatus,
+    NotificationType,
+    RegulatoryChangeSeverity,
+    RegulatoryChangeStatus,
+)
 from domain.regulatory_change import RegulatoryChange, RegulatoryChangeImpact
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.regulatory import (
     ComplianceGapModel,
-    RegulationRequirementModel,
     RegulationModel,
+    RegulationRequirementModel,
 )
 from infrastructure.persistence.models.regulatory_change import (
     RegulatoryChangeModel,
-    RegulatoryChangeImpactModel,
 )
 from infrastructure.persistence.repositories.regulatory_change import (
     SQLRegulatoryChangeImpactRepository,
     SQLRegulatoryChangeRepository,
 )
-from infrastructure.persistence.repositories.user import SQLUserRepository
 from interfaces.api.deps import get_current_user, get_db, require_analyst
-import application.notification_service as notification_service
 
 router = APIRouter(prefix="/regulatory-changes", tags=["regulatory-changes"])
 
@@ -372,9 +376,7 @@ async def scan_impact(
     now = datetime.now(UTC)
 
     # 1 — Find affected assessments
-    assessment_ids = await _find_affected_assessments(
-        db, org_id, change.affected_sectors
-    )
+    assessment_ids = await _find_affected_assessments(db, org_id, change.affected_sectors)
 
     # 2 — Flag assessments for re-review
     if assessment_ids:

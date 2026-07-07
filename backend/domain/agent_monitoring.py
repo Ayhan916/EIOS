@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
+from typing import Any
 
 
 class AgentType(str, Enum):
@@ -88,7 +89,7 @@ class AgentFinding:
     detected_at: datetime
     finding_status: FindingStatus
     rule_triggered: str
-    source_data: dict
+    source_data: dict[str, Any]
 
 
 @dataclass
@@ -120,7 +121,7 @@ class RecommendationDraft:
 
 
 # Built-in agent definitions seeded at startup
-BUILTIN_AGENTS: list[dict] = [
+BUILTIN_AGENTS: list[dict[str, Any]] = [
     {
         "agent_type": AgentType.RISK_MONITOR,
         "name": "Risk Monitoring Agent",

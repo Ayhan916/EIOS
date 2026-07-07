@@ -18,38 +18,38 @@ from application.financial_esg import (
     taxonomy_service,
     value_service,
 )
-from application.financial_esg.kpi_service import FinancialESGError, FinancialESGConflict
+from application.financial_esg.kpi_service import FinancialESGConflict, FinancialESGError
 from interfaces.api.deps import get_db
 from interfaces.api.schemas.financial_esg import (
     CapitalMarketsAssessmentCreate,
     CapitalMarketsAssessmentResponse,
     CarbonCostModelCreate,
     CarbonCostModelResponse,
+    CarbonEconomicsRollupSchema,
     ClimateFinanceCreate,
     ClimateFinanceResponse,
     CorrelationCreate,
     CorrelationResponse,
+    CostOfRiskCreate,
+    CostOfRiskResponse,
     CovenantMonitorRequest,
     DisclosurePackageCreate,
     DisclosurePackageResponse,
     FinanceInstrumentCreate,
     FinanceInstrumentResponse,
+    FinanceRollupSchema,
     FinancialKPICreate,
     FinancialKPIResponse,
     FinancialReportCreate,
     FinancialReportResponse,
     FinancialRollupResponse,
-    CarbonEconomicsRollupSchema,
-    GreenRevenueRollupSchema,
-    TaxonomyRollupSchema,
-    FinanceRollupSchema,
-    ValueCreationRollupSchema,
     GreenCapexCreate,
     GreenCapexResponse,
     GreenOpexCreate,
     GreenOpexResponse,
     GreenRevenueCreate,
     GreenRevenueResponse,
+    GreenRevenueRollupSchema,
     KPIMeasurementCreate,
     KPIMeasurementResponse,
     LinkedKPICreate,
@@ -60,16 +60,16 @@ from interfaces.api.schemas.financial_esg import (
     ScenarioResponse,
     TaxonomyAssessmentCreate,
     TaxonomyAssessmentResponse,
+    TaxonomyRollupSchema,
     TaxonomyStatusUpdate,
     TransitionPlanCreate,
     TransitionPlanResponse,
     ValuationCreate,
     ValuationResponse,
+    ValueCreationRollupSchema,
     ValueInitiativeCreate,
     ValueInitiativeResponse,
     ValueInitiativeUpdate,
-    CostOfRiskCreate,
-    CostOfRiskResponse,
 )
 from shared.security import decode_token
 
@@ -88,14 +88,22 @@ def _require_actor(request: Request) -> str:
     try:
         payload = decode_token(token)
     except _jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Token expired", headers={"WWW-Authenticate": "Bearer"}
+        )
     except _jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Invalid token", headers={"WWW-Authenticate": "Bearer"}
+        )
     if payload.get("type") != "access":
-        raise HTTPException(status_code=401, detail="Invalid token type", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Invalid token type", headers={"WWW-Authenticate": "Bearer"}
+        )
     sub = payload.get("sub")
     if not sub:
-        raise HTTPException(status_code=401, detail="Token missing subject", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(
+            status_code=401, detail="Token missing subject", headers={"WWW-Authenticate": "Bearer"}
+        )
     return sub
 
 
@@ -109,6 +117,7 @@ def _conflict(exc: FinancialESGConflict) -> HTTPException:
 
 # ── Financial ESG KPIs ────────────────────────────────────────────────────────
 
+
 @router.post("/{organization_id}/kpis", response_model=FinancialKPIResponse, status_code=201)
 async def create_kpi(
     organization_id: str,
@@ -119,9 +128,16 @@ async def create_kpi(
     try:
         rec = await db.run_sync(
             lambda s: kpi_service.create_kpi(
-                organization_id, body.name, body.category, actor_id, s,
-                formula=body.formula, unit=body.unit, frequency=body.frequency,
-                owner_user_id=body.owner_user_id, description=body.description,
+                organization_id,
+                body.name,
+                body.category,
+                actor_id,
+                s,
+                formula=body.formula,
+                unit=body.unit,
+                frequency=body.frequency,
+                owner_user_id=body.owner_user_id,
+                description=body.description,
             )
         )
         await db.refresh(rec)
@@ -140,11 +156,15 @@ async def list_kpis(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: kpi_service.list_kpis(organization_id, s, category=category, limit=limit, offset=offset)
+        lambda s: kpi_service.list_kpis(
+            organization_id, s, category=category, limit=limit, offset=offset
+        )
     )
 
 
-@router.post("/{organization_id}/kpis/measurements", response_model=KPIMeasurementResponse, status_code=201)
+@router.post(
+    "/{organization_id}/kpis/measurements", response_model=KPIMeasurementResponse, status_code=201
+)
 async def record_measurement(
     organization_id: str,
     body: KPIMeasurementCreate,
@@ -154,8 +174,15 @@ async def record_measurement(
     try:
         rec = await db.run_sync(
             lambda s: kpi_service.record_measurement(
-                body.kpi_id, organization_id, body.period, body.value, actor_id, s,
-                source=body.source, confidence=body.confidence, notes=body.notes,
+                body.kpi_id,
+                organization_id,
+                body.period,
+                body.value,
+                actor_id,
+                s,
+                source=body.source,
+                confidence=body.confidence,
+                notes=body.notes,
             )
         )
         await db.refresh(rec)
@@ -164,7 +191,9 @@ async def record_measurement(
     return rec
 
 
-@router.get("/{organization_id}/kpis/{kpi_id}/measurements", response_model=list[KPIMeasurementResponse])
+@router.get(
+    "/{organization_id}/kpis/{kpi_id}/measurements", response_model=list[KPIMeasurementResponse]
+)
 async def list_measurements(
     organization_id: str,
     kpi_id: str,
@@ -175,7 +204,9 @@ async def list_measurements(
 ):
     try:
         return await db.run_sync(
-            lambda s: kpi_service.list_measurements(kpi_id, organization_id, s, limit=limit, offset=offset)
+            lambda s: kpi_service.list_measurements(
+                kpi_id, organization_id, s, limit=limit, offset=offset
+            )
         )
     except FinancialESGError as exc:
         raise _err(exc)
@@ -183,7 +214,10 @@ async def list_measurements(
 
 # ── Carbon Cost ───────────────────────────────────────────────────────────────
 
-@router.post("/{organization_id}/carbon-cost", response_model=CarbonCostModelResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/carbon-cost", response_model=CarbonCostModelResponse, status_code=201
+)
 async def create_carbon_cost(
     organization_id: str,
     body: CarbonCostModelCreate,
@@ -192,11 +226,18 @@ async def create_carbon_cost(
 ):
     rec = await db.run_sync(
         lambda s: carbon_cost_service.create_carbon_cost_model(
-            organization_id, body.name, body.assessment_year,
-            body.total_emissions, body.internal_carbon_price, body.regulatory_carbon_price,
-            actor_id, s,
-            avoided_emissions=body.avoided_emissions, currency=body.currency,
-            inventory_id=body.inventory_id, notes=body.notes,
+            organization_id,
+            body.name,
+            body.assessment_year,
+            body.total_emissions,
+            body.internal_carbon_price,
+            body.regulatory_carbon_price,
+            actor_id,
+            s,
+            avoided_emissions=body.avoided_emissions,
+            currency=body.currency,
+            inventory_id=body.inventory_id,
+            notes=body.notes,
         )
     )
     await db.refresh(rec)
@@ -212,11 +253,14 @@ async def list_carbon_cost(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: carbon_cost_service.list_carbon_cost_models(organization_id, s, limit=limit, offset=offset)
+        lambda s: carbon_cost_service.list_carbon_cost_models(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Cost of Risk ──────────────────────────────────────────────────────────────
+
 
 @router.post("/{organization_id}/risk", response_model=CostOfRiskResponse, status_code=201)
 async def create_risk_assessment(
@@ -228,11 +272,17 @@ async def create_risk_assessment(
     try:
         rec = await db.run_sync(
             lambda s: risk_service.create_cost_of_risk_assessment(
-                organization_id, body.name,
-                body.supplier_risk_score, body.climate_risk_score,
-                body.compliance_risk_score, body.operational_risk_score,
-                body.exposure_base, actor_id, s,
-                currency=body.currency, notes=body.notes,
+                organization_id,
+                body.name,
+                body.supplier_risk_score,
+                body.climate_risk_score,
+                body.compliance_risk_score,
+                body.operational_risk_score,
+                body.exposure_base,
+                actor_id,
+                s,
+                currency=body.currency,
+                notes=body.notes,
             )
         )
         await db.refresh(rec)
@@ -256,7 +306,10 @@ async def list_risk_assessments(
 
 # ── Value Creation ────────────────────────────────────────────────────────────
 
-@router.post("/{organization_id}/value-creation", response_model=ValueInitiativeResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/value-creation", response_model=ValueInitiativeResponse, status_code=201
+)
 async def create_value_initiative(
     organization_id: str,
     body: ValueInitiativeCreate,
@@ -265,18 +318,28 @@ async def create_value_initiative(
 ):
     rec = await db.run_sync(
         lambda s: value_service.create_value_creation_initiative(
-            organization_id, body.name, body.investment_amount, body.expected_value, actor_id, s,
-            description=body.description, realized_value=body.realized_value,
+            organization_id,
+            body.name,
+            body.investment_amount,
+            body.expected_value,
+            actor_id,
+            s,
+            description=body.description,
+            realized_value=body.realized_value,
             payback_period_months=body.payback_period_months,
-            start_date=body.start_date, end_date=body.end_date,
-            currency=body.currency, category=body.category,
+            start_date=body.start_date,
+            end_date=body.end_date,
+            currency=body.currency,
+            category=body.category,
         )
     )
     await db.refresh(rec)
     return rec
 
 
-@router.patch("/{organization_id}/value-creation/{initiative_id}", response_model=ValueInitiativeResponse)
+@router.patch(
+    "/{organization_id}/value-creation/{initiative_id}", response_model=ValueInitiativeResponse
+)
 async def update_value_initiative(
     organization_id: str,
     initiative_id: str,
@@ -287,8 +350,12 @@ async def update_value_initiative(
     try:
         rec = await db.run_sync(
             lambda s: value_service.update_realized_value(
-                initiative_id, body.realized_value, actor_id, s,
-                organization_id=organization_id, new_status=body.new_status,
+                initiative_id,
+                body.realized_value,
+                actor_id,
+                s,
+                organization_id=organization_id,
+                new_status=body.new_status,
             )
         )
         await db.refresh(rec)
@@ -306,13 +373,18 @@ async def list_value_initiatives(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: value_service.list_value_initiatives(organization_id, s, limit=limit, offset=offset)
+        lambda s: value_service.list_value_initiatives(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Sustainable Finance ───────────────────────────────────────────────────────
 
-@router.post("/{organization_id}/finance", response_model=FinanceInstrumentResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/finance", response_model=FinanceInstrumentResponse, status_code=201
+)
 async def create_finance_instrument(
     organization_id: str,
     body: FinanceInstrumentCreate,
@@ -322,10 +394,18 @@ async def create_finance_instrument(
     try:
         rec = await db.run_sync(
             lambda s: finance_service.create_finance_instrument(
-                organization_id, body.name, body.instrument_type, body.amount, actor_id, s,
-                currency=body.currency, maturity_date=body.maturity_date,
-                issuer=body.issuer, counterparty=body.counterparty,
-                description=body.description, kpi_linkage=body.kpi_linkage,
+                organization_id,
+                body.name,
+                body.instrument_type,
+                body.amount,
+                actor_id,
+                s,
+                currency=body.currency,
+                maturity_date=body.maturity_date,
+                issuer=body.issuer,
+                counterparty=body.counterparty,
+                description=body.description,
+                kpi_linkage=body.kpi_linkage,
             )
         )
         await db.refresh(rec)
@@ -350,7 +430,9 @@ async def list_finance_instruments(
     )
 
 
-@router.post("/{organization_id}/finance/linked-kpis", response_model=LinkedKPIResponse, status_code=201)
+@router.post(
+    "/{organization_id}/finance/linked-kpis", response_model=LinkedKPIResponse, status_code=201
+)
 async def create_linked_kpi(
     organization_id: str,
     body: LinkedKPICreate,
@@ -360,9 +442,15 @@ async def create_linked_kpi(
     try:
         rec = await db.run_sync(
             lambda s: finance_service.create_linked_kpi(
-                organization_id, body.instrument_id, body.kpi_name, actor_id, s,
-                esg_target_id=body.esg_target_id, kpi_description=body.kpi_description,
-                threshold_value=body.threshold_value, threshold_direction=body.threshold_direction,
+                organization_id,
+                body.instrument_id,
+                body.kpi_name,
+                actor_id,
+                s,
+                esg_target_id=body.esg_target_id,
+                kpi_description=body.kpi_description,
+                threshold_value=body.threshold_value,
+                threshold_direction=body.threshold_direction,
                 current_value=body.current_value,
             )
         )
@@ -372,7 +460,10 @@ async def create_linked_kpi(
     return rec
 
 
-@router.post("/{organization_id}/finance/linked-kpis/{linked_kpi_id}/monitor", response_model=LinkedKPIResponse)
+@router.post(
+    "/{organization_id}/finance/linked-kpis/{linked_kpi_id}/monitor",
+    response_model=LinkedKPIResponse,
+)
 async def monitor_covenant(
     organization_id: str,
     linked_kpi_id: str,
@@ -394,7 +485,10 @@ async def monitor_covenant(
 
 # ── Transition Plans ──────────────────────────────────────────────────────────
 
-@router.post("/{organization_id}/transition-plans", response_model=TransitionPlanResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/transition-plans", response_model=TransitionPlanResponse, status_code=201
+)
 async def create_transition_plan(
     organization_id: str,
     body: TransitionPlanCreate,
@@ -403,11 +497,18 @@ async def create_transition_plan(
 ):
     rec = await db.run_sync(
         lambda s: finance_service.create_transition_plan(
-            organization_id, body.name, actor_id, s,
-            description=body.description, baseline_state=body.baseline_state,
-            target_state=body.target_state, financing_needs=body.financing_needs,
-            funding_sources=body.funding_sources, start_date=body.start_date,
-            target_date=body.target_date, currency=body.currency,
+            organization_id,
+            body.name,
+            actor_id,
+            s,
+            description=body.description,
+            baseline_state=body.baseline_state,
+            target_state=body.target_state,
+            financing_needs=body.financing_needs,
+            funding_sources=body.funding_sources,
+            start_date=body.start_date,
+            target_date=body.target_date,
+            currency=body.currency,
         )
     )
     await db.refresh(rec)
@@ -423,11 +524,17 @@ async def list_transition_plans(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: finance_service.list_transition_plans(organization_id, s, limit=limit, offset=offset)
+        lambda s: finance_service.list_transition_plans(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
-@router.post("/{organization_id}/transition-plans/{plan_id}/milestones", response_model=MilestoneResponse, status_code=201)
+@router.post(
+    "/{organization_id}/transition-plans/{plan_id}/milestones",
+    response_model=MilestoneResponse,
+    status_code=201,
+)
 async def add_milestone(
     organization_id: str,
     plan_id: str,
@@ -438,8 +545,13 @@ async def add_milestone(
     try:
         rec = await db.run_sync(
             lambda s: finance_service.add_transition_milestone(
-                plan_id, organization_id, body.title, actor_id, s,
-                description=body.description, due_date=body.due_date,
+                plan_id,
+                organization_id,
+                body.title,
+                actor_id,
+                s,
+                description=body.description,
+                due_date=body.due_date,
             )
         )
         await db.refresh(rec)
@@ -450,7 +562,10 @@ async def add_milestone(
 
 # ── Taxonomy ──────────────────────────────────────────────────────────────────
 
-@router.post("/{organization_id}/taxonomy", response_model=TaxonomyAssessmentResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/taxonomy", response_model=TaxonomyAssessmentResponse, status_code=201
+)
 async def create_taxonomy_assessment(
     organization_id: str,
     body: TaxonomyAssessmentCreate,
@@ -460,7 +575,10 @@ async def create_taxonomy_assessment(
     try:
         rec = await db.run_sync(
             lambda s: taxonomy_service.create_taxonomy_assessment(
-                organization_id, body.assessment_year, actor_id, s,
+                organization_id,
+                body.assessment_year,
+                actor_id,
+                s,
                 taxonomy_framework=body.taxonomy_framework,
                 eligible_activities=body.eligible_activities,
                 aligned_activities=body.aligned_activities,
@@ -476,7 +594,9 @@ async def create_taxonomy_assessment(
     return rec
 
 
-@router.patch("/{organization_id}/taxonomy/{assessment_id}/status", response_model=TaxonomyAssessmentResponse)
+@router.patch(
+    "/{organization_id}/taxonomy/{assessment_id}/status", response_model=TaxonomyAssessmentResponse
+)
 async def update_taxonomy_status(
     organization_id: str,
     assessment_id: str,
@@ -505,11 +625,14 @@ async def list_taxonomy_assessments(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: taxonomy_service.list_taxonomy_assessments(organization_id, s, limit=limit, offset=offset)
+        lambda s: taxonomy_service.list_taxonomy_assessments(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Green Revenue ─────────────────────────────────────────────────────────────
+
 
 @router.post("/{organization_id}/revenue", response_model=GreenRevenueResponse, status_code=201)
 async def create_green_revenue(
@@ -521,10 +644,17 @@ async def create_green_revenue(
     try:
         rec = await db.run_sync(
             lambda s: revenue_service.create_green_revenue(
-                organization_id, body.revenue_stream, body.amount, body.total_revenue,
-                body.period, actor_id, s,
+                organization_id,
+                body.revenue_stream,
+                body.amount,
+                body.total_revenue,
+                body.period,
+                actor_id,
+                s,
                 taxonomy_category=body.taxonomy_category,
-                alignment_status=body.alignment_status, currency=body.currency, notes=body.notes,
+                alignment_status=body.alignment_status,
+                currency=body.currency,
+                notes=body.notes,
             )
         )
         await db.refresh(rec)
@@ -559,9 +689,16 @@ async def create_green_capex(
     try:
         rec = await db.run_sync(
             lambda s: revenue_service.create_green_capex(
-                organization_id, body.project_name, body.amount, body.alignment_percent,
-                body.period, actor_id, s,
-                taxonomy_category=body.taxonomy_category, currency=body.currency, notes=body.notes,
+                organization_id,
+                body.project_name,
+                body.amount,
+                body.alignment_percent,
+                body.period,
+                actor_id,
+                s,
+                taxonomy_category=body.taxonomy_category,
+                currency=body.currency,
+                notes=body.notes,
             )
         )
         await db.refresh(rec)
@@ -593,9 +730,16 @@ async def create_green_opex(
     try:
         rec = await db.run_sync(
             lambda s: revenue_service.create_green_opex(
-                organization_id, body.description, body.amount, body.alignment_percent,
-                body.period, actor_id, s,
-                category=body.category, currency=body.currency, notes=body.notes,
+                organization_id,
+                body.description,
+                body.amount,
+                body.alignment_percent,
+                body.period,
+                actor_id,
+                s,
+                category=body.category,
+                currency=body.currency,
+                notes=body.notes,
             )
         )
         await db.refresh(rec)
@@ -619,7 +763,10 @@ async def list_green_opex(
 
 # ── Capital Markets Readiness ─────────────────────────────────────────────────
 
-@router.post("/{organization_id}/readiness", response_model=CapitalMarketsAssessmentResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/readiness", response_model=CapitalMarketsAssessmentResponse, status_code=201
+)
 async def create_readiness_assessment(
     organization_id: str,
     body: CapitalMarketsAssessmentCreate,
@@ -629,7 +776,9 @@ async def create_readiness_assessment(
     try:
         rec = await db.run_sync(
             lambda s: readiness_service.create_capital_markets_assessment(
-                organization_id, actor_id, s,
+                organization_id,
+                actor_id,
+                s,
                 disclosure_readiness=body.disclosure_readiness,
                 assurance_readiness=body.assurance_readiness,
                 taxonomy_readiness=body.taxonomy_readiness,
@@ -660,7 +809,12 @@ async def list_readiness_assessments(
 
 # ── Investor Disclosure Packages ──────────────────────────────────────────────
 
-@router.post("/{organization_id}/disclosure-packages", response_model=DisclosurePackageResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/disclosure-packages",
+    response_model=DisclosurePackageResponse,
+    status_code=201,
+)
 async def create_disclosure_package(
     organization_id: str,
     body: DisclosurePackageCreate,
@@ -669,7 +823,12 @@ async def create_disclosure_package(
 ):
     rec = await db.run_sync(
         lambda s: readiness_service.generate_disclosure_package(
-            organization_id, body.title, body.period_start, body.period_end, actor_id, s,
+            organization_id,
+            body.title,
+            body.period_start,
+            body.period_end,
+            actor_id,
+            s,
             description=body.description,
             esg_kpi_snapshot=body.esg_kpi_snapshot,
             taxonomy_snapshot=body.taxonomy_snapshot,
@@ -682,7 +841,10 @@ async def create_disclosure_package(
     return rec
 
 
-@router.post("/{organization_id}/disclosure-packages/{package_id}/finalize", response_model=DisclosurePackageResponse)
+@router.post(
+    "/{organization_id}/disclosure-packages/{package_id}/finalize",
+    response_model=DisclosurePackageResponse,
+)
 async def finalize_disclosure_package(
     organization_id: str,
     package_id: str,
@@ -703,7 +865,9 @@ async def finalize_disclosure_package(
     return rec
 
 
-@router.get("/{organization_id}/disclosure-packages", response_model=list[DisclosurePackageResponse])
+@router.get(
+    "/{organization_id}/disclosure-packages", response_model=list[DisclosurePackageResponse]
+)
 async def list_disclosure_packages(
     organization_id: str,
     limit: int = Query(50, ge=1, le=500),
@@ -712,13 +876,18 @@ async def list_disclosure_packages(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: readiness_service.list_disclosure_packages(organization_id, s, limit=limit, offset=offset)
+        lambda s: readiness_service.list_disclosure_packages(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Climate Finance Analytics ─────────────────────────────────────────────────
 
-@router.post("/{organization_id}/climate-finance", response_model=ClimateFinanceResponse, status_code=201)
+
+@router.post(
+    "/{organization_id}/climate-finance", response_model=ClimateFinanceResponse, status_code=201
+)
 async def create_climate_finance(
     organization_id: str,
     body: ClimateFinanceCreate,
@@ -727,10 +896,16 @@ async def create_climate_finance(
 ):
     rec = await db.run_sync(
         lambda s: value_service.create_climate_finance_analysis(
-            organization_id, body.analysis_name, body.analysis_year,
-            body.transition_investment, body.emissions_reduction, actor_id, s,
+            organization_id,
+            body.analysis_name,
+            body.analysis_year,
+            body.transition_investment,
+            body.emissions_reduction,
+            actor_id,
+            s,
             carbon_price_proxy=body.carbon_price_proxy,
-            currency=body.currency, notes=body.notes,
+            currency=body.currency,
+            notes=body.notes,
         )
     )
     await db.refresh(rec)
@@ -746,11 +921,14 @@ async def list_climate_finance(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: value_service.list_climate_analyses(organization_id, s, limit=limit, offset=offset)
+        lambda s: value_service.list_climate_analyses(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Sustainability Valuation ──────────────────────────────────────────────────
+
 
 @router.post("/{organization_id}/valuation", response_model=ValuationResponse, status_code=201)
 async def create_valuation(
@@ -761,10 +939,16 @@ async def create_valuation(
 ):
     rec = await db.run_sync(
         lambda s: value_service.create_sustainability_valuation(
-            organization_id, body.valuation_name, body.valuation_year,
-            body.risk_reduction_value, body.carbon_reduction_value,
-            body.operational_efficiency_value, actor_id, s,
-            currency=body.currency, notes=body.notes,
+            organization_id,
+            body.valuation_name,
+            body.valuation_year,
+            body.risk_reduction_value,
+            body.carbon_reduction_value,
+            body.operational_efficiency_value,
+            actor_id,
+            s,
+            currency=body.currency,
+            notes=body.notes,
         )
     )
     await db.refresh(rec)
@@ -786,6 +970,7 @@ async def list_valuations(
 
 # ── Scenario Analysis ─────────────────────────────────────────────────────────
 
+
 @router.post("/{organization_id}/scenarios", response_model=ScenarioResponse, status_code=201)
 async def create_scenario(
     organization_id: str,
@@ -796,8 +981,14 @@ async def create_scenario(
     try:
         rec = await db.run_sync(
             lambda s: reporting_service.create_scenario_analysis(
-                organization_id, body.scenario_name, body.scenario_type,
-                body.inputs, body.assumptions, actor_id, s, notes=body.notes,
+                organization_id,
+                body.scenario_name,
+                body.scenario_type,
+                body.inputs,
+                body.assumptions,
+                actor_id,
+                s,
+                notes=body.notes,
             )
         )
         await db.refresh(rec)
@@ -815,11 +1006,14 @@ async def list_scenarios(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: reporting_service.list_scenario_analyses(organization_id, s, limit=limit, offset=offset)
+        lambda s: reporting_service.list_scenario_analyses(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── ESG Financial Correlation ─────────────────────────────────────────────────
+
 
 @router.post("/{organization_id}/correlations", response_model=CorrelationResponse, status_code=201)
 async def create_correlation(
@@ -830,10 +1024,16 @@ async def create_correlation(
 ):
     rec = await db.run_sync(
         lambda s: reporting_service.create_esg_correlation(
-            organization_id, body.esg_score, body.risk_reduction,
-            body.cost_reduction, body.financial_performance, body.correlation_period,
-            actor_id, s,
-            scorecard_id=body.scorecard_id, methodology=body.methodology,
+            organization_id,
+            body.esg_score,
+            body.risk_reduction,
+            body.cost_reduction,
+            body.financial_performance,
+            body.correlation_period,
+            actor_id,
+            s,
+            scorecard_id=body.scorecard_id,
+            methodology=body.methodology,
             assumptions=body.assumptions,
         )
     )
@@ -850,11 +1050,14 @@ async def list_correlations(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: reporting_service.list_correlations(organization_id, s, limit=limit, offset=offset)
+        lambda s: reporting_service.list_correlations(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
+
 
 @router.post("/{organization_id}/reports", response_model=FinancialReportResponse, status_code=201)
 async def generate_report(
@@ -865,14 +1068,21 @@ async def generate_report(
 ):
     rec = await db.run_sync(
         lambda s: reporting_service.generate_financial_esg_report(
-            organization_id, body.title, body.report_period_start, body.report_period_end, actor_id, s
+            organization_id,
+            body.title,
+            body.report_period_start,
+            body.report_period_end,
+            actor_id,
+            s,
         )
     )
     await db.refresh(rec)
     return rec
 
 
-@router.post("/{organization_id}/reports/{report_id}/finalize", response_model=FinancialReportResponse)
+@router.post(
+    "/{organization_id}/reports/{report_id}/finalize", response_model=FinancialReportResponse
+)
 async def finalize_report(
     organization_id: str,
     report_id: str,
@@ -902,11 +1112,14 @@ async def list_reports(
     actor_id: str = Depends(_require_actor),
 ):
     return await db.run_sync(
-        lambda s: reporting_service.list_financial_esg_reports(organization_id, s, limit=limit, offset=offset)
+        lambda s: reporting_service.list_financial_esg_reports(
+            organization_id, s, limit=limit, offset=offset
+        )
     )
 
 
 # ── Enterprise Rollups ────────────────────────────────────────────────────────
+
 
 def _rollup_to_response(r: rollup_service.FinancialRollupSummary) -> FinancialRollupResponse:
     return FinancialRollupResponse(
@@ -967,7 +1180,9 @@ async def rollup_business_unit(
 ):
     try:
         r = await db.run_sync(
-            lambda s: rollup_service.compute_financial_rollup("business_unit", entity_id, actor_id, s)
+            lambda s: rollup_service.compute_financial_rollup(
+                "business_unit", entity_id, actor_id, s
+            )
         )
     except FinancialESGError as exc:
         raise _err(exc)
@@ -982,7 +1197,9 @@ async def rollup_legal_entity(
 ):
     try:
         r = await db.run_sync(
-            lambda s: rollup_service.compute_financial_rollup("legal_entity", entity_id, actor_id, s)
+            lambda s: rollup_service.compute_financial_rollup(
+                "legal_entity", entity_id, actor_id, s
+            )
         )
     except FinancialESGError as exc:
         raise _err(exc)

@@ -1,5 +1,6 @@
 """EIOS secret provider infrastructure (M40.1 / M40.2)."""
 
+from .aws_provider import AwsSecretsManagerProvider, SecretsManagerClient
 from .provider import (
     EnvironmentSecretProvider,
     InMemorySecretProvider,
@@ -8,7 +9,6 @@ from .provider import (
     set_secret_provider,
 )
 from .vault_provider import VaultClient, VaultSecretProvider
-from .aws_provider import AwsSecretsManagerProvider, SecretsManagerClient
 
 __all__ = [
     "SecretProvider",

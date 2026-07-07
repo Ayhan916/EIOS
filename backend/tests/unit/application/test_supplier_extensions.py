@@ -2,24 +2,22 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, UTC
+from datetime import date
 
 from domain.supplier_extensions import (
     CertificationType,
-    ContactRole,
     ESGMetricType,
     LocationType,
     OwnershipType,
     SupplierCertification,
-    SupplierContact,
     SupplierESGMetric,
     SupplierLocation,
     SupplierOwnership,
 )
 from infrastructure.kafka.events import DomainEvent, SupplierEventType
 
-
 # ── Domain Entity Tests ───────────────────────────────────────────────────────
+
 
 class TestSupplierLocation:
     def test_create_plant(self) -> None:
@@ -146,6 +144,7 @@ class TestSupplierESGMetric:
 
 
 # ── Kafka Event Tests ─────────────────────────────────────────────────────────
+
 
 class TestDomainEvents:
     def test_location_created_event_serializes(self) -> None:
@@ -278,6 +277,7 @@ class TestExternalESGRating:
 
     def test_kafka_event_for_rating(self) -> None:
         from infrastructure.kafka.events import DomainEvent, SupplierEventType
+
         event = DomainEvent.supplier_esg_rating_received(
             organization_id="org1",
             supplier_id="sup1",

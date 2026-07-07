@@ -11,7 +11,7 @@ from linked material records — no extra stored model needed.
 
 from __future__ import annotations
 
-from sqlalchemy import Boolean, Float, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Float, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -61,7 +61,9 @@ class ProductBOMItemModel(BaseModel):
     __tablename__ = "product_bom_items"
     __table_args__ = (
         UniqueConstraint(
-            "organization_id", "product_id", "material_id",
+            "organization_id",
+            "product_id",
+            "material_id",
             name="uq_prod_bom_product_material",
         ),
         Index("ix_pbom_product", "product_id"),

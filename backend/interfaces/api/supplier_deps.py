@@ -41,9 +41,10 @@ async def get_current_supplier_user(
     Rejects tokens without aud=eios-supplier.
     Rejects inactive supplier users.
     """
-    from infrastructure.persistence.models.supplier_portal import SupplierUserModel
+
     from sqlalchemy import select
-    from datetime import UTC, datetime
+
+    from infrastructure.persistence.models.supplier_portal import SupplierUserModel
 
     token = credentials.credentials
     try:
@@ -74,10 +75,7 @@ async def get_current_supplier_user(
             detail="Supplier token missing subject",
         )
 
-    stmt = (
-        select(SupplierUserModel)
-        .where(SupplierUserModel.id == supplier_user_id)
-    )
+    stmt = select(SupplierUserModel).where(SupplierUserModel.id == supplier_user_id)
     row = (await session.execute(stmt)).scalar_one_or_none()
     if row is None or not row.is_active:
         raise HTTPException(

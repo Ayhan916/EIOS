@@ -11,7 +11,6 @@ from __future__ import annotations
 import hashlib
 import secrets
 
-
 _KEY_PREFIX = "eios_"
 _RAW_BYTES = 20  # → 40 hex chars → total key length = 45
 

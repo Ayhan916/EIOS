@@ -5,8 +5,21 @@ from __future__ import annotations
 from application.copilot.action_advisor_engine import build_action_advisor_payload
 
 
-def _rec(id: str, priority: str = "Medium", status: str = "open", overdue: bool = False, due_date: str | None = None) -> dict:
-    return {"id": id, "title": f"Rec {id}", "priority": priority, "action_status": status, "overdue": overdue, "due_date": due_date}
+def _rec(
+    id: str,
+    priority: str = "Medium",
+    status: str = "open",
+    overdue: bool = False,
+    due_date: str | None = None,
+) -> dict:
+    return {
+        "id": id,
+        "title": f"Rec {id}",
+        "priority": priority,
+        "action_status": status,
+        "overdue": overdue,
+        "due_date": due_date,
+    }
 
 
 def _finding(id: str, severity: str = "High", category: str = "ESG") -> dict:
@@ -18,7 +31,13 @@ def _risk(id: str, level: str = "High", category: str = "ESG") -> dict:
 
 
 def _gap(id: str, severity: str = "High") -> dict:
-    return {"gap_id": id, "severity": severity, "regulation_name": "CSRD", "requirement_title": "Req", "remediation_steps": "Fix it"}
+    return {
+        "gap_id": id,
+        "severity": severity,
+        "regulation_name": "CSRD",
+        "requirement_title": "Req",
+        "remediation_steps": "Fix it",
+    }
 
 
 def _base(**kwargs) -> dict:

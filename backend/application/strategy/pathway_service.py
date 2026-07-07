@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.strategy.metrics import strategy_counters
 from application.strategy.digital_twin_service import StrategyError
+from application.strategy.metrics import strategy_counters
 from infrastructure.persistence.models.strategy import (
     MILESTONE_FREQUENCIES,
     PATHWAY_TYPES,
@@ -19,7 +19,7 @@ from infrastructure.persistence.models.strategy import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org(record, organization_id: str, label: str = "resource") -> None:
@@ -81,7 +81,7 @@ def _compute_milestones_v2(
         em = round(baseline_emissions + (target_emissions - baseline_emissions) * frac, 2)
         years_elapsed = (i - 1) // steps_per_year
         sub_step = (i - 1) % steps_per_year
-        year = baseline_year + years_elapsed + (1 if sub_step == steps_per_year - 1 else 0)
+        baseline_year + years_elapsed + (1 if sub_step == steps_per_year - 1 else 0)
 
         if frequency == "QUARTERLY":
             period = f"{baseline_year + (i - 1) // 4}-Q{sub_step + 1}"
@@ -90,13 +90,15 @@ def _compute_milestones_v2(
         else:
             period = str(baseline_year + i)
 
-        milestones.append({
-            "step": i,
-            "year": baseline_year + (i * total_years) // total_steps,
-            "period": period,
-            "emissions_tco2e": em,
-            "frequency": frequency,
-        })
+        milestones.append(
+            {
+                "step": i,
+                "year": baseline_year + (i * total_years) // total_steps,
+                "period": period,
+                "emissions_tco2e": em,
+                "frequency": frequency,
+            }
+        )
     return milestones
 
 
@@ -125,10 +127,14 @@ def create_pathway(
     if baseline_emissions_tco2e is not None and target_emissions_tco2e is not None:
         if baseline_emissions_tco2e > 0:
             reduction_pct = round(
-                (baseline_emissions_tco2e - target_emissions_tco2e) / baseline_emissions_tco2e * 100, 4
+                (baseline_emissions_tco2e - target_emissions_tco2e)
+                / baseline_emissions_tco2e
+                * 100,
+                4,
             )
         import datetime as _dt
-        baseline_year = _dt.datetime.now(_dt.timezone.utc).year
+
+        baseline_year = _dt.datetime.now(_dt.UTC).year
         if milestone_frequency == "ANNUAL":
             # Backward-compatible: 5 evenly-spaced annual milestones
             milestones = _compute_milestones(
@@ -174,7 +180,11 @@ def create_pathway(
         actor_id=actor_id,
         resource_type="transition_pathway",
         resource_id=pathway.id,
-        details={"pathway_name": pathway_name, "pathway_type": pathway_type, "target_year": target_year},
+        details={
+            "pathway_name": pathway_name,
+            "pathway_type": pathway_type,
+            "target_year": target_year,
+        },
     )
     strategy_counters.record_transition_pathway()
     return pathway

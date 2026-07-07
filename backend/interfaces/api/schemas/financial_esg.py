@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── KPI Framework ─────────────────────────────────────────────────────────────
+
 
 class FinancialKPICreate(BaseModel):
     name: str
@@ -64,6 +63,7 @@ class KPIMeasurementResponse(BaseModel):
 
 # ── Carbon Cost Model ─────────────────────────────────────────────────────────
 
+
 class CarbonCostModelCreate(BaseModel):
     name: str
     assessment_year: int
@@ -97,6 +97,7 @@ class CarbonCostModelResponse(BaseModel):
 
 
 # ── Cost of Risk ──────────────────────────────────────────────────────────────
+
 
 class CostOfRiskCreate(BaseModel):
     name: str
@@ -132,6 +133,7 @@ class CostOfRiskResponse(BaseModel):
 
 
 # ── Value Creation ────────────────────────────────────────────────────────────
+
 
 class ValueInitiativeCreate(BaseModel):
     name: str
@@ -174,6 +176,7 @@ class ValueInitiativeResponse(BaseModel):
 
 
 # ── Sustainable Finance ───────────────────────────────────────────────────────
+
 
 class FinanceInstrumentCreate(BaseModel):
     name: str
@@ -241,6 +244,7 @@ class CovenantMonitorRequest(BaseModel):
 
 # ── Transition Plan ───────────────────────────────────────────────────────────
 
+
 class TransitionPlanCreate(BaseModel):
     name: str
     description: str | None = None
@@ -295,6 +299,7 @@ class MilestoneResponse(BaseModel):
 
 # ── Taxonomy ──────────────────────────────────────────────────────────────────
 
+
 class TaxonomyAssessmentCreate(BaseModel):
     assessment_year: int
     taxonomy_framework: str = "EU_TAXONOMY"
@@ -332,6 +337,7 @@ class TaxonomyAssessmentResponse(BaseModel):
 
 
 # ── Green Revenue ─────────────────────────────────────────────────────────────
+
 
 class GreenRevenueCreate(BaseModel):
     revenue_stream: str
@@ -416,6 +422,7 @@ class GreenOpexResponse(BaseModel):
 
 # ── Capital Markets Readiness ─────────────────────────────────────────────────
 
+
 class CapitalMarketsAssessmentCreate(BaseModel):
     disclosure_readiness: str = "NOT_READY"
     assurance_readiness: str = "NOT_READY"
@@ -441,6 +448,7 @@ class CapitalMarketsAssessmentResponse(BaseModel):
 
 
 # ── Investor Disclosure Package ───────────────────────────────────────────────
+
 
 class DisclosurePackageCreate(BaseModel):
     title: str
@@ -478,6 +486,7 @@ class DisclosurePackageResponse(BaseModel):
 
 # ── Climate Finance Analytics ─────────────────────────────────────────────────
 
+
 class ClimateFinanceCreate(BaseModel):
     analysis_name: str
     analysis_year: int
@@ -508,6 +517,7 @@ class ClimateFinanceResponse(BaseModel):
 
 # ── Sustainability Valuation ──────────────────────────────────────────────────
 
+
 class ValuationCreate(BaseModel):
     valuation_name: str
     valuation_year: int
@@ -537,6 +547,7 @@ class ValuationResponse(BaseModel):
 
 # ── Scenario Analysis ─────────────────────────────────────────────────────────
 
+
 class ScenarioCreate(BaseModel):
     scenario_name: str
     scenario_type: str
@@ -561,6 +572,7 @@ class ScenarioResponse(BaseModel):
 
 
 # ── ESG Financial Correlation ─────────────────────────────────────────────────
+
 
 class CorrelationCreate(BaseModel):
     esg_score: float
@@ -593,6 +605,7 @@ class CorrelationResponse(BaseModel):
 
 # ── Financial ESG Report ──────────────────────────────────────────────────────
 
+
 class FinancialReportCreate(BaseModel):
     title: str
     report_period_start: datetime
@@ -622,6 +635,7 @@ class FinancialReportResponse(BaseModel):
 
 
 # ── Enterprise Rollup ─────────────────────────────────────────────────────────
+
 
 class CarbonEconomicsRollupSchema(BaseModel):
     total_carbon_cost: float
@@ -668,6 +682,7 @@ class FinancialRollupResponse(BaseModel):
 
 
 # ── Executive Dashboard ───────────────────────────────────────────────────────
+
 
 class FinancialSustainabilitySummary(BaseModel):
     status: str = "ok"

@@ -52,7 +52,7 @@ class ERPConnectorResponse(BaseModel):
     updated_at: datetime
 
     @classmethod
-    def from_model(cls, m: Any) -> "ERPConnectorResponse":
+    def from_model(cls, m: Any) -> ERPConnectorResponse:
         return cls(
             id=m.id,
             organization_id=m.organization_id,
@@ -102,7 +102,7 @@ class ERPSyncJobResponse(BaseModel):
     created_at: datetime
 
     @classmethod
-    def from_model(cls, m: Any) -> "ERPSyncJobResponse":
+    def from_model(cls, m: Any) -> ERPSyncJobResponse:
         return cls(
             id=m.id,
             organization_id=m.organization_id,
@@ -136,7 +136,9 @@ class ERPFieldMappingUpsert(BaseModel):
     entity_type: str = Field(..., description="Material | Product | BOM | DPP")
     erp_field: str = Field(..., min_length=1, max_length=300)
     eios_field: str = Field(..., min_length=1, max_length=300)
-    transform_fn: str | None = Field(default=None, description="trim | uppercase | lowercase | date_iso | float_parse | skip")
+    transform_fn: str | None = Field(
+        default=None, description="trim | uppercase | lowercase | date_iso | float_parse | skip"
+    )
     is_required: bool = False
     default_value: str | None = None
     notes: str | None = None
@@ -157,7 +159,7 @@ class ERPFieldMappingResponse(BaseModel):
     updated_at: datetime
 
     @classmethod
-    def from_model(cls, m: Any) -> "ERPFieldMappingResponse":
+    def from_model(cls, m: Any) -> ERPFieldMappingResponse:
         return cls(
             id=m.id,
             organization_id=m.organization_id,

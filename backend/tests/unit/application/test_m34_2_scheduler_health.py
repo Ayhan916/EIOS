@@ -5,9 +5,6 @@ from __future__ import annotations
 from application.external_intelligence.scheduler_health import (
     _SchedulerHeartbeat,
     get_scheduler_health_report,
-    record_cycle_completed,
-    record_cycle_started,
-    record_scheduler_stopped,
 )
 
 

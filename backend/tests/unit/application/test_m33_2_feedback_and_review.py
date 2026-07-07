@@ -16,9 +16,7 @@ from domain.copilot_audit import CopilotAnswerReview, CopilotFeedback
 from domain.enums import EntityStatus, FeedbackRating, ReviewDecision
 from interfaces.api.schemas.copilot_audit import (
     FeedbackRequest,
-    FeedbackResponse,
     ReviewRequest,
-    ReviewResponse,
 )
 
 

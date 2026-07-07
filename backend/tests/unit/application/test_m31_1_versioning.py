@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from domain.enums import EntityStatus
-from domain.regulation import RegulationRequirement
-
 from application.compliance.gap_engine import compute_gaps
 from application.compliance.mapping_engine import auto_map_entity, create_manual_mapping
 from application.compliance.seed_regulations import _bump_version
+from domain.enums import EntityStatus
+from domain.regulation import RegulationRequirement
 
 
 def _make_req(req_id: str, code: str, regulation_id: str = "reg-1") -> RegulationRequirement:

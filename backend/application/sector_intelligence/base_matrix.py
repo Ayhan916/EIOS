@@ -37,7 +37,6 @@ _Score = dict[CSDDDRight, int]
 # Base matrix: nace_2digit → {CSDDDRight → probability 1-10}
 # ---------------------------------------------------------------------------
 BASE_MATRIX: dict[str, _Score] = {
-
     # ── NACE 01: Agriculture, crop and animal production ──────────────────
     # Highest-risk sector globally for labour and environmental rights.
     # ILO: 170M child labourers worldwide in agriculture (58% of total).
@@ -64,7 +63,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 8,
         _R.COMMUNITY_RIGHTS: 7,
     },
-
     # ── NACE 05: Mining of coal and lignite ───────────────────────────────
     # Artisanal and small-scale mining: severe child/forced labour.
     # Significant environmental destruction and community displacement.
@@ -91,7 +89,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 7,
         _R.COMMUNITY_RIGHTS: 8,
     },
-
     # ── NACE 07: Mining of metal ores ─────────────────────────────────────
     # Cobalt (DRC), lithium (Bolivia/Chile), gold: child labour documented.
     # Mercury use in artisanal gold mining is systemic.
@@ -118,7 +115,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 7,
         _R.COMMUNITY_RIGHTS: 9,
     },
-
     # ── NACE 10: Manufacture of food products ─────────────────────────────
     # Migrant workers, seasonal labour, cold chain safety risks.
     "10": {
@@ -144,7 +140,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 7,
         _R.COMMUNITY_RIGHTS: 4,
     },
-
     # ── NACE 13: Manufacture of textiles ──────────────────────────────────
     # KnowTheChain 2023: worst performer for forced labour in manufacturing.
     # Documented: Xinjiang cotton, Bangladesh factory conditions.
@@ -171,7 +166,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 8,
         _R.COMMUNITY_RIGHTS: 4,
     },
-
     # ── NACE 14: Manufacture of wearing apparel ───────────────────────────
     # Similar to textiles but even higher concentration in at-risk countries.
     "14": {
@@ -197,7 +191,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 9,
         _R.COMMUNITY_RIGHTS: 3,
     },
-
     # ── NACE 20: Manufacture of chemicals ────────────────────────────────
     # Hazardous chemicals, waste disposal, occupational health.
     "20": {
@@ -223,7 +216,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 4,
         _R.COMMUNITY_RIGHTS: 5,
     },
-
     # ── NACE 23: Manufacture of non-metallic mineral products (cement) ────
     # Dust, silicosis, environmental pollution. Child labour in brick kilns.
     "23": {
@@ -249,7 +241,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 6,
         _R.COMMUNITY_RIGHTS: 6,
     },
-
     # ── NACE 24: Manufacture of basic metals ─────────────────────────────
     # Steel, aluminium, copper: high environmental impact. Safety-critical.
     "24": {
@@ -275,7 +266,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 5,
         _R.COMMUNITY_RIGHTS: 6,
     },
-
     # ── NACE 26: Manufacture of electronics ──────────────────────────────
     # KnowTheChain: electronics ranks poorly on forced labour disclosure.
     # Conflict minerals (tin, tantalum, tungsten, gold) in supply chain.
@@ -302,7 +292,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 7,
         _R.COMMUNITY_RIGHTS: 5,
     },
-
     # ── NACE 28: Manufacture of machinery and equipment ───────────────────
     "28": {
         _R.CHILD_LABOUR: 3,
@@ -327,7 +316,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 4,
         _R.COMMUNITY_RIGHTS: 3,
     },
-
     # ── NACE 29: Manufacture of motor vehicles ────────────────────────────
     # Catena-X core sector. Tier-N supply chains in high-risk countries.
     # Direct operations: safer. Deep supply chain: minerals, textiles, rubber.
@@ -354,7 +342,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 4,
         _R.COMMUNITY_RIGHTS: 3,
     },
-
     # ── NACE 35: Electricity and gas supply ──────────────────────────────
     # Large infrastructure projects: community displacement, land rights.
     "35": {
@@ -380,7 +367,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 4,
         _R.COMMUNITY_RIGHTS: 6,
     },
-
     # ── NACE 41: Construction of buildings ───────────────────────────────
     # High migrant worker population globally. Safety accident rates high.
     "41": {
@@ -406,7 +392,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 7,
         _R.COMMUNITY_RIGHTS: 4,
     },
-
     # ── NACE 46: Wholesale trade ──────────────────────────────────────────
     # Lower direct risk; depends on sourcing practices of supply chain.
     "46": {
@@ -432,7 +417,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 4,
         _R.COMMUNITY_RIGHTS: 2,
     },
-
     # ── NACE 49: Land transport and logistics ────────────────────────────
     # Long-haul trucking: forced labour, excessive hours, migrant drivers.
     # OECD: road freight identified as high-risk for labour exploitation.
@@ -459,7 +443,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 7,
         _R.COMMUNITY_RIGHTS: 2,
     },
-
     # ── NACE 62: IT / Software / Computer programming ─────────────────────
     # Lowest inherent CSDDD risk. Data privacy most relevant.
     "62": {
@@ -485,7 +468,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 3,
         _R.COMMUNITY_RIGHTS: 1,
     },
-
     # ── NACE 70: Management consultancy ──────────────────────────────────
     "70": {
         _R.CHILD_LABOUR: 1,
@@ -510,7 +492,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 2,
         _R.COMMUNITY_RIGHTS: 1,
     },
-
     # ── NACE 78: Employment activities (staffing agencies) ────────────────
     # Temporary work agencies: labour exploitation, wage theft.
     "78": {
@@ -536,7 +517,6 @@ BASE_MATRIX: dict[str, _Score] = {
         _R.MIGRANT_WORKER_RIGHTS: 8,
         _R.COMMUNITY_RIGHTS: 2,
     },
-
     # ── NACE 86: Human health activities ─────────────────────────────────
     "86": {
         _R.CHILD_LABOUR: 1,

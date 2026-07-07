@@ -35,7 +35,6 @@ from interfaces.api.schemas.supplier_portal import (
     ReviewAssignmentRequest,
     ReviewSubmissionRequest,
     SendMessageRequest,
-    VerifyPlanRequest,
 )
 
 router = APIRouter(prefix="/supplier-portal/internal", tags=["Supplier Portal (Internal)"])
@@ -44,6 +43,7 @@ _ADMIN = Depends(require_admin)
 
 
 # ── Invitations ───────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/invitations",
@@ -55,12 +55,15 @@ async def invite_supplier_user(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> dict:
-    from application.supplier_portal.supplier_auth_service import invite_supplier_user  # noqa: PLC0415
-    from infrastructure.persistence.models.supplier import SupplierModel  # noqa: PLC0415
-    from infrastructure.persistence.models.organization import OrganizationModel  # noqa: PLC0415
-    from infrastructure.celery.tasks.email import send_supplier_invitation_email  # noqa: PLC0415
-    from shared.config import settings  # noqa: PLC0415
     from sqlalchemy import select  # noqa: PLC0415
+
+    from application.supplier_portal.supplier_auth_service import (
+        invite_supplier_user,  # noqa: PLC0415
+    )
+    from infrastructure.celery.tasks.email import send_supplier_invitation_email  # noqa: PLC0415
+    from infrastructure.persistence.models.organization import OrganizationModel  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier import SupplierModel  # noqa: PLC0415
+    from shared.config import settings  # noqa: PLC0415
 
     raw_token = await invite_supplier_user(
         supplier_id=body.supplier_id,
@@ -79,7 +82,9 @@ async def invite_supplier_user(
         ).scalar_one_or_none()
         org_row = (
             await session.execute(
-                select(OrganizationModel).where(OrganizationModel.id == current_user.organization_id)
+                select(OrganizationModel).where(
+                    OrganizationModel.id == current_user.organization_id
+                )
             )
         ).scalar_one_or_none()
         supplier_name = supplier_row.name if supplier_row else body.supplier_id
@@ -98,6 +103,7 @@ async def invite_supplier_user(
 
 
 # ── Evidence Requests ─────────────────────────────────────────────────────────
+
 
 @router.post(
     "/suppliers/{supplier_id}/evidence/requests",
@@ -180,6 +186,7 @@ async def review_submission(
 
 # ── Questionnaire Assignments listing ────────────────────────────────────────
 
+
 @router.get(
     "/questionnaires/assignments",
     response_model=list[QuestionnaireAssignmentResponse],
@@ -190,8 +197,9 @@ async def list_questionnaire_assignments(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> list[QuestionnaireAssignmentResponse]:
-    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import QuestionnaireAssignmentModel
 
     stmt = select(QuestionnaireAssignmentModel).where(
         QuestionnaireAssignmentModel.organization_id == current_user.organization_id
@@ -205,6 +213,7 @@ async def list_questionnaire_assignments(
 
 # ── Questionnaire Templates ───────────────────────────────────────────────────
 
+
 @router.get(
     "/questionnaires/templates",
     response_model=list[QuestionnaireTemplateResponse],
@@ -213,8 +222,9 @@ async def list_questionnaire_assignments(
 async def list_templates(
     session: AsyncSession = Depends(get_db),
 ) -> list[QuestionnaireTemplateResponse]:
-    from infrastructure.persistence.models.supplier_portal import QuestionnaireTemplateModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import QuestionnaireTemplateModel
 
     stmt = (
         select(QuestionnaireTemplateModel)
@@ -283,6 +293,7 @@ async def review_questionnaire(
 
 
 # ── Remediation Plans ─────────────────────────────────────────────────────────
+
 
 @router.post(
     "/suppliers/{supplier_id}/remediation",
@@ -362,6 +373,7 @@ async def verify_remediation_plan(
 
 # ── Messaging (Internal side) ─────────────────────────────────────────────────
 
+
 @router.post(
     "/suppliers/{supplier_id}/conversations",
     response_model=ConversationResponse,
@@ -400,12 +412,12 @@ async def send_internal_message(
     session: AsyncSession = Depends(get_db),
     current_user=Depends(get_current_user),
 ) -> MessageResponse:
+    from sqlalchemy import select
+
     from application.supplier_portal.messaging_service import (
-        get_conversation,
         send_message,
     )
     from infrastructure.persistence.models.supplier_portal import ConversationModel
-    from sqlalchemy import select
 
     # F1: scope by organization_id to block cross-tenant injection
     stmt = select(ConversationModel).where(

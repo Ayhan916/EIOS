@@ -9,7 +9,7 @@ Test count target: 42
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -27,23 +27,20 @@ from application.ai_governance.inventory_service import AIGovernanceError
 from infrastructure.persistence.models.ai_governance import (
     AI_MODEL_STATUSES,
     AI_MODEL_TYPES,
-    CONTROL_TYPES,
     DRIFT_ALERT_TYPES,
     INCIDENT_TYPES,
     REGULATION_FRAMEWORKS,
-    RISK_LEVELS,
-    TEST_RESULTS,
     WORKFLOW_STAGES,
+    AIAssuranceReportModel,
     AIControlModel,
     AIControlTestModel,
     AIDecisionLogModel,
     AIExplanationModel,
     AIIncidentModel,
     AIModelModel,
+    AIPolicyModel,
     AIRiskAssessmentModel,
     AIUseCaseModel,
-    AIAssuranceReportModel,
-    AIPolicyModel,
     HumanReviewModel,
     ModelApprovalWorkflowModel,
     ModelDriftAlertModel,
@@ -52,11 +49,11 @@ from infrastructure.persistence.models.ai_governance import (
     PromptTemplateModel,
 )
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _mock_model(model_id: str = "m1", org: str = "org1") -> MagicMock:
@@ -91,6 +88,7 @@ def _flush_session():
 
 
 # ── TestAIModelORM ─────────────────────────────────────────────────────────────
+
 
 class TestAIModelORM:
     def test_tablename(self):
@@ -161,6 +159,7 @@ class TestAIGovernanceORM:
 
 # ── TestInventoryService ───────────────────────────────────────────────────────
 
+
 class TestInventoryService:
     def test_register_ai_model_invalid_type_raises(self):
         s = _session_with()
@@ -178,7 +177,7 @@ class TestInventoryService:
     def test_register_ai_model_adds_and_audits(self, mock_audit):
         s, added = _flush_session()
         # workflow flush needs the same added list
-        m = inventory_service.register_ai_model(
+        inventory_service.register_ai_model(
             organization_id="org1",
             name="Claude Gov",
             provider="anthropic",
@@ -275,6 +274,7 @@ class TestInventoryService:
 
 # ── TestControlService ─────────────────────────────────────────────────────────
 
+
 class TestControlService:
     @patch("application.ai_governance.control_service.emit_audit_event")
     def test_create_control_invalid_type(self, _):
@@ -291,7 +291,7 @@ class TestControlService:
     @patch("application.ai_governance.control_service.emit_audit_event")
     def test_create_control_success(self, mock_audit):
         s, added = _flush_session()
-        ctrl = control_service.create_control(
+        control_service.create_control(
             organization_id="org1",
             name="Human Review Gate",
             control_type="PREVENTIVE",
@@ -311,7 +311,7 @@ class TestControlService:
     @patch("application.ai_governance.control_service.emit_audit_event")
     def test_record_control_test_success(self, mock_audit):
         s, added = _flush_session()
-        t = control_service.record_control_test("ctrl1", "PASS", "u1", s)
+        control_service.record_control_test("ctrl1", "PASS", "u1", s)
         assert len(added) == 1
         assert isinstance(added[0], AIControlTestModel)
 
@@ -328,7 +328,7 @@ class TestControlService:
     @patch("application.ai_governance.control_service.emit_audit_event")
     def test_create_risk_assessment_success(self, mock_audit):
         s, added = _flush_session()
-        ra = control_service.create_risk_assessment(
+        control_service.create_risk_assessment(
             model_id="m1",
             actor_id="u1",
             session=s,
@@ -341,11 +341,12 @@ class TestControlService:
 
 # ── TestPromptService ──────────────────────────────────────────────────────────
 
+
 class TestPromptService:
     @patch("application.ai_governance.prompt_service.emit_audit_event")
     def test_create_prompt_template(self, mock_audit):
         s, added = _flush_session()
-        pt = prompt_service.create_prompt_template(
+        prompt_service.create_prompt_template(
             organization_id="org1",
             name="Risk Summary Prompt",
             prompt_text="Summarise the following risks: {risks}",
@@ -403,10 +404,11 @@ class TestPromptService:
 
 # ── TestDecisionService ────────────────────────────────────────────────────────
 
+
 class TestDecisionService:
     def test_log_decision_stores_hash_not_raw(self):
         # Caller provides pre-computed SHA-256 hashes; service stores them as-is.
-        pre_hashed_input = "a" * 64   # simulates a 64-char SHA-256 hex digest
+        pre_hashed_input = "a" * 64  # simulates a 64-char SHA-256 hex digest
         pre_hashed_output = "b" * 64
         s, added = _flush_session()
         decision_service.log_ai_decision(
@@ -447,7 +449,7 @@ class TestDecisionService:
     @patch("application.ai_governance.decision_service.emit_audit_event")
     def test_submit_human_review_success(self, mock_audit):
         s, added = _flush_session()
-        review = decision_service.submit_human_review(
+        decision_service.submit_human_review(
             model_id="m1",
             reviewer_user_id="reviewer1",
             decision="APPROVED",
@@ -460,6 +462,7 @@ class TestDecisionService:
 
     def test_sha256_deterministic(self):
         import hashlib
+
         text = "hello world"
         h1 = hashlib.sha256(text.encode()).hexdigest()
         h2 = hashlib.sha256(text.encode()).hexdigest()
@@ -468,6 +471,7 @@ class TestDecisionService:
 
 
 # ── TestMonitoringService ──────────────────────────────────────────────────────
+
 
 class TestMonitoringService:
     @patch("application.ai_governance.monitoring_service.emit_audit_event")
@@ -536,6 +540,7 @@ class TestMonitoringService:
 
 
 # ── TestIncidentService ────────────────────────────────────────────────────────
+
 
 class TestIncidentService:
     @patch("application.ai_governance.incident_service.emit_audit_event")
@@ -606,16 +611,17 @@ class TestIncidentService:
 
 # ── TestAssuranceService ───────────────────────────────────────────────────────
 
+
 class TestAssuranceService:
     @patch("application.ai_governance.assurance_service.emit_audit_event")
     def test_generate_report_compliant_when_no_incidents(self, mock_audit):
         s = _session_with()
         # All count queries return 0 (no incidents)
-        report_obj = MagicMock(spec=AIAssuranceReportModel)
+        MagicMock(spec=AIAssuranceReportModel)
         added = []
         s.add.side_effect = lambda obj: added.append(obj)
 
-        report = assurance_service.generate_assurance_report(
+        assurance_service.generate_assurance_report(
             organization_id="org1",
             title="Q2 AI Assurance",
             period_start=_now(),
@@ -630,26 +636,21 @@ class TestAssuranceService:
 
     def test_compute_overall_status_non_compliant(self):
         # > 10% incident rate → NON_COMPLIANT
-        status = assurance_service._compute_overall_status(
-            incident_count=5, model_count=3
-        )
+        status = assurance_service._compute_overall_status(incident_count=5, model_count=3)
         assert status == "NON_COMPLIANT"
 
     def test_compute_overall_status_partial(self):
         # < 10% incident rate → PARTIALLY_COMPLIANT
-        status = assurance_service._compute_overall_status(
-            incident_count=1, model_count=20
-        )
+        status = assurance_service._compute_overall_status(incident_count=1, model_count=20)
         assert status == "PARTIALLY_COMPLIANT"
 
     def test_compute_overall_status_compliant(self):
-        status = assurance_service._compute_overall_status(
-            incident_count=0, model_count=5
-        )
+        status = assurance_service._compute_overall_status(incident_count=0, model_count=5)
         assert status == "COMPLIANT"
 
 
 # ── TestSecurityConstraints ────────────────────────────────────────────────────
+
 
 class TestAIGovernanceSecurityConstraints:
     def test_decision_log_never_stores_raw_text(self):

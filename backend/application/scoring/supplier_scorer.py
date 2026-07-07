@@ -46,7 +46,7 @@ BENCHMARKING
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from domain.enums import RiskBand, TrendDirection
 

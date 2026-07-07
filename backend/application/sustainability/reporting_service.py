@@ -6,7 +6,7 @@ Reports are immutable once finalized (is_final=True).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
@@ -15,21 +15,20 @@ from application.sustainability.metrics import sustainability_counters
 from infrastructure.persistence.models.sustainability import (
     ASSURANCE_LEVELS,
     ASSURANCE_REPORT_TYPES,
-    ASSURANCE_STATUSES,
     CSRD_ESRS_STANDARDS,
     ISSB_STANDARDS,
     MAPPING_COMPLIANCE_STATUSES,
-    REPORT_RAG_STATUSES,
     REPORT_TYPES,
+    CarbonInventoryModel,
     CSRDPerformanceMappingModel,
     ESGKPIModel,
-    SustainabilityObjectiveModel,
     ESGTargetModel,
     ISSBSustainabilityMappingModel,
     SustainabilityAssuranceRecordModel,
+    SustainabilityObjectiveModel,
     SustainabilityPerformanceReportModel,
-    CarbonInventoryModel,
 )
+
 from .objective_service import SustainabilityConflict, SustainabilityError, _assert_org, _now
 
 
@@ -213,6 +212,7 @@ def list_reports(
 
 # ── Assurance ─────────────────────────────────────────────────────────────────
 
+
 def create_assurance_record(
     organization_id: str,
     report_type: str,
@@ -295,6 +295,7 @@ def list_assurance_records(
 
 # ── CSRD Mappings ─────────────────────────────────────────────────────────────
 
+
 def create_csrd_mapping(
     organization_id: str,
     esrs_standard: str,
@@ -356,10 +357,13 @@ def list_csrd_mappings(
     )
     if esrs_standard:
         q = q.filter(CSRDPerformanceMappingModel.esrs_standard == esrs_standard)
-    return q.order_by(CSRDPerformanceMappingModel.created_at.desc()).limit(limit).offset(offset).all()
+    return (
+        q.order_by(CSRDPerformanceMappingModel.created_at.desc()).limit(limit).offset(offset).all()
+    )
 
 
 # ── ISSB Mappings ─────────────────────────────────────────────────────────────
+
 
 def create_issb_mapping(
     organization_id: str,
@@ -375,7 +379,9 @@ def create_issb_mapping(
     notes: str | None = None,
 ) -> ISSBSustainabilityMappingModel:
     if issb_standard not in ISSB_STANDARDS:
-        raise SustainabilityError(f"Invalid ISSB standard: {issb_standard}. Valid: {ISSB_STANDARDS}")
+        raise SustainabilityError(
+            f"Invalid ISSB standard: {issb_standard}. Valid: {ISSB_STANDARDS}"
+        )
     if compliance_status not in MAPPING_COMPLIANCE_STATUSES:
         raise SustainabilityError(f"Invalid compliance_status: {compliance_status}")
     now = _now()
@@ -420,4 +426,9 @@ def list_issb_mappings(
     )
     if issb_standard:
         q = q.filter(ISSBSustainabilityMappingModel.issb_standard == issb_standard)
-    return q.order_by(ISSBSustainabilityMappingModel.created_at.desc()).limit(limit).offset(offset).all()
+    return (
+        q.order_by(ISSBSustainabilityMappingModel.created_at.desc())
+        .limit(limit)
+        .offset(offset)
+        .all()
+    )

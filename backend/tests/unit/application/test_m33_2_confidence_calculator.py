@@ -13,7 +13,9 @@ from application.copilot.retrieval.base import RetrievalResult
 from domain.enums import ContradictionType, CopilotConfidenceLevel
 
 
-def _result(retriever: str, has_data: bool = True, citation_type: str = "Supplier") -> RetrievalResult:
+def _result(
+    retriever: str, has_data: bool = True, citation_type: str = "Supplier"
+) -> RetrievalResult:
     return RetrievalResult(
         retriever=retriever,
         provenance="test",
@@ -87,7 +89,9 @@ class TestFactorComponents:
 
     def test_citation_count_captured(self):
         citations = [{"citation_type": "Supplier", "object_id": f"s{i}"} for i in range(3)]
-        _, factors = calculate_confidence([_result("supplier_retriever")], citations, [], _fresh_report())
+        _, factors = calculate_confidence(
+            [_result("supplier_retriever")], citations, [], _fresh_report()
+        )
         assert factors["citation_count"] == 3
 
     def test_source_diversity_captured(self):
@@ -108,7 +112,9 @@ class TestFactorComponents:
     def test_contradiction_penalty_applied(self):
         results = [_result("supplier_retriever")]
         citations = [{"citation_type": "Supplier", "object_id": "s1"}]
-        no_contradiction_level, no_factors = calculate_confidence(results, citations, [], _fresh_report())
+        no_contradiction_level, no_factors = calculate_confidence(
+            results, citations, [], _fresh_report()
+        )
         contradiction_level, with_factors = calculate_confidence(
             results, citations, [_contradiction()], _fresh_report()
         )
@@ -118,7 +124,9 @@ class TestFactorComponents:
         results = [_result("supplier_retriever")]
         contradictions = [_contradiction() for _ in range(10)]
         _, factors = calculate_confidence(results, [], contradictions, _fresh_report())
-        no_contradiction_score = (0 + 0 + 0 + 15.0 + 5.0)  # coverage=0, citation=0, diversity=0, fresh=15, presence=5
+        no_contradiction_score = (
+            0 + 0 + 0 + 15.0 + 5.0
+        )  # coverage=0, citation=0, diversity=0, fresh=15, presence=5
         assert no_contradiction_score - factors["raw_score"] <= 15.0
 
     def test_level_matches_factors_level_field(self):

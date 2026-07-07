@@ -14,8 +14,9 @@ Revises: 035
 Create Date: 2026-06-19
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "036"
 down_revision = "035"
@@ -37,8 +38,12 @@ def upgrade() -> None:
         sa.Column("invited_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("password_hash", sa.String(255), nullable=True),
-        sa.Column("notification_preferences", sa.JSON, nullable=False,
-                  server_default='{"email_evidence_requested": true, "email_questionnaire_assigned": true}'),
+        sa.Column(
+            "notification_preferences",
+            sa.JSON,
+            nullable=False,
+            server_default='{"email_evidence_requested": true, "email_questionnaire_assigned": true}',
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.UniqueConstraint("email", name="uq_supplier_users_email"),
@@ -99,8 +104,12 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_evidence_submissions_request_id", "evidence_submissions", ["evidence_request_id"])
-    op.create_index("ix_evidence_submissions_supplier_user", "evidence_submissions", ["supplier_user_id"])
+    op.create_index(
+        "ix_evidence_submissions_request_id", "evidence_submissions", ["evidence_request_id"]
+    )
+    op.create_index(
+        "ix_evidence_submissions_supplier_user", "evidence_submissions", ["supplier_user_id"]
+    )
 
     # ── evidence_submission_files ──────────────────────────────────────────────
     op.create_table(
@@ -110,12 +119,19 @@ def upgrade() -> None:
         sa.Column("file_name", sa.String(500), nullable=False),
         sa.Column("file_path", sa.String(1000), nullable=False),
         sa.Column("file_size", sa.Integer, nullable=False, server_default="0"),
-        sa.Column("content_type", sa.String(200), nullable=False, server_default="application/octet-stream"),
+        sa.Column(
+            "content_type",
+            sa.String(200),
+            nullable=False,
+            server_default="application/octet-stream",
+        ),
         sa.Column("uploaded_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_evidence_submission_files_submission_id", "evidence_submission_files", ["submission_id"])
+    op.create_index(
+        "ix_evidence_submission_files_submission_id", "evidence_submission_files", ["submission_id"]
+    )
 
     # ── questionnaire_templates ────────────────────────────────────────────────
     op.create_table(
@@ -147,7 +163,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_questionnaire_questions_template_id", "questionnaire_questions", ["template_id"])
+    op.create_index(
+        "ix_questionnaire_questions_template_id", "questionnaire_questions", ["template_id"]
+    )
 
     # ── questionnaire_assignments ──────────────────────────────────────────────
     op.create_table(
@@ -169,9 +187,15 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_questionnaire_assignments_supplier_id", "questionnaire_assignments", ["supplier_id"])
-    op.create_index("ix_questionnaire_assignments_status", "questionnaire_assignments", ["questionnaire_status"])
-    op.create_index("ix_questionnaire_assignments_org", "questionnaire_assignments", ["organization_id"])
+    op.create_index(
+        "ix_questionnaire_assignments_supplier_id", "questionnaire_assignments", ["supplier_id"]
+    )
+    op.create_index(
+        "ix_questionnaire_assignments_status", "questionnaire_assignments", ["questionnaire_status"]
+    )
+    op.create_index(
+        "ix_questionnaire_assignments_org", "questionnaire_assignments", ["organization_id"]
+    )
 
     # ── questionnaire_answers ──────────────────────────────────────────────────
     op.create_table(
@@ -186,9 +210,13 @@ def upgrade() -> None:
         sa.Column("answered_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("assignment_id", "question_id", name="uq_questionnaire_answers_assignment_question"),
+        sa.UniqueConstraint(
+            "assignment_id", "question_id", name="uq_questionnaire_answers_assignment_question"
+        ),
     )
-    op.create_index("ix_questionnaire_answers_assignment_id", "questionnaire_answers", ["assignment_id"])
+    op.create_index(
+        "ix_questionnaire_answers_assignment_id", "questionnaire_answers", ["assignment_id"]
+    )
 
     # ── remediation_plans ─────────────────────────────────────────────────────
     op.create_table(
@@ -238,10 +266,13 @@ def upgrade() -> None:
         sa.Column("joined_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.UniqueConstraint("conversation_id", "participant_id", "participant_type",
-                            name="uq_conv_participant"),
+        sa.UniqueConstraint(
+            "conversation_id", "participant_id", "participant_type", name="uq_conv_participant"
+        ),
     )
-    op.create_index("ix_conversation_participants_conv", "conversation_participants", ["conversation_id"])
+    op.create_index(
+        "ix_conversation_participants_conv", "conversation_participants", ["conversation_id"]
+    )
 
     # ── messages ───────────────────────────────────────────────────────────────
     op.create_table(
@@ -285,7 +316,9 @@ def upgrade() -> None:
     )
     op.create_index("ix_supplier_activity_supplier_id", "supplier_activity_events", ["supplier_id"])
     op.create_index("ix_supplier_activity_event_type", "supplier_activity_events", ["event_type"])
-    op.create_index("ix_supplier_activity_supplier_user", "supplier_activity_events", ["supplier_user_id"])
+    op.create_index(
+        "ix_supplier_activity_supplier_user", "supplier_activity_events", ["supplier_user_id"]
+    )
 
 
 def downgrade() -> None:

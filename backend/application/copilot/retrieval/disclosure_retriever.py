@@ -34,24 +34,26 @@ async def retrieve_disclosure_context(
     responses = (await session.execute(stmt)).scalars().all()
 
     req_ids = [r.requirement_id for r in responses if r.requirement_id]
-    reqs_stmt = select(DisclosureRequirementModel).where(
-        DisclosureRequirementModel.id.in_(req_ids)
-    )
+    reqs_stmt = select(DisclosureRequirementModel).where(DisclosureRequirementModel.id.in_(req_ids))
     reqs = (await session.execute(reqs_stmt)).scalars().all()
     req_map = {r.id: r for r in reqs}
 
     data = []
     for resp in responses:
         req = req_map.get(resp.requirement_id or "")
-        data.append({
-            "response_id": resp.id,
-            "disclosure_status": resp.disclosure_status,
-            "coverage_score": getattr(resp, "coverage_score", None),
-            "requirement_code": req.code if req else "",
-            "requirement_title": req.title if req else "",
-            "requirement_description": req.description if req and hasattr(req, "description") else "",
-            "is_weak": resp.disclosure_status in _WEAK_STATUSES,
-        })
+        data.append(
+            {
+                "response_id": resp.id,
+                "disclosure_status": resp.disclosure_status,
+                "coverage_score": getattr(resp, "coverage_score", None),
+                "requirement_code": req.code if req else "",
+                "requirement_title": req.title if req else "",
+                "requirement_description": req.description
+                if req and hasattr(req, "description")
+                else "",
+                "is_weak": resp.disclosure_status in _WEAK_STATUSES,
+            }
+        )
 
     retrieved_at = datetime.now(UTC).isoformat()
     freshness_metadata = [

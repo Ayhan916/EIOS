@@ -5,9 +5,10 @@ Uses MagicMock / AsyncMock — no real database or Kafka needed.
 
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
+
+import pytest
 
 from application.material.service import (
     MaterialComplianceService,
@@ -24,8 +25,8 @@ from domain.material import (
     SourcingRisk,
 )
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _uid() -> str:
     return str(uuid4())
@@ -77,6 +78,7 @@ def _make_material_model(org_id: str, material_id: str | None = None):
 
 
 # ── MaterialService ───────────────────────────────────────────────────────────
+
 
 class TestMaterialService:
     @pytest.mark.asyncio
@@ -179,6 +181,7 @@ class TestMaterialService:
 
 # ── MaterialCompositionService ────────────────────────────────────────────────
 
+
 class TestMaterialCompositionService:
     @pytest.mark.asyncio
     async def test_add_composition(self):
@@ -235,6 +238,7 @@ class TestMaterialCompositionService:
 
 # ── MaterialSourcingService ───────────────────────────────────────────────────
 
+
 class TestMaterialSourcingService:
     @pytest.mark.asyncio
     async def test_add_sourcing_publishes_kafka(self):
@@ -266,6 +270,7 @@ class TestMaterialSourcingService:
 
 
 # ── MaterialComplianceService ─────────────────────────────────────────────────
+
 
 class TestMaterialComplianceService:
     @pytest.mark.asyncio
@@ -323,6 +328,7 @@ class TestMaterialComplianceService:
 
 
 # ── MaterialSustainabilityService ─────────────────────────────────────────────
+
 
 class TestMaterialSustainabilityService:
     @pytest.mark.asyncio

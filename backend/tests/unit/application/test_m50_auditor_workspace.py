@@ -9,22 +9,19 @@ Tests cover:
 
 from __future__ import annotations
 
-import pytest
-
-
 # ── Helpers mirroring production logic ────────────────────────────────────────
+
 
 def _compute_soc2_pct(controls: list[dict]) -> float:
     if not controls:
         return 0.0
-    implemented = sum(
-        1 for c in controls
-        if c["status"] in ("Implemented", "Tested")
-    )
+    implemented = sum(1 for c in controls if c["status"] in ("Implemented", "Tested"))
     return round(implemented / len(controls) * 100, 1)
 
 
-def _is_ga_ready(soc2_pct: float, owasp_pct: float, checklist_pct: float, critical_open: int, high_open: int) -> bool:
+def _is_ga_ready(
+    soc2_pct: float, owasp_pct: float, checklist_pct: float, critical_open: int, high_open: int
+) -> bool:
     return (
         soc2_pct >= 80.0
         and owasp_pct >= 80.0
@@ -49,6 +46,7 @@ def _categorise_controls(controls: list[dict]) -> dict[str, list[dict]]:
 
 
 # ── SOC2 readiness pct ─────────────────────────────────────────────────────────
+
 
 class TestSoc2ReadinessPct:
     def test_all_implemented(self):
@@ -91,6 +89,7 @@ class TestSoc2ReadinessPct:
 
 # ── GA-ready gating ────────────────────────────────────────────────────────────
 
+
 class TestGaReadyGating:
     def test_all_thresholds_met(self):
         assert _is_ga_ready(85.0, 90.0, 95.0, 0, 0) is True
@@ -119,6 +118,7 @@ class TestGaReadyGating:
 
 # ── Checklist percentage ───────────────────────────────────────────────────────
 
+
 class TestChecklistPct:
     def test_all_complete(self):
         items = [{"status": "Complete"} for _ in range(38)]
@@ -137,9 +137,7 @@ class TestChecklistPct:
 
     def test_mixed_38_items(self):
         items = (
-            [{"status": "Complete"}] * 30
-            + [{"status": "N/A"}] * 4
-            + [{"status": "Pending"}] * 4
+            [{"status": "Complete"}] * 30 + [{"status": "N/A"}] * 4 + [{"status": "Pending"}] * 4
         )
         pct = _checklist_pct(items)
         assert pct == round(34 / 38 * 100, 1)
@@ -147,19 +145,22 @@ class TestChecklistPct:
 
 # ── Category grouping ─────────────────────────────────────────────────────────
 
+
 class TestControlCategoryGrouping:
     def test_groups_by_category(self):
         controls = [
             {"control_id": "CC1.1", "category": "CC", "status": "Implemented"},
             {"control_id": "CC1.2", "category": "CC", "status": "In Progress"},
-            {"control_id": "A1.1",  "category": "A",  "status": "Implemented"},
+            {"control_id": "A1.1", "category": "A", "status": "Implemented"},
         ]
         groups = _categorise_controls(controls)
         assert len(groups["CC"]) == 2
         assert len(groups["A"]) == 1
 
     def test_single_category(self):
-        controls = [{"control_id": f"CC{i}", "category": "CC", "status": "Implemented"} for i in range(5)]
+        controls = [
+            {"control_id": f"CC{i}", "category": "CC", "status": "Implemented"} for i in range(5)
+        ]
         groups = _categorise_controls(controls)
         assert list(groups.keys()) == ["CC"]
         assert len(groups["CC"]) == 5
@@ -169,6 +170,7 @@ class TestControlCategoryGrouping:
 
 
 # ── Sign-off package structure ────────────────────────────────────────────────
+
 
 class TestSignOffPackageStructure:
     def _build_package(

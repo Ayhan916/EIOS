@@ -20,8 +20,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.erp.connector_service import ERPConnectorService
 from application.erp.sync_service import ERPSyncService
-from interfaces.api.deps import get_current_user, get_db, require_analyst, scope_gate
 from domain.user import User
+from interfaces.api.deps import get_current_user, get_db, require_analyst, scope_gate
 from interfaces.api.schemas.erp import (
     ERPConnectorCreate,
     ERPConnectorListResponse,
@@ -144,9 +144,7 @@ async def deactivate_connector(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     svc = ERPConnectorService(db)
-    ok = await svc.deactivate(
-        current_user.organization_id, connector_id, actor_id=current_user.id
-    )
+    ok = await svc.deactivate(current_user.organization_id, connector_id, actor_id=current_user.id)
     if not ok:
         raise HTTPException(status_code=404, detail="ERP connector not found")
     await db.commit()
@@ -174,12 +172,14 @@ async def trigger_sync(
     # Build adapter based on connector type
     if connector.adapter_type == "CSV":
         from application.erp.adapters.csv_adapter import CsvERPAdapter
+
         adapter = CsvERPAdapter(
             materials_csv=body.materials_csv or "",
             bom_csv=body.bom_csv or "",
         )
     else:
         from application.erp.adapters.rest import RestERPAdapter
+
         adapter = RestERPAdapter(
             base_url=connector.base_url or "http://localhost",
             timeout_seconds=connector.timeout_seconds,
@@ -239,9 +239,7 @@ async def list_field_mappings(
     db: AsyncSession = Depends(get_db),
 ) -> list[ERPFieldMappingResponse]:
     svc = ERPConnectorService(db)
-    items = await svc.list_field_mappings(
-        current_user.organization_id, connector_id, entity_type
-    )
+    items = await svc.list_field_mappings(current_user.organization_id, connector_id, entity_type)
     return [ERPFieldMappingResponse.from_model(m) for m in items]
 
 

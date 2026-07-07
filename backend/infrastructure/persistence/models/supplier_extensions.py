@@ -13,7 +13,17 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, Index, Integer, String, Text, UniqueConstraint, JSON
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -145,7 +155,11 @@ class SupplierESGMetricModel(BaseModel):
     __tablename__ = "supplier_esg_metrics"
     __table_args__ = (
         UniqueConstraint(
-            "supplier_id", "organization_id", "reporting_year", "reporting_period", "metric_type",
+            "supplier_id",
+            "organization_id",
+            "reporting_year",
+            "reporting_period",
+            "metric_type",
             name="uq_esg_metric_supplier_period_type",
         ),
         Index("ix_sesg_supplier", "supplier_id"),
@@ -177,7 +191,10 @@ class SupplierExternalESGRatingModel(BaseModel):
     __tablename__ = "supplier_external_esg_ratings"
     __table_args__ = (
         UniqueConstraint(
-            "supplier_id", "organization_id", "provider", "rating_date",
+            "supplier_id",
+            "organization_id",
+            "provider",
+            "rating_date",
             name="uq_esg_rating_supplier_provider_date",
         ),
         Index("ix_sext_esg_supplier", "supplier_id"),

@@ -7,6 +7,7 @@ Represents an authenticated platform participant.
 
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -20,7 +21,7 @@ class User(BaseEntity):
     is_active: bool = True
     last_login_at: datetime | None = None
     password_hash: str | None = None
-    notification_preferences: dict = None  # type: ignore[assignment]
+    notification_preferences: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         if self.notification_preferences is None:

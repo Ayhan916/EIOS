@@ -23,7 +23,6 @@ Security:
 from __future__ import annotations
 
 from datetime import UTC, date, datetime
-from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
@@ -31,9 +30,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.corrective_action_plan import CorrectiveActionPlan
 from domain.enums import EntityStatus
+from domain.user import User
 from infrastructure.persistence.repositories.corrective_action_plan import SQLCAPRepository
 from interfaces.api.deps import get_current_user, get_db, require_analyst
-from domain.user import User
 
 router = APIRouter(prefix="/corrective-action-plans", tags=["corrective-action-plans"])
 
@@ -135,7 +134,7 @@ def _require_status(cap: CorrectiveActionPlan, allowed: list[str], action: str) 
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=f"Cannot '{action}' CAP with status '{cap.cap_status}'. "
-                   f"Allowed: {', '.join(allowed)}",
+            f"Allowed: {', '.join(allowed)}",
         )
 
 
@@ -282,7 +281,9 @@ async def update_cap(
     return _to_response(saved)
 
 
-@router.patch("/{cap_id}/commit", response_model=CAPResponse, dependencies=[Depends(require_analyst)])
+@router.patch(
+    "/{cap_id}/commit", response_model=CAPResponse, dependencies=[Depends(require_analyst)]
+)
 async def commit_cap(
     cap_id: str,
     current_user: User = Depends(get_current_user),
@@ -301,7 +302,9 @@ async def commit_cap(
     return _to_response(saved)
 
 
-@router.patch("/{cap_id}/start", response_model=CAPResponse, dependencies=[Depends(require_analyst)])
+@router.patch(
+    "/{cap_id}/start", response_model=CAPResponse, dependencies=[Depends(require_analyst)]
+)
 async def start_cap(
     cap_id: str,
     current_user: User = Depends(get_current_user),
@@ -320,7 +323,9 @@ async def start_cap(
     return _to_response(saved)
 
 
-@router.patch("/{cap_id}/submit-evidence", response_model=CAPResponse, dependencies=[Depends(require_analyst)])
+@router.patch(
+    "/{cap_id}/submit-evidence", response_model=CAPResponse, dependencies=[Depends(require_analyst)]
+)
 async def submit_evidence(
     cap_id: str,
     body: SubmitEvidenceRequest,
@@ -345,7 +350,9 @@ async def submit_evidence(
     return _to_response(saved)
 
 
-@router.patch("/{cap_id}/verify", response_model=CAPResponse, dependencies=[Depends(require_analyst)])
+@router.patch(
+    "/{cap_id}/verify", response_model=CAPResponse, dependencies=[Depends(require_analyst)]
+)
 async def verify_cap(
     cap_id: str,
     body: VerifyRequest,
@@ -372,7 +379,11 @@ async def verify_cap(
     return _to_response(saved)
 
 
-@router.patch("/{cap_id}/mark-insufficient", response_model=CAPResponse, dependencies=[Depends(require_analyst)])
+@router.patch(
+    "/{cap_id}/mark-insufficient",
+    response_model=CAPResponse,
+    dependencies=[Depends(require_analyst)],
+)
 async def mark_insufficient(
     cap_id: str,
     body: InsufficientRequest,
@@ -398,7 +409,9 @@ async def mark_insufficient(
     return _to_response(saved)
 
 
-@router.patch("/{cap_id}/close", response_model=CAPResponse, dependencies=[Depends(require_analyst)])
+@router.patch(
+    "/{cap_id}/close", response_model=CAPResponse, dependencies=[Depends(require_analyst)]
+)
 async def close_cap(
     cap_id: str,
     current_user: User = Depends(get_current_user),

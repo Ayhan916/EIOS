@@ -9,10 +9,10 @@ Tests cover:
 
 from __future__ import annotations
 
-from datetime import datetime, UTC
-
+from datetime import UTC, datetime
 
 # ── Notification entity href mapping ─────────────────────────────────────────
+
 
 def entity_href(entity_type: str | None, entity_id: str | None) -> str | None:
     if not entity_type or not entity_id:
@@ -74,6 +74,7 @@ class TestNotificationEntityHref:
 
 # ── KPI Measurement validation logic ─────────────────────────────────────────
 
+
 def _validate_measurement(
     measured_value: float,
     period_start: str,
@@ -115,6 +116,7 @@ class TestKpiMeasurementValidation:
 
 
 # ── SBTi validation request fields ───────────────────────────────────────────
+
 
 def _validate_sbti_request(
     base_year: int,
@@ -162,6 +164,7 @@ class TestSBTiValidationRequest:
 
 # ── OFAC per-supplier result shape ───────────────────────────────────────────
 
+
 def _ofac_result(supplier_name: str, hits: list[dict]) -> dict:
     matches = [
         {
@@ -203,7 +206,10 @@ class TestOfacPerSupplierResult:
         assert len(r["matches"][0]["programs"]) == 3
 
     def test_matches_capped_at_20(self):
-        hits = [{"uid": str(i), "name": f"Entity {i}", "type": "Entity", "programs": []} for i in range(25)]
+        hits = [
+            {"uid": str(i), "name": f"Entity {i}", "type": "Entity", "programs": []}
+            for i in range(25)
+        ]
         r = _ofac_result("Big Corp", hits)
         assert len(r["matches"]) == 20
 

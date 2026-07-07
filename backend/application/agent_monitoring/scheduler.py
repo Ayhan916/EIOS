@@ -24,16 +24,15 @@ Human approval model:
 from __future__ import annotations
 
 import asyncio
-from datetime import UTC, datetime
 
 import structlog
 
 logger = structlog.get_logger(__name__)
 
 _CHECK_INTERVAL_SECONDS = 3600  # wake every hour
-_STARTUP_DELAY_SECONDS = 90     # give the app time to warm up
+_STARTUP_DELAY_SECONDS = 90  # give the app time to warm up
 _RETENTION_INTERVAL_CYCLES = 24  # run retention cleanup every 24 cycles (~24 hours)
-_SCHEDULER_LOCK_KEY = 363600     # stable PostgreSQL advisory lock key for eios agent scheduler
+_SCHEDULER_LOCK_KEY = 363600  # stable PostgreSQL advisory lock key for eios agent scheduler
 
 # Track how many scheduler cycles have run (for retention cadence)
 _cycle_count = 0
@@ -70,8 +69,9 @@ async def _try_acquire_scheduler_lock_and_run() -> bool:
     Falls back to running without a lock if advisory locks are unavailable
     (e.g. non-PostgreSQL databases in tests).
     """
-    from infrastructure.persistence.database import AsyncSessionFactory
     from sqlalchemy import text
+
+    from infrastructure.persistence.database import AsyncSessionFactory
 
     lock_session = None
     try:
@@ -114,10 +114,11 @@ async def _try_acquire_scheduler_lock_and_run() -> bool:
 
 async def _run_due_agents() -> None:
     """Find due agents, collect all orgs, run each agent for each org."""
+    from sqlalchemy import select
+
     from application.agent_monitoring.agent_service import get_due_agents
     from infrastructure.persistence.database import AsyncSessionFactory
     from infrastructure.persistence.models.organization import OrganizationModel
-    from sqlalchemy import select
 
     async with AsyncSessionFactory() as session, session.begin():
         due_agents = await get_due_agents(session)
@@ -183,7 +184,9 @@ async def _execute_agent(
 
     # No try/except here — on exception the outer session.begin() rolls back
     # everything (including the run record), and _mark_agent_failed() records it.
-    findings, alerts, drafts = await _dispatch(agent_id, agent_type, run_id, organization_id, session)
+    findings, alerts, drafts = await _dispatch(
+        agent_id, agent_type, run_id, organization_id, session
+    )
     await record_run_completed(run_id, agent_id, findings, alerts, drafts, session)
     logger.info(
         "agent_run_completed",
@@ -203,6 +206,8 @@ async def _dispatch(
     session,
 ) -> tuple[int, int, int]:
     """Route to the correct monitoring agent. Returns (findings, alerts, drafts)."""
+    from sqlalchemy import func, select
+
     from application.agent_monitoring import (
         compliance_drift_monitor,
         intelligence_monitor,
@@ -212,14 +217,16 @@ async def _dispatch(
         supplier_behaviour_monitor,
     )
     from application.surveillance import (
-        risk_drift_engine,
-        emerging_risk_engine,
         correlation_engine,
         early_warning_engine,
+        emerging_risk_engine,
         predictive_escalation_engine,
+        risk_drift_engine,
     )
-    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel, RecommendationDraftModel
-    from sqlalchemy import func, select
+    from infrastructure.persistence.models.agent_monitoring import (
+        AgentAlertModel,
+        RecommendationDraftModel,
+    )
 
     _RUN_BEFORE_FIND = (
         select(func.count())
@@ -256,14 +263,20 @@ async def _dispatch(
         return 0, 0, 0
 
     # Count alerts/drafts before the run to compute delta
-    alerts_before = (await session.execute(
-        select(func.count()).select_from(AgentAlertModel).where(AgentAlertModel.agent_id == agent_id)
-    )).scalar_one()
-    drafts_before = (await session.execute(
-        select(func.count()).select_from(RecommendationDraftModel).where(
-            RecommendationDraftModel.agent_id == agent_id
+    alerts_before = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentAlertModel)
+            .where(AgentAlertModel.agent_id == agent_id)
         )
-    )).scalar_one()
+    ).scalar_one()
+    drafts_before = (
+        await session.execute(
+            select(func.count())
+            .select_from(RecommendationDraftModel)
+            .where(RecommendationDraftModel.agent_id == agent_id)
+        )
+    ).scalar_one()
 
     findings_created = await run_fn(
         agent_id=agent_id,
@@ -272,14 +285,20 @@ async def _dispatch(
         session=session,
     )
 
-    alerts_after = (await session.execute(
-        select(func.count()).select_from(AgentAlertModel).where(AgentAlertModel.agent_id == agent_id)
-    )).scalar_one()
-    drafts_after = (await session.execute(
-        select(func.count()).select_from(RecommendationDraftModel).where(
-            RecommendationDraftModel.agent_id == agent_id
+    alerts_after = (
+        await session.execute(
+            select(func.count())
+            .select_from(AgentAlertModel)
+            .where(AgentAlertModel.agent_id == agent_id)
         )
-    )).scalar_one()
+    ).scalar_one()
+    drafts_after = (
+        await session.execute(
+            select(func.count())
+            .select_from(RecommendationDraftModel)
+            .where(RecommendationDraftModel.agent_id == agent_id)
+        )
+    ).scalar_one()
 
     return findings_created, alerts_after - alerts_before, drafts_after - drafts_before
 

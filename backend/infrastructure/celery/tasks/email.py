@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import smtplib
 import ssl
-import structlog
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+
+import structlog
 
 from infrastructure.celery.app import celery_app
 

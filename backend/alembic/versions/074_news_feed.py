@@ -3,9 +3,11 @@
 Revision ID: 074
 Revises: 073
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "074"
@@ -32,13 +34,20 @@ def upgrade() -> None:
         sa.Column("match_type", sa.String(20), nullable=False, server_default="supplier"),
         sa.Column("match_query", sa.String(500), nullable=True),
     )
-    op.create_index("ix_news_articles_org_fetched", "news_articles", ["organization_id", "fetched_at"])
+    op.create_index(
+        "ix_news_articles_org_fetched", "news_articles", ["organization_id", "fetched_at"]
+    )
     op.create_index("ix_news_articles_published", "news_articles", ["published_at"])
 
     op.create_table(
         "news_supplier_assignments",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("article_id", sa.String(36), sa.ForeignKey("news_articles.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "article_id",
+            sa.String(36),
+            sa.ForeignKey("news_articles.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("supplier_id", sa.String(36), nullable=False),
         sa.Column("organization_id", sa.String(36), nullable=False, index=True),
         sa.Column("match_reason", sa.String(20), nullable=False),

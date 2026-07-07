@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 
 import structlog
 
@@ -39,11 +39,12 @@ def check_certificate_expiry_task(self) -> dict[str, object]:
 
 
 async def _run_expiry_check() -> dict[str, object]:
+    from sqlalchemy import select  # noqa: PLC0415
+
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from infrastructure.persistence.models.m46_3 import SupplierCertificateModel  # noqa: PLC0415
-    from infrastructure.persistence.models.user import UserModel  # noqa: PLC0415
     from infrastructure.persistence.models.notification import NotificationModel  # noqa: PLC0415
-    from sqlalchemy import select  # noqa: PLC0415
+    from infrastructure.persistence.models.user import UserModel  # noqa: PLC0415
 
     now = datetime.now(UTC)
     alerted = 0

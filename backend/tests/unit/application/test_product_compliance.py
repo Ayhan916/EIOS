@@ -5,11 +5,13 @@ Tests cover:
 - ProductComplianceScanService: list scans, list non-compliant
 - SupplyChainComplianceSummaryService: summary aggregation
 """
+
 from __future__ import annotations
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
+
+import pytest
 
 from application.compliance.product_scan import ProductComplianceScanService
 from application.compliance.supply_chain_summary import SupplyChainComplianceSummaryService
@@ -65,6 +67,7 @@ def _scalar_one(value):
 
 # ── scan_result logic ─────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_scan_result_compliant_when_all_materials_compliant():
     org_id = _uid()
@@ -72,13 +75,17 @@ async def test_scan_result_compliant_when_all_materials_compliant():
     mat_ids = [_uid(), _uid()]
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
-        _scalars_result([
-            _make_flag(org_id, mat_ids[0], "REACH", "COMPLIANT"),
-            _make_flag(org_id, mat_ids[1], "REACH", "COMPLIANT"),
-        ]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
+            _scalars_result(
+                [
+                    _make_flag(org_id, mat_ids[0], "REACH", "COMPLIANT"),
+                    _make_flag(org_id, mat_ids[1], "REACH", "COMPLIANT"),
+                ]
+            ),
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     scan = await svc.scan_product_bom(org_id, product_id, "REACH")
@@ -97,13 +104,17 @@ async def test_scan_result_non_compliant_when_any_material_non_compliant():
     mat_ids = [_uid(), _uid()]
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
-        _scalars_result([
-            _make_flag(org_id, mat_ids[0], "REACH", "COMPLIANT"),
-            _make_flag(org_id, mat_ids[1], "REACH", "NON_COMPLIANT"),
-        ]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
+            _scalars_result(
+                [
+                    _make_flag(org_id, mat_ids[0], "REACH", "COMPLIANT"),
+                    _make_flag(org_id, mat_ids[1], "REACH", "NON_COMPLIANT"),
+                ]
+            ),
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     scan = await svc.scan_product_bom(org_id, product_id, "REACH")
@@ -120,13 +131,17 @@ async def test_scan_result_partial_when_mix_of_compliant_and_unknown():
     mat_ids = [_uid(), _uid()]
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
-        _scalars_result([
-            _make_flag(org_id, mat_ids[0], "REACH", "COMPLIANT"),
-            # mat_ids[1] has no flag → unknown
-        ]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
+            _scalars_result(
+                [
+                    _make_flag(org_id, mat_ids[0], "REACH", "COMPLIANT"),
+                    # mat_ids[1] has no flag → unknown
+                ]
+            ),
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     scan = await svc.scan_product_bom(org_id, product_id, "REACH")
@@ -143,10 +158,12 @@ async def test_scan_result_unknown_when_no_flags_exist():
     mat_ids = [_uid()]
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
-        _scalars_result([]),  # no flags at all
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result(_make_bom_items(org_id, product_id, mat_ids)),
+            _scalars_result([]),  # no flags at all
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     scan = await svc.scan_product_bom(org_id, product_id, "REACH")
@@ -161,9 +178,11 @@ async def test_scan_result_unknown_when_empty_bom():
     product_id = _uid()
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([]),  # no BOM items
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([]),  # no BOM items
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     scan = await svc.scan_product_bom(org_id, product_id, "REACH")
@@ -178,9 +197,11 @@ async def test_scan_writes_to_session_and_flushes():
     product_id = _uid()
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([]),  # empty BOM
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([]),  # empty BOM
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     await svc.scan_product_bom(org_id, product_id, "EU_BATTERY")
@@ -196,9 +217,11 @@ async def test_scan_records_actor_id():
     actor_id = _uid()
 
     db = _make_db()
-    db.execute = AsyncMock(side_effect=[
-        _scalars_result([]),
-    ])
+    db.execute = AsyncMock(
+        side_effect=[
+            _scalars_result([]),
+        ]
+    )
 
     svc = ProductComplianceScanService(db)
     scan = await svc.scan_product_bom(org_id, product_id, "REACH", actor_id=actor_id)
@@ -236,6 +259,7 @@ async def test_list_non_compliant_products_returns_results():
 
 
 # ── SupplyChainComplianceSummaryService ────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_summary_returns_expected_structure():

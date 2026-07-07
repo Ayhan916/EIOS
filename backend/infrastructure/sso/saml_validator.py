@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import base64
 from datetime import UTC, datetime
-from typing import Any
 
 import lxml.etree as etree
 from signxml import InvalidInput, InvalidSignature, XMLVerifier
@@ -22,16 +21,22 @@ _NS_ASSERTION = "urn:oasis:names:tc:SAML:2.0:assertion"
 _NS_PROTOCOL = "urn:oasis:names:tc:SAML:2.0:protocol"
 
 # Standard attribute OIDs / names for email and display name
-_EMAIL_ATTRS = frozenset({
-    "email", "mail",
-    "urn:oid:0.9.2342.19200300.100.1.3",  # eduPersonPrincipalName
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
-})
-_DISPLAYNAME_ATTRS = frozenset({
-    "displayName", "cn",
-    "urn:oid:2.16.840.1.113730.3.1.241",  # displayName OID
-    "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
-})
+_EMAIL_ATTRS = frozenset(
+    {
+        "email",
+        "mail",
+        "urn:oid:0.9.2342.19200300.100.1.3",  # eduPersonPrincipalName
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress",
+    }
+)
+_DISPLAYNAME_ATTRS = frozenset(
+    {
+        "displayName",
+        "cn",
+        "urn:oid:2.16.840.1.113730.3.1.241",  # displayName OID
+        "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name",
+    }
+)
 
 
 class ProductionSAMLValidator:
@@ -64,9 +69,7 @@ class ProductionSAMLValidator:
         self._check_conditions(assertion, sp_entity_id)
 
         name_id = self._extract_name_id(assertion)
-        email, display_name, groups = self._extract_attributes(
-            assertion, name_id, group_attribute
-        )
+        email, display_name, groups = self._extract_attributes(assertion, name_id, group_attribute)
 
         return ValidatedIdentity(
             external_id=name_id,
@@ -77,9 +80,7 @@ class ProductionSAMLValidator:
             display_name=display_name,
         )
 
-    def _verify_signature(
-        self, root: etree._Element, certificates: list[str]
-    ) -> etree._Element:
+    def _verify_signature(self, root: etree._Element, certificates: list[str]) -> etree._Element:
         verifier = XMLVerifier()
         last_exc: Exception | None = None
         for cert_pem in certificates:
@@ -88,9 +89,7 @@ class ProductionSAMLValidator:
                 return result.signed_xml
             except (InvalidSignature, InvalidInput, Exception) as exc:
                 last_exc = exc
-        raise SSOValidationError(
-            f"SAMLResponse signature invalid: {last_exc}"
-        )
+        raise SSOValidationError(f"SAMLResponse signature invalid: {last_exc}")
 
     def _extract_assertion(self, signed_root: etree._Element) -> etree._Element:
         tag_assertion = f"{{{_NS_ASSERTION}}}Assertion"
@@ -105,9 +104,7 @@ class ProductionSAMLValidator:
         issuer_elem = assertion.find(f"{{{_NS_ASSERTION}}}Issuer")
         actual = issuer_elem.text if issuer_elem is not None else None
         if actual != idp_issuer:
-            raise SSOValidationError(
-                f"Issuer mismatch: expected '{idp_issuer}', got '{actual}'"
-            )
+            raise SSOValidationError(f"Issuer mismatch: expected '{idp_issuer}', got '{actual}'")
 
     def _check_conditions(self, assertion: etree._Element, sp_entity_id: str) -> None:
         conditions = assertion.find(f"{{{_NS_ASSERTION}}}Conditions")
@@ -124,16 +121,12 @@ class ProductionSAMLValidator:
 
         not_on_or_after_str = conditions.get("NotOnOrAfter")
         if not_on_or_after_str:
-            not_on_or_after = datetime.fromisoformat(
-                not_on_or_after_str.replace("Z", "+00:00")
-            )
+            not_on_or_after = datetime.fromisoformat(not_on_or_after_str.replace("Z", "+00:00"))
             if now >= not_on_or_after:
                 raise SSOValidationError("SAMLResponse has expired (NotOnOrAfter)")
 
         if sp_entity_id:
-            audience_restrictions = conditions.findall(
-                f"{{{_NS_ASSERTION}}}AudienceRestriction"
-            )
+            audience_restrictions = conditions.findall(f"{{{_NS_ASSERTION}}}AudienceRestriction")
             if audience_restrictions:
                 valid = any(
                     aud.text == sp_entity_id
@@ -141,9 +134,7 @@ class ProductionSAMLValidator:
                     for aud in ar.findall(f"{{{_NS_ASSERTION}}}Audience")
                 )
                 if not valid:
-                    raise SSOValidationError(
-                        f"Audience restriction: expected '{sp_entity_id}'"
-                    )
+                    raise SSOValidationError(f"Audience restriction: expected '{sp_entity_id}'")
 
     def _extract_name_id(self, assertion: etree._Element) -> str:
         subject = assertion.find(f"{{{_NS_ASSERTION}}}Subject")
@@ -170,8 +161,7 @@ class ProductionSAMLValidator:
         for attr in attr_stmt.findall(f"{{{_NS_ASSERTION}}}Attribute"):
             attr_name = attr.get("Name", "")
             values: list[str] = [
-                v.text or ""
-                for v in attr.findall(f"{{{_NS_ASSERTION}}}AttributeValue")
+                v.text or "" for v in attr.findall(f"{{{_NS_ASSERTION}}}AttributeValue")
             ]
             if attr_name in _EMAIL_ATTRS and values:
                 email = values[0]

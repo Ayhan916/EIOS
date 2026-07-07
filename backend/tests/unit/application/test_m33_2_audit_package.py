@@ -8,8 +8,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import UTC, datetime
-from unittest.mock import MagicMock
 
 from application.copilot.audit_package_service import (
     build_audit_payload,

@@ -8,10 +8,12 @@ Revision ID: 096
 Revises: 095
 Create Date: 2026-07-06
 """
+
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "096"
 down_revision = "095"
@@ -42,14 +44,27 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_board_signoff_requests_org", "board_signoff_requests", ["organization_id"])
-    op.create_index("ix_board_signoff_requests_org_status", "board_signoff_requests", ["organization_id", "status"])
-    op.create_index("ix_board_signoff_requests_org_type", "board_signoff_requests", ["organization_id", "signoff_type"])
+    op.create_index(
+        "ix_board_signoff_requests_org_status",
+        "board_signoff_requests",
+        ["organization_id", "status"],
+    )
+    op.create_index(
+        "ix_board_signoff_requests_org_type",
+        "board_signoff_requests",
+        ["organization_id", "signoff_type"],
+    )
 
     op.create_table(
         "board_decisions",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("organization_id", sa.String(36), nullable=False),
-        sa.Column("request_id", sa.String(36), sa.ForeignKey("board_signoff_requests.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "request_id",
+            sa.String(36),
+            sa.ForeignKey("board_signoff_requests.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("decision", sa.String(20), nullable=False),
         sa.Column("decided_by", sa.String(255), nullable=False),
         sa.Column("decided_by_role", sa.String(30), nullable=False, server_default="board_member"),

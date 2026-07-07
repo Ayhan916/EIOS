@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import pytest
-
 from domain.disclosure import DisclosureFramework, DisclosureRequirement, DisclosureResponse
 from domain.enums import EntityStatus
 from domain.reporting_package import ReportingPackage
 from infrastructure.reporting.disclosure_pdf_renderer import render_reporting_package
-
 
 # ── DisclosureFramework ───────────────────────────────────────────────────────
 
@@ -85,8 +82,12 @@ class TestDisclosureResponse:
         assert isinstance(resp.coverage_rationale, list)
 
     def test_unique_ids(self):
-        r1 = DisclosureResponse(organization_id="o", requirement_id="r1", status=EntityStatus.ACTIVE)
-        r2 = DisclosureResponse(organization_id="o", requirement_id="r2", status=EntityStatus.ACTIVE)
+        r1 = DisclosureResponse(
+            organization_id="o", requirement_id="r1", status=EntityStatus.ACTIVE
+        )
+        r2 = DisclosureResponse(
+            organization_id="o", requirement_id="r2", status=EntityStatus.ACTIVE
+        )
         assert r1.id != r2.id
 
 

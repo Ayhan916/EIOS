@@ -21,6 +21,7 @@ M34.2 hardening:
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -68,7 +69,7 @@ async def run_with_retry(
         except Exception as exc:
             last_error = exc
             if attempt < max_retries - 1:
-                delay = base_delay * (2 ** attempt)
+                delay = base_delay * (2**attempt)
                 logger.warning(
                     "connector_retry",
                     connector=connector_name,
@@ -112,6 +113,7 @@ class BaseLiveConnector(ABC):
             errors.append("Dataset is empty — no records ingested")
         seen: set[str] = set()
         import json
+
         for record in raw.records:
             key = json.dumps(record, sort_keys=True, default=str)
             if key in seen:
@@ -134,14 +136,14 @@ class BaseLiveConnector(ABC):
             (ExternalDataset, validation_errors) — dataset is QUARANTINED
             if validation_errors is non-empty.
         """
+        import httpx
+
         from application.external_intelligence.dataset_service import ingest_dataset
         from application.external_intelligence.validation_service import (
-            validate_dataset,
             validate_and_persist_result,
+            validate_dataset,
         )
         from domain.enums import DatasetStatus
-
-        import httpx
 
         _client = client
         _own_client = False
@@ -181,8 +183,12 @@ class BaseLiveConnector(ABC):
 
             if errors:
                 dataset.dataset_status = DatasetStatus.QUARANTINED
-                from infrastructure.persistence.models.external_intelligence import ExternalDatasetModel
                 from sqlalchemy import update
+
+                from infrastructure.persistence.models.external_intelligence import (
+                    ExternalDatasetModel,
+                )
+
                 stmt = (
                     update(ExternalDatasetModel)
                     .where(ExternalDatasetModel.id == dataset.id)
@@ -252,7 +258,7 @@ class BaseLiveConnector(ABC):
                     break
                 except Exception as exc:
                     if attempt < max(max_retries, 1) - 1:
-                        delay = _BASE_DELAY_SECONDS * (2 ** attempt)
+                        delay = _BASE_DELAY_SECONDS * (2**attempt)
                         logger.warning(
                             "connector_retry",
                             connector=self.connector_name,
@@ -276,11 +282,7 @@ class BaseLiveConnector(ABC):
         runtime = (completed_at - started_at).total_seconds()
 
         # H1: success requires dataset, no error, AND no validation errors (not quarantined)
-        is_success = (
-            dataset is not None
-            and error_msg is None
-            and not validation_errors
-        )
+        is_success = dataset is not None and error_msg is None and not validation_errors
 
         # M4: always increment total; failures also increment failed_total
         ext_counters.record_dataset_refresh(self.connector_name, success=is_success)
@@ -309,8 +311,9 @@ class BaseLiveConnector(ABC):
 
 async def _check_concurrent_run(connector_name: str, session: Any) -> str | None:
     """Return the ID of an in-progress run if one exists, else None."""
-    from infrastructure.persistence.models.connector_run import ConnectorRunModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.connector_run import ConnectorRunModel
 
     stmt = (
         select(ConnectorRunModel)
@@ -333,6 +336,7 @@ async def _acquire_running_lock(
 ) -> str:
     """Insert a status='running' row and return its ID."""
     import uuid
+
     from infrastructure.persistence.models.connector_run import ConnectorRunModel
 
     lock_id = str(uuid.uuid4())
@@ -355,10 +359,8 @@ async def _acquire_running_lock(
         updated_at=started_at,
     )
     session.add(model)
-    try:
+    with contextlib.suppress(Exception):
         await session.flush()
-    except Exception:
-        pass
     return lock_id
 
 
@@ -369,9 +371,10 @@ async def _record_run(
     run_lock_id: str | None = None,
 ) -> None:
     """Update the running lock row to final status (or insert if lock failed)."""
-    from infrastructure.persistence.models.connector_run import ConnectorRunModel
-    from domain.enums import ConnectorStatus
     import json
+
+    from domain.enums import ConnectorStatus
+    from infrastructure.persistence.models.connector_run import ConnectorRunModel
 
     status = ConnectorStatus.HEALTHY if result.success else ConnectorStatus.FAILED
     if result.success and result.retry_count > 0:
@@ -379,6 +382,7 @@ async def _record_run(
 
     if run_lock_id:
         from sqlalchemy import update
+
         stmt = (
             update(ConnectorRunModel)
             .where(ConnectorRunModel.id == run_lock_id)
@@ -403,6 +407,7 @@ async def _record_run(
             pass
     else:
         import uuid
+
         model = ConnectorRunModel(
             id=str(uuid.uuid4()),
             connector_name=result.connector_name,
@@ -422,7 +427,5 @@ async def _record_run(
             updated_at=result.completed_at,
         )
         session.add(model)
-        try:
+        with contextlib.suppress(Exception):
             await session.flush()
-        except Exception:
-            pass

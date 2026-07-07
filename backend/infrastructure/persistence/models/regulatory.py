@@ -2,7 +2,17 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Float, ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Float,
+    ForeignKey,
+    Index,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSON
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -68,7 +78,9 @@ class RequirementMappingModel(BaseModel):
     rationale: Mapped[str] = mapped_column(Text, nullable=False, default="")
     mapping_method: Mapped[str] = mapped_column(String(30), nullable=False, default="manual")
     mapping_version: Mapped[str] = mapped_column(String(10), nullable=False, default="1.0")
-    regulation_version_at_mapping: Mapped[str] = mapped_column(String(20), nullable=False, default="1.0")
+    regulation_version_at_mapping: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="1.0"
+    )
     mapped_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     supplier_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     assessment_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
@@ -95,7 +107,9 @@ class ComplianceGapModel(BaseModel):
     source_entity_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     calculation_version: Mapped[str] = mapped_column(String(10), nullable=False, default="1.0")
-    regulation_version_at_calculation: Mapped[str] = mapped_column(String(20), nullable=False, default="1.0")
+    regulation_version_at_calculation: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="1.0"
+    )
     is_resolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
@@ -110,9 +124,7 @@ class ComplianceReportModel(BaseModel):
     """
 
     __tablename__ = "compliance_reports"
-    __table_args__ = (
-        Index("ix_compliance_reports_org_type", "organization_id", "report_type"),
-    )
+    __table_args__ = (Index("ix_compliance_reports_org_type", "organization_id", "report_type"),)
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     report_type: Mapped[str] = mapped_column(String(30), nullable=False)

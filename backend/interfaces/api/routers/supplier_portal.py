@@ -26,7 +26,6 @@ from interfaces.api.deps import get_db
 from interfaces.api.schemas.supplier_portal import (
     ActivateRequest,
     ActivityEventResponse,
-    ConversationCreate,
     ConversationResponse,
     DashboardResponse,
     EvidenceRequestResponse,
@@ -38,7 +37,6 @@ from interfaces.api.schemas.supplier_portal import (
     PasswordResetConfirm,
     PasswordResetRequest,
     QuestionnaireAssignmentResponse,
-    QuestionnaireTemplateResponse,
     RemediationPlanResponse,
     SaveAnswerRequest,
     SendMessageRequest,
@@ -48,7 +46,6 @@ from interfaces.api.schemas.supplier_portal import (
 )
 from interfaces.api.supplier_deps import (
     get_current_supplier_user,
-    guard_supplier_resource,
 )
 
 router = APIRouter(prefix="/supplier-portal", tags=["Supplier Portal"])
@@ -57,6 +54,7 @@ _SUPPLIER = Depends(get_current_supplier_user)
 
 
 # ── Auth (no auth required) ───────────────────────────────────────────────────
+
 
 @router.post("/auth/activate", response_model=LoginResponse, status_code=status.HTTP_201_CREATED)
 async def activate_account(
@@ -103,6 +101,7 @@ async def request_password_reset(
     session: AsyncSession = Depends(get_db),
 ) -> None:
     from application.supplier_portal.supplier_auth_service import generate_password_reset_token
+
     # Fire-and-forget — never reveal whether user exists
     await generate_password_reset_token(body.email, session)
     await session.commit()
@@ -124,6 +123,7 @@ async def confirm_password_reset(
 
 # ── Profile ───────────────────────────────────────────────────────────────────
 
+
 @router.get("/profile", response_model=SupplierUserResponse)
 async def get_profile(
     supplier_user: SupplierUser = _SUPPLIER,
@@ -140,7 +140,9 @@ async def get_profile(
         accepted_at=supplier_user.accepted_at,
         notification_preferences=supplier_user.notification_preferences,
         created_at=supplier_user.accepted_at or supplier_user.invited_at,
-        updated_at=supplier_user.last_login_at or supplier_user.accepted_at or supplier_user.invited_at,
+        updated_at=supplier_user.last_login_at
+        or supplier_user.accepted_at
+        or supplier_user.invited_at,
     )
 
 
@@ -150,9 +152,11 @@ async def update_profile(
     supplier_user: SupplierUser = _SUPPLIER,
     session: AsyncSession = Depends(get_db),
 ) -> SupplierUserResponse:
-    from infrastructure.persistence.models.supplier_portal import SupplierUserModel
     from datetime import UTC, datetime
+
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import SupplierUserModel
 
     stmt = select(SupplierUserModel).where(SupplierUserModel.id == supplier_user.id)
     row = (await session.execute(stmt)).scalar_one_or_none()
@@ -185,6 +189,7 @@ async def update_profile(
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/dashboard", response_model=DashboardResponse)
 async def get_dashboard(
     supplier_user: SupplierUser = _SUPPLIER,
@@ -201,13 +206,12 @@ async def get_dashboard(
         pending_questionnaires=result.pending_questionnaires,
         requested_evidence=result.requested_evidence,
         open_remediation_plans=result.open_remediation_plans,
-        recent_activity=[
-            ActivityEventResponse.model_validate(ev) for ev in result.recent_activity
-        ],
+        recent_activity=[ActivityEventResponse.model_validate(ev) for ev in result.recent_activity],
     )
 
 
 # ── Evidence ──────────────────────────────────────────────────────────────────
+
 
 @router.get("/evidence/requests", response_model=list[EvidenceRequestResponse])
 async def list_my_evidence_requests(
@@ -293,6 +297,7 @@ async def submit_evidence(
 
 # ── Questionnaires ────────────────────────────────────────────────────────────
 
+
 @router.get("/questionnaires", response_model=list[QuestionnaireAssignmentResponse])
 async def list_my_questionnaires(
     status: str | None = None,
@@ -343,9 +348,7 @@ async def submit_questionnaire(
     from application.supplier_portal.questionnaire_service import submit_questionnaire
 
     try:
-        assignment = await submit_questionnaire(
-            assignment_id, supplier_user.supplier_id, session
-        )
+        assignment = await submit_questionnaire(assignment_id, supplier_user.supplier_id, session)
         await session.commit()
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
@@ -353,6 +356,7 @@ async def submit_questionnaire(
 
 
 # ── Remediation ───────────────────────────────────────────────────────────────
+
 
 @router.get("/remediation", response_model=list[RemediationPlanResponse])
 async def list_my_remediation_plans(
@@ -393,6 +397,7 @@ async def update_remediation_progress(
 
 
 # ── Messaging ─────────────────────────────────────────────────────────────────
+
 
 @router.get("/messages/conversations", response_model=list[ConversationResponse])
 async def list_conversations(
@@ -454,6 +459,7 @@ async def send_message(
 
 
 # ── Activity ──────────────────────────────────────────────────────────────────
+
 
 @router.get("/activity", response_model=list[ActivityEventResponse])
 async def get_activity(

@@ -9,7 +9,7 @@ Production upgrade path: add Confluent Schema Registry in M28.2.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from enum import Enum
 from uuid import uuid4
@@ -80,17 +80,15 @@ class DomainEvent:
     """
 
     event_type: str
-    aggregate_type: str          # Supplier | Material | Product
+    aggregate_type: str  # Supplier | Material | Product
     aggregate_id: str
     organization_id: str
     payload: dict
     event_id: str = field(default_factory=lambda: str(uuid4()))
-    occurred_at: str = field(
-        default_factory=lambda: datetime.now(UTC).isoformat()
-    )
+    occurred_at: str = field(default_factory=lambda: datetime.now(UTC).isoformat())
     correlation_id: str | None = None
     causation_id: str | None = None  # ID of the event that caused this one
-    actor_id: str | None = None      # user_id who triggered the action
+    actor_id: str | None = None  # user_id who triggered the action
 
     def to_json(self) -> bytes:
         return json.dumps(asdict(self), default=str).encode("utf-8")
@@ -103,7 +101,7 @@ class DomainEvent:
         location_id: str,
         location_type: str,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=SupplierEventType.LOCATION_CREATED,
             aggregate_type="Supplier",
@@ -126,7 +124,7 @@ class DomainEvent:
         cert_type: str,
         valid_until: str | None,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=SupplierEventType.CERTIFICATION_CREATED,
             aggregate_type="Supplier",
@@ -152,7 +150,7 @@ class DomainEvent:
         value: float,
         unit: str,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=SupplierEventType.ESG_METRIC_RECORDED,
             aggregate_type="Supplier",
@@ -178,7 +176,7 @@ class DomainEvent:
         is_state_owned: bool,
         parent_company_country: str | None,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=SupplierEventType.OWNERSHIP_UPDATED,
             aggregate_type="Supplier",
@@ -204,7 +202,7 @@ class DomainEvent:
         score_pct: float | None,
         grade: str | None,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=SupplierEventType.ESG_RATING_RECEIVED,
             aggregate_type="Supplier",
@@ -229,7 +227,7 @@ class DomainEvent:
         product_type: str,
         name: str,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=ProductEventType.PRODUCT_CREATED,
             aggregate_type="Product",
@@ -247,7 +245,7 @@ class DomainEvent:
         material_id: str,
         weight_pct: float | None,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=ProductEventType.BOM_ITEM_ADDED,
             aggregate_type="Product",
@@ -269,7 +267,7 @@ class DomainEvent:
         material_type: str,
         name: str,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=MaterialEventType.MATERIAL_CREATED,
             aggregate_type="Material",
@@ -287,7 +285,7 @@ class DomainEvent:
         regulation: str,
         compliance_status: str,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=MaterialEventType.COMPLIANCE_FLAG_SET,
             aggregate_type="Material",
@@ -309,7 +307,7 @@ class DomainEvent:
         supplier_id: str,
         country_of_origin: str | None,
         actor_id: str | None = None,
-    ) -> "DomainEvent":
+    ) -> DomainEvent:
         return cls(
             event_type=MaterialEventType.SOURCING_ADDED,
             aggregate_type="Material",

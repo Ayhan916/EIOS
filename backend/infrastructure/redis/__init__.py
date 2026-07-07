@@ -1,3 +1,3 @@
-from .client import get_redis, init_redis, close_redis
+from .client import close_redis, get_redis, init_redis
 
 __all__ = ["get_redis", "init_redis", "close_redis"]

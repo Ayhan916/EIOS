@@ -1,4 +1,5 @@
 """SQLAlchemy persistence models — Contractual Assurance (CSDDD Art. 10)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -23,15 +24,15 @@ class ContractClauseModel(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     created_by: Mapped[str] = mapped_column(String(36), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     assurances: Mapped[list[ContractAssuranceModel]] = relationship(
         "ContractAssuranceModel", back_populates="clause", cascade="all, delete-orphan"
     )
 
-    __table_args__ = (
-        Index("ix_contract_clauses_org_category", "organization_id", "category"),
-    )
+    __table_args__ = (Index("ix_contract_clauses_org_category", "organization_id", "category"),)
 
 
 class ContractAssuranceModel(Base):
@@ -49,12 +50,18 @@ class ContractAssuranceModel(Base):
     document_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     cascade_confirmed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    cascade_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    cascade_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     valid_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
-    clause: Mapped[ContractClauseModel] = relationship("ContractClauseModel", back_populates="assurances")
+    clause: Mapped[ContractClauseModel] = relationship(
+        "ContractClauseModel", back_populates="assurances"
+    )
     audit_logs: Mapped[list[ClauseAuditLogModel]] = relationship(
         "ClauseAuditLogModel", back_populates="assurance", cascade="all, delete-orphan"
     )

@@ -17,14 +17,15 @@ from application.surveillance.signal_service import create_signal
 
 logger = structlog.get_logger(__name__)
 
-_RESPONSE_RATE_THRESHOLD = 0.5      # < 50% response rate
-_EVIDENCE_SLOWDOWN_DAYS = 14        # no new evidence in 14 days
-_INACTIVITY_DAYS = 30               # no supplier portal activity in 30 days
+_RESPONSE_RATE_THRESHOLD = 0.5  # < 50% response rate
+_EVIDENCE_SLOWDOWN_DAYS = 14  # no new evidence in 14 days
+_INACTIVITY_DAYS = 30  # no supplier portal activity in 30 days
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
-    from infrastructure.persistence.models.supplier import SupplierModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     suppliers_stmt = select(SupplierModel).where(
         SupplierModel.organization_id == organization_id,
@@ -37,39 +38,45 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
         signals_created += await _check_questionnaire_response_rate(
             supplier, organization_id, session
         )
-        signals_created += await _check_evidence_slowdown(
-            supplier, organization_id, session
-        )
-        signals_created += await _check_supplier_inactivity(
-            supplier, organization_id, session
-        )
+        signals_created += await _check_evidence_slowdown(supplier, organization_id, session)
+        signals_created += await _check_supplier_inactivity(supplier, organization_id, session)
     return signals_created
 
 
 async def _check_questionnaire_response_rate(supplier, organization_id: str, session) -> int:
     """Detect falling questionnaire response rate."""
     try:
+        from datetime import UTC, datetime, timedelta
+
+        from sqlalchemy import func, select
+
         from infrastructure.persistence.models.supplier_portal import (
             SupplierQuestionnaireModel,
             SupplierResponseModel,
         )
-        from sqlalchemy import func, select
-        from datetime import UTC, datetime, timedelta
 
         cutoff = datetime.now(UTC) - timedelta(days=60)
-        total_stmt = select(func.count()).select_from(SupplierQuestionnaireModel).where(
-            SupplierQuestionnaireModel.organization_id == organization_id,
-            SupplierQuestionnaireModel.supplier_id == supplier.id,
-            SupplierQuestionnaireModel.created_at >= cutoff,
+        total_stmt = (
+            select(func.count())
+            .select_from(SupplierQuestionnaireModel)
+            .where(
+                SupplierQuestionnaireModel.organization_id == organization_id,
+                SupplierQuestionnaireModel.supplier_id == supplier.id,
+                SupplierQuestionnaireModel.created_at >= cutoff,
+            )
         )
         total = (await session.execute(total_stmt)).scalar_one()
         if total == 0:
             return 0
 
-        answered_stmt = select(func.count()).select_from(SupplierResponseModel).where(
-            SupplierResponseModel.organization_id == organization_id,
-            SupplierResponseModel.supplier_id == supplier.id,
-            SupplierResponseModel.created_at >= cutoff,
+        answered_stmt = (
+            select(func.count())
+            .select_from(SupplierResponseModel)
+            .where(
+                SupplierResponseModel.organization_id == organization_id,
+                SupplierResponseModel.supplier_id == supplier.id,
+                SupplierResponseModel.created_at >= cutoff,
+            )
         )
         answered = (await session.execute(answered_stmt)).scalar_one()
         rate = answered / total if total > 0 else 1.0
@@ -108,9 +115,11 @@ async def _check_questionnaire_response_rate(supplier, organization_id: str, ses
 async def _check_evidence_slowdown(supplier, organization_id: str, session) -> int:
     """Detect evidence delivery slowdown."""
     try:
-        from infrastructure.persistence.models.evidence import EvidenceModel
-        from sqlalchemy import select
         from datetime import UTC, datetime, timedelta
+
+        from sqlalchemy import select
+
+        from infrastructure.persistence.models.evidence import EvidenceModel
 
         cutoff = datetime.now(UTC) - timedelta(days=_EVIDENCE_SLOWDOWN_DAYS)
         stmt = (
@@ -130,6 +139,7 @@ async def _check_evidence_slowdown(supplier, organization_id: str, session) -> i
         return 0
 
     from datetime import UTC, datetime
+
     week = datetime.now(UTC).strftime("%Y-W%V")
     dedupe = f"early_warning:evidence_slowdown:{supplier.id}:{week}"
     await create_signal(
@@ -155,9 +165,11 @@ async def _check_evidence_slowdown(supplier, organization_id: str, session) -> i
 async def _check_supplier_inactivity(supplier, organization_id: str, session) -> int:
     """Detect supplier portal inactivity."""
     try:
-        from infrastructure.persistence.models.supplier_portal import SupplierPortalUserModel
-        from sqlalchemy import select
         from datetime import UTC, datetime, timedelta
+
+        from sqlalchemy import select
+
+        from infrastructure.persistence.models.supplier_portal import SupplierPortalUserModel
 
         cutoff = datetime.now(UTC) - timedelta(days=_INACTIVITY_DAYS)
         stmt = (
@@ -176,6 +188,7 @@ async def _check_supplier_inactivity(supplier, organization_id: str, session) ->
         return 0
 
     from datetime import UTC, datetime
+
     month = datetime.now(UTC).strftime("%Y-%m")
     dedupe = f"early_warning:inactivity:{supplier.id}:{month}"
     await create_signal(

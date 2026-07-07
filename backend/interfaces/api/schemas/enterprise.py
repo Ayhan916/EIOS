@@ -7,7 +7,6 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Enums (string literals used throughout) ───────────────────────────────────
 
 DATA_RESIDENCY_VALUES = ("EU", "UK", "US", "APAC")
@@ -373,6 +372,7 @@ class SCIMTokenResponse(BaseModel):
 
 class SCIMTokenCreateResponse(SCIMTokenResponse):
     """Returned only on token creation — raw_token never returned again."""
+
     raw_token: str
 
 
@@ -424,6 +424,7 @@ class SSOLoginResponse(BaseModel):
 
 class SAMLCallbackRequest(BaseModel):
     """Posted by the IdP to the SAML ACS endpoint."""
+
     idp_id: str
     user_id: str
     # base64-encoded SAMLResponse from the IdP
@@ -433,6 +434,7 @@ class SAMLCallbackRequest(BaseModel):
 
 class OIDCCallbackRequest(BaseModel):
     """Posted after the OIDC authorization code exchange."""
+
     idp_id: str
     user_id: str
     # ID token returned by the OIDC token endpoint

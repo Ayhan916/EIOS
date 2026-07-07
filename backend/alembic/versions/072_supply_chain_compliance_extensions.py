@@ -3,11 +3,13 @@
 Revision ID: 072
 Revises: 071
 """
+
 from __future__ import annotations
 
 import sqlalchemy as sa
-from alembic import op
 from sqlalchemy.dialects.postgresql import JSON
+
+from alembic import op
 
 revision = "072"
 down_revision = "071"

@@ -15,6 +15,7 @@ Create Date: 2026-06-21
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "045"
@@ -44,9 +45,7 @@ def upgrade() -> None:
             nullable=True,
         ),
     )
-    op.create_index(
-        "ix_ai_reg_mappings_org", "ai_regulation_mappings", ["organization_id"]
-    )
+    op.create_index("ix_ai_reg_mappings_org", "ai_regulation_mappings", ["organization_id"])
 
     # ── human_reviews: link to incidents for severity gate ────────────────────
     op.add_column(
@@ -98,9 +97,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table("ai_regulation_mapping_history")
-    op.drop_constraint(
-        "uq_workflow_model_stage", "model_approval_workflows", type_="unique"
-    )
+    op.drop_constraint("uq_workflow_model_stage", "model_approval_workflows", type_="unique")
     op.drop_index("ix_human_reviews_incident", table_name="human_reviews")
     op.drop_column("human_reviews", "incident_id")
     op.drop_index("ix_ai_reg_mappings_org", table_name="ai_regulation_mappings")

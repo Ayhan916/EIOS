@@ -90,25 +90,29 @@ class TestConfidenceNeverRawModelScore:
     def test_confidence_level_is_enum_value(self):
         """Confidence must be one of the four evidence-based levels."""
         valid_levels = {l.value for l in CopilotConfidenceLevel}
-        results = [RetrievalResult(
-            retriever="supplier_retriever",
-            provenance="test",
-            data=[{"id": "s1"}],
-            source_ids=["s1"],
-            citation_type="Supplier",
-        )]
+        results = [
+            RetrievalResult(
+                retriever="supplier_retriever",
+                provenance="test",
+                data=[{"id": "s1"}],
+                source_ids=["s1"],
+                citation_type="Supplier",
+            )
+        ]
         level, _ = calculate_confidence(results, [], [], FreshnessReport())
         assert level.value in valid_levels
 
     def test_confidence_factors_have_no_model_probability(self):
         """The factors dict must not contain raw model probability fields."""
-        results = [RetrievalResult(
-            retriever="supplier_retriever",
-            provenance="test",
-            data=[{"id": "s1"}],
-            source_ids=["s1"],
-            citation_type="Supplier",
-        )]
+        results = [
+            RetrievalResult(
+                retriever="supplier_retriever",
+                provenance="test",
+                data=[{"id": "s1"}],
+                source_ids=["s1"],
+                citation_type="Supplier",
+            )
+        ]
         _, factors = calculate_confidence(results, [], [], FreshnessReport())
         forbidden_keys = {"model_confidence", "llm_probability", "model_score", "raw_model_score"}
         assert not forbidden_keys.intersection(factors.keys())
@@ -208,12 +212,14 @@ class TestFreshnessIsolation:
             data=[{"id": "s1"}],
             source_ids=["s1"],
             citation_type="Supplier",
-            freshness_metadata=[{
-                "object_id": "s1",
-                "object_type": "S",
-                "updated_at": old_ts,
-                "retrieved_at": retrieved_at,
-            }],
+            freshness_metadata=[
+                {
+                    "object_id": "s1",
+                    "object_type": "S",
+                    "updated_at": old_ts,
+                    "retrieved_at": retrieved_at,
+                }
+            ],
         )
         r2 = RetrievalResult(
             retriever="supplier_retriever",
@@ -221,12 +227,14 @@ class TestFreshnessIsolation:
             data=[{"id": "s2"}],
             source_ids=["s2"],
             citation_type="Supplier",
-            freshness_metadata=[{
-                "object_id": "s2",
-                "object_type": "S",
-                "updated_at": new_ts,
-                "retrieved_at": retrieved_at,
-            }],
+            freshness_metadata=[
+                {
+                    "object_id": "s2",
+                    "object_type": "S",
+                    "updated_at": new_ts,
+                    "retrieved_at": retrieved_at,
+                }
+            ],
         )
 
         report_old = analyze_freshness([r1])

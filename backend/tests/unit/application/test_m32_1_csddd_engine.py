@@ -2,25 +2,51 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.due_diligence.csddd_engine import build_csddd_report
 
 
 def _supplier(id: str = "s1", country: str = "Germany", tier: str = "Tier 1") -> dict:
-    return {"id": id, "name": f"Supplier {id}", "tier": tier, "country": country, "industry": "Manufacturing", "status": "Active"}
+    return {
+        "id": id,
+        "name": f"Supplier {id}",
+        "tier": tier,
+        "country": country,
+        "industry": "Manufacturing",
+        "status": "Active",
+    }
 
 
-def _score(supplier_id: str, risk_band: str = "Low", trend: str = "Stable", risk_score: float = 10.0) -> tuple[str, dict]:
-    return supplier_id, {"esg_score": 80.0, "risk_score": risk_score, "risk_band": risk_band, "trend": trend}
+def _score(
+    supplier_id: str, risk_band: str = "Low", trend: str = "Stable", risk_score: float = 10.0
+) -> tuple[str, dict]:
+    return supplier_id, {
+        "esg_score": 80.0,
+        "risk_score": risk_score,
+        "risk_band": risk_band,
+        "trend": trend,
+    }
 
 
 def _finding(id: str, severity: str = "High", category: str = "Environmental") -> dict:
-    return {"id": id, "title": f"Finding {id}", "severity": severity, "category": category, "supplier_id": "s1"}
+    return {
+        "id": id,
+        "title": f"Finding {id}",
+        "severity": severity,
+        "category": category,
+        "supplier_id": "s1",
+    }
 
 
-def _gap(id: str, severity: str = "Critical", is_resolved: bool = False, supplier_id: str = "s1") -> dict:
-    return {"id": id, "severity": severity, "is_resolved": is_resolved, "supplier_id": supplier_id, "gap_type": "missing_evidence"}
+def _gap(
+    id: str, severity: str = "Critical", is_resolved: bool = False, supplier_id: str = "s1"
+) -> dict:
+    return {
+        "id": id,
+        "severity": severity,
+        "is_resolved": is_resolved,
+        "supplier_id": supplier_id,
+        "gap_type": "missing_evidence",
+    }
 
 
 def _base_args(**kwargs) -> dict:
@@ -65,7 +91,11 @@ class TestCsdddEngineStructure:
 
 class TestCsdddSupplyChain:
     def test_tier_counts(self):
-        suppliers = [_supplier("s1", tier="Tier 1"), _supplier("s2", tier="Tier 2"), _supplier("s3", tier="Tier 1")]
+        suppliers = [
+            _supplier("s1", tier="Tier 1"),
+            _supplier("s2", tier="Tier 2"),
+            _supplier("s3", tier="Tier 1"),
+        ]
         result = build_csddd_report(**_base_args(suppliers=suppliers))
         assert result["supply_chain"]["total_suppliers"] == 3
         assert result["supply_chain"]["by_tier"]["Tier 1"] == 2
@@ -119,11 +149,13 @@ class TestCsdddRiskAssessment:
 class TestCsdddSupplierTrends:
     def test_trend_counts(self):
         suppliers = [_supplier("s1"), _supplier("s2"), _supplier("s3")]
-        scores = dict([
-            _score("s1", trend="Improving"),
-            _score("s2", trend="Deteriorating"),
-            _score("s3", trend="Stable"),
-        ])
+        scores = dict(
+            [
+                _score("s1", trend="Improving"),
+                _score("s2", trend="Deteriorating"),
+                _score("s3", trend="Stable"),
+            ]
+        )
         result = build_csddd_report(**_base_args(suppliers=suppliers, supplier_scores=scores))
         assert result["supplier_risk_trends"]["improving"] == 1
         assert result["supplier_risk_trends"]["deteriorating"] == 1
@@ -138,11 +170,13 @@ class TestCsdddSupplierTrends:
 class TestCsdddSupplierReadiness:
     def test_ready_vs_not_ready(self):
         suppliers = [_supplier("s1"), _supplier("s2"), _supplier("s3")]
-        scores = dict([
-            _score("s1", "Low"),
-            _score("s2", "Moderate"),
-            _score("s3", "Critical"),
-        ])
+        scores = dict(
+            [
+                _score("s1", "Low"),
+                _score("s2", "Moderate"),
+                _score("s3", "Critical"),
+            ]
+        )
         result = build_csddd_report(**_base_args(suppliers=suppliers, supplier_scores=scores))
         assert result["supplier_readiness"]["ready"] == 2
         assert result["supplier_readiness"]["not_ready"] == 1

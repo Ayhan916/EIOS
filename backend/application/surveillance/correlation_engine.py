@@ -17,9 +17,9 @@ from application.surveillance.signal_service import create_signal
 
 logger = structlog.get_logger(__name__)
 
-_COUNTRY_DRIFT_MIN_SUPPLIERS = 2    # at least 2 suppliers in same country deteriorating
-_SECTOR_DRIFT_MIN_SUPPLIERS = 2     # at least 2 suppliers in same sector
-_REGULATION_REPEAT_THRESHOLD = 2    # same regulation gap in >= 2 suppliers
+_COUNTRY_DRIFT_MIN_SUPPLIERS = 2  # at least 2 suppliers in same country deteriorating
+_SECTOR_DRIFT_MIN_SUPPLIERS = 2  # at least 2 suppliers in same sector
+_REGULATION_REPEAT_THRESHOLD = 2  # same regulation gap in >= 2 suppliers
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
@@ -33,10 +33,12 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
 
 async def _check_country_correlation(organization_id: str, session) -> int:
     """Detect multiple suppliers in same country with drift signals."""
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-    from infrastructure.persistence.models.supplier import SupplierModel
-    from sqlalchemy import func, select
     from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     cutoff = datetime.now(UTC) - timedelta(days=30)
 
@@ -81,9 +83,7 @@ async def _check_country_correlation(organization_id: str, session) -> int:
             source_type="correlation_engine",
             severity="HIGH",
             title=f"Country-level ESG deterioration: {country}",
-            description=(
-                f"{cnt} suppliers in {country} show simultaneous ESG/risk drift"
-            ),
+            description=(f"{cnt} suppliers in {country} show simultaneous ESG/risk drift"),
             confidence=0.80,
             supplier_id=None,
             dedupe_key=dedupe,
@@ -105,10 +105,12 @@ async def _check_country_correlation(organization_id: str, session) -> int:
 
 async def _check_sector_correlation(organization_id: str, session) -> int:
     """Detect multiple suppliers in same sector with emerging risk signals."""
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-    from infrastructure.persistence.models.supplier import SupplierModel
-    from sqlalchemy import func, select
     from datetime import UTC, datetime, timedelta
+
+    from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     cutoff = datetime.now(UTC) - timedelta(days=30)
 
@@ -150,10 +152,8 @@ async def _check_sector_correlation(organization_id: str, session) -> int:
             signal_type="CORRELATED_RISK",
             source_type="correlation_engine",
             severity="HIGH",
-            title=f"Sector-level emerging risk pattern",
-            description=(
-                f"{cnt} suppliers in sector show simultaneous emerging risk signals"
-            ),
+            title="Sector-level emerging risk pattern",
+            description=(f"{cnt} suppliers in sector show simultaneous emerging risk signals"),
             confidence=0.75,
             supplier_id=None,
             dedupe_key=dedupe,
@@ -175,12 +175,13 @@ async def _check_sector_correlation(organization_id: str, session) -> int:
 async def _check_regulation_correlation(organization_id: str, session) -> int:
     """Detect the same regulation gap appearing across multiple suppliers."""
     try:
+        from datetime import UTC, datetime, timedelta
+
+        from sqlalchemy import func, select
+
         from infrastructure.persistence.models.regulatory import (
             ComplianceGapModel,
-            RegulationRequirementModel,
         )
-        from sqlalchemy import func, select
-        from datetime import UTC, datetime, timedelta
 
         cutoff = datetime.now(UTC) - timedelta(days=60)
         stmt = (
@@ -195,8 +196,7 @@ async def _check_regulation_correlation(organization_id: str, session) -> int:
             )
             .group_by(ComplianceGapModel.regulation_requirement_id)
             .having(
-                func.count(ComplianceGapModel.entity_id.distinct())
-                >= _REGULATION_REPEAT_THRESHOLD
+                func.count(ComplianceGapModel.entity_id.distinct()) >= _REGULATION_REPEAT_THRESHOLD
             )
         )
         repeating = (await session.execute(stmt)).all()
@@ -213,9 +213,7 @@ async def _check_regulation_correlation(organization_id: str, session) -> int:
             source_type="compliance_gap",
             severity="HIGH",
             title=f"Recurring compliance gap across {cnt} suppliers",
-            description=(
-                f"The same regulatory requirement is open for {cnt} suppliers"
-            ),
+            description=(f"The same regulatory requirement is open for {cnt} suppliers"),
             confidence=0.85,
             supplier_id=None,
             dedupe_key=dedupe,

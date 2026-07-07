@@ -23,22 +23,23 @@ from application.agent_monitoring.finding_service import create_finding
 
 logger = structlog.get_logger(__name__)
 
-_COUNTRY_RISK_HIGH = 60.0         # overall_risk_score above this = HIGH
-_COUNTRY_RISK_CRITICAL = 80.0     # overall_risk_score above this = CRITICAL
-_GOVERNANCE_LOW = 30.0            # governance_score below this = concern
-_CORRUPTION_HIGH = 70.0           # corruption_score above this = HIGH risk
-_DATA_FRESHNESS_DAYS = 30         # F4: max age for external dataset to be trusted
+_COUNTRY_RISK_HIGH = 60.0  # overall_risk_score above this = HIGH
+_COUNTRY_RISK_CRITICAL = 80.0  # overall_risk_score above this = CRITICAL
+_GOVERNANCE_LOW = 30.0  # governance_score below this = concern
+_CORRUPTION_HIGH = 70.0  # corruption_score above this = HIGH risk
+_DATA_FRESHNESS_DAYS = 30  # F4: max age for external dataset to be trusted
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
     """Run external intelligence monitor for one organization. Returns findings created."""
-    from infrastructure.persistence.models.supplier import SupplierModel
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.external_intelligence import (
         CountryRiskProfileModel,
         ExternalDatasetModel,
         SupplierEnrichmentModel,
     )
-    from sqlalchemy import select
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     findings_created = 0
     now = datetime.now(UTC)
@@ -120,7 +121,7 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
                         "Immediate review and legal assessment required."
                     ),
                     evidence=f"country={country}, sanctions_status={profile.sanctions_status}",
-                    rule_triggered=f"sanctions_status in ['confirmed', 'suspected']",
+                    rule_triggered="sanctions_status in ['confirmed', 'suspected']",
                     source_data={"sanctions_exposure": True, **source_data},
                     confidence_score=0.95,
                     supplier_id=supplier.id,
@@ -146,8 +147,7 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
                         "Consider enhanced due diligence or supply chain diversification."
                     ),
                     evidence=(
-                        f"country_risk={profile.overall_risk_score:.1f}, "
-                        f"level={profile.risk_level}"
+                        f"country_risk={profile.overall_risk_score:.1f}, level={profile.risk_level}"
                     ),
                     rule_triggered=f"overall_risk_score >= {_COUNTRY_RISK_CRITICAL}",
                     source_data=source_data,

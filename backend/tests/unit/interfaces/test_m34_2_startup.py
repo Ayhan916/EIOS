@@ -13,21 +13,24 @@ from __future__ import annotations
 
 import importlib
 import importlib.util
-import inspect
 import os
-import sys
 
 
 def _load_source(module_path: str, module_name: str):
     """Load a Python source file without executing transitive imports."""
-    spec = importlib.util.spec_from_file_location(module_name, module_path)
+    importlib.util.spec_from_file_location(module_name, module_path)
     return open(module_path).read()
 
 
 def _read_router_source(filename: str) -> str:
     base = os.path.join(
         os.path.dirname(__file__),
-        "..", "..", "..", "interfaces", "api", "routers",
+        "..",
+        "..",
+        "..",
+        "interfaces",
+        "api",
+        "routers",
     )
     path = os.path.normpath(os.path.join(base, filename))
     with open(path) as f:
@@ -76,6 +79,7 @@ def test_operations_router_has_all_six_endpoints():
 
 def test_scheduler_health_module_importable():
     from application.external_intelligence.scheduler_health import get_scheduler_health_report
+
     assert callable(get_scheduler_health_report)
 
 
@@ -83,6 +87,7 @@ def test_scheduler_health_report_structure():
     from application.external_intelligence.scheduler_health import (
         _SchedulerHeartbeat,
     )
+
     hb = _SchedulerHeartbeat()
     hb.record_started()
     hb.record_completed()
@@ -94,6 +99,7 @@ def test_scheduler_health_report_structure():
 
 def test_m1_api_scope_has_external_intelligence_scopes():
     from domain.enums import ApiScope
+
     assert hasattr(ApiScope, "EXTERNAL_INTELLIGENCE_READ")
     assert hasattr(ApiScope, "EXTERNAL_INTELLIGENCE_WRITE")
     assert ApiScope.EXTERNAL_INTELLIGENCE_READ.value == "external_intelligence:read"

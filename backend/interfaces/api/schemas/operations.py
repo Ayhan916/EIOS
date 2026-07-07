@@ -10,7 +10,6 @@ Pydantic models for the /external-intelligence/operations admin endpoints:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -18,8 +17,8 @@ from pydantic import BaseModel
 class ConnectorHealthResponse(BaseModel):
     connector_name: str
     status: str
-    last_success: Optional[datetime]
-    last_failure: Optional[datetime]
+    last_success: datetime | None
+    last_failure: datetime | None
     total_runs: int
     successful_runs: int
     failed_runs: int
@@ -36,11 +35,11 @@ class ConnectorHealthListResponse(BaseModel):
 class DatasetFreshnessResponse(BaseModel):
     source_name: str
     freshness_status: str
-    last_refresh: Optional[datetime]
+    last_refresh: datetime | None
     expected_cadence_hours: int
-    hours_since_refresh: Optional[float]
+    hours_since_refresh: float | None
     hours_overdue: float
-    next_expected_refresh: Optional[datetime]
+    next_expected_refresh: datetime | None
 
 
 class DatasetFreshnessListResponse(BaseModel):
@@ -59,8 +58,8 @@ class ConnectorTriggerResponse(BaseModel):
     success: bool
     row_count: int
     runtime_seconds: float
-    dataset_id: Optional[str]
-    error_message: Optional[str]
+    dataset_id: str | None
+    error_message: str | None
 
 
 class ValidationResultResponse(BaseModel):
@@ -76,9 +75,9 @@ class ValidationResultResponse(BaseModel):
 
 class SchedulerHealthResponse(BaseModel):
     scheduler_alive: bool
-    last_cycle_started: Optional[datetime]
-    last_cycle_completed: Optional[datetime]
-    seconds_since_last_cycle: Optional[float]
+    last_cycle_started: datetime | None
+    last_cycle_completed: datetime | None
+    seconds_since_last_cycle: float | None
     cycles_completed: int
 
 

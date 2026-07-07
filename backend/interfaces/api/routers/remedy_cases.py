@@ -28,10 +28,10 @@ Security:
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -49,7 +49,7 @@ from interfaces.api.deps import get_current_user, get_sync_db, require_analyst
 
 class RemedyCaseCreate(BaseModel):
     title: str = Field(min_length=3, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
+    description: str | None = Field(default=None, max_length=5000)
     incident_date: datetime
     affected_count: int = Field(default=0, ge=0)
     affected_type: str
@@ -57,32 +57,32 @@ class RemedyCaseCreate(BaseModel):
     remedy_types: list[str] = Field(default_factory=list)
     severity_score: float = Field(default=0.0, ge=0.0, le=10.0)
     impact_causation: str
-    source_grievance_id: Optional[UUID] = None
+    source_grievance_id: UUID | None = None
     co_responsible_parties: list[str] = Field(default_factory=list)
 
 
 class RemedyCaseUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=5000)
-    incident_date: Optional[datetime] = None
-    affected_count: Optional[int] = Field(default=None, ge=0)
-    affected_type: Optional[str] = None
-    rights: Optional[list[str]] = None
-    remedy_types: Optional[list[str]] = None
-    severity_score: Optional[float] = Field(default=None, ge=0.0, le=10.0)
-    impact_causation: Optional[str] = None
-    co_responsible_parties: Optional[list[str]] = None
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=5000)
+    incident_date: datetime | None = None
+    affected_count: int | None = Field(default=None, ge=0)
+    affected_type: str | None = None
+    rights: list[str] | None = None
+    remedy_types: list[str] | None = None
+    severity_score: float | None = Field(default=None, ge=0.0, le=10.0)
+    impact_causation: str | None = None
+    co_responsible_parties: list[str] | None = None
 
 
 class RemedyCaseClose(BaseModel):
-    closure_notes: Optional[str] = Field(default=None, max_length=5000)
+    closure_notes: str | None = Field(default=None, max_length=5000)
 
 
 class RemedyCaseResponse(BaseModel):
     id: UUID
     organization_id: UUID
     title: str
-    description: Optional[str]
+    description: str | None
     incident_date: datetime
     affected_count: int
     affected_type: str
@@ -91,11 +91,11 @@ class RemedyCaseResponse(BaseModel):
     severity_score: float
     impact_causation: str
     status: str
-    source_grievance_id: Optional[UUID]
+    source_grievance_id: UUID | None
     co_responsible_parties: list[str]
-    closed_at: Optional[datetime]
-    closed_by: Optional[str]
-    closure_notes: Optional[str]
+    closed_at: datetime | None
+    closed_by: str | None
+    closure_notes: str | None
     created_at: datetime
     updated_at: datetime
 
@@ -106,16 +106,16 @@ class RemedyCaseResponse(BaseModel):
 class BeneficiaryCreate(BaseModel):
     reference: str = Field(min_length=1, max_length=255)
     affected_type: str
-    promised_compensation: Optional[float] = Field(default=None, ge=0)
-    received_compensation: Optional[float] = Field(default=None, ge=0)
-    confirmation_date: Optional[datetime] = None
+    promised_compensation: float | None = Field(default=None, ge=0)
+    received_compensation: float | None = Field(default=None, ge=0)
+    confirmation_date: datetime | None = None
 
 
 class BeneficiaryUpdate(BaseModel):
-    reference: Optional[str] = Field(default=None, max_length=255)
-    promised_compensation: Optional[float] = Field(default=None, ge=0)
-    received_compensation: Optional[float] = Field(default=None, ge=0)
-    confirmation_date: Optional[datetime] = None
+    reference: str | None = Field(default=None, max_length=255)
+    promised_compensation: float | None = Field(default=None, ge=0)
+    received_compensation: float | None = Field(default=None, ge=0)
+    confirmation_date: datetime | None = None
 
 
 class BeneficiaryResponse(BaseModel):
@@ -123,9 +123,9 @@ class BeneficiaryResponse(BaseModel):
     remedy_case_id: UUID
     reference: str
     affected_type: str
-    promised_compensation: Optional[float]
-    received_compensation: Optional[float]
-    confirmation_date: Optional[datetime]
+    promised_compensation: float | None
+    received_compensation: float | None
+    confirmation_date: datetime | None
     created_at: datetime
 
     class Config:
@@ -134,28 +134,28 @@ class BeneficiaryResponse(BaseModel):
 
 class RemedyActionCreate(BaseModel):
     title: str = Field(min_length=3, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=3000)
-    responsible_party: Optional[str] = Field(default=None, max_length=255)
-    due_date: Optional[datetime] = None
+    description: str | None = Field(default=None, max_length=3000)
+    responsible_party: str | None = Field(default=None, max_length=255)
+    due_date: datetime | None = None
 
 
 class RemedyActionUpdate(BaseModel):
-    title: Optional[str] = Field(default=None, max_length=255)
-    description: Optional[str] = Field(default=None, max_length=3000)
-    status: Optional[str] = None
-    responsible_party: Optional[str] = Field(default=None, max_length=255)
-    due_date: Optional[datetime] = None
+    title: str | None = Field(default=None, max_length=255)
+    description: str | None = Field(default=None, max_length=3000)
+    status: str | None = None
+    responsible_party: str | None = Field(default=None, max_length=255)
+    due_date: datetime | None = None
 
 
 class RemedyActionResponse(BaseModel):
     id: UUID
     remedy_case_id: UUID
     title: str
-    description: Optional[str]
+    description: str | None
     status: str
-    responsible_party: Optional[str]
-    due_date: Optional[datetime]
-    completed_at: Optional[datetime]
+    responsible_party: str | None
+    due_date: datetime | None
+    completed_at: datetime | None
     created_by: str
     created_at: datetime
     updated_at: datetime
@@ -169,7 +169,7 @@ class AuditLogResponse(BaseModel):
     remedy_case_id: UUID
     action: str
     performed_by: str
-    details: Optional[str]
+    details: str | None
     created_at: datetime
 
     class Config:
@@ -201,6 +201,7 @@ def _log_repo(db: Session = Depends(get_sync_db)) -> SQLRemedyAuditLogRepository
 
 # ── Remedy Cases ──────────────────────────────────────────────────────────────
 
+
 @router.post("/", response_model=RemedyCaseResponse, status_code=status.HTTP_201_CREATED)
 def create_remedy_case(
     body: RemedyCaseCreate,
@@ -217,7 +218,7 @@ def create_remedy_case(
 
 @router.get("/", response_model=list[RemedyCaseResponse])
 def list_remedy_cases(
-    status_filter: Optional[str] = None,
+    status_filter: str | None = None,
     skip: int = 0,
     limit: int = 50,
     user: User = Depends(get_current_user),
@@ -282,7 +283,10 @@ def close_remedy_case(
 
 # ── Create Case from Grievance ────────────────────────────────────────────────
 
-@grievance_router.post("/{grievance_id}/create-remedy-case", response_model=RemedyCaseResponse, status_code=201)
+
+@grievance_router.post(
+    "/{grievance_id}/create-remedy-case", response_model=RemedyCaseResponse, status_code=201
+)
 def create_remedy_case_from_grievance(
     grievance_id: UUID,
     body: RemedyCaseCreate,
@@ -300,6 +304,7 @@ def create_remedy_case_from_grievance(
 
 
 # ── Beneficiaries ─────────────────────────────────────────────────────────────
+
 
 @router.post("/{case_id}/beneficiaries", response_model=BeneficiaryResponse, status_code=201)
 def add_beneficiary(
@@ -352,6 +357,7 @@ def update_beneficiary(
 
 
 # ── Actions ───────────────────────────────────────────────────────────────────
+
 
 @router.post("/{case_id}/actions", response_model=RemedyActionResponse, status_code=201)
 def add_action(
@@ -407,6 +413,7 @@ def update_action(
 
 # ── Audit Log ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/{case_id}/audit-log", response_model=list[AuditLogResponse])
 def get_audit_log(
     case_id: UUID,
@@ -421,6 +428,7 @@ def get_audit_log(
 
 # ── Annual Report ─────────────────────────────────────────────────────────────
 
+
 @report_router.get("/remedy-summary")
 def remedy_summary_report(
     year: int,
@@ -431,6 +439,7 @@ def remedy_summary_report(
 
 
 # ── Serialization helpers ─────────────────────────────────────────────────────
+
 
 def _case_to_response(c: Any) -> dict:
     return {

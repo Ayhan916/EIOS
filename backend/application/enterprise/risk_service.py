@@ -50,20 +50,22 @@ async def create_enterprise_risk(
     )
     session.add(risk)
     await session.flush()
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=now,
-        updated_at=now,
-        action="enterprise_risk.created",
-        entity_type="EnterpriseRisk",
-        entity_id=risk.id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=f"Enterprise risk '{title}' ({severity}) created",
-        event_metadata={"enterprise_id": enterprise_id, "esg_category": esg_category},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=now,
+            updated_at=now,
+            action="enterprise_risk.created",
+            entity_type="EnterpriseRisk",
+            entity_id=risk.id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=f"Enterprise risk '{title}' ({severity}) created",
+            event_metadata={"enterprise_id": enterprise_id, "esg_category": esg_category},
+        )
+    )
     return risk
 
 
@@ -73,9 +75,7 @@ async def list_enterprise_risks(
     status: str | None,
     session: AsyncSession,
 ) -> list[EnterpriseRiskModel]:
-    stmt = select(EnterpriseRiskModel).where(
-        EnterpriseRiskModel.enterprise_id == enterprise_id
-    )
+    stmt = select(EnterpriseRiskModel).where(EnterpriseRiskModel.enterprise_id == enterprise_id)
     if severity:
         stmt = stmt.where(EnterpriseRiskModel.severity == severity)
     if status:
@@ -84,9 +84,7 @@ async def list_enterprise_risks(
     return list(result.scalars().all())
 
 
-async def get_enterprise_risk(
-    risk_id: str, session: AsyncSession
-) -> EnterpriseRiskModel | None:
+async def get_enterprise_risk(risk_id: str, session: AsyncSession) -> EnterpriseRiskModel | None:
     result = await session.execute(
         select(EnterpriseRiskModel).where(EnterpriseRiskModel.id == risk_id)
     )
@@ -105,18 +103,20 @@ async def update_enterprise_risk_status(
     risk.risk_status = new_status
     risk.updated_at = datetime.now(UTC)
     risk.version += 1
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        action="enterprise_risk.status_changed",
-        entity_type="EnterpriseRisk",
-        entity_id=risk_id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=f"Status changed to '{new_status}'",
-        event_metadata={"enterprise_id": risk.enterprise_id},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action="enterprise_risk.status_changed",
+            entity_type="EnterpriseRisk",
+            entity_id=risk_id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=f"Status changed to '{new_status}'",
+            event_metadata={"enterprise_id": risk.enterprise_id},
+        )
+    )
     return risk

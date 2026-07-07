@@ -21,8 +21,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
+
 
 def _make_session(scalar_one_or_none=None, scalars_all=None, scalar_one=0):
     session = AsyncMock()
@@ -50,6 +50,7 @@ def _make_watchlist_entry(status="ACTIVE", severity="HIGH", supplier_id="sup-1")
 
 def _make_signal(signal_id="sig-1", severity="HIGH", signal_status="ACTIVE"):
     from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
+
     s = MagicMock(spec=SurveillanceSignalModel)
     s.id = signal_id
     s.organization_id = "org-1"
@@ -86,6 +87,7 @@ def _make_episode(status="OPEN", org_id="org-1"):
 # P0 — Watchlist Re-Add After Removal
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 class TestWatchlistReAdd:
     """P0: Re-adding a previously removed supplier must not raise IntegrityError."""
 
@@ -93,7 +95,6 @@ class TestWatchlistReAdd:
     async def test_fresh_add_inserts_new_row(self):
         """First-time add: no existing rows → INSERT."""
         from application.surveillance.watchlist_service import add_to_watchlist
-        from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
 
         # Both lookups (ACTIVE and ANY) return None → new entry
         session = _make_session(scalar_one_or_none=None)
@@ -114,7 +115,6 @@ class TestWatchlistReAdd:
     async def test_reactivates_removed_row_instead_of_inserting(self):
         """Re-add after removal: updates REMOVED row, no INSERT."""
         from application.surveillance.watchlist_service import add_to_watchlist
-        from infrastructure.persistence.models.surveillance import SupplierWatchlistModel
 
         removed_entry = _make_watchlist_entry(status="REMOVED", severity="HIGH")
 
@@ -248,8 +248,7 @@ class TestWatchlistReAdd:
         )
 
         audit_calls = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         assert any("watchlist.added" in c.action for c in audit_calls)
 
@@ -257,6 +256,7 @@ class TestWatchlistReAdd:
 # ══════════════════════════════════════════════════════════════════════════════
 # P1 — Episode Lifecycle Governance
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 class TestEpisodeLifecycle:
     """P1: MONITORING → OPEN transition must be rejected."""
@@ -325,16 +325,20 @@ class TestEpisodeLifecycle:
     def test_allowed_map_excludes_monitoring_to_open(self):
         """Source-code guard: MONITORING must not list OPEN as allowed."""
         from application.surveillance import episode_service
+
         src = inspect.getsource(episode_service.transition_episode)
         # Extract the allowed dict. Verify MONITORING maps only to RESOLVED.
-        assert '"MONITORING": ["RESOLVED"]' in src or \
-               '"MONITORING": ["RESOLVED",]' in src or \
-               "\"MONITORING\": [\"RESOLVED\"]" in src
+        assert (
+            '"MONITORING": ["RESOLVED"]' in src
+            or '"MONITORING": ["RESOLVED",]' in src
+            or '"MONITORING": ["RESOLVED"]' in src
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════════
 # P1 — Notification Storm Prevention
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 class TestNotificationStorm:
     """P1: At most one HIGH/CRITICAL notification per user per hour."""
@@ -342,6 +346,7 @@ class TestNotificationStorm:
     def test_dedupe_key_uses_hour_not_signal_id(self):
         """Dedupe key must be hour-based, not signal-id-based."""
         from application.surveillance import signal_service
+
         src = inspect.getsource(signal_service._maybe_notify)
         assert "surveillance_digest" in src
         assert "hour_str" in src or "%Y-%m-%dT%H" in src
@@ -349,6 +354,7 @@ class TestNotificationStorm:
     def test_notification_includes_alert_count(self):
         """Notification title must include the alert count."""
         from application.surveillance import signal_service
+
         src = inspect.getsource(signal_service._maybe_notify)
         assert "alert_count" in src
 
@@ -460,6 +466,7 @@ class TestNotificationStorm:
 # P2 — Audit Actor Attribution
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 class TestAuditActorAttribution:
     """P2: User-initiated actions must record the real user ID, not 'surveillance_engine'."""
 
@@ -474,12 +481,9 @@ class TestAuditActorAttribution:
         await acknowledge_signal("sig-1", "org-1", "user-42", session)
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
-        ack_event = next(
-            (e for e in audit_events if "acknowledged" in e.action), None
-        )
+        ack_event = next((e for e in audit_events if "acknowledged" in e.action), None)
         assert ack_event is not None
         assert ack_event.actor_id == "user-42"
 
@@ -494,12 +498,9 @@ class TestAuditActorAttribution:
         await dismiss_signal("sig-1", "org-1", "user-99", session)
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
-        dismiss_event = next(
-            (e for e in audit_events if "dismissed" in e.action), None
-        )
+        dismiss_event = next((e for e in audit_events if "dismissed" in e.action), None)
         assert dismiss_event is not None
         assert dismiss_event.actor_id == "user-99"
 
@@ -514,8 +515,7 @@ class TestAuditActorAttribution:
         await transition_episode("ep-1", "org-1", "MONITORING", "user-77", session)
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         assert any(e.actor_id == "user-77" for e in audit_events)
 
@@ -530,12 +530,9 @@ class TestAuditActorAttribution:
         await remove_from_watchlist("org-1", "sup-1", "user-55", session)
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
-        removed_event = next(
-            (e for e in audit_events if "removed" in e.action), None
-        )
+        removed_event = next((e for e in audit_events if "removed" in e.action), None)
         assert removed_event is not None
         assert removed_event.actor_id == "user-55"
 
@@ -555,12 +552,9 @@ class TestAuditActorAttribution:
         )
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
-        created_event = next(
-            (e for e in audit_events if "created" in e.action), None
-        )
+        created_event = next((e for e in audit_events if "created" in e.action), None)
         assert created_event is not None
         assert created_event.actor_id == "user-33"
 
@@ -583,18 +577,16 @@ class TestAuditActorAttribution:
         )
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
-        created_event = next(
-            (e for e in audit_events if "signal.created" in e.action), None
-        )
+        created_event = next((e for e in audit_events if "signal.created" in e.action), None)
         assert created_event is not None
         assert created_event.actor_id == "surveillance_engine"
 
     def test_log_audit_event_accepts_actor_id_param(self):
         """_log_audit_event must accept actor_id as a keyword argument."""
         from application.surveillance import signal_service
+
         sig = inspect.signature(signal_service._log_audit_event)
         assert "actor_id" in sig.parameters
 
@@ -602,6 +594,7 @@ class TestAuditActorAttribution:
 # ══════════════════════════════════════════════════════════════════════════════
 # P2 — Signal Expiry Audit
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 class TestSignalExpiryAudit:
     """P2: expire_stale_signals() must emit surveillance.signal.expired per signal."""
@@ -625,8 +618,7 @@ class TestSignalExpiryAudit:
         assert stale_2.signal_status == "EXPIRED"
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         expired_events = [e for e in audit_events if "signal.expired" in e.action]
         assert len(expired_events) == 2
@@ -642,8 +634,7 @@ class TestSignalExpiryAudit:
 
         assert count == 0
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         assert audit_events == []
 
@@ -660,8 +651,7 @@ class TestSignalExpiryAudit:
         await expire_stale_signals(session)
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         expired_event = next((e for e in audit_events if "expired" in e.action), None)
         assert expired_event is not None
@@ -669,6 +659,7 @@ class TestSignalExpiryAudit:
 
     def test_expire_stale_signals_source_contains_audit_call(self):
         from application.surveillance import signal_service
+
         src = inspect.getsource(signal_service.expire_stale_signals)
         assert "surveillance.signal.expired" in src
         assert "_log_audit_event" in src
@@ -677,6 +668,7 @@ class TestSignalExpiryAudit:
 # ══════════════════════════════════════════════════════════════════════════════
 # P2 — Watchlist Severity Upgrade Audit
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 class TestWatchlistSeverityUpgradeAudit:
     """P2: Severity upgrades must emit surveillance.watchlist.severity_upgraded."""
@@ -700,12 +692,9 @@ class TestWatchlistSeverityUpgradeAudit:
         assert existing.severity == "CRITICAL"
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
-        upgrade_event = next(
-            (e for e in audit_events if "severity_upgraded" in e.action), None
-        )
+        upgrade_event = next((e for e in audit_events if "severity_upgraded" in e.action), None)
         assert upgrade_event is not None
         assert "from=HIGH" in upgrade_event.detail
         assert "to=CRITICAL" in upgrade_event.detail
@@ -728,8 +717,7 @@ class TestWatchlistSeverityUpgradeAudit:
         )
 
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         upgrade_events = [e for e in audit_events if "severity_upgraded" in e.action]
         assert upgrade_events == []
@@ -754,8 +742,7 @@ class TestWatchlistSeverityUpgradeAudit:
         # Severity unchanged
         assert result.severity == "CRITICAL"
         audit_events = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         upgrade_events = [e for e in audit_events if "severity_upgraded" in e.action]
         assert upgrade_events == []
@@ -765,21 +752,24 @@ class TestWatchlistSeverityUpgradeAudit:
 # P3 — Heatmap Severity Max Correctness
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 class TestHeatmapSeverityMax:
     """P3: Severity max must use numeric rank (CRITICAL=4), not alphabetical strings."""
 
     def test_geography_heatmap_uses_numeric_case_expression(self):
         """Source must contain 'CRITICAL', 4 in a case expression, not func.max(severity)."""
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor._heatmap_by_geography)
         # Must use severity_rank case expression
         assert "severity_rank" in src or "max_rank" in src
         # Must NOT use the broken string max
-        assert 'func.max(SurveillanceSignalModel.severity)' not in src
+        assert "func.max(SurveillanceSignalModel.severity)" not in src
 
     def test_rank_to_severity_mapping_correct(self):
         """_RANK_TO_SEVERITY must map CRITICAL=4, HIGH=3, MEDIUM=2, LOW=1."""
         from application.surveillance.portfolio_monitor import _RANK_TO_SEVERITY
+
         assert _RANK_TO_SEVERITY[4] == "CRITICAL"
         assert _RANK_TO_SEVERITY[3] == "HIGH"
         assert _RANK_TO_SEVERITY[2] == "MEDIUM"
@@ -789,6 +779,7 @@ class TestHeatmapSeverityMax:
     def test_rank_ordering_is_correct(self):
         """Numeric rank must produce CRITICAL > HIGH > MEDIUM > LOW."""
         from application.surveillance.portfolio_monitor import _RANK_TO_SEVERITY
+
         # When using max(), rank 4 > 3 > 2 > 1 — verify mapping is consistent
         ranks = sorted(_RANK_TO_SEVERITY.keys(), reverse=True)
         severities = [_RANK_TO_SEVERITY[r] for r in ranks]
@@ -802,34 +793,40 @@ class TestHeatmapSeverityMax:
 # P3 — Heatmap Active Signal Filter
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 class TestHeatmapActiveFilter:
     """P3: Geography and sector heatmaps must count only ACTIVE signals."""
 
     def test_geography_heatmap_filters_active_signals_in_join(self):
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor._heatmap_by_geography)
         # The active filter must be inside the JOIN ON clause, not WHERE
         assert 'signal_status == "ACTIVE"' in src or "signal_status == 'ACTIVE'" in src
 
     def test_sector_heatmap_filters_active_signals_in_join(self):
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor._heatmap_by_sector)
         assert 'signal_status == "ACTIVE"' in src or "signal_status == 'ACTIVE'" in src
 
     def test_severity_heatmap_already_filters_active(self):
         """Regression guard: severity heatmap already had the filter."""
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor._heatmap_by_severity)
         assert "ACTIVE" in src
 
     def test_geography_heatmap_uses_and_for_join_condition(self):
         """Geography join must use and_() to combine supplier_id + signal_status."""
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor._heatmap_by_geography)
         assert "and_" in src
 
     def test_sector_heatmap_uses_and_for_join_condition(self):
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor._heatmap_by_sector)
         assert "and_" in src
 
@@ -838,12 +835,14 @@ class TestHeatmapActiveFilter:
 # P3 — Portfolio Monitor N+1 Elimination
 # ══════════════════════════════════════════════════════════════════════════════
 
+
 class TestPortfolioMonitorN1:
     """P3: compute_portfolio_stats must use a single join query for trend aggregation."""
 
     def test_uses_row_number_not_per_supplier_loop(self):
         """Source must contain row_number() and must NOT iterate suppliers in Python."""
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor.compute_portfolio_stats)
         # Must use ROW_NUMBER
         assert "row_number" in src
@@ -852,6 +851,7 @@ class TestPortfolioMonitorN1:
 
     def test_uses_outerjoin_for_trend_lookup(self):
         from application.surveillance import portfolio_monitor
+
         src = inspect.getsource(portfolio_monitor.compute_portfolio_stats)
         assert "outerjoin" in src or "outer" in src.lower()
 
@@ -881,9 +881,16 @@ class TestPortfolioMonitorN1:
         stats = await compute_portfolio_stats("org-1", session)
 
         required = {
-            "total_suppliers", "suppliers_at_risk", "suppliers_improving",
-            "suppliers_deteriorating", "suppliers_stable", "suppliers_needing_review",
-            "watchlist_count", "active_signals", "critical_signals", "open_episodes",
+            "total_suppliers",
+            "suppliers_at_risk",
+            "suppliers_improving",
+            "suppliers_deteriorating",
+            "suppliers_stable",
+            "suppliers_needing_review",
+            "watchlist_count",
+            "active_signals",
+            "critical_signals",
+            "open_episodes",
         }
         assert required.issubset(set(stats.keys()))
 
@@ -891,6 +898,7 @@ class TestPortfolioMonitorN1:
 # ══════════════════════════════════════════════════════════════════════════════
 # P3 — Episode Attachment Tenant Guard
 # ══════════════════════════════════════════════════════════════════════════════
+
 
 class TestEpisodeAttachTenantGuard:
     """P3: attach_signal_to_episode must filter by organization_id when provided."""
@@ -940,10 +948,12 @@ class TestEpisodeAttachTenantGuard:
     def test_function_accepts_organization_id_param(self):
         """attach_signal_to_episode must accept organization_id keyword."""
         from application.surveillance.episode_service import attach_signal_to_episode
+
         sig = inspect.signature(attach_signal_to_episode)
         assert "organization_id" in sig.parameters
 
     def test_source_contains_org_filter(self):
         from application.surveillance import episode_service
+
         src = inspect.getsource(episode_service.attach_signal_to_episode)
         assert "organization_id" in src

@@ -27,7 +27,9 @@ class SQLDDPolicyRepository(BaseRepository[DDPolicy, DDPolicyModel]):
             id=e.id,
             organization_id=e.organization_id,
             title=e.title,
-            policy_status=e.policy_status.value if hasattr(e.policy_status, "value") else e.policy_status,
+            policy_status=e.policy_status.value
+            if hasattr(e.policy_status, "value")
+            else e.policy_status,
             content_text=e.content_text,
             file_url=e.file_url,
             approved_by=e.approved_by,

@@ -70,6 +70,7 @@ async def compute_health_score(
     inputs["formula_version"] = FORMULA_VERSION
 
     from infrastructure.persistence.models.operating_system import OrganizationESGHealthScoreModel
+
     now = datetime.now(UTC)
     snap = OrganizationESGHealthScoreModel(
         id=str(uuid.uuid4()),
@@ -94,10 +95,9 @@ async def compute_health_score(
     return _to_dict(snap)
 
 
-async def get_latest_health_score(
-    organization_id: str, session: AsyncSession
-) -> dict | None:
+async def get_latest_health_score(organization_id: str, session: AsyncSession) -> dict | None:
     from infrastructure.persistence.models.operating_system import OrganizationESGHealthScoreModel
+
     stmt = (
         select(OrganizationESGHealthScoreModel)
         .where(OrganizationESGHealthScoreModel.organization_id == organization_id)
@@ -110,11 +110,11 @@ async def get_latest_health_score(
 
 # ── Domain score helpers ──────────────────────────────────────────────────────
 
-async def _supplier_intelligence_score(
-    org_id: str, session: AsyncSession, inputs: dict
-) -> float:
+
+async def _supplier_intelligence_score(org_id: str, session: AsyncSession, inputs: dict) -> float:
     try:
         from infrastructure.persistence.models.supplier_score import SupplierScoreModel
+
         stmt = select(func.avg(SupplierScoreModel.esg_score)).where(
             SupplierScoreModel.organization_id == org_id
         )
@@ -126,34 +126,40 @@ async def _supplier_intelligence_score(
     return score
 
 
-async def _surveillance_score(
-    org_id: str, session: AsyncSession, inputs: dict
-) -> float:
+async def _surveillance_score(org_id: str, session: AsyncSession, inputs: dict) -> float:
     try:
         from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-        total_stmt = select(func.count()).select_from(SurveillanceSignalModel).where(
-            SurveillanceSignalModel.organization_id == org_id
+
+        total_stmt = (
+            select(func.count())
+            .select_from(SurveillanceSignalModel)
+            .where(SurveillanceSignalModel.organization_id == org_id)
         )
-        resolved_stmt = select(func.count()).select_from(SurveillanceSignalModel).where(
-            SurveillanceSignalModel.organization_id == org_id,
-            SurveillanceSignalModel.signal_status == "RESOLVED",
+        resolved_stmt = (
+            select(func.count())
+            .select_from(SurveillanceSignalModel)
+            .where(
+                SurveillanceSignalModel.organization_id == org_id,
+                SurveillanceSignalModel.signal_status == "RESOLVED",
+            )
         )
         total = (await session.execute(total_stmt)).scalar_one() or 0
         resolved = (await session.execute(resolved_stmt)).scalar_one() or 0
         score = round((resolved / total) * 100, 4) if total > 0 else 100.0
     except Exception:
         score = 0.0
-    inputs["surveillance"] = {"total_signals": locals().get("total", 0),
-                              "resolved_signals": locals().get("resolved", 0),
-                              "score": score}
+    inputs["surveillance"] = {
+        "total_signals": locals().get("total", 0),
+        "resolved_signals": locals().get("resolved", 0),
+        "score": score,
+    }
     return score
 
 
-async def _compliance_score(
-    org_id: str, session: AsyncSession, inputs: dict
-) -> float:
+async def _compliance_score(org_id: str, session: AsyncSession, inputs: dict) -> float:
     try:
         from infrastructure.persistence.models.operating_system import ComplianceOperationModel
+
         stmt = select(func.avg(ComplianceOperationModel.coverage_percent)).where(
             ComplianceOperationModel.organization_id == org_id
         )
@@ -165,17 +171,22 @@ async def _compliance_score(
     return score
 
 
-async def _due_diligence_score(
-    org_id: str, session: AsyncSession, inputs: dict
-) -> float:
+async def _due_diligence_score(org_id: str, session: AsyncSession, inputs: dict) -> float:
     try:
         from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel
-        total_stmt = select(func.count()).select_from(DueDiligenceReportModel).where(
-            DueDiligenceReportModel.organization_id == org_id
+
+        total_stmt = (
+            select(func.count())
+            .select_from(DueDiligenceReportModel)
+            .where(DueDiligenceReportModel.organization_id == org_id)
         )
-        comp_stmt = select(func.count()).select_from(DueDiligenceReportModel).where(
-            DueDiligenceReportModel.organization_id == org_id,
-            DueDiligenceReportModel.report_status == "COMPLETED",
+        comp_stmt = (
+            select(func.count())
+            .select_from(DueDiligenceReportModel)
+            .where(
+                DueDiligenceReportModel.organization_id == org_id,
+                DueDiligenceReportModel.report_status == "COMPLETED",
+            )
         )
         total = (await session.execute(total_stmt)).scalar_one() or 0
         completed = (await session.execute(comp_stmt)).scalar_one() or 0
@@ -186,17 +197,22 @@ async def _due_diligence_score(
     return score
 
 
-async def _remediation_score(
-    org_id: str, session: AsyncSession, inputs: dict
-) -> float:
+async def _remediation_score(org_id: str, session: AsyncSession, inputs: dict) -> float:
     try:
         from infrastructure.persistence.models.operating_system import ESGActionModel
-        total_stmt = select(func.count()).select_from(ESGActionModel).where(
-            ESGActionModel.organization_id == org_id
+
+        total_stmt = (
+            select(func.count())
+            .select_from(ESGActionModel)
+            .where(ESGActionModel.organization_id == org_id)
         )
-        done_stmt = select(func.count()).select_from(ESGActionModel).where(
-            ESGActionModel.organization_id == org_id,
-            ESGActionModel.action_status == "COMPLETED",
+        done_stmt = (
+            select(func.count())
+            .select_from(ESGActionModel)
+            .where(
+                ESGActionModel.organization_id == org_id,
+                ESGActionModel.action_status == "COMPLETED",
+            )
         )
         total = (await session.execute(total_stmt)).scalar_one() or 0
         done = (await session.execute(done_stmt)).scalar_one() or 0
@@ -207,17 +223,22 @@ async def _remediation_score(
     return score
 
 
-async def _governance_score(
-    org_id: str, session: AsyncSession, inputs: dict
-) -> float:
+async def _governance_score(org_id: str, session: AsyncSession, inputs: dict) -> float:
     try:
         from infrastructure.persistence.models.operating_system import ESGObjectiveModel
-        total_stmt = select(func.count()).select_from(ESGObjectiveModel).where(
-            ESGObjectiveModel.organization_id == org_id
+
+        total_stmt = (
+            select(func.count())
+            .select_from(ESGObjectiveModel)
+            .where(ESGObjectiveModel.organization_id == org_id)
         )
-        good_stmt = select(func.count()).select_from(ESGObjectiveModel).where(
-            ESGObjectiveModel.organization_id == org_id,
-            ESGObjectiveModel.objective_status.in_(["ON_TRACK", "COMPLETED"]),
+        good_stmt = (
+            select(func.count())
+            .select_from(ESGObjectiveModel)
+            .where(
+                ESGObjectiveModel.organization_id == org_id,
+                ESGObjectiveModel.objective_status.in_(["ON_TRACK", "COMPLETED"]),
+            )
         )
         total = (await session.execute(total_stmt)).scalar_one() or 0
         good = (await session.execute(good_stmt)).scalar_one() or 0

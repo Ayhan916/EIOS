@@ -52,7 +52,9 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
             confidence=ConfidenceLevel(model.confidence),
             reasoning=model.reasoning,
             uncertainty=model.uncertainty,
-            evidence_strength=EvidenceStrength(model.evidence_strength) if model.evidence_strength else None,
+            evidence_strength=EvidenceStrength(model.evidence_strength)
+            if model.evidence_strength
+            else None,
             evidence_source_count=model.evidence_source_count or 0,
             severity_score=model.severity_score,
             probability_score=model.probability_score,

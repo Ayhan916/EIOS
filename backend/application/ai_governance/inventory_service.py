@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -14,10 +14,10 @@ from infrastructure.persistence.models.ai_governance import (
     AI_MODEL_TYPES,
     RISK_LEVELS,
     TERMINAL_WORKFLOW_STATUSES,
+    WORKFLOW_STAGES,
     AIModelModel,
     AIUseCaseModel,
     ModelApprovalWorkflowModel,
-    WORKFLOW_STAGES,
 )
 
 
@@ -27,11 +27,12 @@ class AIGovernanceError(Exception):
 
 class AIGovernanceConflict(AIGovernanceError):
     """Resource is in a conflicting state (e.g., already resolved, terminal FSM state)."""
+
     pass
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _assert_org_ownership(record: Any, organization_id: str, label: str = "resource") -> None:
@@ -41,6 +42,7 @@ def _assert_org_ownership(record: Any, organization_id: str, label: str = "resou
 
 
 # ── AI Model ──────────────────────────────────────────────────────────────────
+
 
 def register_ai_model(
     organization_id: str,
@@ -143,6 +145,7 @@ def list_ai_models(
 
 
 # ── Use Case ──────────────────────────────────────────────────────────────────
+
 
 def register_use_case(
     model_id: str,

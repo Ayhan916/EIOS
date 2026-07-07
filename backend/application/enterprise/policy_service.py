@@ -24,20 +24,22 @@ async def _log(
     entity_id: str,
     detail: str = "",
 ) -> None:
-    session.add(AuditEventModel(
-        id=str(uuid.uuid4()),
-        status="Active",
-        version=1,
-        created_at=datetime.now(UTC),
-        updated_at=datetime.now(UTC),
-        action=action,
-        entity_type=entity_type,
-        entity_id=entity_id,
-        actor_id=actor_id,
-        outcome="success",
-        detail=detail,
-        event_metadata={},
-    ))
+    session.add(
+        AuditEventModel(
+            id=str(uuid.uuid4()),
+            status="Active",
+            version=1,
+            created_at=datetime.now(UTC),
+            updated_at=datetime.now(UTC),
+            action=action,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            actor_id=actor_id,
+            outcome="success",
+            detail=detail,
+            event_metadata={},
+        )
+    )
 
 
 # ── Enterprise Policy ─────────────────────────────────────────────────────────
@@ -75,7 +77,14 @@ async def create_policy(
     )
     session.add(policy)
     await session.flush()
-    await _log(session, "policy.created", actor_id, "EnterprisePolicy", policy.id, f"Policy '{name}' ({policy_type}) created")
+    await _log(
+        session,
+        "policy.created",
+        actor_id,
+        "EnterprisePolicy",
+        policy.id,
+        f"Policy '{name}' ({policy_type}) created",
+    )
     return policy
 
 
@@ -137,12 +146,20 @@ async def create_retention_rule(
     )
     session.add(rule)
     await session.flush()
-    await _log(session, "retention.rule_created", actor_id, "RetentionRule", rule.id,
-               f"Retention rule for {entity_type}: {retention_days} days")
+    await _log(
+        session,
+        "retention.rule_created",
+        actor_id,
+        "RetentionRule",
+        rule.id,
+        f"Retention rule for {entity_type}: {retention_days} days",
+    )
     return rule
 
 
-async def list_retention_rules(enterprise_id: str, session: AsyncSession) -> list[RetentionRuleModel]:
+async def list_retention_rules(
+    enterprise_id: str, session: AsyncSession
+) -> list[RetentionRuleModel]:
     result = await session.execute(
         select(RetentionRuleModel).where(
             RetentionRuleModel.enterprise_id == enterprise_id,
@@ -181,11 +198,20 @@ async def create_notification_policy(
     )
     session.add(np)
     await session.flush()
-    await _log(session, "notification_policy.created", actor_id, "NotificationPolicy", np.id, f"Notification policy '{name}' created")
+    await _log(
+        session,
+        "notification_policy.created",
+        actor_id,
+        "NotificationPolicy",
+        np.id,
+        f"Notification policy '{name}' created",
+    )
     return np
 
 
-async def list_notification_policies(enterprise_id: str, session: AsyncSession) -> list[NotificationPolicyModel]:
+async def list_notification_policies(
+    enterprise_id: str, session: AsyncSession
+) -> list[NotificationPolicyModel]:
     result = await session.execute(
         select(NotificationPolicyModel).where(
             NotificationPolicyModel.enterprise_id == enterprise_id,

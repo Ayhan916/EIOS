@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from domain.compliance_gap import ComplianceGap
 from domain.enums import EntityStatus
 from domain.regulation import RegulationRequirement
 from domain.requirement_mapping import RequirementMapping
@@ -24,8 +23,8 @@ from domain.requirement_mapping import RequirementMapping
 _MAPPING_VERSION = "1.0"
 
 # Confidence thresholds for rule-based matching
-_HIGH_CONFIDENCE = 0.85   # ≥2 keyword matches
-_LOW_CONFIDENCE = 0.65    # 1 keyword match
+_HIGH_CONFIDENCE = 0.85  # ≥2 keyword matches
+_LOW_CONFIDENCE = 0.65  # 1 keyword match
 
 
 def _keywords_match(text: str, keywords: list[str]) -> tuple[bool, int]:

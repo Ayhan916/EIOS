@@ -27,7 +27,6 @@ from application.external_intelligence.country_risk_service import (
     list_country_risks,
 )
 from application.external_intelligence.dataset_service import (
-    get_active_dataset,
     list_datasets,
 )
 from application.external_intelligence.enrichment_service import (
@@ -35,18 +34,19 @@ from application.external_intelligence.enrichment_service import (
     get_enrichment,
     list_high_risk_suppliers,
 )
+from application.external_intelligence.sector_benchmark_service import (
+    get_benchmark_by_nace,
+    get_sector_benchmark,
+    list_sector_benchmarks,
+)
 from application.external_intelligence.signal_service import (
     create_signal,
     list_active_signals,
     list_signals_for_country,
     list_signals_for_supplier,
 )
-from application.external_intelligence.sector_benchmark_service import (
-    get_sector_benchmark,
-    get_benchmark_by_nace,
-    list_sector_benchmarks,
-)
 from domain.external_intelligence import ExternalRiskSignal
+from domain.user import User
 from interfaces.api.deps import get_current_user, get_db, scope_gate
 from interfaces.api.schemas.external_intelligence import (
     CountryRiskListResponse,
@@ -62,7 +62,6 @@ from interfaces.api.schemas.external_intelligence import (
     SignalListResponse,
     SupplierEnrichmentResponse,
 )
-from domain.user import User
 
 router = APIRouter(
     prefix="/external-intelligence",
@@ -74,6 +73,7 @@ _WRITE = Depends(scope_gate("external_intelligence:write"))
 
 
 # ── Datasets ──────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/datasets",
@@ -87,7 +87,9 @@ async def list_external_datasets(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> DatasetListResponse:
-    datasets = await list_datasets(session, source_name=source_name, status=dataset_status, limit=limit)
+    datasets = await list_datasets(
+        session, source_name=source_name, status=dataset_status, limit=limit
+    )
     return DatasetListResponse(
         datasets=[_dataset_to_response(d) for d in datasets],
         total=len(datasets),
@@ -95,6 +97,7 @@ async def list_external_datasets(
 
 
 # ── Country Risk ──────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/countries/{country_code}",
@@ -109,6 +112,7 @@ async def get_country_risk_profile(
     profile = await get_country_risk(country_code, session)
     if profile is None:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Country risk profile not found")
     return _country_risk_to_response(profile)
 
@@ -133,6 +137,7 @@ async def list_country_risk_profiles(
 
 # ── Sector Benchmarks ─────────────────────────────────────────────────────────
 
+
 @router.get(
     "/sectors/{sector_id}",
     response_model=SectorBenchmarkResponse,
@@ -151,6 +156,7 @@ async def get_sector_benchmark_profile(
         benchmark = await get_sector_benchmark(sector_id, session)
     if benchmark is None:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Sector benchmark not found")
     return _sector_benchmark_to_response(benchmark)
 
@@ -173,6 +179,7 @@ async def list_sector_benchmark_profiles(
 
 
 # ── Signals ───────────────────────────────────────────────────────────────────
+
 
 @router.get(
     "/signals",
@@ -215,16 +222,17 @@ async def signals_by_connector(
     }
     """
     from sqlalchemy import select
+
     from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
 
     _SEV_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
     _CONNECTOR_LABELS = {
-        "world_bank":                  "World Bank",
-        "transparency_international":  "Transparency International",
-        "ilo":                         "ILO",
-        "unicef":                      "UNICEF",
-        "un_sanctions":                "UN Sanctions",
-        "eu_sanctions":                "EU Sanctions",
+        "world_bank": "World Bank",
+        "transparency_international": "Transparency International",
+        "ilo": "ILO",
+        "unicef": "UNICEF",
+        "un_sanctions": "UN Sanctions",
+        "eu_sanctions": "EU Sanctions",
     }
 
     # Pull all active signals for this org (max 1000)
@@ -250,17 +258,23 @@ async def signals_by_connector(
     for src, label in _CONNECTOR_LABELS.items():
         bucket = grouped[src]
         # Sort by severity then observed_at desc
-        bucket.sort(key=lambda r: (
-            _SEV_ORDER.get((r.severity if isinstance(r.severity, str) else r.severity.value).lower(), 9),
-            -(r.observed_at.timestamp() if r.observed_at else 0),
-        ))
+        bucket.sort(
+            key=lambda r: (
+                _SEV_ORDER.get(
+                    (r.severity if isinstance(r.severity, str) else r.severity.value).lower(), 9
+                ),
+                -(r.observed_at.timestamp() if r.observed_at else 0),
+            )
+        )
         top = bucket[:top_n]
-        connectors.append({
-            "source_name": src,
-            "label": label,
-            "total": len(bucket),
-            "signals": [_signal_to_response(r) for r in top],
-        })
+        connectors.append(
+            {
+                "source_name": src,
+                "label": label,
+                "total": len(bucket),
+                "signals": [_signal_to_response(r) for r in top],
+            }
+        )
 
     return {"connectors": connectors}
 
@@ -314,8 +328,8 @@ async def create_risk_signal(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> ExternalRiskSignalResponse:
-    from domain.enums import EntityStatus, RiskSignalType, SignalSeverity
-    from domain.external_intelligence import ExternalRiskSignal
+    from domain.enums import RiskSignalType, SignalSeverity
+
     signal_obj = ExternalRiskSignal(
         signal_type=RiskSignalType(body.signal_type).value,
         severity=SignalSeverity(body.severity).value,
@@ -337,6 +351,7 @@ async def create_risk_signal(
 
 
 # ── Enrichments ───────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/enrich",
@@ -375,6 +390,7 @@ async def get_supplier_enrichment(
     enrichment = await get_enrichment(supplier_id, current_user.organization_id, session)
     if enrichment is None:
         from fastapi import HTTPException
+
         raise HTTPException(status_code=404, detail="Supplier enrichment not found")
     return _enrichment_to_response(enrichment)
 
@@ -401,6 +417,7 @@ async def list_high_risk_supplier_enrichments(
 
 # ── Serialiser helpers ────────────────────────────────────────────────────────
 
+
 def _dataset_to_response(d) -> ExternalDatasetResponse:
     return ExternalDatasetResponse(
         id=d.id,
@@ -409,7 +426,9 @@ def _dataset_to_response(d) -> ExternalDatasetResponse:
         dataset_hash=d.dataset_hash,
         imported_at=d.imported_at,
         row_count=d.row_count,
-        dataset_status=d.dataset_status.value if hasattr(d.dataset_status, "value") else d.dataset_status,
+        dataset_status=d.dataset_status.value
+        if hasattr(d.dataset_status, "value")
+        else d.dataset_status,
         description=d.description,
         created_at=d.created_at,
     )
@@ -488,11 +507,17 @@ def _enrichment_to_response(e) -> SupplierEnrichmentResponse:
         supplier_id=e.supplier_id,
         organization_id=e.organization_id,
         country_code=e.country_code,
-        country_risk_level=e.country_risk_level.value if hasattr(e.country_risk_level, "value") else e.country_risk_level,
+        country_risk_level=e.country_risk_level.value
+        if hasattr(e.country_risk_level, "value")
+        else e.country_risk_level,
         country_risk_score=e.country_risk_score,
-        sanctions_exposure=e.sanctions_exposure.value if hasattr(e.sanctions_exposure, "value") else e.sanctions_exposure,
+        sanctions_exposure=e.sanctions_exposure.value
+        if hasattr(e.sanctions_exposure, "value")
+        else e.sanctions_exposure,
         sector_percentile=e.sector_percentile,
-        percentile_rank=e.percentile_rank.value if hasattr(e.percentile_rank, "value") else e.percentile_rank,
+        percentile_rank=e.percentile_rank.value
+        if hasattr(e.percentile_rank, "value")
+        else e.percentile_rank,
         benchmark_score=e.benchmark_score,
         benchmark_explanation=e.benchmark_explanation,
         external_risk_score=e.external_risk_score,

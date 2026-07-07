@@ -22,7 +22,6 @@ import structlog
 
 from application.external_intelligence.base_adapter import RawDataset
 from application.external_intelligence.metrics import ext_counters
-from domain.enums import DatasetStatus
 
 logger = structlog.get_logger(__name__)
 
@@ -77,9 +76,7 @@ def validate_dataset(raw: RawDataset) -> ValidationResult:
     # ── 2. Minimum row count ──────────────────────────────────────────────────
     min_rows = _MIN_ROW_COUNTS.get(source, 1)
     if 0 < raw.row_count < min_rows:
-        errors.append(
-            f"Row count {raw.row_count} below minimum {min_rows} for source '{source}'"
-        )
+        errors.append(f"Row count {raw.row_count} below minimum {min_rows} for source '{source}'")
 
     # ── 3. Required fields ────────────────────────────────────────────────────
     required = _REQUIRED_FIELDS.get(source, set())
@@ -144,6 +141,7 @@ async def validate_and_persist_result(
 ) -> None:
     """Persist a ValidationResult to dataset_validation_results table."""
     import uuid
+
     from infrastructure.persistence.models.connector_run import DatasetValidationResultModel
 
     validation.dataset_id = dataset_id
@@ -169,8 +167,7 @@ async def validate_and_persist_result(
 def _recompute_hash(records: list[dict]) -> str:
     """Recompute the canonical hash of a list of records."""
     row_strings = sorted(
-        json.dumps(r, sort_keys=True, separators=(",", ":"), default=str)
-        for r in records
+        json.dumps(r, sort_keys=True, separators=(",", ":"), default=str) for r in records
     )
     canonical = json.dumps(row_strings, separators=(",", ":"))
     return hashlib.sha256(canonical.encode()).hexdigest()

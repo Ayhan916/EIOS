@@ -8,8 +8,9 @@ Creates:
   readiness_snapshots — audit trail of readiness score computations
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "094"
 down_revision = "093"
@@ -29,7 +30,9 @@ def upgrade() -> None:
         sa.Column("computed_by", sa.String(255), nullable=True),
     )
     op.create_index("ix_readiness_snapshots_org", "readiness_snapshots", ["organization_id"])
-    op.create_index("ix_readiness_snapshots_org_date", "readiness_snapshots", ["organization_id", "computed_at"])
+    op.create_index(
+        "ix_readiness_snapshots_org_date", "readiness_snapshots", ["organization_id", "computed_at"]
+    )
 
 
 def downgrade() -> None:

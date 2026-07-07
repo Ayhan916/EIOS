@@ -8,8 +8,9 @@ Adds chain_direction and downstream_type to suppliers table.
 Existing rows default to 'upstream' (all historical suppliers are upstream).
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "091"
 down_revision = "090"

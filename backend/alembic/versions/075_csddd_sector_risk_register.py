@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "075"
@@ -40,7 +41,7 @@ def upgrade() -> None:
         # CSDDD right (CSDDDRight enum value)
         sa.Column("csddd_right", sa.String(64), nullable=False),
         # Score
-        sa.Column("probability", sa.Integer, nullable=False),   # 1–10
+        sa.Column("probability", sa.Integer, nullable=False),  # 1–10
         sa.Column("confidence", sa.String(20), nullable=False),
         sa.Column("sources", sa.JSON, nullable=False, server_default="[]"),
         sa.Column("calibration_version", sa.String(20), nullable=False, server_default="v1.0"),

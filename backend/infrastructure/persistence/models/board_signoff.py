@@ -1,4 +1,5 @@
 """SQLAlchemy models — Board Sign-off Trail (CSDDD Art. 22)."""
+
 from __future__ import annotations
 
 from datetime import datetime
@@ -21,7 +22,9 @@ class BoardSignoffRequestModel(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     requested_by: Mapped[str] = mapped_column(String(255), nullable=False)
-    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    requested_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     approved_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
@@ -29,7 +32,9 @@ class BoardSignoffRequestModel(Base):
     rejection_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     document_ref: Mapped[str | None] = mapped_column(String(500), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
     decisions: Mapped[list[BoardDecisionModel]] = relationship(
         "BoardDecisionModel", back_populates="request", cascade="all, delete-orphan"
@@ -59,6 +64,4 @@ class BoardDecisionModel(Base):
         "BoardSignoffRequestModel", back_populates="decisions"
     )
 
-    __table_args__ = (
-        Index("ix_board_decisions_request", "request_id"),
-    )
+    __table_args__ = (Index("ix_board_decisions_request", "request_id"),)

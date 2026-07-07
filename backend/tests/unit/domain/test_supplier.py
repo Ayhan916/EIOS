@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
-
 from domain.enums import SupplierStatus, SupplierTier
 from domain.supplier import Supplier
 

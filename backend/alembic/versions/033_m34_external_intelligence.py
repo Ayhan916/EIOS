@@ -15,8 +15,8 @@ Create Date: 2026-06-19
 """
 
 import sqlalchemy as sa
+
 from alembic import op
-from sqlalchemy.dialects import postgresql
 
 revision = "033"
 down_revision = "032"
@@ -47,7 +47,9 @@ def upgrade() -> None:
         sa.Column("row_count", sa.Integer, nullable=False, server_default="0"),
         sa.Column("dataset_status", sa.String(20), nullable=False, server_default="active"),
         sa.Column("description", sa.Text, nullable=False, server_default=""),
-        sa.UniqueConstraint("source_name", "source_version", name="uq_external_datasets_source_version"),
+        sa.UniqueConstraint(
+            "source_name", "source_version", name="uq_external_datasets_source_version"
+        ),
     )
     op.create_index("ix_external_datasets_source", "external_datasets", ["source_name"])
     op.create_index("ix_external_datasets_status", "external_datasets", ["dataset_status"])
@@ -144,7 +146,9 @@ def upgrade() -> None:
         sa.Column("enriched_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("dataset_version", sa.String(100), nullable=False, server_default=""),
         sa.Column("active_signal_count", sa.Integer, nullable=False, server_default="0"),
-        sa.UniqueConstraint("supplier_id", "organization_id", name="uq_supplier_enrichments_supplier_org"),
+        sa.UniqueConstraint(
+            "supplier_id", "organization_id", name="uq_supplier_enrichments_supplier_org"
+        ),
     )
     op.create_index("ix_supplier_enrichments_supplier", "supplier_enrichments", ["supplier_id"])
     op.create_index("ix_supplier_enrichments_org", "supplier_enrichments", ["organization_id"])

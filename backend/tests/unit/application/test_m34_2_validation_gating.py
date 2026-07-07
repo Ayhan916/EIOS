@@ -6,17 +6,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from application.external_intelligence.connectors.base import ConnectorRunResult
-
-
 # ── H1: success=False when quarantined ───────────────────────────────────────
 
 
 @pytest.mark.asyncio
 async def test_run_success_false_when_quarantined():
     """run() must return success=False when validation_errors is non-empty."""
-    from application.external_intelligence.connectors.base import BaseLiveConnector
     from application.external_intelligence.base_adapter import RawDataset
+    from application.external_intelligence.connectors.base import BaseLiveConnector
 
     class _FakeConnector(BaseLiveConnector):
         connector_name = "test_connector"
@@ -70,8 +67,8 @@ async def test_run_success_false_when_quarantined():
 @pytest.mark.asyncio
 async def test_run_success_true_when_no_validation_errors():
     """run() must return success=True when no errors."""
-    from application.external_intelligence.connectors.base import BaseLiveConnector
     from application.external_intelligence.base_adapter import RawDataset
+    from application.external_intelligence.connectors.base import BaseLiveConnector
 
     class _FakeConnector(BaseLiveConnector):
         connector_name = "test_connector"
@@ -125,8 +122,8 @@ async def test_run_success_true_when_no_validation_errors():
 @pytest.mark.asyncio
 async def test_run_aborts_when_already_running():
     """run() must abort and return success=False when a 'running' lock exists."""
-    from application.external_intelligence.connectors.base import BaseLiveConnector
     from application.external_intelligence.base_adapter import RawDataset
+    from application.external_intelligence.connectors.base import BaseLiveConnector
 
     class _FakeConnector(BaseLiveConnector):
         connector_name = "test_connector"
@@ -135,8 +132,9 @@ async def test_run_aborts_when_already_running():
             return []
 
         def normalize(self, raw_records):
-            return RawDataset(source_name="test_connector", source_version="1.0",
-                              records=[], description="test")
+            return RawDataset(
+                source_name="test_connector", source_version="1.0", records=[], description="test"
+            )
 
     connector = _FakeConnector()
     mock_session = AsyncMock()
@@ -170,8 +168,8 @@ async def test_check_concurrent_run_returns_none_when_no_running():
 
 def test_validate_dataset_called_with_raw():
     """validate_dataset is a pure function that takes a RawDataset."""
-    from application.external_intelligence.validation_service import validate_dataset
     from application.external_intelligence.base_adapter import RawDataset
+    from application.external_intelligence.validation_service import validate_dataset
 
     raw = RawDataset(
         source_name="world_bank",
@@ -185,8 +183,8 @@ def test_validate_dataset_called_with_raw():
 
 
 def test_validate_dataset_passes_for_valid_data():
-    from application.external_intelligence.validation_service import validate_dataset
     from application.external_intelligence.base_adapter import RawDataset
+    from application.external_intelligence.validation_service import validate_dataset
 
     # Use unique country codes to avoid duplicate detection
     records = [

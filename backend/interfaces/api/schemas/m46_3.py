@@ -6,8 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # ── G-040 Remediation Milestones ─────────────────────────────────────────────
+
 
 class RemediationMilestoneCreate(BaseModel):
     title: str = Field(min_length=1, max_length=500)
@@ -43,6 +43,7 @@ class RemediationMilestoneResponse(BaseModel):
 
 # ── G-041 Assessment Schedules ───────────────────────────────────────────────
 
+
 class AssessmentScheduleCreate(BaseModel):
     supplier_id: str
     frequency_days: int = Field(ge=7, le=3650, description="Reassessment interval in days")
@@ -66,6 +67,7 @@ class AssessmentScheduleResponse(BaseModel):
 
 
 # ── G-046 Supplier Certificates ──────────────────────────────────────────────
+
 
 class SupplierCertificateCreate(BaseModel):
     name: str = Field(min_length=1, max_length=500)
@@ -98,6 +100,7 @@ class SupplierCertificateResponse(BaseModel):
 
 
 # ── G-056 Risk Drafts ────────────────────────────────────────────────────────
+
 
 class RiskDraftResponse(BaseModel):
     id: str

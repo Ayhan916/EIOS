@@ -82,6 +82,7 @@ async def _resolve_entity_org_id(
 
     return None
 
+
 router = APIRouter(
     prefix="/comments",
     tags=["comments"],
@@ -190,8 +191,12 @@ async def list_comments(
 
     # Tenant isolation: verify caller belongs to the same org as the parent entity
     entity_org_id = await _resolve_entity_org_id(
-        entity_type, entity_id,
-        assessment_repo, finding_repo, risk_repo, recommendation_repo,
+        entity_type,
+        entity_id,
+        assessment_repo,
+        finding_repo,
+        risk_repo,
+        recommendation_repo,
     )
     if entity_org_id is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Entity not found")
@@ -248,6 +253,7 @@ async def delete_comment(
 
     # Admins can delete any comment; authors can delete their own
     from domain.enums import UserRole, has_min_role
+
     is_admin = has_min_role(current_user.role, UserRole.ADMIN)
     if not is_admin and comment.author_id != current_user.id:
         raise HTTPException(

@@ -6,8 +6,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field
 
-
 # ── External Dataset ──────────────────────────────────────────────────────────
+
 
 class ExternalDatasetResponse(BaseModel):
     id: str
@@ -29,6 +29,7 @@ class DatasetListResponse(BaseModel):
 
 
 # ── Country Risk ──────────────────────────────────────────────────────────────
+
 
 class CountryRiskResponse(BaseModel):
     id: str
@@ -57,6 +58,7 @@ class CountryRiskListResponse(BaseModel):
 
 
 # ── Sector Benchmark ──────────────────────────────────────────────────────────
+
 
 class SectorBenchmarkResponse(BaseModel):
     id: str
@@ -88,6 +90,7 @@ class SectorBenchmarkListResponse(BaseModel):
 
 
 # ── External Risk Signal ──────────────────────────────────────────────────────
+
 
 class ExternalRiskSignalResponse(BaseModel):
     id: str
@@ -134,6 +137,7 @@ class SignalListResponse(BaseModel):
 
 
 # ── Supplier Enrichment ───────────────────────────────────────────────────────
+
 
 class SupplierEnrichmentResponse(BaseModel):
     id: str

@@ -8,6 +8,7 @@ Create Date: 2026-07-05
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "086"
@@ -59,8 +60,14 @@ def upgrade() -> None:
         sa.Column("linked_finding_id", sa.String(36), nullable=True),
         sa.Column("linked_cap_id", sa.String(36), nullable=True),
     )
-    op.create_index("ix_stakeholder_consultations_org", "stakeholder_consultations", ["organization_id"])
-    op.create_index("ix_stakeholder_consultations_date", "stakeholder_consultations", ["organization_id", "consultation_date"])
+    op.create_index(
+        "ix_stakeholder_consultations_org", "stakeholder_consultations", ["organization_id"]
+    )
+    op.create_index(
+        "ix_stakeholder_consultations_date",
+        "stakeholder_consultations",
+        ["organization_id", "consultation_date"],
+    )
 
     op.create_table(
         "stakeholder_feedback",
@@ -75,7 +82,9 @@ def upgrade() -> None:
         sa.Column("submitted_by_name", sa.String(500), nullable=True),
         sa.Column("submitter_ip", sa.String(45), nullable=True),
     )
-    op.create_index("ix_stakeholder_feedback_consultation", "stakeholder_feedback", ["consultation_id"])
+    op.create_index(
+        "ix_stakeholder_feedback_consultation", "stakeholder_feedback", ["consultation_id"]
+    )
     op.create_index("ix_stakeholder_feedback_org", "stakeholder_feedback", ["organization_id"])
 
 

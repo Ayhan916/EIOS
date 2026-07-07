@@ -33,16 +33,16 @@ class EventOutboxModel(Base):
     aggregate_id: Mapped[str] = mapped_column(String(36), nullable=False)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False)
     # Outbox state machine: PENDING → PUBLISHED | FAILED
-    outbox_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING", index=True)
+    outbox_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="PENDING", index=True
+    )
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     published_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     failed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (
-        Index("ix_event_outbox_pending", "outbox_status", "created_at"),
-    )
+    __table_args__ = (Index("ix_event_outbox_pending", "outbox_status", "created_at"),)
 
 
 class EventLogModel(Base):
@@ -67,9 +67,9 @@ class EventLogModel(Base):
     handler_error: Mapped[str | None] = mapped_column(Text, nullable=True)
     kafka_partition: Mapped[int | None] = mapped_column(Integer, nullable=True)
     kafka_offset: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    consumed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    consumed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, index=True
+    )
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    __table_args__ = (
-        Index("ix_event_log_org_type", "organization_id", "event_type"),
-    )
+    __table_args__ = (Index("ix_event_log_org_type", "organization_id", "event_type"),)

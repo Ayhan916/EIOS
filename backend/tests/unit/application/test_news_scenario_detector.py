@@ -2,15 +2,15 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
 from application.sector_intelligence.news_scenario_detector import (
-    NewsScenarioDetector,
     _NACE_SECTOR_KEYWORDS,
     _SCENARIO_KEYWORDS,
     _THRESHOLD_ARTICLES,
+    NewsScenarioDetector,
 )
 from domain.enums import ScenarioSuggestionStatus, ScenarioType
 
@@ -21,7 +21,7 @@ def _make_articles(
     summary: str = "",
     days_ago: int = 0,
 ) -> list[dict]:
-    now = datetime.now(timezone.utc) - timedelta(days=days_ago)
+    now = datetime.now(UTC) - timedelta(days=days_ago)
     return [
         {
             "title": title_template.format(i=i),
@@ -78,9 +78,7 @@ class TestDetectionLogic:
         result = detector.detect(articles)
         assert result == []
 
-    def test_at_threshold_returns_suggestion(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_at_threshold_returns_suggestion(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES,
             title_template="Workers go on strike in automotive sector {i}",
@@ -89,9 +87,7 @@ class TestDetectionLogic:
         types = {s["scenario_type"] for s in result}
         assert "labour_unrest" in types
 
-    def test_above_threshold_returns_suggestion(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_above_threshold_returns_suggestion(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES + 3,
             title_template="War conflict invasion military troops {i}",
@@ -100,9 +96,7 @@ class TestDetectionLogic:
         types = {s["scenario_type"] for s in result}
         assert "geopolitical_conflict" in types
 
-    def test_suggestion_has_required_fields(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_suggestion_has_required_fields(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES + 2,
             title_template="Flood disaster earthquake natural disaster {i}",
@@ -111,15 +105,20 @@ class TestDetectionLogic:
         assert len(result) > 0
         suggestion = result[0]
         required = {
-            "id", "status", "scenario_type", "affected_nace_codes",
-            "trigger_article_count", "trigger_keywords_matched",
-            "sample_headlines", "created_at",
+            "id",
+            "status",
+            "scenario_type",
+            "affected_nace_codes",
+            "trigger_article_count",
+            "trigger_keywords_matched",
+            "sample_headlines",
+            "created_at",
         }
-        assert required <= set(suggestion.keys()), f"Missing fields: {required - set(suggestion.keys())}"
+        assert required <= set(suggestion.keys()), (
+            f"Missing fields: {required - set(suggestion.keys())}"
+        )
 
-    def test_suggestion_status_is_pending(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_suggestion_status_is_pending(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES,
             title_template="Sanctions embargo trade restriction {i}",
@@ -128,9 +127,7 @@ class TestDetectionLogic:
         for s in result:
             assert s["status"] == ScenarioSuggestionStatus.PENDING.value
 
-    def test_trigger_count_matches_articles(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_trigger_count_matches_articles(self, detector: NewsScenarioDetector) -> None:
         n = _THRESHOLD_ARTICLES + 4
         articles = _make_articles(n, title_template="Strike walkout union {i}")
         result = detector.detect(articles)
@@ -139,9 +136,7 @@ class TestDetectionLogic:
         assert labour[0]["trigger_article_count"] >= _THRESHOLD_ARTICLES
 
     def test_sample_headlines_max_3(self, detector: NewsScenarioDetector) -> None:
-        articles = _make_articles(
-            20, title_template="Flood disaster earthquake {i}"
-        )
+        articles = _make_articles(20, title_template="Flood disaster earthquake {i}")
         result = detector.detect(articles)
         for s in result:
             assert len(s["sample_headlines"]) <= 3
@@ -158,9 +153,7 @@ class TestDetectionLogic:
 
 
 class TestSectorClassification:
-    def test_automotive_keyword_matches_nace_29(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_automotive_keyword_matches_nace_29(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES,
             title_template="Automotive sector war invasion conflict {i}",
@@ -168,11 +161,12 @@ class TestSectorClassification:
         result = detector.detect(articles)
         conflict = [s for s in result if s["scenario_type"] == "geopolitical_conflict"]
         if conflict:
-            assert "29" in conflict[0]["affected_nace_codes"] or conflict[0]["affected_nace_codes"] == []
+            assert (
+                "29" in conflict[0]["affected_nace_codes"]
+                or conflict[0]["affected_nace_codes"] == []
+            )
 
-    def test_textile_keyword_matches_nace_13(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_textile_keyword_matches_nace_13(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES,
             title_template="Textile workers strike walkout union {i}",
@@ -186,15 +180,13 @@ class TestSectorClassification:
 
 
 class TestActiveTypeFiltering:
-    def test_already_active_scenario_not_duplicated(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_already_active_scenario_not_duplicated(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES + 3,
             title_template="Workers go on strike {i}",
         )
         result_first = detector.detect(articles)
-        labour_first = [s for s in result_first if s["scenario_type"] == "labour_unrest"]
+        [s for s in result_first if s["scenario_type"] == "labour_unrest"]
 
         # Simulate labour_unrest already active
         active = {ScenarioType.LABOUR_UNREST}
@@ -241,9 +233,7 @@ class TestRecencyFilter:
 
 
 class TestSuggestionIdUniqueness:
-    def test_each_suggestion_has_unique_id(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_each_suggestion_has_unique_id(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             30,
             title_template="War strike flood sanctions shortage {i}",
@@ -252,9 +242,7 @@ class TestSuggestionIdUniqueness:
         ids = [s["id"] for s in result]
         assert len(ids) == len(set(ids)), "Suggestion IDs must be unique"
 
-    def test_two_runs_produce_different_ids(
-        self, detector: NewsScenarioDetector
-    ) -> None:
+    def test_two_runs_produce_different_ids(self, detector: NewsScenarioDetector) -> None:
         articles = _make_articles(
             _THRESHOLD_ARTICLES,
             title_template="Flood disaster earthquake {i}",

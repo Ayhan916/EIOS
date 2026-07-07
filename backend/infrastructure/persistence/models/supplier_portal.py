@@ -23,13 +23,12 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import (
+    JSON,
     Boolean,
     DateTime,
     Float,
-    ForeignKey,
     Index,
     Integer,
-    JSON,
     String,
     Text,
     UniqueConstraint,
@@ -119,7 +118,9 @@ class EvidenceSubmissionModel(Base):
     __tablename__ = "evidence_submissions"
     __table_args__ = (
         # M35.1 F8: one active submission per (request, supplier)
-        UniqueConstraint("evidence_request_id", "supplier_id", name="uq_evidence_submission_per_supplier"),
+        UniqueConstraint(
+            "evidence_request_id", "supplier_id", name="uq_evidence_submission_per_supplier"
+        ),
         Index("ix_evidence_submissions_request_id", "evidence_request_id"),
         Index("ix_evidence_submissions_supplier_user", "supplier_user_id"),
     )
@@ -140,16 +141,16 @@ class EvidenceSubmissionModel(Base):
 
 class EvidenceSubmissionFileModel(Base):
     __tablename__ = "evidence_submission_files"
-    __table_args__ = (
-        Index("ix_evidence_submission_files_submission_id", "submission_id"),
-    )
+    __table_args__ = (Index("ix_evidence_submission_files_submission_id", "submission_id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     submission_id: Mapped[str] = mapped_column(String(36), nullable=False)
     file_name: Mapped[str] = mapped_column(String(500), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    content_type: Mapped[str] = mapped_column(String(200), nullable=False, default="application/octet-stream")
+    content_type: Mapped[str] = mapped_column(
+        String(200), nullable=False, default="application/octet-stream"
+    )
     uploaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -175,9 +176,7 @@ class QuestionnaireTemplateModel(Base):
 
 class QuestionnaireQuestionModel(Base):
     __tablename__ = "questionnaire_questions"
-    __table_args__ = (
-        Index("ix_questionnaire_questions_template_id", "template_id"),
-    )
+    __table_args__ = (Index("ix_questionnaire_questions_template_id", "template_id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     template_id: Mapped[str] = mapped_column(String(36), nullable=False)
@@ -205,7 +204,9 @@ class QuestionnaireAssignmentModel(Base):
     supplier_id: Mapped[str] = mapped_column(String(36), nullable=False)
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
     assigned_by_user_id: Mapped[str] = mapped_column(String(36), nullable=False)
-    questionnaire_status: Mapped[str] = mapped_column(String(30), nullable=False, default="assigned")
+    questionnaire_status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="assigned"
+    )
     due_date: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     assigned_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -221,7 +222,9 @@ class QuestionnaireAnswerModel(Base):
     __tablename__ = "questionnaire_answers"
     __table_args__ = (
         Index("ix_questionnaire_answers_assignment_id", "assignment_id"),
-        UniqueConstraint("assignment_id", "question_id", name="uq_questionnaire_answers_assignment_question"),
+        UniqueConstraint(
+            "assignment_id", "question_id", name="uq_questionnaire_answers_assignment_question"
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -230,7 +233,9 @@ class QuestionnaireAnswerModel(Base):
     answer_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     answer_json: Mapped[str] = mapped_column(Text, nullable=False, default="null")
     file_path: Mapped[str | None] = mapped_column(String(1000), nullable=True)
-    answered_by_supplier_user_id: Mapped[str] = mapped_column(String(36), nullable=False, default="")
+    answered_by_supplier_user_id: Mapped[str] = mapped_column(
+        String(36), nullable=False, default=""
+    )
     answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
@@ -281,8 +286,9 @@ class ConversationModel(Base):
 class ConversationParticipantModel(Base):
     __tablename__ = "conversation_participants"
     __table_args__ = (
-        UniqueConstraint("conversation_id", "participant_id", "participant_type",
-                         name="uq_conv_participant"),
+        UniqueConstraint(
+            "conversation_id", "participant_id", "participant_type", name="uq_conv_participant"
+        ),
         Index("ix_conversation_participants_conv", "conversation_id"),
     )
 
@@ -313,9 +319,7 @@ class MessageModel(Base):
 
 class MessageAttachmentModel(Base):
     __tablename__ = "message_attachments"
-    __table_args__ = (
-        Index("ix_message_attachments_message_id", "message_id"),
-    )
+    __table_args__ = (Index("ix_message_attachments_message_id", "message_id"),)
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     message_id: Mapped[str] = mapped_column(String(36), nullable=False)
@@ -397,7 +401,9 @@ class GrievanceReportModel(Base):
     resolution_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    regulation_refs: Mapped[str] = mapped_column(String(255), nullable=False, default="LkSG §8; CSDDD Art. 14")
+    regulation_refs: Mapped[str] = mapped_column(
+        String(255), nullable=False, default="LkSG §8; CSDDD Art. 14"
+    )
     linked_finding_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

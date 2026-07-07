@@ -1,4 +1,5 @@
 """SQLAlchemy models for Effectiveness Monitoring (CSDDD Art. 15)."""
+
 from sqlalchemy import (
     Boolean,
     Column,
@@ -48,7 +49,9 @@ class EffectivenessReviewModel(Base):
     approved_at = Column(DateTime(timezone=True), nullable=True)
     approved_by = Column(String(255), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
-    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
 
 
 class ReviewLineModel(Base):

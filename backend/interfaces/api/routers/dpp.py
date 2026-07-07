@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.dpp.service import DPPService
 from domain.dpp import DPPFormat, DPPStatus
+from domain.user import User
 from infrastructure.kafka.producer import KafkaEventProducer, get_kafka_producer
 from interfaces.api.deps import (
     get_current_user,
@@ -27,7 +28,6 @@ from interfaces.api.deps import (
     require_analyst,
     scope_gate,
 )
-from domain.user import User
 from interfaces.api.schemas.dpp import (
     DPPCreate,
     DPPListResponse,
@@ -154,9 +154,7 @@ async def update_dpp(
 ) -> DPPResponse:
     svc = DPPService(db, kafka)
     data = body.model_dump(exclude_unset=True)
-    model = await svc.update(
-        current_user.organization_id, dpp_id, actor_id=current_user.id, **data
-    )
+    model = await svc.update(current_user.organization_id, dpp_id, actor_id=current_user.id, **data)
     if model is None:
         raise HTTPException(status_code=404, detail="Digital Product Passport not found")
     await db.commit()
@@ -199,9 +197,7 @@ async def publish_dpp(
 ) -> DPPResponse:
     """Refresh snapshot, set status=ACTIVE, stamp disclosed_at."""
     svc = DPPService(db, kafka)
-    model = await svc.publish(
-        current_user.organization_id, dpp_id, actor_id=current_user.id
-    )
+    model = await svc.publish(current_user.organization_id, dpp_id, actor_id=current_user.id)
     if model is None:
         raise HTTPException(status_code=404, detail="Digital Product Passport not found")
     await db.commit()
@@ -220,9 +216,7 @@ async def withdraw_dpp(
     kafka: KafkaEventProducer = Depends(get_kafka_producer),
 ) -> None:
     svc = DPPService(db, kafka)
-    withdrawn = await svc.withdraw(
-        current_user.organization_id, dpp_id, actor_id=current_user.id
-    )
+    withdrawn = await svc.withdraw(current_user.organization_id, dpp_id, actor_id=current_user.id)
     if not withdrawn:
         raise HTTPException(status_code=404, detail="Digital Product Passport not found")
     await db.commit()

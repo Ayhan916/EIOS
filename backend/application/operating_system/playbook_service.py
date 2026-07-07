@@ -15,9 +15,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.operating_system.metrics import os_counters
 
 
-async def _log_audit(session: AsyncSession, action: str, entity_id: str,
-                     entity_type: str, organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session: AsyncSession,
+    action: str,
+    entity_id: str,
+    entity_type: str,
+    organization_id: str,
+    detail: str = "",
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
+
     evt = AuditEventModel(
         id=str(uuid.uuid4()),
         status="Active",
@@ -37,6 +44,7 @@ async def _log_audit(session: AsyncSession, action: str, entity_id: str,
 
 # ── Playbooks ─────────────────────────────────────────────────────────────────
 
+
 async def create_playbook(
     organization_id: str,
     title: str,
@@ -48,6 +56,7 @@ async def create_playbook(
     evidence_required: list | None = None,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ESGPlaybookModel
+
     now = datetime.now(UTC)
     pb = ESGPlaybookModel(
         id=str(uuid.uuid4()),
@@ -67,8 +76,14 @@ async def create_playbook(
     session.add(pb)
     await session.flush()
     os_counters.record_playbook_created()
-    await _log_audit(session, "playbook.created", pb.id, "ESGPlaybook", organization_id,
-                     detail=f"type={playbook_type}")
+    await _log_audit(
+        session,
+        "playbook.created",
+        pb.id,
+        "ESGPlaybook",
+        organization_id,
+        detail=f"type={playbook_type}",
+    )
     return _pb_to_dict(pb)
 
 
@@ -76,6 +91,7 @@ async def list_playbooks(
     organization_id: str, session: AsyncSession, playbook_type: str | None = None
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGPlaybookModel
+
     stmt = select(ESGPlaybookModel).where(
         ESGPlaybookModel.organization_id == organization_id,
         ESGPlaybookModel.playbook_status == "ACTIVE",
@@ -90,6 +106,7 @@ async def get_playbook(
     organization_id: str, playbook_id: str, session: AsyncSession
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGPlaybookModel
+
     stmt = select(ESGPlaybookModel).where(
         ESGPlaybookModel.organization_id == organization_id,
         ESGPlaybookModel.id == playbook_id,
@@ -99,6 +116,7 @@ async def get_playbook(
 
 
 # ── Workflow Executions ───────────────────────────────────────────────────────
+
 
 async def start_workflow(
     organization_id: str,
@@ -111,8 +129,10 @@ async def start_workflow(
     total_steps: int = 0,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import (
-        WorkflowExecutionModel, ESGPlaybookModel,
+        ESGPlaybookModel,
+        WorkflowExecutionModel,
     )
+
     # Infer total_steps from playbook if not provided
     if total_steps == 0 and playbook_id:
         pb_stmt = select(ESGPlaybookModel).where(
@@ -145,8 +165,14 @@ async def start_workflow(
     session.add(wf)
     await session.flush()
     os_counters.record_workflow_started()
-    await _log_audit(session, "playbook.executed", wf.id, "WorkflowExecution",
-                     organization_id, detail=f"type={workflow_type}")
+    await _log_audit(
+        session,
+        "playbook.executed",
+        wf.id,
+        "WorkflowExecution",
+        organization_id,
+        detail=f"type={workflow_type}",
+    )
     return _wf_to_dict(wf)
 
 
@@ -159,6 +185,7 @@ async def approve_workflow_step(
 ) -> dict | None:
     """Human-only: advance workflow to next step after approval."""
     from infrastructure.persistence.models.operating_system import WorkflowExecutionModel
+
     stmt = select(WorkflowExecutionModel).where(
         WorkflowExecutionModel.organization_id == organization_id,
         WorkflowExecutionModel.id == execution_id,
@@ -183,8 +210,14 @@ async def approve_workflow_step(
 
     wf.updated_at = datetime.now(UTC)
     await session.flush()
-    await _log_audit(session, "workflow.approved", wf.id, "WorkflowExecution",
-                     organization_id, detail=f"step={completed_step['step']} by={approved_by}")
+    await _log_audit(
+        session,
+        "workflow.approved",
+        wf.id,
+        "WorkflowExecution",
+        organization_id,
+        detail=f"step={completed_step['step']} by={approved_by}",
+    )
     return _wf_to_dict(wf)
 
 
@@ -197,6 +230,7 @@ async def reject_workflow_step(
 ) -> dict | None:
     """Human-only: halt workflow execution with rejection."""
     from infrastructure.persistence.models.operating_system import WorkflowExecutionModel
+
     stmt = select(WorkflowExecutionModel).where(
         WorkflowExecutionModel.organization_id == organization_id,
         WorkflowExecutionModel.id == execution_id,
@@ -207,8 +241,14 @@ async def reject_workflow_step(
     wf.execution_status = "REJECTED"
     wf.updated_at = datetime.now(UTC)
     await session.flush()
-    await _log_audit(session, "workflow.rejected", wf.id, "WorkflowExecution",
-                     organization_id, detail=f"by={rejected_by} reason={reason}")
+    await _log_audit(
+        session,
+        "workflow.rejected",
+        wf.id,
+        "WorkflowExecution",
+        organization_id,
+        detail=f"by={rejected_by} reason={reason}",
+    )
     return _wf_to_dict(wf)
 
 
@@ -219,6 +259,7 @@ async def list_workflow_executions(
     limit: int = 50,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import WorkflowExecutionModel
+
     stmt = select(WorkflowExecutionModel).where(
         WorkflowExecutionModel.organization_id == organization_id
     )

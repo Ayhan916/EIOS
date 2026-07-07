@@ -9,6 +9,7 @@ scan_result logic:
   PARTIAL        — mix of COMPLIANT and (UNKNOWN or no flag)
   UNKNOWN        — no material has any flag for this regulation
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -45,9 +46,15 @@ class ProductComplianceScanService:
 
         if not material_ids:
             return await self._write_scan(
-                organization_id, product_id, regulation_code,
-                total=0, compliant=0, non_compliant=0, unknown=0,
-                flagged_ids=[], actor_id=actor_id,
+                organization_id,
+                product_id,
+                regulation_code,
+                total=0,
+                compliant=0,
+                non_compliant=0,
+                unknown=0,
+                flagged_ids=[],
+                actor_id=actor_id,
             )
 
         flags_result = await self._db.execute(
@@ -76,7 +83,9 @@ class ProductComplianceScanService:
                 unknown += 1
 
         return await self._write_scan(
-            organization_id, product_id, regulation_code,
+            organization_id,
+            product_id,
+            regulation_code,
             total=len(material_ids),
             compliant=compliant,
             non_compliant=non_compliant,

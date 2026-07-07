@@ -203,6 +203,7 @@ async def list_high_risk_suppliers(
 
 def _domain_to_model(e: SupplierEnrichment):
     from infrastructure.persistence.models.external_intelligence import SupplierEnrichmentModel
+
     return SupplierEnrichmentModel(
         id=e.id,
         status=e.status.value if hasattr(e.status, "value") else e.status,
@@ -216,12 +217,18 @@ def _domain_to_model(e: SupplierEnrichment):
         organization_id=e.organization_id,
         country_code=e.country_code,
         country_risk_id=e.country_risk_id or None,
-        country_risk_level=e.country_risk_level.value if hasattr(e.country_risk_level, "value") else e.country_risk_level,
+        country_risk_level=e.country_risk_level.value
+        if hasattr(e.country_risk_level, "value")
+        else e.country_risk_level,
         country_risk_score=e.country_risk_score,
-        sanctions_exposure=e.sanctions_exposure.value if hasattr(e.sanctions_exposure, "value") else e.sanctions_exposure,
+        sanctions_exposure=e.sanctions_exposure.value
+        if hasattr(e.sanctions_exposure, "value")
+        else e.sanctions_exposure,
         sector_benchmark_id=e.sector_benchmark_id or None,
         sector_percentile=e.sector_percentile,
-        percentile_rank=e.percentile_rank.value if hasattr(e.percentile_rank, "value") else e.percentile_rank,
+        percentile_rank=e.percentile_rank.value
+        if hasattr(e.percentile_rank, "value")
+        else e.percentile_rank,
         benchmark_score=e.benchmark_score,
         benchmark_explanation=e.benchmark_explanation,
         external_risk_score=e.external_risk_score,
@@ -235,14 +242,25 @@ def _domain_to_model(e: SupplierEnrichment):
 def _update_model(model, e: SupplierEnrichment) -> None:
     """In-place update of existing enrichment model."""
     from datetime import UTC, datetime
+
     model.country_code = e.country_code
     model.country_risk_id = e.country_risk_id or None
-    model.country_risk_level = e.country_risk_level.value if hasattr(e.country_risk_level, "value") else e.country_risk_level
+    model.country_risk_level = (
+        e.country_risk_level.value
+        if hasattr(e.country_risk_level, "value")
+        else e.country_risk_level
+    )
     model.country_risk_score = e.country_risk_score
-    model.sanctions_exposure = e.sanctions_exposure.value if hasattr(e.sanctions_exposure, "value") else e.sanctions_exposure
+    model.sanctions_exposure = (
+        e.sanctions_exposure.value
+        if hasattr(e.sanctions_exposure, "value")
+        else e.sanctions_exposure
+    )
     model.sector_benchmark_id = e.sector_benchmark_id or None
     model.sector_percentile = e.sector_percentile
-    model.percentile_rank = e.percentile_rank.value if hasattr(e.percentile_rank, "value") else e.percentile_rank
+    model.percentile_rank = (
+        e.percentile_rank.value if hasattr(e.percentile_rank, "value") else e.percentile_rank
+    )
     model.benchmark_score = e.benchmark_score
     model.benchmark_explanation = e.benchmark_explanation
     model.external_risk_score = e.external_risk_score

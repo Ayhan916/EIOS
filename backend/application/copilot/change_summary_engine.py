@@ -43,15 +43,17 @@ def build_change_summary(
             severity = "critical" if abs(diff) >= 5 else "warning"
         else:
             severity = "info"
-        changes.append({
-            "metric": key,
-            "label": label,
-            "previous": prev,
-            "current": cur,
-            "delta": diff,
-            "direction": direction,
-            "severity": severity,
-        })
+        changes.append(
+            {
+                "metric": key,
+                "label": label,
+                "previous": prev,
+                "current": cur,
+                "delta": diff,
+                "direction": direction,
+                "severity": severity,
+            }
+        )
 
     _delta("critical_findings", "Critical findings", higher_is_worse=True)
     _delta("critical_risks", "Critical risks", higher_is_worse=True)
@@ -84,7 +86,9 @@ def build_change_summary(
         "overall_severity": overall_severity,
         "changes": changes,
         "risk_distribution_changes": dist_changes,
-        "new_concerns": [c for c in changes if c["severity"] in ("critical", "warning") and c["delta"] > 0],
+        "new_concerns": [
+            c for c in changes if c["severity"] in ("critical", "warning") and c["delta"] > 0
+        ],
         "improvements": [c for c in changes if c["delta"] < 0],
         "total_changes": len(changes),
     }

@@ -17,21 +17,57 @@ ESG_PILLAR_ENVIRONMENTAL = "Environmental"
 ESG_PILLAR_SOCIAL = "Social"
 ESG_PILLAR_GOVERNANCE = "Governance"
 
-_ENV_KEYWORDS = frozenset({
-    "environment", "environmental", "climate", "energy",
-    "emission", "carbon", "greenhouse", "ghg", "waste",
-    "water", "pollution", "biodiversity", "deforestation",
-    "land use", "resource", "renewable", "ecological",
-    "scope 1", "scope 2", "scope 3",
-})
+_ENV_KEYWORDS = frozenset(
+    {
+        "environment",
+        "environmental",
+        "climate",
+        "energy",
+        "emission",
+        "carbon",
+        "greenhouse",
+        "ghg",
+        "waste",
+        "water",
+        "pollution",
+        "biodiversity",
+        "deforestation",
+        "land use",
+        "resource",
+        "renewable",
+        "ecological",
+        "scope 1",
+        "scope 2",
+        "scope 3",
+    }
+)
 
-_SOC_KEYWORDS = frozenset({
-    "social", "labor", "labour", "human rights", "human right",
-    "health", "safety", "community", "diversity", "inclusion",
-    "worker", "employee", "child", "forced", "discrimination",
-    "wage", "salary", "supply chain", "modern slavery", "trafficking",
-    "workplace", "occupational",
-})
+_SOC_KEYWORDS = frozenset(
+    {
+        "social",
+        "labor",
+        "labour",
+        "human rights",
+        "human right",
+        "health",
+        "safety",
+        "community",
+        "diversity",
+        "inclusion",
+        "worker",
+        "employee",
+        "child",
+        "forced",
+        "discrimination",
+        "wage",
+        "salary",
+        "supply chain",
+        "modern slavery",
+        "trafficking",
+        "workplace",
+        "occupational",
+    }
+)
 
 
 def categorize_pillar(category: str, title: str = "") -> str:

@@ -10,8 +10,9 @@ Creates:
   clause_audit_logs      — immutable audit trail for status changes
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "092"
 down_revision = "091"
@@ -36,14 +37,21 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )
     op.create_index("ix_contract_clauses_org", "contract_clauses", ["organization_id"])
-    op.create_index("ix_contract_clauses_org_category", "contract_clauses", ["organization_id", "category"])
+    op.create_index(
+        "ix_contract_clauses_org_category", "contract_clauses", ["organization_id", "category"]
+    )
 
     op.create_table(
         "contract_assurances",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column("supplier_id", sa.String(36), nullable=False),
-        sa.Column("clause_id", sa.String(36), sa.ForeignKey("contract_clauses.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "clause_id",
+            sa.String(36),
+            sa.ForeignKey("contract_clauses.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("status", sa.String(20), nullable=False, server_default="pending"),
         sa.Column("accepted_at", sa.DateTime(timezone=True), nullable=True),
         sa.Column("accepted_by", sa.String(255), nullable=True),
@@ -57,14 +65,25 @@ def upgrade() -> None:
     )
     op.create_index("ix_contract_assurances_org", "contract_assurances", ["organization_id"])
     op.create_index("ix_contract_assurances_supplier", "contract_assurances", ["supplier_id"])
-    op.create_index("ix_contract_assurances_supplier_clause", "contract_assurances", ["supplier_id", "clause_id"])
-    op.create_index("ix_contract_assurances_org_status", "contract_assurances", ["organization_id", "status"])
+    op.create_index(
+        "ix_contract_assurances_supplier_clause",
+        "contract_assurances",
+        ["supplier_id", "clause_id"],
+    )
+    op.create_index(
+        "ix_contract_assurances_org_status", "contract_assurances", ["organization_id", "status"]
+    )
 
     op.create_table(
         "clause_audit_logs",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("organization_id", sa.String(36), nullable=False),
-        sa.Column("assurance_id", sa.String(36), sa.ForeignKey("contract_assurances.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "assurance_id",
+            sa.String(36),
+            sa.ForeignKey("contract_assurances.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("changed_by", sa.String(255), nullable=False),
         sa.Column("from_status", sa.String(20), nullable=True),
         sa.Column("to_status", sa.String(20), nullable=False),

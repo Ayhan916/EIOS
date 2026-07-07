@@ -78,7 +78,8 @@ class WorldBankConnector(BaseLiveConnector):
         for entry in raw_records:
             indicators = entry.get("indicators", {})
             gov_values = [
-                indicators[k] for k in ["GE.EST", "RQ.EST", "RL.EST", "PS.EST", "VA.EST"]
+                indicators[k]
+                for k in ["GE.EST", "RQ.EST", "RL.EST", "PS.EST", "VA.EST"]
                 if k in indicators
             ]
             governance_raw = sum(gov_values) / len(gov_values) if gov_values else 0.0
@@ -87,18 +88,20 @@ class WorldBankConnector(BaseLiveConnector):
             def to_risk(raw: float) -> float:
                 return max(0.0, min(100.0, (2.5 - raw) / 5.0 * 100))
 
-            records.append({
-                "country_code": entry["country_code"],
-                "country_name": entry["country_name"],
-                "governance_score": round(to_risk(governance_raw), 2),
-                "corruption_score": round(to_risk(corruption_raw), 2),
-                "labour_rights_score": 0.0,
-                "environmental_risk_score": 0.0,
-                "human_rights_score": 0.0,
-                "sanctions_status": "none",
-                "data_date": entry.get("date", ""),
-                "source": ExternalSourceName.WORLD_BANK.value,
-            })
+            records.append(
+                {
+                    "country_code": entry["country_code"],
+                    "country_name": entry["country_name"],
+                    "governance_score": round(to_risk(governance_raw), 2),
+                    "corruption_score": round(to_risk(corruption_raw), 2),
+                    "labour_rights_score": 0.0,
+                    "environmental_risk_score": 0.0,
+                    "human_rights_score": 0.0,
+                    "sanctions_status": "none",
+                    "data_date": entry.get("date", ""),
+                    "source": ExternalSourceName.WORLD_BANK.value,
+                }
+            )
         return RawDataset(
             source_name=ExternalSourceName.WORLD_BANK.value,
             source_version=self.connector_version,

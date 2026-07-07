@@ -7,7 +7,7 @@ Tenant isolation: organization_id ownership is validated at the service layer.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import jwt as _jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -55,12 +55,11 @@ from interfaces.api.schemas.ai_governance import (
     PromptTemplateCreate,
     PromptTemplateResponse,
     PromptTemplateRevise,
-    RiskAssessmentCreate,
-    RiskAssessmentResponse,
     RegulationMappingCreate,
-    RegulationMappingHistoryResponse,
     RegulationMappingResponse,
     RegulationMappingStatusUpdate,
+    RiskAssessmentCreate,
+    RiskAssessmentResponse,
     WorkflowStageAdvance,
     WorkflowStageResponse,
 )
@@ -70,7 +69,7 @@ router = APIRouter(prefix="/ai-governance", tags=["ai-governance"])
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _require_actor(request: Request) -> str:
@@ -127,6 +126,7 @@ def _gov_conflict(exc: AIGovernanceConflict) -> HTTPException:
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/{organization_id}/dashboard", response_model=AIGovernanceDashboard)
 async def get_dashboard(
     organization_id: str,
@@ -134,19 +134,16 @@ async def get_dashboard(
     actor_id: str = Depends(_require_actor),
 ):
     from infrastructure.persistence.models.ai_governance import (
-        AIModelModel,
-        ModelDriftAlertModel,
         AIAssuranceReportModel,
+        AIModelModel,
         AIPolicyModel,
+        ModelDriftAlertModel,
     )
 
-    stats = await db.run_sync(
-        lambda s: assurance_service.get_dashboard_stats(organization_id, s)
-    )
+    stats = await db.run_sync(lambda s: assurance_service.get_dashboard_stats(organization_id, s))
 
     # Remaining counts that aren't in the consolidated query
     def _extra_counts(s):
-        from sqlalchemy.orm import Session as _S
 
         unresolved_drift = (
             s.query(ModelDriftAlertModel)
@@ -190,6 +187,7 @@ async def get_dashboard(
 
 
 # ── AI Models ─────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/models",
@@ -273,6 +271,7 @@ async def update_model_status(
 
 # ── Approval Workflow ─────────────────────────────────────────────────────────
 
+
 @router.get(
     "/{organization_id}/models/{model_id}/workflow",
     response_model=list[WorkflowStageResponse],
@@ -283,9 +282,7 @@ async def get_workflow(
     db: AsyncSession = Depends(get_db),
     actor_id: str = Depends(_require_actor),
 ):
-    return await db.run_sync(
-        lambda s: inventory_service.get_workflow_stages(model_id, s)
-    )
+    return await db.run_sync(lambda s: inventory_service.get_workflow_stages(model_id, s))
 
 
 @router.post(
@@ -320,6 +317,7 @@ async def advance_workflow(
 
 
 # ── Use Cases ─────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/models/{model_id}/use-cases",
@@ -394,6 +392,7 @@ async def approve_use_case(
 
 # ── Risk Assessments ──────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/models/{model_id}/risk-assessments",
     response_model=RiskAssessmentResponse,
@@ -430,6 +429,7 @@ async def create_risk_assessment(
 
 
 # ── Controls ──────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/controls",
@@ -521,6 +521,7 @@ async def list_control_tests(
 
 
 # ── Prompt Templates ──────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/prompts",
@@ -645,6 +646,7 @@ async def prompt_history(
 
 # ── Decision Logs ─────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/models/{model_id}/decisions",
     response_model=DecisionLogResponse,
@@ -757,6 +759,7 @@ async def submit_human_review(
 
 # ── Monitoring ────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/models/{model_id}/monitoring",
     response_model=MonitoringSnapshotResponse,
@@ -832,6 +835,7 @@ async def resolve_drift_alert(
 
 
 # ── Incidents ─────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/incidents",
@@ -910,7 +914,8 @@ async def list_incidents(
 ):
     return await db.run_sync(
         lambda s: incident_service.list_incidents(
-            organization_id, s,
+            organization_id,
+            s,
             unresolved_only=unresolved_only,
             limit=limit,
             offset=offset,
@@ -949,6 +954,7 @@ async def resolve_incident(
 
 
 # ── Policies ──────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/policies",
@@ -996,6 +1002,7 @@ async def list_policies(
 
 
 # ── Regulation Mappings ───────────────────────────────────────────────────────
+
 
 @router.post(
     "/{organization_id}/regulation-mappings",
@@ -1077,6 +1084,7 @@ async def update_regulation_mapping_status(
 
 # ── Assurance Reports ─────────────────────────────────────────────────────────
 
+
 @router.post(
     "/{organization_id}/assurance-reports",
     response_model=AssuranceReportResponse,
@@ -1130,9 +1138,7 @@ async def get_assurance_report(
     db: AsyncSession = Depends(get_db),
     actor_id: str = Depends(_require_actor),
 ):
-    r = await db.run_sync(
-        lambda s: assurance_service.get_assurance_report(report_id, s)
-    )
+    r = await db.run_sync(lambda s: assurance_service.get_assurance_report(report_id, s))
     if not r or r.organization_id != organization_id:
         raise HTTPException(status_code=404, detail="Report not found")
     return r

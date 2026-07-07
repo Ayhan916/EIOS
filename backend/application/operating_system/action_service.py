@@ -16,9 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from application.operating_system.metrics import os_counters
 
 
-async def _log_audit(session: AsyncSession, action: str, entity_id: str,
-                     organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session: AsyncSession, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
+
     evt = AuditEventModel(
         id=str(uuid.uuid4()),
         status="Active",
@@ -49,6 +51,7 @@ async def create_action(
     linked_objectives: list[str] | None = None,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ESGActionModel
+
     now = datetime.now(UTC)
     action = ESGActionModel(
         id=str(uuid.uuid4()),
@@ -70,8 +73,13 @@ async def create_action(
     session.add(action)
     await session.flush()
     os_counters.record_action_created()
-    await _log_audit(session, "action.assigned", action.id, organization_id,
-                     detail=f"source={source_type} priority={priority}")
+    await _log_audit(
+        session,
+        "action.assigned",
+        action.id,
+        organization_id,
+        detail=f"source={source_type} priority={priority}",
+    )
     return _to_dict(action)
 
 
@@ -86,9 +94,8 @@ async def list_actions(
     limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGActionModel
-    stmt = select(ESGActionModel).where(
-        ESGActionModel.organization_id == organization_id
-    )
+
+    stmt = select(ESGActionModel).where(ESGActionModel.organization_id == organization_id)
     if action_status:
         stmt = stmt.where(ESGActionModel.action_status == action_status)
     if priority:
@@ -108,10 +115,9 @@ async def list_actions(
     return [_to_dict(r) for r in rows]
 
 
-async def get_action(
-    organization_id: str, action_id: str, session: AsyncSession
-) -> dict | None:
+async def get_action(organization_id: str, action_id: str, session: AsyncSession) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGActionModel
+
     stmt = select(ESGActionModel).where(
         ESGActionModel.organization_id == organization_id,
         ESGActionModel.id == action_id,
@@ -128,6 +134,7 @@ async def update_action(
     **fields,
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGActionModel
+
     stmt = select(ESGActionModel).where(
         ESGActionModel.organization_id == organization_id,
         ESGActionModel.id == action_id,
@@ -140,8 +147,7 @@ async def update_action(
             setattr(row, k, v)
     row.updated_at = datetime.now(UTC)
     await session.flush()
-    audit_action = "action.escalated" if fields.get("priority") == "CRITICAL" \
-        else "action.assigned"
+    audit_action = "action.escalated" if fields.get("priority") == "CRITICAL" else "action.assigned"
     await _log_audit(session, audit_action, row.id, organization_id)
     if fields.get("priority") == "CRITICAL":
         os_counters.record_escalation()
@@ -183,11 +189,16 @@ async def ingest_from_module_idempotent(
 ) -> dict | None:
     """Create an ESGAction from a cross-module event, no-op if one already exists for this source."""
     from infrastructure.persistence.models.operating_system import ESGActionModel
-    existing_stmt = select(ESGActionModel).where(
-        ESGActionModel.organization_id == organization_id,
-        ESGActionModel.source_type == source_type,
-        ESGActionModel.source_id == source_id,
-    ).limit(1)
+
+    existing_stmt = (
+        select(ESGActionModel)
+        .where(
+            ESGActionModel.organization_id == organization_id,
+            ESGActionModel.source_type == source_type,
+            ESGActionModel.source_id == source_id,
+        )
+        .limit(1)
+    )
     existing = (await session.execute(existing_stmt)).scalar_one_or_none()
     if existing is not None:
         return None

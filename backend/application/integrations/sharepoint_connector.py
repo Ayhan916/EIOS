@@ -100,14 +100,16 @@ async def list_sharepoint_files(
             data = res.json()
             for item in data.get("value", []):
                 if "file" in item:
-                    items.append({
-                        "id": item["id"],
-                        "name": item["name"],
-                        "size": item.get("size", 0),
-                        "webUrl": item.get("webUrl", ""),
-                        "mimeType": item["file"].get("mimeType", ""),
-                        "lastModified": item.get("lastModifiedDateTime", ""),
-                    })
+                    items.append(
+                        {
+                            "id": item["id"],
+                            "name": item["name"],
+                            "size": item.get("size", 0),
+                            "webUrl": item.get("webUrl", ""),
+                            "mimeType": item["file"].get("mimeType", ""),
+                            "lastModified": item.get("lastModifiedDateTime", ""),
+                        }
+                    )
             url = data.get("@odata.nextLink")
 
     return items

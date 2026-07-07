@@ -20,14 +20,16 @@ from application.agent_monitoring.finding_service import create_finding
 
 logger = structlog.get_logger(__name__)
 
-_QUESTIONNAIRE_OVERDUE_DAYS = 0    # flag as soon as due_date passes
-_EVIDENCE_OVERDUE_DAYS = 0         # flag as soon as due_date passes
-_INACTIVITY_DAYS = 30              # no activity in 30 days = disengagement risk
-_STALL_DAYS = 30                   # no progress update in 30 days
+_QUESTIONNAIRE_OVERDUE_DAYS = 0  # flag as soon as due_date passes
+_EVIDENCE_OVERDUE_DAYS = 0  # flag as soon as due_date passes
+_INACTIVITY_DAYS = 30  # no activity in 30 days = disengagement risk
+_STALL_DAYS = 30  # no progress update in 30 days
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
     """Run supplier behaviour monitor. Returns findings created."""
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.supplier import SupplierModel
     from infrastructure.persistence.models.supplier_portal import (
         EvidenceRequestModel,
@@ -35,7 +37,6 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
         RemediationPlanModel,
         SupplierActivityEventModel,
     )
-    from sqlalchemy import func, select
 
     findings_created = 0
     now = datetime.now(UTC)
@@ -53,10 +54,14 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
         source_base = {"supplier_id": supplier.id, "supplier_name": supplier.name}
 
         # --- Overdue questionnaires ---
-        overdue_q_stmt = select(func.count()).select_from(QuestionnaireAssignmentModel).where(
-            QuestionnaireAssignmentModel.supplier_id == supplier.id,
-            QuestionnaireAssignmentModel.questionnaire_status.in_(["assigned", "in_progress"]),
-            QuestionnaireAssignmentModel.due_date < now,
+        overdue_q_stmt = (
+            select(func.count())
+            .select_from(QuestionnaireAssignmentModel)
+            .where(
+                QuestionnaireAssignmentModel.supplier_id == supplier.id,
+                QuestionnaireAssignmentModel.questionnaire_status.in_(["assigned", "in_progress"]),
+                QuestionnaireAssignmentModel.due_date < now,
+            )
         )
         overdue_q_count = (await session.execute(overdue_q_stmt)).scalar_one()
 
@@ -83,11 +88,15 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
             findings_created += 1
 
         # --- Overdue evidence requests ---
-        overdue_ev_stmt = select(func.count()).select_from(EvidenceRequestModel).where(
-            EvidenceRequestModel.supplier_id == supplier.id,
-            EvidenceRequestModel.organization_id == organization_id,
-            EvidenceRequestModel.evidence_status.in_(["open"]),
-            EvidenceRequestModel.due_date < now,
+        overdue_ev_stmt = (
+            select(func.count())
+            .select_from(EvidenceRequestModel)
+            .where(
+                EvidenceRequestModel.supplier_id == supplier.id,
+                EvidenceRequestModel.organization_id == organization_id,
+                EvidenceRequestModel.evidence_status.in_(["open"]),
+                EvidenceRequestModel.due_date < now,
+            )
         )
         overdue_ev_count = (await session.execute(overdue_ev_stmt)).scalar_one()
 
@@ -114,10 +123,14 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
             findings_created += 1
 
         # --- Stalled remediation plans ---
-        stalled_rem_stmt = select(func.count()).select_from(RemediationPlanModel).where(
-            RemediationPlanModel.supplier_id == supplier.id,
-            RemediationPlanModel.remediation_status.in_(["open", "in_progress"]),
-            RemediationPlanModel.updated_at < stall_cutoff,
+        stalled_rem_stmt = (
+            select(func.count())
+            .select_from(RemediationPlanModel)
+            .where(
+                RemediationPlanModel.supplier_id == supplier.id,
+                RemediationPlanModel.remediation_status.in_(["open", "in_progress"]),
+                RemediationPlanModel.updated_at < stall_cutoff,
+            )
         )
         stalled_rem_count = (await session.execute(stalled_rem_stmt)).scalar_one()
 

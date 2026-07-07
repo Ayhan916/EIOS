@@ -61,14 +61,18 @@ class TestNoContradictions:
         assert detect_contradictions([]) == []
 
     def test_high_risk_band_with_critical_gap_no_contradiction(self):
-        sup = _supplier_result([{"supplier_id": "s1", "risk_band": "High", "critical_findings": []}])
+        sup = _supplier_result(
+            [{"supplier_id": "s1", "risk_band": "High", "critical_findings": []}]
+        )
         gap = _compliance_result([{"gap_id": "g1", "severity": "Critical"}])
         result = detect_contradictions([sup, gap])
         types = {c.contradiction_type for c in result}
         assert ContradictionType.RISK_VS_COMPLIANCE not in types
 
     def test_fresh_disclosure_no_completeness_contradiction(self):
-        disc = _disclosure_result([{"response_id": "d1", "disclosure_status": "Approved", "coverage_score": 0.9}])
+        disc = _disclosure_result(
+            [{"response_id": "d1", "disclosure_status": "Approved", "coverage_score": 0.9}]
+        )
         assert detect_contradictions([disc]) == []
 
 
@@ -81,7 +85,9 @@ class TestRiskVsCompliance:
         assert ContradictionType.RISK_VS_COMPLIANCE in types
 
     def test_moderate_risk_band_with_critical_gap_triggers(self):
-        sup = _supplier_result([{"supplier_id": "s1", "risk_band": "Moderate", "critical_findings": []}])
+        sup = _supplier_result(
+            [{"supplier_id": "s1", "risk_band": "Moderate", "critical_findings": []}]
+        )
         gap = _compliance_result([{"gap_id": "g1", "severity": "Critical"}])
         result = detect_contradictions([sup, gap])
         types = [c.contradiction_type for c in result]
@@ -98,32 +104,42 @@ class TestRiskVsCompliance:
         sup = _supplier_result([{"supplier_id": "s1", "risk_band": "Low", "critical_findings": []}])
         gap = _compliance_result([{"gap_id": "g1", "severity": "Critical"}])
         result = detect_contradictions([sup, gap])
-        rvc = next(c for c in result if c.contradiction_type == ContradictionType.RISK_VS_COMPLIANCE)
+        rvc = next(
+            c for c in result if c.contradiction_type == ContradictionType.RISK_VS_COMPLIANCE
+        )
         assert "1 supplier(s)" in rvc.description
         assert "1 Critical compliance gap(s)" in rvc.description
 
 
 class TestDisclosureCompleteness:
     def test_approved_low_coverage_triggers(self):
-        disc = _disclosure_result([{"response_id": "d1", "disclosure_status": "Approved", "coverage_score": 0.10}])
+        disc = _disclosure_result(
+            [{"response_id": "d1", "disclosure_status": "Approved", "coverage_score": 0.10}]
+        )
         result = detect_contradictions([disc])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.DISCLOSURE_COMPLETENESS in types
 
     def test_published_low_coverage_triggers(self):
-        disc = _disclosure_result([{"response_id": "d1", "disclosure_status": "Published", "coverage_score": 0.20}])
+        disc = _disclosure_result(
+            [{"response_id": "d1", "disclosure_status": "Published", "coverage_score": 0.20}]
+        )
         result = detect_contradictions([disc])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.DISCLOSURE_COMPLETENESS in types
 
     def test_draft_low_coverage_does_not_trigger(self):
-        disc = _disclosure_result([{"response_id": "d1", "disclosure_status": "Draft", "coverage_score": 0.10}])
+        disc = _disclosure_result(
+            [{"response_id": "d1", "disclosure_status": "Draft", "coverage_score": 0.10}]
+        )
         result = detect_contradictions([disc])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.DISCLOSURE_COMPLETENESS not in types
 
     def test_approved_30pct_exact_boundary_does_not_trigger(self):
-        disc = _disclosure_result([{"response_id": "d1", "disclosure_status": "Approved", "coverage_score": 0.30}])
+        disc = _disclosure_result(
+            [{"response_id": "d1", "disclosure_status": "Approved", "coverage_score": 0.30}]
+        )
         result = detect_contradictions([disc])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.DISCLOSURE_COMPLETENESS not in types
@@ -145,52 +161,70 @@ class TestFindingWithoutAction:
     def test_severity_is_critical(self):
         exec_data = {"critical_findings": 2, "open_recommendations": 0}
         result = detect_contradictions([_executive_result(exec_data)])
-        fwa = next(c for c in result if c.contradiction_type == ContradictionType.FINDING_WITHOUT_ACTION)
+        fwa = next(
+            c for c in result if c.contradiction_type == ContradictionType.FINDING_WITHOUT_ACTION
+        )
         assert fwa.severity == "critical"
 
 
 class TestSupplierScoreVsFindings:
     def test_high_esg_with_critical_findings_triggers(self):
-        sup = _supplier_result([{
-            "supplier_id": "s1",
-            "supplier_name": "Acme Corp",
-            "risk_band": "Low",
-            "esg_score": 85,
-            "critical_findings": ["f1"],
-        }])
+        sup = _supplier_result(
+            [
+                {
+                    "supplier_id": "s1",
+                    "supplier_name": "Acme Corp",
+                    "risk_band": "Low",
+                    "esg_score": 85,
+                    "critical_findings": ["f1"],
+                }
+            ]
+        )
         result = detect_contradictions([sup])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.SUPPLIER_SCORE_VS_FINDINGS in types
 
     def test_low_esg_no_trigger(self):
-        sup = _supplier_result([{
-            "supplier_id": "s1",
-            "risk_band": "High",
-            "esg_score": 50,
-            "critical_findings": ["f1"],
-        }])
+        sup = _supplier_result(
+            [
+                {
+                    "supplier_id": "s1",
+                    "risk_band": "High",
+                    "esg_score": 50,
+                    "critical_findings": ["f1"],
+                }
+            ]
+        )
         result = detect_contradictions([sup])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.SUPPLIER_SCORE_VS_FINDINGS not in types
 
     def test_exactly_80_esg_no_trigger(self):
-        sup = _supplier_result([{
-            "supplier_id": "s1",
-            "risk_band": "Low",
-            "esg_score": 80,
-            "critical_findings": ["f1"],
-        }])
+        sup = _supplier_result(
+            [
+                {
+                    "supplier_id": "s1",
+                    "risk_band": "Low",
+                    "esg_score": 80,
+                    "critical_findings": ["f1"],
+                }
+            ]
+        )
         result = detect_contradictions([sup])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.SUPPLIER_SCORE_VS_FINDINGS not in types
 
     def test_high_esg_no_critical_findings_no_trigger(self):
-        sup = _supplier_result([{
-            "supplier_id": "s1",
-            "risk_band": "Low",
-            "esg_score": 90,
-            "critical_findings": [],
-        }])
+        sup = _supplier_result(
+            [
+                {
+                    "supplier_id": "s1",
+                    "risk_band": "Low",
+                    "esg_score": 90,
+                    "critical_findings": [],
+                }
+            ]
+        )
         result = detect_contradictions([sup])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.SUPPLIER_SCORE_VS_FINDINGS not in types
@@ -199,24 +233,32 @@ class TestSupplierScoreVsFindings:
 class TestExecutiveSummaryMismatch:
     def test_exec_0_critical_but_supplier_has_findings_triggers(self):
         exec_data = {"critical_findings": 0, "open_recommendations": 1}
-        sup = _supplier_result([{
-            "supplier_id": "s1",
-            "risk_band": "High",
-            "esg_score": 60,
-            "critical_findings": ["f1"],
-        }])
+        sup = _supplier_result(
+            [
+                {
+                    "supplier_id": "s1",
+                    "risk_band": "High",
+                    "esg_score": 60,
+                    "critical_findings": ["f1"],
+                }
+            ]
+        )
         result = detect_contradictions([sup, _executive_result(exec_data)])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.EXECUTIVE_SUMMARY_MISMATCH in types
 
     def test_exec_nonzero_critical_no_mismatch(self):
         exec_data = {"critical_findings": 1, "open_recommendations": 1}
-        sup = _supplier_result([{
-            "supplier_id": "s1",
-            "risk_band": "High",
-            "esg_score": 60,
-            "critical_findings": ["f1"],
-        }])
+        sup = _supplier_result(
+            [
+                {
+                    "supplier_id": "s1",
+                    "risk_band": "High",
+                    "esg_score": 60,
+                    "critical_findings": ["f1"],
+                }
+            ]
+        )
         result = detect_contradictions([sup, _executive_result(exec_data)])
         types = [c.contradiction_type for c in result]
         assert ContradictionType.EXECUTIVE_SUMMARY_MISMATCH not in types

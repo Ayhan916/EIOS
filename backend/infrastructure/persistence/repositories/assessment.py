@@ -61,7 +61,9 @@ class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
             approval_date=model.approval_date,
             quality_score=model.quality_score,
             extraction_metadata=model.extraction_metadata,
-            review_status=ReviewStatus(model.review_status) if model.review_status else ReviewStatus.DRAFT,
+            review_status=ReviewStatus(model.review_status)
+            if model.review_status
+            else ReviewStatus.DRAFT,
             assigned_reviewer_id=model.assigned_reviewer_id,
             review_due_date=model.review_due_date,
             supplier_id=model.supplier_id,

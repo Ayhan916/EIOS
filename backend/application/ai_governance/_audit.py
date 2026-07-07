@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -20,7 +20,7 @@ def emit_audit_event(
     resource_id: str,
     details: dict[str, Any] | None = None,
 ) -> None:
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     session.add(
         AuditEventModel(
             id=str(uuid.uuid4()),

@@ -1,8 +1,8 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 import application.audit as audit_events
 import application.notification_service as notification_service
@@ -13,11 +13,11 @@ from application.remediation.brief import compute_brief
 from application.remediation.matcher import compute_matches
 from application.remediation.planner import compute_remediation_plan
 from application.scoring.supplier_scorer import (
+    SCORE_VERSION,
     ScoreInputs,
     build_drivers,
     calculate_esg_scores,
     calculate_risk_score,
-    SCORE_VERSION,
 )
 from domain.assessment import Assessment
 from domain.enums import (
@@ -91,7 +91,10 @@ class AssessmentReviseRequest(BaseModel):
 router = APIRouter(
     prefix="/assessments",
     tags=["assessments"],
-    dependencies=[Depends(get_current_user), Depends(scope_gate("assessments:read", "assessments:write"))],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(scope_gate("assessments:read", "assessments:write")),
+    ],
 )
 
 
@@ -128,6 +131,7 @@ async def create_assessment(
                 detail="Supplier not found.",
             )
         from domain.enums import SupplierStatus  # noqa: PLC0415
+
         if supplier.supplier_status != SupplierStatus.ACTIVE:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -163,7 +167,11 @@ async def create_assessment(
             dispatch_webhook_event,
             current_user.organization_id,
             "assessment.created",
-            {"assessment_id": saved.id, "title": saved.title, "assessment_type": saved.assessment_type},
+            {
+                "assessment_id": saved.id,
+                "title": saved.title,
+                "assessment_type": saved.assessment_type,
+            },
         )
     return AssessmentResponse.model_validate(saved)
 
@@ -257,7 +265,9 @@ async def get_assessment_evidence_insights(
     for f in findings:
         f_links = links_by_finding.get(f.id, [])
         if f.evidence_strength:
-            strength_dist[f.evidence_strength.value] = strength_dist.get(f.evidence_strength.value, 0) + 1
+            strength_dist[f.evidence_strength.value] = (
+                strength_dist.get(f.evidence_strength.value, 0) + 1
+            )
         findings_with_links.append(
             FindingWithLinksResponse(
                 finding=FindingResponse.model_validate(f),
@@ -387,20 +397,31 @@ async def get_score_breakdown(
         low_risks=_count(risks, risk_level="Low"),
         open_actions=sum(1 for r in recs if r.action_status.value in ("open", "in_progress")),
         overdue_actions=sum(
-            1 for r in recs
+            1
+            for r in recs
             if r.due_date is not None
             and r.action_status.value not in ("resolved", "verified")
             and (r.due_date.date() if hasattr(r.due_date, "date") else r.due_date) < today
         ),
-        env_critical=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Critical"),
+        env_critical=sum(
+            1 for f in findings if _pillar(f) == "env" and f.severity.value == "Critical"
+        ),
         env_high=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "High"),
         env_medium=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Medium"),
         env_low=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Low"),
-        social_critical=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Critical"),
-        social_high=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "High"),
-        social_medium=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Medium"),
+        social_critical=sum(
+            1 for f in findings if _pillar(f) == "social" and f.severity.value == "Critical"
+        ),
+        social_high=sum(
+            1 for f in findings if _pillar(f) == "social" and f.severity.value == "High"
+        ),
+        social_medium=sum(
+            1 for f in findings if _pillar(f) == "social" and f.severity.value == "Medium"
+        ),
         social_low=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Low"),
-        gov_critical=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Critical"),
+        gov_critical=sum(
+            1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Critical"
+        ),
         gov_high=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "High"),
         gov_medium=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Medium"),
         gov_low=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Low"),
@@ -475,7 +496,9 @@ async def get_score_breakdown(
         uncertainty_reason = "Solide Datenbasis: Findings, Risks und Empfehlungen vorhanden."
     elif completeness >= 40:
         uncertainty = "Medium"
-        uncertainty_reason = "Partielle Datenbasis — nicht alle Bewertungsdimensionen vollständig erfasst."
+        uncertainty_reason = (
+            "Partielle Datenbasis — nicht alle Bewertungsdimensionen vollständig erfasst."
+        )
     else:
         uncertainty = "High"
         uncertainty_reason = "Wenige Daten erfasst — Score basiert auf unvollständiger Evidenz."
@@ -483,32 +506,40 @@ async def get_score_breakdown(
     hints: list[ImprovementHint] = []
     if inputs.critical_findings > 0:
         reduction = round(inputs.critical_findings * 20 / 5.0, 1)
-        hints.append(ImprovementHint(
-            action=f"{inputs.critical_findings} kritische(s) Finding(s) adressieren und schließen",
-            expected_risk_reduction=reduction,
-            effort="High",
-        ))
+        hints.append(
+            ImprovementHint(
+                action=f"{inputs.critical_findings} kritische(s) Finding(s) adressieren und schließen",
+                expected_risk_reduction=reduction,
+                effort="High",
+            )
+        )
     if inputs.overdue_actions > 0:
         reduction = round(inputs.overdue_actions * 8 / 5.0, 1)
-        hints.append(ImprovementHint(
-            action=f"{inputs.overdue_actions} überfällige Maßnahme(n) abschließen",
-            expected_risk_reduction=reduction,
-            effort="Medium",
-        ))
+        hints.append(
+            ImprovementHint(
+                action=f"{inputs.overdue_actions} überfällige Maßnahme(n) abschließen",
+                expected_risk_reduction=reduction,
+                effort="Medium",
+            )
+        )
     if inputs.high_findings > 0:
         reduction = round(inputs.high_findings * 10 / 5.0, 1)
-        hints.append(ImprovementHint(
-            action=f"{inputs.high_findings} High-Severity Finding(s) in Findings-Register bearbeiten",
-            expected_risk_reduction=reduction,
-            effort="Medium",
-        ))
+        hints.append(
+            ImprovementHint(
+                action=f"{inputs.high_findings} High-Severity Finding(s) in Findings-Register bearbeiten",
+                expected_risk_reduction=reduction,
+                effort="Medium",
+            )
+        )
     if inputs.open_actions > 0:
         reduction = round(inputs.open_actions * 3 / 5.0, 1)
-        hints.append(ImprovementHint(
-            action=f"{inputs.open_actions} offene Empfehlung(en) umsetzen",
-            expected_risk_reduction=reduction,
-            effort="Low",
-        ))
+        hints.append(
+            ImprovementHint(
+                action=f"{inputs.open_actions} offene Empfehlung(en) umsetzen",
+                expected_risk_reduction=reduction,
+                effort="Low",
+            )
+        )
     hints.sort(key=lambda h: h.expected_risk_reduction, reverse=True)
 
     assumptions = [
@@ -540,9 +571,9 @@ async def get_score_breakdown(
 
 class UncertaintyResponse(BaseModel):
     assessment_id: str
-    uncertainty: str          # Low | Medium | High
+    uncertainty: str  # Low | Medium | High
     uncertainty_reason: str
-    data_completeness: int    # 0–100
+    data_completeness: int  # 0–100
 
 
 @router.get("/{assessment_id}/uncertainty", response_model=UncertaintyResponse)
@@ -596,9 +627,9 @@ async def get_assessment_uncertainty(
 
 class ChainNode(BaseModel):
     id: str
-    node_type: str          # finding | risk | recommendation | evidence | cap
+    node_type: str  # finding | risk | recommendation | evidence | cap
     label: str
-    detail: str             # severity / risk_level / status / evidence_type
+    detail: str  # severity / risk_level / status / evidence_type
     href: str | None = None
 
 
@@ -636,13 +667,16 @@ async def get_evidence_chain(
 
     Optionally filtered to a single finding via ?finding_id=...
     """
-    from sqlalchemy import select, text
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.associations import (
-        finding_evidence, risk_finding, recommendation_risk, recommendation_finding,
+        finding_evidence,
+        recommendation_finding,
+        recommendation_risk,
+        risk_finding,
     )
-    from infrastructure.persistence.models.evidence import EvidenceModel
-    from infrastructure.persistence.models.recommendation import RecommendationModel
     from infrastructure.persistence.models.corrective_action_plan import CorrectiveActionPlanModel
+    from infrastructure.persistence.models.evidence import EvidenceModel
 
     assessment = await assessment_repo.get_by_id(assessment_id)
     if assessment is None:
@@ -665,31 +699,37 @@ async def get_evidence_chain(
     ev_links: list[tuple[str, str]] = []  # (finding_id, evidence_id)
     ev_ids: set[str] = set()
     if finding_ids:
-        rows = (await session.execute(
-            select(finding_evidence.c.finding_id, finding_evidence.c.evidence_id)
-            .where(finding_evidence.c.finding_id.in_(finding_ids))
-        )).all()
+        rows = (
+            await session.execute(
+                select(finding_evidence.c.finding_id, finding_evidence.c.evidence_id).where(
+                    finding_evidence.c.finding_id.in_(finding_ids)
+                )
+            )
+        ).all()
         ev_links = [(r.finding_id, r.evidence_id) for r in rows]
         ev_ids = {r.evidence_id for r in rows}
 
     # ── load evidence metadata ──────────────────────────────────────────────────
     ev_map: dict[str, EvidenceModel] = {}
     if ev_ids:
-        ev_rows = (await session.execute(
-            select(EvidenceModel).where(EvidenceModel.id.in_(ev_ids))
-        )).scalars().all()
+        ev_rows = (
+            (await session.execute(select(EvidenceModel).where(EvidenceModel.id.in_(ev_ids))))
+            .scalars()
+            .all()
+        )
         ev_map = {e.id: e for e in ev_rows}
 
     # ── risk–finding links ──────────────────────────────────────────────────────
     rf_links: list[tuple[str, str]] = []  # (risk_id, finding_id)
     if risk_ids and finding_ids:
-        rows = (await session.execute(
-            select(risk_finding.c.risk_id, risk_finding.c.finding_id)
-            .where(
-                risk_finding.c.risk_id.in_(risk_ids),
-                risk_finding.c.finding_id.in_(finding_ids),
+        rows = (
+            await session.execute(
+                select(risk_finding.c.risk_id, risk_finding.c.finding_id).where(
+                    risk_finding.c.risk_id.in_(risk_ids),
+                    risk_finding.c.finding_id.in_(finding_ids),
+                )
             )
-        )).all()
+        ).all()
         rf_links = [(r.risk_id, r.finding_id) for r in rows]
 
     linked_risk_ids = {r for r, _ in rf_links}
@@ -697,25 +737,31 @@ async def get_evidence_chain(
     # ── recommendation–risk links ───────────────────────────────────────────────
     rr_links: list[tuple[str, str]] = []  # (rec_id, risk_id)
     if rec_ids and linked_risk_ids:
-        rows = (await session.execute(
-            select(recommendation_risk.c.recommendation_id, recommendation_risk.c.risk_id)
-            .where(
-                recommendation_risk.c.recommendation_id.in_(rec_ids),
-                recommendation_risk.c.risk_id.in_(linked_risk_ids),
+        rows = (
+            await session.execute(
+                select(
+                    recommendation_risk.c.recommendation_id, recommendation_risk.c.risk_id
+                ).where(
+                    recommendation_risk.c.recommendation_id.in_(rec_ids),
+                    recommendation_risk.c.risk_id.in_(linked_risk_ids),
+                )
             )
-        )).all()
+        ).all()
         rr_links = [(r.recommendation_id, r.risk_id) for r in rows]
 
     # ── recommendation–finding links ────────────────────────────────────────────
     rfind_links: list[tuple[str, str]] = []  # (rec_id, finding_id)
     if rec_ids and finding_ids:
-        rows = (await session.execute(
-            select(recommendation_finding.c.recommendation_id, recommendation_finding.c.finding_id)
-            .where(
-                recommendation_finding.c.recommendation_id.in_(rec_ids),
-                recommendation_finding.c.finding_id.in_(finding_ids),
+        rows = (
+            await session.execute(
+                select(
+                    recommendation_finding.c.recommendation_id, recommendation_finding.c.finding_id
+                ).where(
+                    recommendation_finding.c.recommendation_id.in_(rec_ids),
+                    recommendation_finding.c.finding_id.in_(finding_ids),
+                )
             )
-        )).all()
+        ).all()
         rfind_links = [(r.recommendation_id, r.finding_id) for r in rows]
 
     linked_rec_ids = {r for r, _ in rr_links} | {r for r, _ in rfind_links}
@@ -723,10 +769,17 @@ async def get_evidence_chain(
     # ── CAPs linked to findings ─────────────────────────────────────────────────
     caps: list[CorrectiveActionPlanModel] = []
     if finding_ids:
-        caps = (await session.execute(
-            select(CorrectiveActionPlanModel)
-            .where(CorrectiveActionPlanModel.finding_id.in_(finding_ids))
-        )).scalars().all()
+        caps = (
+            (
+                await session.execute(
+                    select(CorrectiveActionPlanModel).where(
+                        CorrectiveActionPlanModel.finding_id.in_(finding_ids)
+                    )
+                )
+            )
+            .scalars()
+            .all()
+        )
 
     # ── Build nodes ─────────────────────────────────────────────────────────────
     nodes: list[ChainNode] = []
@@ -734,57 +787,78 @@ async def get_evidence_chain(
 
     for f in findings:
         sev = f.severity.value if hasattr(f.severity, "value") else str(f.severity)
-        nodes.append(ChainNode(
-            id=f"finding:{f.id}", node_type="finding",
-            label=f.title[:60] + ("…" if len(f.title) > 60 else ""),
-            detail=sev,
-            href=f"/assessments/{assessment_id}?tab=findings",
-        ))
+        nodes.append(
+            ChainNode(
+                id=f"finding:{f.id}",
+                node_type="finding",
+                label=f.title[:60] + ("…" if len(f.title) > 60 else ""),
+                detail=sev,
+                href=f"/assessments/{assessment_id}?tab=findings",
+            )
+        )
 
     for r in risks:
         if r.id not in linked_risk_ids:
             continue
         lvl = r.risk_level.value if hasattr(r.risk_level, "value") else str(r.risk_level)
-        nodes.append(ChainNode(
-            id=f"risk:{r.id}", node_type="risk",
-            label=r.title[:60] + ("…" if len(r.title) > 60 else ""),
-            detail=lvl,
-            href=f"/risks/{r.id}",
-        ))
+        nodes.append(
+            ChainNode(
+                id=f"risk:{r.id}",
+                node_type="risk",
+                label=r.title[:60] + ("…" if len(r.title) > 60 else ""),
+                detail=lvl,
+                href=f"/risks/{r.id}",
+            )
+        )
 
     for rec in recs:
         if rec.id not in linked_rec_ids:
             continue
-        stat = rec.action_status.value if hasattr(rec.action_status, "value") else str(rec.action_status)
-        nodes.append(ChainNode(
-            id=f"rec:{rec.id}", node_type="recommendation",
-            label=rec.title[:60] + ("…" if len(rec.title) > 60 else ""),
-            detail=stat,
-            href=f"/assessments/{assessment_id}?tab=recommendations",
-        ))
+        stat = (
+            rec.action_status.value
+            if hasattr(rec.action_status, "value")
+            else str(rec.action_status)
+        )
+        nodes.append(
+            ChainNode(
+                id=f"rec:{rec.id}",
+                node_type="recommendation",
+                label=rec.title[:60] + ("…" if len(rec.title) > 60 else ""),
+                detail=stat,
+                href=f"/assessments/{assessment_id}?tab=recommendations",
+            )
+        )
 
     for ev_id, ev in ev_map.items():
-        nodes.append(ChainNode(
-            id=f"evidence:{ev_id}", node_type="evidence",
-            label=ev.title[:60] + ("…" if len(ev.title) > 60 else ""),
-            detail=ev.evidence_type,
-            href=None,
-        ))
+        nodes.append(
+            ChainNode(
+                id=f"evidence:{ev_id}",
+                node_type="evidence",
+                label=ev.title[:60] + ("…" if len(ev.title) > 60 else ""),
+                detail=ev.evidence_type,
+                href=None,
+            )
+        )
 
     for cap in caps:
-        nodes.append(ChainNode(
-            id=f"cap:{cap.id}", node_type="cap",
-            label=cap.title[:60] + ("…" if len(cap.title) > 60 else ""),
-            detail=cap.cap_status,
-            href="/corrective-action-plans",
-        ))
+        nodes.append(
+            ChainNode(
+                id=f"cap:{cap.id}",
+                node_type="cap",
+                label=cap.title[:60] + ("…" if len(cap.title) > 60 else ""),
+                detail=cap.cap_status,
+                href="/corrective-action-plans",
+            )
+        )
 
     # ── Build edges ─────────────────────────────────────────────────────────────
     for fid, eid in ev_links:
         edges.append(ChainEdge(source=f"evidence:{eid}", target=f"finding:{fid}", label="supports"))
 
     for rid, fid in rf_links:
-        edges.append(ChainEdge(source=f"finding:{fid}", target=f"risk:{rid}", label="contributes to"))
+        edges.append(
+            ChainEdge(source=f"finding:{fid}", target=f"risk:{rid}", label="contributes to")
+        )
 
     for rid, risk_id in rr_links:
         edges.append(ChainEdge(source=f"risk:{risk_id}", target=f"rec:{rid}", label="addressed by"))
@@ -793,7 +867,11 @@ async def get_evidence_chain(
         edges.append(ChainEdge(source=f"finding:{fid}", target=f"rec:{rid}", label="addressed by"))
 
     for cap in caps:
-        edges.append(ChainEdge(source=f"finding:{cap.finding_id}", target=f"cap:{cap.id}", label="remediated by"))
+        edges.append(
+            ChainEdge(
+                source=f"finding:{cap.finding_id}", target=f"cap:{cap.id}", label="remediated by"
+            )
+        )
 
     filter_options = [
         FindingFilterOption(
@@ -813,14 +891,14 @@ async def get_evidence_chain(
 
 
 class ScoreSimulation(BaseModel):
-    scenario: str               # "Wenn alle kritischen Findings geschlossen werden..."
-    action_label: str           # Short label for the action button
-    action_href: str | None     # Link to the relevant tab/page
+    scenario: str  # "Wenn alle kritischen Findings geschlossen werden..."
+    action_label: str  # Short label for the action button
+    action_href: str | None  # Link to the relevant tab/page
     simulated_risk_score: float
-    risk_score_delta: float     # negative = improvement
+    risk_score_delta: float  # negative = improvement
     simulated_esg_total: float
-    esg_delta: float            # positive = improvement
-    effort: str                 # Low | Medium | High
+    esg_delta: float  # positive = improvement
+    effort: str  # Low | Medium | High
     items_affected: int
 
 
@@ -846,8 +924,8 @@ async def get_score_simulation(
     Deterministic: all simulations re-run calculate_risk_score with modified inputs.
     Sorted by risk_score_delta ascending (biggest improvement first).
     """
-    from datetime import date as _date
     from dataclasses import replace
+    from datetime import date as _date
 
     assessment = await assessment_repo.get_by_id(assessment_id)
     if assessment is None:
@@ -865,13 +943,18 @@ async def get_score_simulation(
 
     def _pillar(f):
         cat = (f.category or "").strip()
-        if cat in ESG_CATS: return "env"
-        if cat in SOC_CATS: return "social"
-        if cat in GOV_CATS: return "gov"
+        if cat in ESG_CATS:
+            return "env"
+        if cat in SOC_CATS:
+            return "social"
+        if cat in GOV_CATS:
+            return "gov"
         return "other"
 
     def _count(items, **filters):
-        return sum(1 for item in items if all(getattr(item, k, None) == v for k, v in filters.items()))
+        return sum(
+            1 for item in items if all(getattr(item, k, None) == v for k, v in filters.items())
+        )
 
     base = ScoreInputs(
         total_assessments=1,
@@ -886,20 +969,31 @@ async def get_score_simulation(
         low_risks=_count(risks, risk_level="Low"),
         open_actions=sum(1 for r in recs if r.action_status.value in ("open", "in_progress")),
         overdue_actions=sum(
-            1 for r in recs
+            1
+            for r in recs
             if r.due_date is not None
             and r.action_status.value not in ("resolved", "verified")
             and (r.due_date.date() if hasattr(r.due_date, "date") else r.due_date) < today
         ),
-        env_critical=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Critical"),
+        env_critical=sum(
+            1 for f in findings if _pillar(f) == "env" and f.severity.value == "Critical"
+        ),
         env_high=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "High"),
         env_medium=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Medium"),
         env_low=sum(1 for f in findings if _pillar(f) == "env" and f.severity.value == "Low"),
-        social_critical=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Critical"),
-        social_high=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "High"),
-        social_medium=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Medium"),
+        social_critical=sum(
+            1 for f in findings if _pillar(f) == "social" and f.severity.value == "Critical"
+        ),
+        social_high=sum(
+            1 for f in findings if _pillar(f) == "social" and f.severity.value == "High"
+        ),
+        social_medium=sum(
+            1 for f in findings if _pillar(f) == "social" and f.severity.value == "Medium"
+        ),
         social_low=sum(1 for f in findings if _pillar(f) == "social" and f.severity.value == "Low"),
-        gov_critical=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Critical"),
+        gov_critical=sum(
+            1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Critical"
+        ),
         gov_high=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "High"),
         gov_medium=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Medium"),
         gov_low=sum(1 for f in findings if _pillar(f) == "gov" and f.severity.value == "Low"),
@@ -908,7 +1002,14 @@ async def get_score_simulation(
     current_score, current_band = calculate_risk_score(base)
     current_esg, _, _, _ = calculate_esg_scores(base)
 
-    def _sim(modified: ScoreInputs, scenario: str, action_label: str, action_href: str | None, effort: str, items: int) -> ScoreSimulation | None:
+    def _sim(
+        modified: ScoreInputs,
+        scenario: str,
+        action_label: str,
+        action_href: str | None,
+        effort: str,
+        items: int,
+    ) -> ScoreSimulation | None:
         new_score, _ = calculate_risk_score(modified)
         new_esg, _, _, _ = calculate_esg_scores(modified)
         risk_delta = round(new_score - current_score, 1)
@@ -942,7 +1043,8 @@ async def get_score_simulation(
             "High",
             base.critical_findings,
         )
-        if s: simulations.append(s)
+        if s:
+            simulations.append(s)
 
     # Scenario 2: Close all high findings
     if base.high_findings > 0:
@@ -954,7 +1056,8 @@ async def get_score_simulation(
             "High",
             base.high_findings,
         )
-        if s: simulations.append(s)
+        if s:
+            simulations.append(s)
 
     # Scenario 3: Resolve all overdue actions
     if base.overdue_actions > 0:
@@ -966,7 +1069,8 @@ async def get_score_simulation(
             "Medium",
             base.overdue_actions,
         )
-        if s: simulations.append(s)
+        if s:
+            simulations.append(s)
 
     # Scenario 4: Close all critical risks
     if base.critical_risks > 0:
@@ -978,7 +1082,8 @@ async def get_score_simulation(
             "High",
             base.critical_risks,
         )
-        if s: simulations.append(s)
+        if s:
+            simulations.append(s)
 
     # Scenario 5: Resolve all open actions
     if base.open_actions > 0:
@@ -990,16 +1095,22 @@ async def get_score_simulation(
             "Medium",
             base.open_actions,
         )
-        if s: simulations.append(s)
+        if s:
+            simulations.append(s)
 
     # Scenario 6: Downgrade all critical findings to Medium (partial improvement)
     if base.critical_findings > 0:
         s = _sim(
-            replace(base,
-                critical_findings=0, medium_findings=base.medium_findings + base.critical_findings,
-                env_critical=0, env_medium=base.env_medium + base.env_critical,
-                social_critical=0, social_medium=base.social_medium + base.social_critical,
-                gov_critical=0, gov_medium=base.gov_medium + base.gov_critical,
+            replace(
+                base,
+                critical_findings=0,
+                medium_findings=base.medium_findings + base.critical_findings,
+                env_critical=0,
+                env_medium=base.env_medium + base.env_critical,
+                social_critical=0,
+                social_medium=base.social_medium + base.social_critical,
+                gov_critical=0,
+                gov_medium=base.gov_medium + base.gov_critical,
             ),
             f"Wenn alle {base.critical_findings} kritischen Findings zu Medium herabgestuft werden (Teilmaßnahme)",
             "Kritische Findings abschwächen",
@@ -1007,7 +1118,8 @@ async def get_score_simulation(
             "Medium",
             base.critical_findings,
         )
-        if s: simulations.append(s)
+        if s:
+            simulations.append(s)
 
     # Sort: biggest risk reduction first, then ESG improvement
     simulations.sort(key=lambda s: (s.risk_score_delta, -s.esg_delta))
@@ -1337,6 +1449,7 @@ async def submit_for_review(
         if reviewer is None or reviewer.organization_id != current_user.organization_id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")
         from domain.enums import UserRole, has_min_role
+
         if not has_min_role(reviewer.role, UserRole.REVIEWER):
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -1399,6 +1512,7 @@ async def assign_reviewer(
     if reviewer is None or reviewer.organization_id != current_user.organization_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reviewer not found")
     from domain.enums import UserRole, has_min_role
+
     if not has_min_role(reviewer.role, UserRole.REVIEWER):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

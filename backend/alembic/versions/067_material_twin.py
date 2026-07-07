@@ -15,6 +15,7 @@ Create Date: 2026-06-12
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "067"
@@ -29,8 +30,12 @@ _AUDIT_COLS = [
     sa.Column("owner", sa.String(36), nullable=True),
     sa.Column("created_by", sa.String(36), nullable=True),
     sa.Column("updated_by", sa.String(36), nullable=True),
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
-    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")),
+    sa.Column(
+        "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    ),
+    sa.Column(
+        "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("now()")
+    ),
 ]
 
 
@@ -79,7 +84,8 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text, nullable=True),
     )
     op.create_unique_constraint(
-        "uq_mat_comp_parent_child", "material_compositions",
+        "uq_mat_comp_parent_child",
+        "material_compositions",
         ["organization_id", "parent_material_id", "child_material_id"],
     )
     op.create_index("ix_mcomp_parent", "material_compositions", ["parent_material_id"])
@@ -104,7 +110,8 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text, nullable=True),
     )
     op.create_unique_constraint(
-        "uq_mat_sourcing_material_supplier", "material_sourcing",
+        "uq_mat_sourcing_material_supplier",
+        "material_sourcing",
         ["organization_id", "material_id", "supplier_id"],
     )
     op.create_index("ix_msrc_material", "material_sourcing", ["material_id"])
@@ -129,7 +136,8 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text, nullable=True),
     )
     op.create_unique_constraint(
-        "uq_mat_compliance_material_reg", "material_compliance_flags",
+        "uq_mat_compliance_material_reg",
+        "material_compliance_flags",
         ["organization_id", "material_id", "regulation"],
     )
     op.create_index("ix_mcf_material", "material_compliance_flags", ["material_id"])
@@ -160,7 +168,8 @@ def upgrade() -> None:
         sa.Column("notes", sa.Text, nullable=True),
     )
     op.create_unique_constraint(
-        "uq_mat_sustain_material_year", "material_sustainability_metrics",
+        "uq_mat_sustain_material_year",
+        "material_sustainability_metrics",
         ["organization_id", "material_id", "reporting_year"],
     )
     op.create_index("ix_msus_material", "material_sustainability_metrics", ["material_id"])

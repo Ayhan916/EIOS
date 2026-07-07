@@ -6,13 +6,13 @@ and deactivation when a signal is resolved.
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import UTC
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from domain.enums import EntityStatus
 from domain.external_intelligence import ExternalRiskSignal
+
 from .event_attribution import derive_esg_category, derive_protected_right
 
 
@@ -25,10 +25,12 @@ async def create_signal(
     Auto-derives esg_category and protected_right from signal_type when not
     explicitly provided (deterministic mapping, GAP-10).
     """
-    from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
-    from sqlalchemy import func, select as sa_select
+    from sqlalchemy import func
+    from sqlalchemy import select as sa_select
 
-    sig_type_str = signal.signal_type.value if hasattr(signal.signal_type, "value") else signal.signal_type
+    sig_type_str = (
+        signal.signal_type.value if hasattr(signal.signal_type, "value") else signal.signal_type
+    )
     if not signal.esg_category:
         signal.esg_category = derive_esg_category(sig_type_str)
     if not signal.protected_right:
@@ -36,15 +38,26 @@ async def create_signal(
 
     # Compute frequency: count matching active signals for same scope+type in last 12 months
     from datetime import timedelta
-    from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel as _M
-    cutoff = signal.observed_at.replace(tzinfo=None) if signal.observed_at.tzinfo else signal.observed_at
-    from datetime import timezone
-    cutoff_utc = signal.observed_at.astimezone(timezone.utc) if signal.observed_at.tzinfo else signal.observed_at.replace(tzinfo=timezone.utc)
+
+    from infrastructure.persistence.models.external_intelligence import (
+        ExternalRiskSignalModel as _M,
+    )
+
+    signal.observed_at.replace(tzinfo=None) if signal.observed_at.tzinfo else signal.observed_at
+    cutoff_utc = (
+        signal.observed_at.astimezone(UTC)
+        if signal.observed_at.tzinfo
+        else signal.observed_at.replace(tzinfo=UTC)
+    )
     twelve_months_ago = cutoff_utc - timedelta(days=365)
-    freq_stmt = sa_select(func.count()).select_from(_M).where(
-        _M.signal_type == sig_type_str,
-        _M.is_active.is_(True),
-        _M.observed_at >= twelve_months_ago,
+    freq_stmt = (
+        sa_select(func.count())
+        .select_from(_M)
+        .where(
+            _M.signal_type == sig_type_str,
+            _M.is_active.is_(True),
+            _M.observed_at >= twelve_months_ago,
+        )
     )
     if signal.supplier_id:
         freq_stmt = freq_stmt.where(_M.supplier_id == signal.supplier_id)
@@ -125,6 +138,7 @@ async def list_active_signals(
 
 def _domain_to_model(s: ExternalRiskSignal):
     from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel
+
     return ExternalRiskSignalModel(
         id=s.id,
         status=s.status.value if hasattr(s.status, "value") else s.status,

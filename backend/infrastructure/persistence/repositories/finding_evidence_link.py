@@ -7,7 +7,9 @@ from infrastructure.persistence.models.finding_evidence_link import FindingEvide
 from infrastructure.persistence.repositories.base import BaseRepository
 
 
-class SQLFindingEvidenceLinkRepository(BaseRepository[FindingEvidenceLink, FindingEvidenceLinkModel]):
+class SQLFindingEvidenceLinkRepository(
+    BaseRepository[FindingEvidenceLink, FindingEvidenceLinkModel]
+):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, FindingEvidenceLinkModel)
 
@@ -44,7 +46,9 @@ class SQLFindingEvidenceLinkRepository(BaseRepository[FindingEvidenceLink, Findi
             evidence_id=model.evidence_id,
             evidence_chunk_id=model.evidence_chunk_id,
             page_number=model.page_number,
-            confidence_score=float(model.confidence_score) if model.confidence_score is not None else None,
+            confidence_score=float(model.confidence_score)
+            if model.confidence_score is not None
+            else None,
             supporting_excerpt=model.supporting_excerpt,
             link_method=model.link_method,
         )
@@ -58,7 +62,9 @@ class SQLFindingEvidenceLinkRepository(BaseRepository[FindingEvidenceLink, Findi
         result = await self._session.execute(stmt)
         return [self._to_domain(row) for row in result.scalars().all()]
 
-    async def list_by_assessment_findings(self, finding_ids: list[str]) -> list[FindingEvidenceLink]:
+    async def list_by_assessment_findings(
+        self, finding_ids: list[str]
+    ) -> list[FindingEvidenceLink]:
         if not finding_ids:
             return []
         stmt = (

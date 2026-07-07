@@ -350,7 +350,7 @@ class AuditVerificationStatus(str, Enum):
 
 class DueDiligenceReportType(str, Enum):
     LKSGG_ANNUAL = "lksgg_annual"
-    LKSG_STATEMENT = "lksg_statement"      # LkSG §10 annual declaration (5 mandatory sections)
+    LKSG_STATEMENT = "lksg_statement"  # LkSG §10 annual declaration (5 mandatory sections)
     CSDDD = "csddd"
     HUMAN_RIGHTS = "human_rights"
     ENVIRONMENTAL = "environmental"
@@ -409,6 +409,7 @@ class RiskSignalType(str, Enum):
 
 class EsgCategory(str, Enum):
     """Top-level ESG pillar for event attribution (GAP-10 / FR-005)."""
+
     ENVIRONMENTAL = "Environmental"
     SOCIAL = "Social"
     GOVERNANCE = "Governance"
@@ -443,6 +444,7 @@ class CountryRiskLevel(str, Enum):
 
 
 # ── M34.1 Live Connector enums ────────────────────────────────────────────────
+
 
 class ConnectorStatus(str, Enum):
     HEALTHY = "healthy"
@@ -487,6 +489,9 @@ class QuestionType(str, Enum):
     SELECT = "select"
     MULTI_SELECT = "multi_select"
     FILE_UPLOAD = "file_upload"
+    YES_NO = "yes_no"
+    MULTIPLE_CHOICE = "multiple_choice"
+    SCALE_1_5 = "scale_1_5"
 
 
 class QuestionnaireStatus(str, Enum):
@@ -520,33 +525,36 @@ class SupplierActivityEventType(str, Enum):
 
 # ── CSDDD Sector Risk Register (TASK-003) ─────────────────────────────────────
 
+
 class CSDDDRight(str, Enum):
     """21 protected rights from CSDDD Annex I and referenced ILO/UN conventions."""
-    CHILD_LABOUR = "child_labour"                          # ILO C138, C182
-    FORCED_LABOUR = "forced_labour"                        # ILO C029, C105
-    FREEDOM_OF_ASSOCIATION = "freedom_of_association"      # ILO C087
-    COLLECTIVE_BARGAINING = "collective_bargaining"        # ILO C098
-    DISCRIMINATION = "discrimination"                      # ILO C100, C111
-    MINIMUM_WAGE = "minimum_wage"                          # ILO C131
-    WORKING_HOURS = "working_hours"                        # ILO C001
-    OCCUPATIONAL_SAFETY = "occupational_safety"            # ILO C155, C187
-    LAND_RIGHTS = "land_rights"                            # UNDRIP, VGGT
-    WATER_RIGHTS = "water_rights"                          # UN Resolution A/RES/64/292
+
+    CHILD_LABOUR = "child_labour"  # ILO C138, C182
+    FORCED_LABOUR = "forced_labour"  # ILO C029, C105
+    FREEDOM_OF_ASSOCIATION = "freedom_of_association"  # ILO C087
+    COLLECTIVE_BARGAINING = "collective_bargaining"  # ILO C098
+    DISCRIMINATION = "discrimination"  # ILO C100, C111
+    MINIMUM_WAGE = "minimum_wage"  # ILO C131
+    WORKING_HOURS = "working_hours"  # ILO C001
+    OCCUPATIONAL_SAFETY = "occupational_safety"  # ILO C155, C187
+    LAND_RIGHTS = "land_rights"  # UNDRIP, VGGT
+    WATER_RIGHTS = "water_rights"  # UN Resolution A/RES/64/292
     ENVIRONMENTAL_DESTRUCTION = "environmental_destruction"
-    HARMFUL_CHEMICALS = "harmful_chemicals"                # Stockholm, Rotterdam Conventions
-    BIODIVERSITY = "biodiversity"                          # CBD
-    MERCURY = "mercury"                                    # Minamata Convention
-    HAZARDOUS_WASTE = "hazardous_waste"                    # Basel Convention
-    PRIVACY = "privacy"                                    # ICCPR Art. 17
-    FREEDOM_OF_EXPRESSION = "freedom_of_expression"        # ICCPR Art. 19
-    HUMAN_DIGNITY = "human_dignity"                        # UDHR Art. 1
-    MODERN_SLAVERY = "modern_slavery"                      # Palermo Protocol
-    MIGRANT_WORKER_RIGHTS = "migrant_worker_rights"        # ICRMW
-    COMMUNITY_RIGHTS = "community_rights"                  # ILO C169, UNDRIP
+    HARMFUL_CHEMICALS = "harmful_chemicals"  # Stockholm, Rotterdam Conventions
+    BIODIVERSITY = "biodiversity"  # CBD
+    MERCURY = "mercury"  # Minamata Convention
+    HAZARDOUS_WASTE = "hazardous_waste"  # Basel Convention
+    PRIVACY = "privacy"  # ICCPR Art. 17
+    FREEDOM_OF_EXPRESSION = "freedom_of_expression"  # ICCPR Art. 19
+    HUMAN_DIGNITY = "human_dignity"  # UDHR Art. 1
+    MODERN_SLAVERY = "modern_slavery"  # Palermo Protocol
+    MIGRANT_WORKER_RIGHTS = "migrant_worker_rights"  # ICRMW
+    COMMUNITY_RIGHTS = "community_rights"  # ILO C169, UNDRIP
 
 
 class ScenarioType(str, Enum):
     """Predefined scenario types for deterministic sector risk simulation."""
+
     GEOPOLITICAL_CONFLICT = "geopolitical_conflict"
     SANCTIONS_ESCALATION = "sanctions_escalation"
     NATURAL_DISASTER = "natural_disaster"
@@ -557,6 +565,7 @@ class ScenarioType(str, Enum):
 
 class CalibrationStatus(str, Enum):
     """Lifecycle of a RAG-generated score suggestion awaiting human review."""
+
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
@@ -564,6 +573,7 @@ class CalibrationStatus(str, Enum):
 
 class ScenarioSuggestionStatus(str, Enum):
     """Lifecycle of a news-triggered scenario suggestion."""
+
     PENDING = "pending"
     ACTIVE = "active"
     DISMISSED = "dismissed"
@@ -571,6 +581,7 @@ class ScenarioSuggestionStatus(str, Enum):
 
 class GrievanceStatus(str, Enum):
     """Lifecycle of a GrievanceReport — LkSG §8, CSDDD Art. 14."""
+
     RECEIVED = "received"
     UNDER_REVIEW = "under_review"
     INVESTIGATING = "investigating"
@@ -580,6 +591,7 @@ class GrievanceStatus(str, Enum):
 
 class GrievanceCategory(str, Enum):
     """Category of a grievance report — aligned to LkSG risk areas."""
+
     LABOUR_RIGHTS = "labour_rights"
     CHILD_LABOUR = "child_labour"
     FORCED_LABOUR = "forced_labour"
@@ -593,6 +605,7 @@ class GrievanceCategory(str, Enum):
 
 class RegulatoryChangeSeverity(str, Enum):
     """How significantly the change impacts existing assessments and compliance programmes."""
+
     MINOR = "minor"
     MODERATE = "moderate"
     MAJOR = "major"
@@ -601,16 +614,21 @@ class RegulatoryChangeSeverity(str, Enum):
 
 class RegulatoryChangeStatus(str, Enum):
     """Lifecycle of a detected regulatory change."""
+
     NEW = "new"
     SCANNING = "scanning"
     IMPACTS_IDENTIFIED = "impacts_identified"
     NOTIFIED = "notified"
     ACKNOWLEDGED = "acknowledged"
+    ANALYSED = "analysed"
+    IMPLEMENTED = "implemented"
+    NOT_RELEVANT = "not_relevant"
 
 
 # ── CSDDD-001 Stakeholder Engagement (Art. 13) ────────────────────────────────
 
 # ── CSDDD-003 Effectiveness Monitoring (Art. 15) ─────────────────────────────
+
 
 class IndicatorType(str, Enum):
     QUANTITATIVE = "quantitative"
@@ -631,8 +649,10 @@ class EffectivenessReviewStatus(str, Enum):
 
 # ── CSDDD-004 Remedy Case Manager (Art. 12) ──────────────────────────────────
 
+
 class RemedyCaseStatus(str, Enum):
     """Lifecycle of a Remedy Case — Art. 12 CSDDD."""
+
     OPEN = "open"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
@@ -641,6 +661,7 @@ class RemedyCaseStatus(str, Enum):
 
 class RemedyType(str, Enum):
     """Types of remedy per Art. 12 CSDDD."""
+
     COMPENSATION = "compensation"
     RESTORATION = "restoration"
     REHABILITATION = "rehabilitation"
@@ -658,6 +679,7 @@ class AffectedPartyType(str, Enum):
 
 class ImpactCausation(str, Enum):
     """Own impact vs. jointly caused with third parties — Art. 12 Abs. 5 CSDDD."""
+
     OWN = "own"
     JOINT_WITH_THIRD_PARTY = "joint_with_third_party"
 
@@ -670,8 +692,10 @@ class RemedyActionStatus(str, Enum):
 
 # ── CSDDD-002 DD-Governance (Art. 7) ─────────────────────────────────────────
 
+
 class DDPolicyStatus(str, Enum):
     """Lifecycle of a DD-Policy document — Art. 7 CSDDD."""
+
     DRAFT = "draft"
     ACTIVE = "active"
     ARCHIVED = "archived"
@@ -679,6 +703,7 @@ class DDPolicyStatus(str, Enum):
 
 class GovernanceEventType(str, Enum):
     """Types of governance deadline tracked in the calendar."""
+
     POLICY_REVIEW = "policy_review"
     COC_ACCEPTANCE = "coc_acceptance"
     ANNUAL_REPORT = "annual_report"
@@ -686,6 +711,7 @@ class GovernanceEventType(str, Enum):
 
 
 # ── CSDDD-005 Downstream Activity Chain (Art. 2/3) ───────────────────���───────
+
 
 class ChainDirection(str, Enum):
     UPSTREAM = "upstream"
@@ -704,6 +730,7 @@ class DownstreamPartnerType(str, Enum):
 
 # ── CSDDD-008 Scoping Study (Art. 8 Abs. 3) ──────────────────────────────────
 
+
 class ScopingPriority(str, Enum):
     PRIORITY_1 = "priority_1"  # Immediate DD required
     PRIORITY_2 = "priority_2"  # Scheduled DD
@@ -718,8 +745,10 @@ class ScopingStudyStatus(str, Enum):
 
 # ── CSDDD-001 Stakeholder Engagement (Art. 13) ────────────────────────────────
 
+
 class StakeholderType(str, Enum):
     """Category of an affected stakeholder per CSDDD Art. 13 Abs. 1."""
+
     WORKER = "worker"
     TRADE_UNION = "trade_union"
     NGO = "ngo"
@@ -730,6 +759,7 @@ class StakeholderType(str, Enum):
 
 class ConsultationFormat(str, Enum):
     """Format of a stakeholder consultation."""
+
     MEETING = "meeting"
     WORKSHOP = "workshop"
     QUESTIONNAIRE = "questionnaire"
@@ -739,6 +769,7 @@ class ConsultationFormat(str, Enum):
 
 class ConsultationBarrier(str, Enum):
     """Barriers to participation — Art. 13 Abs. 1 explicit documentation requirement."""
+
     NONE = "none"
     LANGUAGE = "language"
     ACCESS = "access"
@@ -752,6 +783,7 @@ class ConsultationBarrier(str, Enum):
 
 class ClauseCategory(str, Enum):
     """Subject-matter categories for contractual DD clauses (Art. 10 Abs. 2)."""
+
     LABOR_RIGHTS = "labor_rights"
     HUMAN_RIGHTS = "human_rights"
     ENVIRONMENT = "environment"
@@ -763,6 +795,7 @@ class ClauseCategory(str, Enum):
 
 class AssuranceStatus(str, Enum):
     """Lifecycle state of a supplier's acceptance of a contractual clause."""
+
     PENDING = "pending"
     ACCEPTED = "accepted"
     REJECTED = "rejected"
@@ -775,14 +808,16 @@ class AssuranceStatus(str, Enum):
 
 class SMEClassification(str, Enum):
     """EU SME definition (2003/361/EC): headcount + revenue/balance sheet ceiling."""
-    MICRO = "micro"        # <10 employees, ≤€2M revenue
-    SMALL = "small"        # <50 employees, ≤€10M revenue
-    MEDIUM = "medium"      # <250 employees, ≤€50M revenue
-    LARGE = "large"        # ≥250 employees or >€50M revenue (not an SME)
+
+    MICRO = "micro"  # <10 employees, ≤€2M revenue
+    SMALL = "small"  # <50 employees, ≤€10M revenue
+    MEDIUM = "medium"  # <250 employees, ≤€50M revenue
+    LARGE = "large"  # ≥250 employees or >€50M revenue (not an SME)
 
 
 class SupportType(str, Enum):
     """Category of support measure offered to an SME supplier."""
+
     TRAINING = "training"
     FINANCIAL_AID = "financial_aid"
     TOOLS_RESOURCES = "tools_resources"
@@ -811,10 +846,10 @@ class SupportMeasureStatus(str, Enum):
 
 
 class ReadinessLevel(str, Enum):
-    NOT_READY = "not_ready"       # <40%
-    PARTIAL = "partial"           # 40–79%
-    READY = "ready"               # 80–99%
-    FULLY_READY = "fully_ready"   # 100%
+    NOT_READY = "not_ready"  # <40%
+    PARTIAL = "partial"  # 40–79%
+    READY = "ready"  # 80–99%
+    FULLY_READY = "fully_ready"  # 100%
 
 
 # ── CSDDD-012 Impact Severity Calculator (Art. 3/6) ───────────────────────────
@@ -822,6 +857,7 @@ class ReadinessLevel(str, Enum):
 
 class ImpactType(str, Enum):
     """Subject-matter category of the adverse impact (CSDDD Annex I reference)."""
+
     HUMAN_RIGHTS = "human_rights"
     LABOR_RIGHTS = "labor_rights"
     ENVIRONMENT = "environment"
@@ -832,14 +868,16 @@ class ImpactType(str, Enum):
 
 class SeverityLevel(str, Enum):
     """OECD RBC / CSDDD severity classification."""
-    CRITICAL = "critical"   # severity ≥ 8.0
-    HIGH = "high"           # severity ≥ 6.0
-    MEDIUM = "medium"       # severity ≥ 3.0
-    LOW = "low"             # severity < 3.0
+
+    CRITICAL = "critical"  # severity ≥ 8.0
+    HIGH = "high"  # severity ≥ 6.0
+    MEDIUM = "medium"  # severity ≥ 3.0
+    LOW = "low"  # severity < 3.0
 
 
 class ImpactEntityType(str, Enum):
     """The EIOS entity this assessment is linked to."""
+
     FINDING = "finding"
     RISK = "risk"
     SUPPLIER = "supplier"
@@ -852,6 +890,7 @@ class ImpactEntityType(str, Enum):
 
 class BoardSignoffType(str, Enum):
     """What category of document/decision requires board sign-off."""
+
     DD_POLICY = "dd_policy"
     DD_STRATEGY = "dd_strategy"
     ANNUAL_REPORT = "annual_report"
@@ -871,7 +910,7 @@ class BoardSignoffStatus(str, Enum):
 class BoardMemberRole(str, Enum):
     CEO = "ceo"
     CFO = "cfo"
-    CSO = "cso"            # Chief Sustainability Officer
+    CSO = "cso"  # Chief Sustainability Officer
     BOARD_MEMBER = "board_member"
     SUPERVISORY_BOARD = "supervisory_board"
     COMPLIANCE_OFFICER = "compliance_officer"
@@ -880,20 +919,13 @@ class BoardMemberRole(str, Enum):
 
 # ── CSDDD-015 — Supplier Self-Assessment ──────────────────────────────────────
 
-class QuestionType(str, Enum):
-    YES_NO = "yes_no"
-    MULTIPLE_CHOICE = "multiple_choice"
-    TEXT = "text"
-    FILE_UPLOAD = "file_upload"
-    SCALE_1_5 = "scale_1_5"
-
 
 class AssessmentSection(str, Enum):
-    COMPANY_STRUCTURE = "company_structure"    # A — Art. 7
-    HR_POLICIES = "hr_policies"                # B — Art. 10 + Annex I
-    ENVIRONMENT = "environment"                # C — Art. 10 + Annex II
-    GRIEVANCE = "grievance"                    # D — Art. 14
-    SUB_SUPPLIERS = "sub_suppliers"            # E — Art. 10 Abs. 2 lit. b
+    COMPANY_STRUCTURE = "company_structure"  # A — Art. 7
+    HR_POLICIES = "hr_policies"  # B — Art. 10 + Annex I
+    ENVIRONMENT = "environment"  # C — Art. 10 + Annex II
+    GRIEVANCE = "grievance"  # D — Art. 14
+    SUB_SUPPLIERS = "sub_suppliers"  # E — Art. 10 Abs. 2 lit. b
 
 
 class AssessmentStatus(str, Enum):
@@ -920,6 +952,7 @@ class TrafficLight(str, Enum):
 
 # ── CSDDD-009 — ESAP Export ───────────────────────────────────────────────────
 
+
 class ESAPSubmissionStatus(str, Enum):
     DRAFT = "draft"
     READY = "ready"
@@ -934,20 +967,16 @@ class ESAPExportFormat(str, Enum):
 
 # ── CSDDD-010 — Threshold Monitor ────────────────────────────────────────────
 
+
 class CSDDDThresholdLevel(str, Enum):
-    NOT_APPLICABLE = "not_applicable"    # below both thresholds
-    BORDERLINE = "borderline"            # < 20% below a threshold
-    TIER_2 = "tier_2"                    # ≥1000 MA + ≥450M€ (from 2028)
-    TIER_1 = "tier_1"                    # ≥5000 MA + ≥1500M€ (from 2027)
+    NOT_APPLICABLE = "not_applicable"  # below both thresholds
+    BORDERLINE = "borderline"  # < 20% below a threshold
+    TIER_2 = "tier_2"  # ≥1000 MA + ≥450M€ (from 2028)
+    TIER_1 = "tier_1"  # ≥5000 MA + ≥1500M€ (from 2027)
 
 
 # ── CSDDD-014 — Regulatory Change Radar ──────────────────────────────────────
 
-class RegulatoryChangeStatus(str, Enum):
-    NEW = "new"
-    ANALYSED = "analysed"
-    IMPLEMENTED = "implemented"
-    NOT_RELEVANT = "not_relevant"
 
 class RegulatoryChangeActionRequired(str, Enum):
     YES = "yes"

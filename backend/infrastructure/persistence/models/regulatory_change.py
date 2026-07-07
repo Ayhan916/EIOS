@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -38,9 +38,7 @@ class RegulatoryChangeModel(BaseModel):
 
     impact_summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
-    impacted_assessment_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
+    impacted_assessment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     impacted_gap_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
     regulation_refs: Mapped[str] = mapped_column(String(500), nullable=False, default="")
@@ -68,6 +66,4 @@ class RegulatoryChangeImpactModel(BaseModel):
     notification_sent: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     acknowledged_by_user_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    acknowledged_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

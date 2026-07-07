@@ -22,8 +22,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
 
 def _fake_rel(
     org_id="org-1",
@@ -60,6 +60,7 @@ def _fake_session():
 
 # ── 1. Relationship Service ───────────────────────────────────────────────────
 
+
 def _session_with_execute_sequence(*scalars):
     """Build a session whose execute() returns successive scalar_one_or_none values."""
     session = _fake_session()
@@ -88,7 +89,7 @@ class TestRelationshipService:
         session = _session_with_execute_sequence(
             MagicMock(id="sup-A"),  # supplier A found
             MagicMock(id="sup-B"),  # supplier B found
-            None,                   # no duplicate
+            None,  # no duplicate
         )
 
         with patch(
@@ -164,17 +165,13 @@ class TestRelationshipService:
         existing = _fake_rel()
         existing.relationship_status = "ACTIVE"
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=existing
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=existing)
 
         with patch(
             "application.network.relationship_service._log_audit_event",
             new_callable=AsyncMock,
         ) as mock_audit:
-            removed = await remove_relationship(
-                existing.id, "org-1", "user-2", session
-            )
+            removed = await remove_relationship(existing.id, "org-1", "user-2", session)
 
         assert removed.relationship_status == "REMOVED"
         assert removed.removed_by == "user-2"
@@ -188,9 +185,7 @@ class TestRelationshipService:
 
         existing = _fake_rel(status="REMOVED")
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=existing
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=existing)
 
         with pytest.raises(ValueError, match="already removed"):
             await remove_relationship(existing.id, "org-1", "user-2", session)
@@ -206,6 +201,7 @@ class TestRelationshipService:
 
 
 # ── 2. Discovery Engine ───────────────────────────────────────────────────────
+
 
 class TestDiscoveryEngine:
     """discovery_engine: dedup, approve, reject."""
@@ -225,21 +221,20 @@ class TestDiscoveryEngine:
         suggestion.suggestion_status = "PENDING"
 
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=suggestion
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=suggestion)
 
-        with patch(
-            "application.network.discovery_engine._log_audit_event",
-            new_callable=AsyncMock,
-        ), patch(
-            "application.network.relationship_service.create_relationship",
-            new_callable=AsyncMock,
-        ) as mock_create:
+        with (
+            patch(
+                "application.network.discovery_engine._log_audit_event",
+                new_callable=AsyncMock,
+            ),
+            patch(
+                "application.network.relationship_service.create_relationship",
+                new_callable=AsyncMock,
+            ) as mock_create,
+        ):
             mock_create.return_value = _fake_rel()
-            result = await approve_suggestion(
-                suggestion.id, "org-1", "user-1", session
-            )
+            result = await approve_suggestion(suggestion.id, "org-1", "user-1", session)
 
         assert result.suggestion_status == "APPROVED"
         assert result.reviewed_by == "user-1"
@@ -252,9 +247,7 @@ class TestDiscoveryEngine:
         suggestion = MagicMock()
         suggestion.suggestion_status = "REJECTED"
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=suggestion
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=suggestion)
         with pytest.raises(ValueError, match="already REJECTED"):
             await approve_suggestion("s-id", "org-1", "user-1", session)
 
@@ -266,9 +259,7 @@ class TestDiscoveryEngine:
         suggestion.id = str(uuid.uuid4())
         suggestion.suggestion_status = "PENDING"
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=suggestion
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=suggestion)
 
         with patch(
             "application.network.discovery_engine._log_audit_event",
@@ -301,6 +292,7 @@ class TestDiscoveryEngine:
 
 
 # ── 3. Graph Service ──────────────────────────────────────────────────────────
+
 
 class TestGraphService:
     """graph_service: BFS, shortest path, adjacency."""
@@ -384,6 +376,7 @@ class TestGraphService:
 
 
 # ── 4. Risk Propagation ───────────────────────────────────────────────────────
+
 
 def _propagation_session(adj_rows, already_signaled_ids=None):
     """Build a session for propagate_signal tests.
@@ -509,14 +502,13 @@ class TestRiskPropagation:
             )
 
         impacted_ids = [
-            obj.impacted_supplier_id
-            for obj in created
-            if hasattr(obj, "impacted_supplier_id")
+            obj.impacted_supplier_id for obj in created if hasattr(obj, "impacted_supplier_id")
         ]
         assert "A" not in impacted_ids
 
 
 # ── 5. Dependency Analysis ────────────────────────────────────────────────────
+
 
 class TestDependencyService:
     """dependency_service: score formula, upsert idempotency."""
@@ -529,9 +521,7 @@ class TestDependencyService:
         existing.dependency_score = 0.1
 
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=existing
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=existing)
 
         now = datetime.now(UTC)
         result = await _upsert_dependency(
@@ -559,7 +549,7 @@ class TestDependencyService:
         session.execute.return_value.scalar_one_or_none = MagicMock(return_value=None)
 
         now = datetime.now(UTC)
-        result = await _upsert_dependency(
+        await _upsert_dependency(
             organization_id="org-1",
             supplier_id=None,
             dependency_score=0.2,
@@ -575,6 +565,7 @@ class TestDependencyService:
 
 
 # ── 6. Centrality Service ─────────────────────────────────────────────────────
+
 
 class TestCentralityService:
     """centrality_service: degree centrality formula."""
@@ -607,10 +598,12 @@ class TestCentralityService:
                 result.all = MagicMock(return_value=in_rows)
             else:
                 # BFS adjacency calls
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", related_supplier_id="B"),
-                    MagicMock(supplier_id="B", related_supplier_id="C"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", related_supplier_id="B"),
+                        MagicMock(supplier_id="B", related_supplier_id="C"),
+                    ]
+                )
             return result
 
         session.execute = multi_execute
@@ -632,7 +625,12 @@ class TestCentralityService:
         record = await upsert_criticality(
             organization_id="org-1",
             supplier_id="sup-A",
-            centrality_data={"degree_centrality": 1.0, "inbound_degree": 10, "outbound_degree": 5, "connected_component_size": 8},
+            centrality_data={
+                "degree_centrality": 1.0,
+                "inbound_degree": 10,
+                "outbound_degree": 5,
+                "connected_component_size": 8,
+            },
             dependency_score=1.0,
             assessment_count=10,
             finding_count=20,
@@ -652,7 +650,12 @@ class TestCentralityService:
         record = await upsert_criticality(
             organization_id="org-1",
             supplier_id="sup-B",
-            centrality_data={"degree_centrality": 0.0, "inbound_degree": 0, "outbound_degree": 0, "connected_component_size": 1},
+            centrality_data={
+                "degree_centrality": 0.0,
+                "inbound_degree": 0,
+                "outbound_degree": 0,
+                "connected_component_size": 1,
+            },
             dependency_score=0.0,
             assessment_count=0,
             finding_count=0,
@@ -664,6 +667,7 @@ class TestCentralityService:
 
 
 # ── 7. Cascading Risk ─────────────────────────────────────────────────────────
+
 
 class TestCascadingRisk:
     """cascading_risk: component detection, no self-exposure."""
@@ -691,9 +695,11 @@ class TestCascadingRisk:
             result = MagicMock()
             if call_count == 1:
                 # signals query
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", severity="HIGH", id="sig-1", title="t")
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", severity="HIGH", id="sig-1", title="t")
+                    ]
+                )
             else:
                 result.all = MagicMock(return_value=[])
             return result
@@ -718,15 +724,19 @@ class TestCascadingRisk:
             result = MagicMock()
             if call_count == 1:
                 # surveillance signals
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", severity="CRITICAL", id="sig-1", title="t"),
-                    MagicMock(supplier_id="B", severity="HIGH", id="sig-2", title="t2"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", severity="CRITICAL", id="sig-1", title="t"),
+                        MagicMock(supplier_id="B", severity="HIGH", id="sig-2", title="t2"),
+                    ]
+                )
             elif call_count == 2:
                 # adjacency
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", related_supplier_id="B"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", related_supplier_id="B"),
+                    ]
+                )
             else:
                 # P0 M38.1: dup-check per pair → None means no existing signal
                 result.scalar_one_or_none = MagicMock(return_value=None)
@@ -753,9 +763,11 @@ class TestCascadingRisk:
             call_count += 1
             result = MagicMock()
             # findings: only one supplier per category
-            result.all = MagicMock(return_value=[
-                MagicMock(id="f1", supplier_id="A", category="Human Rights", severity="HIGH"),
-            ])
+            result.all = MagicMock(
+                return_value=[
+                    MagicMock(id="f1", supplier_id="A", category="Human Rights", severity="HIGH"),
+                ]
+            )
             return result
 
         session.execute = staged_execute
@@ -765,6 +777,7 @@ class TestCascadingRisk:
 
 
 # ── 8. Cluster Service ────────────────────────────────────────────────────────
+
 
 class TestClusterService:
     """cluster_service: resolve lifecycle."""
@@ -778,9 +791,7 @@ class TestClusterService:
         cluster.cluster_status = "ACTIVE"
 
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=cluster
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=cluster)
 
         with patch(
             "application.network.cluster_service._log_audit_event",
@@ -798,9 +809,7 @@ class TestClusterService:
         cluster = MagicMock()
         cluster.cluster_status = "RESOLVED"
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=cluster
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=cluster)
 
         with pytest.raises(ValueError, match="already resolved"):
             await resolve_cluster("c-id", "org-1", "user-3", session)
@@ -816,6 +825,7 @@ class TestClusterService:
 
 
 # ── 9. Resilience Service ─────────────────────────────────────────────────────
+
 
 class TestResilienceService:
     """resilience_service: score bounds, upsert."""
@@ -849,9 +859,7 @@ class TestResilienceService:
         existing.resilience_score = 0.3
 
         session = _fake_session()
-        session.execute.return_value.scalar_one_or_none = MagicMock(
-            return_value=existing
-        )
+        session.execute.return_value.scalar_one_or_none = MagicMock(return_value=existing)
 
         now = datetime.now(UTC)
         result = await _upsert_resilience(
@@ -870,6 +878,7 @@ class TestResilienceService:
 
 
 # ── 10. Tenant Isolation ──────────────────────────────────────────────────────
+
 
 class TestTenantIsolation:
     """Verify cross-tenant access returns None or raises."""
@@ -917,6 +926,7 @@ class TestTenantIsolation:
 
 # ── 11. Dashboard ─────────────────────────────────────────────────────────────
 
+
 class TestNetworkDashboard:
     """Network metrics coverage."""
 
@@ -956,11 +966,18 @@ class TestNetworkDashboard:
         from application.network.relationship_service import _VALID_TYPES
 
         expected = {
-            "PARENT_COMPANY", "SUBSIDIARY", "SISTER_COMPANY", "SHARED_COUNTRY",
-            "SHARED_SECTOR", "SHARED_SUPPLY_CHAIN", "SHARED_INCIDENT",
-            "SHARED_LOGISTICS", "SHARED_REGULATORY_EXPOSURE", "CUSTOM",
+            "PARENT_COMPANY",
+            "SUBSIDIARY",
+            "SISTER_COMPANY",
+            "SHARED_COUNTRY",
+            "SHARED_SECTOR",
+            "SHARED_SUPPLY_CHAIN",
+            "SHARED_INCIDENT",
+            "SHARED_LOGISTICS",
+            "SHARED_REGULATORY_EXPOSURE",
+            "CUSTOM",
         }
-        assert _VALID_TYPES == expected
+        assert expected == _VALID_TYPES
 
     def test_attenuation_constants_in_range(self):
         from application.network.risk_propagation import ATTENUATION_FACTOR, MIN_CONFIDENCE
@@ -970,6 +987,7 @@ class TestNetworkDashboard:
 
 
 # ── 12. M38.1 Hardening ───────────────────────────────────────────────────────
+
 
 class TestM381Hardening:
     """P0/P1/P2/P3/P4 fixes from M38 audit."""
@@ -1007,9 +1025,7 @@ class TestM381Hardening:
             )
 
         impacted_ids = [
-            obj.impacted_supplier_id
-            for obj in created
-            if hasattr(obj, "impacted_supplier_id")
+            obj.impacted_supplier_id for obj in created if hasattr(obj, "impacted_supplier_id")
         ]
         # C must appear at most once despite two paths
         assert impacted_ids.count("C") <= 1
@@ -1039,9 +1055,7 @@ class TestM381Hardening:
         )
 
         impacted_ids = [
-            obj.impacted_supplier_id
-            for obj in created
-            if hasattr(obj, "impacted_supplier_id")
+            obj.impacted_supplier_id for obj in created if hasattr(obj, "impacted_supplier_id")
         ]
         assert "B" not in impacted_ids
         assert signals == []
@@ -1089,14 +1103,18 @@ class TestM381Hardening:
             call_count += 1
             result = MagicMock()
             if call_count == 1:
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", severity="CRITICAL", id="s1", title="t"),
-                    MagicMock(supplier_id="B", severity="HIGH", id="s2", title="t2"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", severity="CRITICAL", id="s1", title="t"),
+                        MagicMock(supplier_id="B", severity="HIGH", id="s2", title="t2"),
+                    ]
+                )
             elif call_count == 2:
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", related_supplier_id="B"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", related_supplier_id="B"),
+                    ]
+                )
             else:
                 # dup check returns an existing signal → skip creation
                 result.scalar_one_or_none = MagicMock(return_value=MagicMock(id="existing"))
@@ -1123,14 +1141,18 @@ class TestM381Hardening:
             call_count += 1
             result = MagicMock()
             if call_count == 1:
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", severity="CRITICAL", id="s1", title="t"),
-                    MagicMock(supplier_id="B", severity="HIGH", id="s2", title="t2"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", severity="CRITICAL", id="s1", title="t"),
+                        MagicMock(supplier_id="B", severity="HIGH", id="s2", title="t2"),
+                    ]
+                )
             elif call_count == 2:
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="A", related_supplier_id="B"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="A", related_supplier_id="B"),
+                    ]
+                )
             else:
                 result.scalar_one_or_none = MagicMock(return_value=None)
             return result
@@ -1176,7 +1198,7 @@ class TestM381Hardening:
         # First supplier found, second supplier not found
         session = _session_with_execute_sequence(
             MagicMock(id="sup-A"),  # supplier A found
-            None,                   # supplier B not found
+            None,  # supplier B not found
         )
 
         with pytest.raises(ValueError, match="not found in organization"):
@@ -1195,9 +1217,9 @@ class TestM381Hardening:
 
         # Both suppliers found, duplicate check returns existing relationship
         session = _session_with_execute_sequence(
-            MagicMock(id="sup-A"),          # supplier A found
-            MagicMock(id="sup-B"),          # supplier B found
-            MagicMock(id="rel-existing"),   # duplicate found
+            MagicMock(id="sup-A"),  # supplier A found
+            MagicMock(id="sup-B"),  # supplier B found
+            MagicMock(id="rel-existing"),  # duplicate found
         )
 
         with pytest.raises(ValueError, match="already exists"):
@@ -1279,9 +1301,9 @@ class TestM381Hardening:
             call_count += 1
             r = MagicMock()
             r.all = MagicMock(
-                return_value=out_rows if call_count == 1 else (
-                    in_rows if call_count == 2 else adj_rows
-                )
+                return_value=out_rows
+                if call_count == 1
+                else (in_rows if call_count == 2 else adj_rows)
             )
             return r
 
@@ -1313,8 +1335,14 @@ class TestM381Hardening:
         from application.network.cascading_risk import cluster_incidents
 
         mock_fm = MagicMock()
-        for attr in ("id", "supplier_id", "category", "severity",
-                     "organization_id", "finding_status"):
+        for attr in (
+            "id",
+            "supplier_id",
+            "category",
+            "severity",
+            "organization_id",
+            "finding_status",
+        ):
             setattr(mock_fm, attr, MagicMock())
         mock_fm.finding_status.in_.return_value = MagicMock()
         mock_fm.supplier_id.is_not.return_value = MagicMock()
@@ -1332,10 +1360,16 @@ class TestM381Hardening:
             call_count += 1
             result = MagicMock()
             if call_count == 1:
-                result.all = MagicMock(return_value=[
-                    MagicMock(id="f1", supplier_id="A", category="Environmental", severity="HIGH"),
-                    MagicMock(id="f2", supplier_id="B", category="Environmental", severity="MEDIUM"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(
+                            id="f1", supplier_id="A", category="Environmental", severity="HIGH"
+                        ),
+                        MagicMock(
+                            id="f2", supplier_id="B", category="Environmental", severity="MEDIUM"
+                        ),
+                    ]
+                )
             else:
                 result.scalar_one_or_none = MagicMock(return_value=None)
             return result
@@ -1346,9 +1380,11 @@ class TestM381Hardening:
         async def capture_audit(_session, action, *args, **kwargs):
             audit_calls.append(action)
 
-        with patch("infrastructure.persistence.models.finding.FindingModel", mock_fm), \
-             patch("sqlalchemy.select", side_effect=mock_select_fn), \
-             patch("application.network.cascading_risk._log_audit_event", side_effect=capture_audit):
+        with (
+            patch("infrastructure.persistence.models.finding.FindingModel", mock_fm),
+            patch("sqlalchemy.select", side_effect=mock_select_fn),
+            patch("application.network.cascading_risk._log_audit_event", side_effect=capture_audit),
+        ):
             await cluster_incidents("org-1", session)
 
         assert "network.cluster.created" in audit_calls
@@ -1364,8 +1400,14 @@ class TestM381Hardening:
         existing_cluster.finding_ids = ["f0"]
 
         mock_fm = MagicMock()
-        for attr in ("id", "supplier_id", "category", "severity",
-                     "organization_id", "finding_status"):
+        for attr in (
+            "id",
+            "supplier_id",
+            "category",
+            "severity",
+            "organization_id",
+            "finding_status",
+        ):
             setattr(mock_fm, attr, MagicMock())
         mock_fm.finding_status.in_.return_value = MagicMock()
         mock_fm.supplier_id.is_not.return_value = MagicMock()
@@ -1383,10 +1425,16 @@ class TestM381Hardening:
             call_count += 1
             result = MagicMock()
             if call_count == 1:
-                result.all = MagicMock(return_value=[
-                    MagicMock(id="f1", supplier_id="A", category="Environmental", severity="HIGH"),
-                    MagicMock(id="f2", supplier_id="B", category="Environmental", severity="MEDIUM"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(
+                            id="f1", supplier_id="A", category="Environmental", severity="HIGH"
+                        ),
+                        MagicMock(
+                            id="f2", supplier_id="B", category="Environmental", severity="MEDIUM"
+                        ),
+                    ]
+                )
             else:
                 result.scalar_one_or_none = MagicMock(return_value=existing_cluster)
             return result
@@ -1397,9 +1445,11 @@ class TestM381Hardening:
         async def capture_audit(_session, action, *args, **kwargs):
             audit_calls.append(action)
 
-        with patch("infrastructure.persistence.models.finding.FindingModel", mock_fm), \
-             patch("sqlalchemy.select", side_effect=mock_select_fn), \
-             patch("application.network.cascading_risk._log_audit_event", side_effect=capture_audit):
+        with (
+            patch("infrastructure.persistence.models.finding.FindingModel", mock_fm),
+            patch("sqlalchemy.select", side_effect=mock_select_fn),
+            patch("application.network.cascading_risk._log_audit_event", side_effect=capture_audit),
+        ):
             await cluster_incidents("org-1", session)
 
         assert "network.cluster.updated" in audit_calls
@@ -1420,10 +1470,12 @@ class TestM381Hardening:
             result = MagicMock()
             if call_count == 1:
                 # bfs_neighborhood adjacency query
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="WATCHED", related_supplier_id="REL-1"),
-                    MagicMock(supplier_id="REL-1", related_supplier_id="REL-2"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="WATCHED", related_supplier_id="REL-1"),
+                        MagicMock(supplier_id="REL-1", related_supplier_id="REL-2"),
+                    ]
+                )
             else:
                 # dup check → None (no existing entry)
                 result.scalar_one_or_none = MagicMock(return_value=None)
@@ -1454,9 +1506,11 @@ class TestM381Hardening:
             call_count += 1
             result = MagicMock()
             if call_count == 1:
-                result.all = MagicMock(return_value=[
-                    MagicMock(supplier_id="WATCHED", related_supplier_id="REL-1"),
-                ])
+                result.all = MagicMock(
+                    return_value=[
+                        MagicMock(supplier_id="WATCHED", related_supplier_id="REL-1"),
+                    ]
+                )
             else:
                 # dup check → existing entry found
                 result.scalar_one_or_none = MagicMock(return_value=MagicMock(id="existing"))

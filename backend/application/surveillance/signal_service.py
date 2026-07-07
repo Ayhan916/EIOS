@@ -64,8 +64,9 @@ async def find_active_duplicate(
     session,
 ) -> object | None:
     """Return an ACTIVE signal with the same dedupe_key, or None."""
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     if dedupe_key is None:
         return None
@@ -163,6 +164,7 @@ async def create_signal(
     if severity.upper() == "CRITICAL":
         try:
             from application.operating_system.action_service import ingest_from_module_idempotent
+
             await ingest_from_module_idempotent(
                 organization_id=organization_id,
                 source_type="SURVEILLANCE_SIGNAL",
@@ -188,10 +190,11 @@ async def _maybe_notify(signal, organization_id: str, session) -> None:
     if signal.severity not in ("HIGH", "CRITICAL"):
         return
     try:
-        from application.notification_service import notify
-        from infrastructure.persistence.models.user import UserModel
-        from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
         from sqlalchemy import func, select
+
+        from application.notification_service import notify
+        from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
+        from infrastructure.persistence.models.user import UserModel
 
         users_stmt = select(UserModel).where(
             UserModel.organization_id == organization_id,
@@ -240,8 +243,9 @@ async def acknowledge_signal(
     acknowledged_by: str,
     session,
 ) -> object:
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     stmt = select(SurveillanceSignalModel).where(
         SurveillanceSignalModel.id == signal_id,
@@ -261,7 +265,9 @@ async def acknowledge_signal(
     await session.flush()
 
     await _log_audit_event(
-        session, "surveillance.signal.acknowledged", signal.id,
+        session,
+        "surveillance.signal.acknowledged",
+        signal.id,
         actor_id=acknowledged_by,
     )
     return signal
@@ -273,8 +279,9 @@ async def dismiss_signal(
     dismissed_by: str,
     session,
 ) -> object:
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     stmt = select(SurveillanceSignalModel).where(
         SurveillanceSignalModel.id == signal_id,
@@ -292,7 +299,9 @@ async def dismiss_signal(
     await session.flush()
 
     await _log_audit_event(
-        session, "surveillance.signal.dismissed", signal.id,
+        session,
+        "surveillance.signal.dismissed",
+        signal.id,
         actor_id=dismissed_by,
     )
     return signal
@@ -303,8 +312,9 @@ async def expire_stale_signals(session) -> int:
 
     Emits surveillance.signal.expired audit event for every expired signal.
     """
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     now = datetime.now(UTC)
     stmt = select(SurveillanceSignalModel).where(
@@ -315,9 +325,7 @@ async def expire_stale_signals(session) -> int:
     for s in stale:
         s.signal_status = "EXPIRED"
         s.updated_at = now
-        await _log_audit_event(
-            session, "surveillance.signal.expired", s.id, detail="ttl_expired"
-        )
+        await _log_audit_event(session, "surveillance.signal.expired", s.id, detail="ttl_expired")
     await session.flush()
     return len(stale)
 
@@ -333,8 +341,9 @@ async def list_signals(
     offset: int = 0,
     session,
 ) -> list:
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     stmt = select(SurveillanceSignalModel).where(
         SurveillanceSignalModel.organization_id == organization_id
@@ -352,8 +361,9 @@ async def list_signals(
 
 
 async def get_signal(signal_id: str, organization_id: str, session) -> object | None:
-    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
 
     stmt = select(SurveillanceSignalModel).where(
         SurveillanceSignalModel.id == signal_id,

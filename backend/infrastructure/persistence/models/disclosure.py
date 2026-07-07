@@ -28,9 +28,7 @@ class DisclosureRequirementModel(BaseModel):
         Index("ix_disclosure_requirements_ref", "reference"),
     )
 
-    framework_id: Mapped[str] = mapped_column(
-        String(36), nullable=False, index=True
-    )
+    framework_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     reference: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(500), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
@@ -51,7 +49,9 @@ class DisclosureResponseModel(BaseModel):
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     requirement_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    disclosure_status: Mapped[str] = mapped_column(String(30), nullable=False, default="Not Started")
+    disclosure_status: Mapped[str] = mapped_column(
+        String(30), nullable=False, default="Not Started"
+    )
     narrative_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     evidence_coverage: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     coverage_category: Mapped[str] = mapped_column(String(20), nullable=False, default="Weak")
@@ -67,9 +67,7 @@ class ReportingPackageModel(BaseModel):
     """Immutable snapshot of a published sustainability reporting package."""
 
     __tablename__ = "reporting_packages"
-    __table_args__ = (
-        Index("ix_reporting_packages_org_fw", "organization_id", "framework_code"),
-    )
+    __table_args__ = (Index("ix_reporting_packages_org_fw", "organization_id", "framework_code"),)
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     framework_id: Mapped[str] = mapped_column(String(36), nullable=False)

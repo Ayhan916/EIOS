@@ -10,7 +10,7 @@ All status transitions require explicit human action.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from .base_entity import BaseEntity
@@ -21,12 +21,12 @@ class ImprovementProposal(BaseEntity):
     """A platform weakness detected by the Evaluation Engine with a proposed fix."""
 
     # ── Weakness classification ──────────────────────────────────────────────
-    weakness_type: str = ""       # see WeaknessType enum below
-    affected_module: str = ""     # benchmark module name or "global"
-    current_value: float = 0.0    # e.g. accuracy=0.75
-    target_value: float = 0.0     # e.g. accuracy=0.90
+    weakness_type: str = ""  # see WeaknessType enum below
+    affected_module: str = ""  # benchmark module name or "global"
+    current_value: float = 0.0  # e.g. accuracy=0.75
+    target_value: float = 0.0  # e.g. accuracy=0.90
     expected_impact: float = 0.0  # absolute improvement (0–1)
-    priority_score: float = 0.0   # higher = more urgent; deterministic
+    priority_score: float = 0.0  # higher = more urgent; deterministic
 
     # ── Human-readable content ───────────────────────────────────────────────
     title: str = ""
@@ -35,7 +35,7 @@ class ImprovementProposal(BaseEntity):
 
     # ── Approval workflow ────────────────────────────────────────────────────
     # Agents NEVER set these — only human API calls may change status
-    approval_status: str = "DRAFT"        # DRAFT|APPROVED|IN_PROGRESS|VERIFIED|REJECTED
+    approval_status: str = "DRAFT"  # DRAFT|APPROVED|IN_PROGRESS|VERIFIED|REJECTED
     approved_by_user_id: str | None = None
     approved_at: datetime | None = None
     rejected_by_user_id: str | None = None

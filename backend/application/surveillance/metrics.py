@@ -18,9 +18,7 @@ class _SurveillanceCounters:
     def record_signal_created(self, severity: str = "MEDIUM") -> None:
         self.surveillance_signals_total += 1
         self.surveillance_signals_active += 1
-        self._signals_by_severity[severity] = (
-            self._signals_by_severity.get(severity, 0) + 1
-        )
+        self._signals_by_severity[severity] = self._signals_by_severity.get(severity, 0) + 1
 
     def record_signal_resolved(self) -> None:
         if self.surveillance_signals_active > 0:

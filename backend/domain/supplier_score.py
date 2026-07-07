@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
 from domain.base_entity import BaseEntity
 from domain.enums import RiskBand, TrendDirection
@@ -37,5 +38,5 @@ class SupplierScore(BaseEntity):
     sector_percentile: float | None = None  # 0-100; lower risk_score = higher percentile
 
     # Auditability
-    inputs: dict = field(default_factory=dict)   # raw counts used for calculation
-    drivers: list = field(default_factory=list)  # human-readable score explanation
+    inputs: dict[str, Any] = field(default_factory=dict)  # raw counts used for calculation
+    drivers: list[Any] = field(default_factory=list)  # human-readable score explanation

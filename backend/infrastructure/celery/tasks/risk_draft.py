@@ -88,10 +88,10 @@ async def _run_draft_generation(
     signal_severity: str,
     actor_id: str,
 ) -> dict[str, object]:
+    from application.ports.llm import Message  # noqa: PLC0415
+    from infrastructure.llm.deps import init_llm_provider  # noqa: PLC0415
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from infrastructure.persistence.models.m46_3 import RiskDraftModel  # noqa: PLC0415
-    from infrastructure.llm.deps import init_llm_provider  # noqa: PLC0415
-    from application.ports.llm import Message  # noqa: PLC0415
 
     user_prompt = (
         f"Signal type: {signal_type}\n"
@@ -100,9 +100,7 @@ async def _run_draft_generation(
         "Produce a risk draft JSON for this signal."
     )
 
-    prompt_hash = hashlib.sha256(
-        (_DRAFT_SYSTEM_PROMPT + user_prompt).encode()
-    ).hexdigest()
+    prompt_hash = hashlib.sha256((_DRAFT_SYSTEM_PROMPT + user_prompt).encode()).hexdigest()
 
     llm = init_llm_provider()
     response = await llm.complete(

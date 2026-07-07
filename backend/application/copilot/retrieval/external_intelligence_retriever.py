@@ -70,42 +70,48 @@ async def retrieve_external_intelligence_context(
     freshness_metadata: list[dict] = []
 
     for e in enrichments:
-        data.append({
-            "supplier_id": e.supplier_id,
-            "country_code": e.country_code,
-            "country_risk_level": e.country_risk_level,
-            "country_risk_score": e.country_risk_score,
-            "sanctions_exposure": e.sanctions_exposure,
-            "sector_percentile": e.sector_percentile,
-            "percentile_rank": e.percentile_rank,
-            "benchmark_score": e.benchmark_score,
-            "benchmark_explanation": e.benchmark_explanation,
-            "external_risk_score": e.external_risk_score,
-            "combined_risk_score": e.combined_risk_score,
-            "active_signal_count": e.active_signal_count,
-            "dataset_version": e.dataset_version,
-            "enriched_at": e.enriched_at.isoformat() if e.enriched_at else None,
-        })
+        data.append(
+            {
+                "supplier_id": e.supplier_id,
+                "country_code": e.country_code,
+                "country_risk_level": e.country_risk_level,
+                "country_risk_score": e.country_risk_score,
+                "sanctions_exposure": e.sanctions_exposure,
+                "sector_percentile": e.sector_percentile,
+                "percentile_rank": e.percentile_rank,
+                "benchmark_score": e.benchmark_score,
+                "benchmark_explanation": e.benchmark_explanation,
+                "external_risk_score": e.external_risk_score,
+                "combined_risk_score": e.combined_risk_score,
+                "active_signal_count": e.active_signal_count,
+                "dataset_version": e.dataset_version,
+                "enriched_at": e.enriched_at.isoformat() if e.enriched_at else None,
+            }
+        )
         source_ids.append(e.supplier_id)
-        freshness_metadata.append({
-            "object_id": e.supplier_id,
-            "object_type": "SupplierEnrichment",
-            "updated_at": e.enriched_at.isoformat() if e.enriched_at else None,
-            "retrieved_at": retrieved_at,
-        })
+        freshness_metadata.append(
+            {
+                "object_id": e.supplier_id,
+                "object_type": "SupplierEnrichment",
+                "updated_at": e.enriched_at.isoformat() if e.enriched_at else None,
+                "retrieved_at": retrieved_at,
+            }
+        )
 
     for s in signals:
-        data.append({
-            "signal_id": s.id,
-            "signal_type": s.signal_type,
-            "severity": s.severity,
-            "description": s.description,
-            "country_code": s.country_code,
-            "supplier_id": s.supplier_id,
-            "source_name": s.source_name,
-            "source_version": s.source_version,
-            "observed_at": s.observed_at.isoformat() if s.observed_at else None,
-        })
+        data.append(
+            {
+                "signal_id": s.id,
+                "signal_type": s.signal_type,
+                "severity": s.severity,
+                "description": s.description,
+                "country_code": s.country_code,
+                "supplier_id": s.supplier_id,
+                "source_name": s.source_name,
+                "source_version": s.source_version,
+                "observed_at": s.observed_at.isoformat() if s.observed_at else None,
+            }
+        )
         if s.supplier_id:
             source_ids.append(s.supplier_id)
 

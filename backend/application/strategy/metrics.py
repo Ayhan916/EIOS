@@ -100,28 +100,100 @@ class _StrategyCounters:
 
     def to_prometheus_lines(self, env: str) -> list[str]:
         metrics = [
-            ("eios_digital_twins_total", "Total enterprise digital twins created", self.digital_twins_total),
-            ("eios_digital_twin_snapshots_total", "Total digital twin snapshots", self.digital_twin_snapshots_total),
+            (
+                "eios_digital_twins_total",
+                "Total enterprise digital twins created",
+                self.digital_twins_total,
+            ),
+            (
+                "eios_digital_twin_snapshots_total",
+                "Total digital twin snapshots",
+                self.digital_twin_snapshots_total,
+            ),
             ("eios_strategic_plans_total", "Total strategic plans", self.strategic_plans_total),
-            ("eios_strategic_objectives_total", "Total strategic objectives", self.strategic_objectives_total),
+            (
+                "eios_strategic_objectives_total",
+                "Total strategic objectives",
+                self.strategic_objectives_total,
+            ),
             ("eios_strategy_scenarios_total", "Total strategy scenarios", self.scenarios_total),
-            ("eios_scenario_executions_total", "Total scenario executions", self.scenario_executions_total),
-            ("eios_climate_stress_tests_total", "Total climate stress tests", self.climate_stress_tests_total),
-            ("eios_supplier_shock_scenarios_total", "Total supplier shock scenarios", self.supplier_shock_scenarios_total),
-            ("eios_financial_stress_tests_total", "Total financial stress tests", self.financial_stress_tests_total),
-            ("eios_transition_pathways_total", "Total transition pathways", self.transition_pathways_total),
-            ("eios_net_zero_pathways_total", "Total net zero pathways", self.net_zero_pathways_total),
-            ("eios_portfolio_optimizations_total", "Total portfolio optimizations", self.portfolio_optimizations_total),
-            ("eios_investment_scenarios_total", "Total investment scenarios", self.investment_scenarios_total),
+            (
+                "eios_scenario_executions_total",
+                "Total scenario executions",
+                self.scenario_executions_total,
+            ),
+            (
+                "eios_climate_stress_tests_total",
+                "Total climate stress tests",
+                self.climate_stress_tests_total,
+            ),
+            (
+                "eios_supplier_shock_scenarios_total",
+                "Total supplier shock scenarios",
+                self.supplier_shock_scenarios_total,
+            ),
+            (
+                "eios_financial_stress_tests_total",
+                "Total financial stress tests",
+                self.financial_stress_tests_total,
+            ),
+            (
+                "eios_transition_pathways_total",
+                "Total transition pathways",
+                self.transition_pathways_total,
+            ),
+            (
+                "eios_net_zero_pathways_total",
+                "Total net zero pathways",
+                self.net_zero_pathways_total,
+            ),
+            (
+                "eios_portfolio_optimizations_total",
+                "Total portfolio optimizations",
+                self.portfolio_optimizations_total,
+            ),
+            (
+                "eios_investment_scenarios_total",
+                "Total investment scenarios",
+                self.investment_scenarios_total,
+            ),
             ("eios_forecast_models_total", "Total forecast models", self.forecast_models_total),
             ("eios_forecasts_total", "Total forecasts generated", self.forecasts_total),
-            ("eios_board_simulations_total", "Total board simulations", self.board_simulations_total),
-            ("eios_strategic_reports_total", "Total strategic scenario reports", self.strategic_reports_total),
-            ("eios_strategic_reports_finalized_total", "Total finalized strategic reports", self.strategic_reports_finalized_total),
-            ("eios_scenario_templates_total", "Total scenario templates created", self.scenario_templates_total),
-            ("eios_strategy_methodologies_total", "Total strategy methodologies registered", self.strategy_methodologies_total),
-            ("eios_scenario_comparisons_total", "Total scenario comparisons computed", self.scenario_comparisons_total),
-            ("eios_stress_test_templates_total", "Total stress test templates created", self.stress_test_templates_total),
+            (
+                "eios_board_simulations_total",
+                "Total board simulations",
+                self.board_simulations_total,
+            ),
+            (
+                "eios_strategic_reports_total",
+                "Total strategic scenario reports",
+                self.strategic_reports_total,
+            ),
+            (
+                "eios_strategic_reports_finalized_total",
+                "Total finalized strategic reports",
+                self.strategic_reports_finalized_total,
+            ),
+            (
+                "eios_scenario_templates_total",
+                "Total scenario templates created",
+                self.scenario_templates_total,
+            ),
+            (
+                "eios_strategy_methodologies_total",
+                "Total strategy methodologies registered",
+                self.strategy_methodologies_total,
+            ),
+            (
+                "eios_scenario_comparisons_total",
+                "Total scenario comparisons computed",
+                self.scenario_comparisons_total,
+            ),
+            (
+                "eios_stress_test_templates_total",
+                "Total stress test templates created",
+                self.stress_test_templates_total,
+            ),
         ]
         lines: list[str] = []
         for name, help_text, value in metrics:

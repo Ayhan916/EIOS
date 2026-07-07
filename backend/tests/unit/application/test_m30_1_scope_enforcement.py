@@ -8,12 +8,12 @@ No I/O, no DB, no network.
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
 
-from interfaces.api.deps import scope_gate, require_scope
+from interfaces.api.deps import require_scope, scope_gate
 
 
 def _make_request(*, api_scopes: list[str] | None, method: str = "GET") -> Any:

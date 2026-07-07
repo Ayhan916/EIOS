@@ -6,8 +6,9 @@ Down revision: 061
 
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "062"
 down_revision = "061"
@@ -82,9 +83,7 @@ def upgrade() -> None:
     )
     op.create_index("ix_bat_org", "board_access_tokens", ["organization_id"])
     op.create_index("ix_bat_report", "board_access_tokens", ["report_id"])
-    op.create_unique_constraint(
-        "uq_bat_token_hash", "board_access_tokens", ["token_hash"]
-    )
+    op.create_unique_constraint("uq_bat_token_hash", "board_access_tokens", ["token_hash"])
     op.create_index("ix_bat_token_hash", "board_access_tokens", ["token_hash"])
 
 

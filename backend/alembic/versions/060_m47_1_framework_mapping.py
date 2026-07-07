@@ -8,6 +8,7 @@ Create Date: 2026-06-23
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "060"
@@ -29,7 +30,9 @@ def upgrade() -> None:
         sa.Column("organization_id", sa.String(36), nullable=False),
         sa.Column("created_by", sa.String(36), nullable=False),
         sa.UniqueConstraint(
-            "control_id", "framework_code", "framework_control_id",
+            "control_id",
+            "framework_code",
+            "framework_control_id",
             name="uq_ctrl_fw_mapping",
         ),
     )

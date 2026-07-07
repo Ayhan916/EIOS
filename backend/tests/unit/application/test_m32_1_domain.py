@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-
 from domain.due_diligence_report import DueDiligenceReport
-from domain.enums import EntityStatus, DueDiligenceReportType, PreventiveMeasureEffectiveness
+from domain.enums import DueDiligenceReportType, EntityStatus, PreventiveMeasureEffectiveness
 from infrastructure.reporting.due_diligence_pdf_renderer import render_due_diligence_report
-
 
 # ── DueDiligenceReport entity ─────────────────────────────────────────────────
 
@@ -35,8 +32,12 @@ class TestDueDiligenceReportEntity:
         assert isinstance(rpt.report_data, dict)
 
     def test_unique_ids(self):
-        r1 = DueDiligenceReport(organization_id="o", report_type="csddd", status=EntityStatus.ACTIVE)
-        r2 = DueDiligenceReport(organization_id="o", report_type="lksgg_annual", status=EntityStatus.ACTIVE)
+        r1 = DueDiligenceReport(
+            organization_id="o", report_type="csddd", status=EntityStatus.ACTIVE
+        )
+        r2 = DueDiligenceReport(
+            organization_id="o", report_type="lksgg_annual", status=EntityStatus.ACTIVE
+        )
         assert r1.id != r2.id
 
     def test_report_data_stored(self):
@@ -51,7 +52,9 @@ class TestDueDiligenceReportEntity:
         assert rpt.report_data["supplier_inventory"]["total"] == 5
 
     def test_version_is_int_not_conflicted(self):
-        rpt = DueDiligenceReport(organization_id="o", report_type="csddd", status=EntityStatus.ACTIVE)
+        rpt = DueDiligenceReport(
+            organization_id="o", report_type="csddd", status=EntityStatus.ACTIVE
+        )
         assert isinstance(rpt.version, int)
 
 
@@ -92,15 +95,53 @@ _LKSGG_SNAPSHOT = {
     },
     "supplier_inventory": {"total": 10, "by_tier": {"Tier 1": 5, "Tier 2": 5}, "active": 10},
     "risk_classification": {"Critical": 1, "High": 2, "Moderate": 4, "Low": 3},
-    "human_rights": {"total_findings": 5, "critical_findings": 1, "high_findings": 2, "suppliers_impacted": 3},
-    "environmental": {"total_findings": 3, "critical_findings": 0, "high_findings": 1, "suppliers_impacted": 2},
-    "remediation": {"open": 4, "in_progress": 2, "resolved": 6, "overdue": 1, "total": 12, "closure_rate": 0.5},
+    "human_rights": {
+        "total_findings": 5,
+        "critical_findings": 1,
+        "high_findings": 2,
+        "suppliers_impacted": 3,
+    },
+    "environmental": {
+        "total_findings": 3,
+        "critical_findings": 0,
+        "high_findings": 1,
+        "suppliers_impacted": 2,
+    },
+    "remediation": {
+        "open": 4,
+        "in_progress": 2,
+        "resolved": 6,
+        "overdue": 1,
+        "total": 12,
+        "closure_rate": 0.5,
+    },
     "critical_suppliers": [
-        {"supplier_id": "s1", "supplier_name": "Critical Corp", "country": "CN", "tier": "Tier 1", "risk_band": "Critical", "esg_score": 20.0, "risk_score": 95.0, "trend": "Deteriorating", "critical_findings": 3, "high_findings": 5, "open_actions": 4, "overdue_actions": 2},
+        {
+            "supplier_id": "s1",
+            "supplier_name": "Critical Corp",
+            "country": "CN",
+            "tier": "Tier 1",
+            "risk_band": "Critical",
+            "esg_score": 20.0,
+            "risk_score": 95.0,
+            "trend": "Deteriorating",
+            "critical_findings": 3,
+            "high_findings": 5,
+            "open_actions": 4,
+            "overdue_actions": 2,
+        },
     ],
     "explainability": [
-        {"factor": "supplier_inventory", "value": 10, "description": "10 suppliers assessed across 2 tiers"},
-        {"factor": "critical_risk_suppliers", "value": 1, "description": "1 suppliers in Critical risk band"},
+        {
+            "factor": "supplier_inventory",
+            "value": 10,
+            "description": "10 suppliers assessed across 2 tiers",
+        },
+        {
+            "factor": "critical_risk_suppliers",
+            "value": 1,
+            "description": "1 suppliers in Critical risk band",
+        },
     ],
 }
 
@@ -141,7 +182,10 @@ class TestDueDiligencePDFRenderer:
         assert len(pdf_bytes) > 2000
 
     def test_different_snapshots_produce_different_pdfs(self):
-        snapshot_v2 = {**_LKSGG_SNAPSHOT, "remediation": {"open": 0, "resolved": 12, "total": 12, "closure_rate": 1.0}}
+        snapshot_v2 = {
+            **_LKSGG_SNAPSHOT,
+            "remediation": {"open": 0, "resolved": 12, "total": 12, "closure_rate": 1.0},
+        }
         pdf1 = render_due_diligence_report(org_name="Org", report=_LKSGG_SNAPSHOT)
         pdf2 = render_due_diligence_report(org_name="Org", report=snapshot_v2)
         assert pdf1 != pdf2
@@ -154,7 +198,14 @@ class TestDueDiligencePDFRenderer:
                 "organization_id": "org-1",
             },
             "summary": {"total": 5, "open": 2, "completed": 3, "overdue": 1, "closure_rate": 0.6},
-            "remediation": {"open": 2, "completed": 3, "resolved": 3, "overdue": 1, "total": 5, "closure_rate": 0.6},
+            "remediation": {
+                "open": 2,
+                "completed": 3,
+                "resolved": 3,
+                "overdue": 1,
+                "total": 5,
+                "closure_rate": 0.6,
+            },
         }
         pdf_bytes = render_due_diligence_report(org_name="Org", report=rem_snapshot)
         assert pdf_bytes[:4] == b"%PDF"

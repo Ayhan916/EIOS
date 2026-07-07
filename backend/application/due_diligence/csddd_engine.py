@@ -14,17 +14,39 @@ _FRAMEWORK_VERSION = "2024/1760"
 
 _HIGH_RISK_COUNTRIES = frozenset(
     {
-        "China", "India", "Bangladesh", "Myanmar", "Cambodia", "Pakistan",
-        "Ethiopia", "Nigeria", "Democratic Republic of Congo", "Colombia",
-        "Brazil", "Indonesia", "Malaysia", "Vietnam", "Philippines",
+        "China",
+        "India",
+        "Bangladesh",
+        "Myanmar",
+        "Cambodia",
+        "Pakistan",
+        "Ethiopia",
+        "Nigeria",
+        "Democratic Republic of Congo",
+        "Colombia",
+        "Brazil",
+        "Indonesia",
+        "Malaysia",
+        "Vietnam",
+        "Philippines",
     }
 )
 
 _SEVERE_IMPACT_CATEGORIES = frozenset(
     {
-        "human rights", "child labour", "forced labour", "slavery", "trafficking",
-        "discrimination", "health", "safety", "environmental", "climate",
-        "deforestation", "pollution", "emissions",
+        "human rights",
+        "child labour",
+        "forced labour",
+        "slavery",
+        "trafficking",
+        "discrimination",
+        "health",
+        "safety",
+        "environmental",
+        "climate",
+        "deforestation",
+        "pollution",
+        "emissions",
     }
 )
 
@@ -40,13 +62,31 @@ def _is_severe(finding: dict) -> bool:
 
 def _is_hr_severe(finding: dict) -> bool:
     cat = (finding.get("category") or "").lower()
-    hr_terms = {"human rights", "labour", "labor", "social", "child", "forced", "discrimination", "health", "safety"}
+    hr_terms = {
+        "human rights",
+        "labour",
+        "labor",
+        "social",
+        "child",
+        "forced",
+        "discrimination",
+        "health",
+        "safety",
+    }
     return _is_severe(finding) and any(t in cat for t in hr_terms)
 
 
 def _is_env_severe(finding: dict) -> bool:
     cat = (finding.get("category") or "").lower()
-    env_terms = {"environmental", "climate", "emission", "pollution", "deforestation", "waste", "water"}
+    env_terms = {
+        "environmental",
+        "climate",
+        "emission",
+        "pollution",
+        "deforestation",
+        "waste",
+        "water",
+    }
     return _is_severe(finding) and any(t in cat for t in env_terms)
 
 
@@ -107,16 +147,28 @@ def build_csddd_report(
     residual_risks = len(open_gaps)
 
     # ── Supplier risk trends ────────────────────────────────────────────────
-    improving = sum(1 for s in suppliers if (supplier_scores.get(s["id"]) or {}).get("trend") == "Improving")
-    stable = sum(1 for s in suppliers if (supplier_scores.get(s["id"]) or {}).get("trend") == "Stable")
-    deteriorating = sum(1 for s in suppliers if (supplier_scores.get(s["id"]) or {}).get("trend") == "Deteriorating")
+    improving = sum(
+        1 for s in suppliers if (supplier_scores.get(s["id"]) or {}).get("trend") == "Improving"
+    )
+    stable = sum(
+        1 for s in suppliers if (supplier_scores.get(s["id"]) or {}).get("trend") == "Stable"
+    )
+    deteriorating = sum(
+        1 for s in suppliers if (supplier_scores.get(s["id"]) or {}).get("trend") == "Deteriorating"
+    )
     no_score = len(suppliers) - improving - stable - deteriorating
 
     # ── Remediation progress ────────────────────────────────────────────────
     open_recs = sum(1 for r in recommendations if r.get("action_status") == "open")
     in_progress = sum(1 for r in recommendations if r.get("action_status") == "in_progress")
-    resolved_recs = sum(1 for r in recommendations if r.get("action_status") in ("resolved", "verified"))
-    overdue = sum(1 for r in recommendations if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False))
+    resolved_recs = sum(
+        1 for r in recommendations if r.get("action_status") in ("resolved", "verified")
+    )
+    overdue = sum(
+        1
+        for r in recommendations
+        if r.get("action_status") in ("open", "in_progress") and r.get("overdue", False)
+    )
     total_recs = len(recommendations)
     closure_rate = round(resolved_recs / total_recs, 4) if total_recs else 0.0
 
@@ -137,7 +189,7 @@ def build_csddd_report(
             "source": "findings",
             "count": len(all_severe),
             "detail": f"{len(all_severe)} severe adverse impacts identified "
-                      f"({len(hr_severe)} human rights, {len(env_severe)} environmental)",
+            f"({len(hr_severe)} human rights, {len(env_severe)} environmental)",
         },
         {
             "conclusion": "risk_residual",
@@ -150,21 +202,21 @@ def build_csddd_report(
             "source": "suppliers",
             "count": len(suppliers),
             "detail": f"{len(suppliers)} suppliers mapped; {len(high_risk_countries)} "
-                      f"in high-risk jurisdictions",
+            f"in high-risk jurisdictions",
         },
         {
             "conclusion": "supplier_readiness",
             "source": "supplier_scores",
             "count": ready_count,
             "detail": f"{ready_count} suppliers ready (Low/Moderate risk); "
-                      f"{unready_count} require urgent attention",
+            f"{unready_count} require urgent attention",
         },
         {
             "conclusion": "remediation_progress",
             "source": "recommendations",
             "count": resolved_recs,
             "detail": f"{resolved_recs}/{total_recs} actions resolved ({closure_rate:.1%}); "
-                      f"{overdue} overdue",
+            f"{overdue} overdue",
         },
     ]
 

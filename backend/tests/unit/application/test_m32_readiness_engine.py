@@ -2,13 +2,11 @@
 
 from __future__ import annotations
 
-import pytest
-
 from application.disclosure.readiness_engine import (
-    determine_readiness,
-    REVIEW_COVERAGE_THRESHOLD,
     APPROVAL_COVERAGE_THRESHOLD,
     PUBLISH_COVERAGE_THRESHOLD,
+    REVIEW_COVERAGE_THRESHOLD,
+    determine_readiness,
 )
 
 

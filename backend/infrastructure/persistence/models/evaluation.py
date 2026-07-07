@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, Index, Integer, JSON, String, Text
+from sqlalchemy import JSON, Boolean, DateTime, Float, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -41,9 +41,7 @@ class EvaluationRunModel(BaseModel):
     platform_health_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
 
     raw_metrics: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
-    computed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    computed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class BenchmarkResultModel(BaseModel):

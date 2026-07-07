@@ -5,8 +5,9 @@ Revises: 083
 Create Date: 2026-07-04
 """
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "084"
 down_revision = "083"
@@ -16,8 +17,13 @@ depends_on = None
 
 def upgrade() -> None:
     op.add_column("external_risk_signals", sa.Column("esg_category", sa.String(20), nullable=True))
-    op.add_column("external_risk_signals", sa.Column("protected_right", sa.String(60), nullable=True))
-    op.add_column("external_risk_signals", sa.Column("frequency", sa.Integer(), nullable=False, server_default="0"))
+    op.add_column(
+        "external_risk_signals", sa.Column("protected_right", sa.String(60), nullable=True)
+    )
+    op.add_column(
+        "external_risk_signals",
+        sa.Column("frequency", sa.Integer(), nullable=False, server_default="0"),
+    )
 
 
 def downgrade() -> None:

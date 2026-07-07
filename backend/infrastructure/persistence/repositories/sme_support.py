@@ -1,13 +1,14 @@
 """Repositories — SME Support Tracker (CSDDD Art. 10 Abs. 2 lit. b)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from domain.enums import SMEClassification, SupportMeasureStatus, SupportProgramStatus, SupportType
+from domain.enums import SMEClassification, SupportMeasureStatus, SupportProgramStatus
 from domain.sme_support import SMEProfile, SupportMeasure, SupportProgram
 from infrastructure.persistence.models.sme_support import (
     SMEProfileModel,
@@ -17,7 +18,7 @@ from infrastructure.persistence.models.sme_support import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _classify(employees: int | None, revenue: float | None) -> str:
@@ -34,6 +35,7 @@ def _classify(employees: int | None, revenue: float | None) -> str:
 
 
 # ── Converters ────────────────────────────────────────────────────────────────
+
 
 def _profile_to_domain(m: SMEProfileModel) -> SMEProfile:
     return SMEProfile(
@@ -91,6 +93,7 @@ def _measure_to_domain(m: SupportMeasureModel) -> SupportMeasure:
 
 # ── SMEProfile Repository ─────────────────────────────────────────────────────
 
+
 class SQLSMEProfileRepository:
     def __init__(self, session: Session) -> None:
         self._s = session
@@ -147,7 +150,9 @@ class SQLSMEProfileRepository:
         self._s.flush()
         return _profile_to_domain(m)
 
-    def confirm(self, organization_id: str, supplier_id: str, confirmed_by: str) -> SMEProfile | None:
+    def confirm(
+        self, organization_id: str, supplier_id: str, confirmed_by: str
+    ) -> SMEProfile | None:
         """HUMAN ANALYST/ADMIN ONLY — AI agents MUST NOT call this method."""
         p = self.get_by_supplier(organization_id, supplier_id)
         if not p:
@@ -175,6 +180,7 @@ class SQLSMEProfileRepository:
 
 
 # ── SupportProgram Repository ─────────────────────────────────────────────────
+
 
 class SQLSupportProgramRepository:
     def __init__(self, session: Session) -> None:
@@ -282,12 +288,11 @@ class SQLSupportProgramRepository:
     def annual_report(self, organization_id: str, year: int) -> dict:
         """Aggregate support data for CSDDD annual report (Art. 16)."""
         all_programs = self.list_org(organization_id)
-        year_programs = [
-            p for p in all_programs
-            if p.start_date and p.start_date.year == year
-        ]
+        year_programs = [p for p in all_programs if p.start_date and p.start_date.year == year]
         total_invested = sum(p.spent_budget_eur for p in year_programs)
-        completed = sum(1 for p in year_programs if p.status == SupportProgramStatus.COMPLETED.value)
+        completed = sum(
+            1 for p in year_programs if p.status == SupportProgramStatus.COMPLETED.value
+        )
         return {
             "year": year,
             "programs_total": len(year_programs),
@@ -298,6 +303,7 @@ class SQLSupportProgramRepository:
 
 
 # ── SupportMeasure Repository ─────────────────────────────────────────────────
+
 
 class SQLSupportMeasureRepository:
     def __init__(self, session: Session) -> None:
@@ -310,7 +316,9 @@ class SQLSupportMeasureRepository:
                 SupportMeasureModel.program_id == program_id,
                 SupportMeasureModel.organization_id == organization_id,
             )
-            .order_by(SupportMeasureModel.due_date.asc().nulls_last(), SupportMeasureModel.created_at)
+            .order_by(
+                SupportMeasureModel.due_date.asc().nulls_last(), SupportMeasureModel.created_at
+            )
         )
         return [_measure_to_domain(m) for m in self._s.execute(stmt).scalars().all()]
 

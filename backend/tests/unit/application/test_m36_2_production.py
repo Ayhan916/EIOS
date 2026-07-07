@@ -15,13 +15,13 @@ Covers:
 from __future__ import annotations
 
 import inspect
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ── Shared helpers ─────────────────────────────────────────────────────────────
+
 
 def _make_session(scalar_one_or_none=None, scalars_all=None):
     session = AsyncMock()
@@ -34,8 +34,15 @@ def _make_session(scalar_one_or_none=None, scalars_all=None):
     return session
 
 
-def _make_run(run_id="run-1", agent_id="agent-1", org_id="org-1", status="RUNNING",
-              started_at=None, completed_at=None, execution_time_ms=None):
+def _make_run(
+    run_id="run-1",
+    agent_id="agent-1",
+    org_id="org-1",
+    status="RUNNING",
+    started_at=None,
+    completed_at=None,
+    execution_time_ms=None,
+):
     r = MagicMock()
     r.id = run_id
     r.agent_id = agent_id
@@ -47,8 +54,16 @@ def _make_run(run_id="run-1", agent_id="agent-1", org_id="org-1", status="RUNNIN
     return r
 
 
-def _make_agent(agent_id="agent-1", agent_type="RISK_MONITOR", run_count=10, success_count=8,
-                failure_count=2, status="ACTIVE", enabled=True, run_interval_hours=24):
+def _make_agent(
+    agent_id="agent-1",
+    agent_type="RISK_MONITOR",
+    run_count=10,
+    success_count=8,
+    failure_count=2,
+    status="ACTIVE",
+    enabled=True,
+    run_interval_hours=24,
+):
     a = MagicMock()
     a.id = agent_id
     a.agent_type = agent_type
@@ -64,13 +79,15 @@ def _make_agent(agent_id="agent-1", agent_type="RISK_MONITOR", run_count=10, suc
 
 # ── 1. Retention Service ───────────────────────────────────────────────────────
 
+
 class TestRetentionPolicy:
     def test_retention_constants_defined(self):
         from application.agent_monitoring.retention_service import (
-            _RETENTION_AGENT_RUNS_DAYS,
             _RETENTION_AGENT_ALERTS_DAYS,
             _RETENTION_AGENT_FINDINGS_DAYS,
+            _RETENTION_AGENT_RUNS_DAYS,
         )
+
         assert _RETENTION_AGENT_RUNS_DAYS == 365
         assert _RETENTION_AGENT_ALERTS_DAYS == 365
         assert _RETENTION_AGENT_FINDINGS_DAYS == 730
@@ -139,18 +156,22 @@ class TestRetentionPolicy:
 
 # ── 2. Distributed Scheduler Lock ─────────────────────────────────────────────
 
+
 class TestSchedulerLock:
     def test_lock_key_constant_exists(self):
         from application.agent_monitoring.scheduler import _SCHEDULER_LOCK_KEY
+
         assert isinstance(_SCHEDULER_LOCK_KEY, int)
         assert _SCHEDULER_LOCK_KEY > 0
 
     def test_try_acquire_lock_function_exists(self):
         from application.agent_monitoring import scheduler
+
         assert hasattr(scheduler, "_try_acquire_scheduler_lock_and_run")
 
     def test_advisory_lock_in_source(self):
         from application.agent_monitoring import scheduler
+
         src = inspect.getsource(scheduler._try_acquire_scheduler_lock_and_run)
         assert "pg_try_advisory_lock" in src
         assert "pg_advisory_unlock" in src
@@ -170,13 +191,16 @@ class TestSchedulerLock:
 
         mock_factory = MagicMock(return_value=mock_session)
 
-        with patch(
-            "infrastructure.persistence.database.AsyncSessionFactory",
-            mock_factory,
-        ), patch(
-            "application.agent_monitoring.scheduler._run_due_agents",
-            new=AsyncMock(),
-        ) as mock_run:
+        with (
+            patch(
+                "infrastructure.persistence.database.AsyncSessionFactory",
+                mock_factory,
+            ),
+            patch(
+                "application.agent_monitoring.scheduler._run_due_agents",
+                new=AsyncMock(),
+            ) as mock_run,
+        ):
             result = await scheduler._try_acquire_scheduler_lock_and_run()
 
         assert result is False
@@ -211,13 +235,16 @@ class TestSchedulerLock:
 
         mock_factory = MagicMock(return_value=mock_session)
 
-        with patch(
-            "infrastructure.persistence.database.AsyncSessionFactory",
-            mock_factory,
-        ), patch(
-            "application.agent_monitoring.scheduler._run_due_agents",
-            new=AsyncMock(),
-        ) as mock_run:
+        with (
+            patch(
+                "infrastructure.persistence.database.AsyncSessionFactory",
+                mock_factory,
+            ),
+            patch(
+                "application.agent_monitoring.scheduler._run_due_agents",
+                new=AsyncMock(),
+            ) as mock_run,
+        ):
             result = await scheduler._try_acquire_scheduler_lock_and_run()
 
         assert result is True
@@ -234,14 +261,18 @@ class TestSchedulerLock:
 
 # ── 3. Finding Deduplication ───────────────────────────────────────────────────
 
+
 class TestFindingDeduplication:
     def test_find_open_duplicate_function_exists(self):
         from application.agent_monitoring import finding_service
+
         assert hasattr(finding_service, "find_open_duplicate")
 
     def test_skip_if_open_parameter_in_create_finding(self):
-        from application.agent_monitoring import finding_service
         import inspect as _inspect
+
+        from application.agent_monitoring import finding_service
+
         sig = _inspect.signature(finding_service.create_finding)
         assert "skip_if_open" in sig.parameters
 
@@ -282,7 +313,7 @@ class TestFindingDeduplication:
 
         session = _make_session(scalar_one_or_none=None)
 
-        result = await create_finding(
+        await create_finding(
             organization_id="org-1",
             agent_id="agent-1",
             category="risk_score",
@@ -318,15 +349,19 @@ class TestFindingDeduplication:
 
 # ── 4. Alert Deduplication ─────────────────────────────────────────────────────
 
+
 class TestAlertDeduplication:
     def test_find_open_alert_duplicate_exists(self):
         from application.agent_monitoring import alert_service
+
         assert hasattr(alert_service, "_find_open_alert_duplicate")
 
     def test_skip_if_open_default_true(self):
         """create_alert must default skip_if_open=True."""
         import inspect as _inspect
+
         from application.agent_monitoring.alert_service import create_alert
+
         sig = _inspect.signature(create_alert)
         assert sig.parameters["skip_if_open"].default is True
 
@@ -362,7 +397,7 @@ class TestAlertDeduplication:
 
         session = _make_session(scalar_one_or_none=None)
 
-        alert = await create_alert(
+        await create_alert(
             organization_id="org-1",
             agent_id="agent-1",
             severity="HIGH",
@@ -378,6 +413,7 @@ class TestAlertDeduplication:
 
 
 # ── 5. Explainability Snapshot ─────────────────────────────────────────────────
+
 
 class TestExplainabilitySnapshot:
     @pytest.mark.asyncio
@@ -403,7 +439,8 @@ class TestExplainabilitySnapshot:
         )
 
         finding_calls = [
-            c.args[0] for c in session.add.call_args_list
+            c.args[0]
+            for c in session.add.call_args_list
             if isinstance(c.args[0], AgentFindingModel)
         ]
         assert len(finding_calls) == 1
@@ -439,7 +476,8 @@ class TestExplainabilitySnapshot:
         )
 
         finding_calls = [
-            c.args[0] for c in session.add.call_args_list
+            c.args[0]
+            for c in session.add.call_args_list
             if isinstance(c.args[0], AgentFindingModel)
         ]
         sdata = finding_calls[0].source_data_json
@@ -450,9 +488,10 @@ class TestExplainabilitySnapshot:
 
 # ── 6. Agent Health Dashboard ──────────────────────────────────────────────────
 
+
 class TestAgentHealthDashboard:
     def test_per_agent_health_in_schema(self):
-        from interfaces.api.schemas.agent_monitoring import AgentDashboard, AgentHealthInfo
+        from interfaces.api.schemas.agent_monitoring import AgentDashboard
 
         fields = AgentDashboard.model_fields
         assert "per_agent_health" in fields
@@ -462,14 +501,22 @@ class TestAgentHealthDashboard:
 
         fields = set(AgentHealthInfo.model_fields.keys())
         required = {
-            "agent_id", "agent_type", "name", "status", "enabled",
-            "last_successful_run", "consecutive_failures",
-            "avg_runtime_ms", "success_rate", "backlog_count",
+            "agent_id",
+            "agent_type",
+            "name",
+            "status",
+            "enabled",
+            "last_successful_run",
+            "consecutive_failures",
+            "avg_runtime_ms",
+            "success_rate",
+            "backlog_count",
         }
         assert required.issubset(fields)
 
     def test_get_agent_health_list_exists(self):
         from application.agent_monitoring import agent_service
+
         assert hasattr(agent_service, "get_agent_health_list")
 
     @pytest.mark.asyncio
@@ -519,9 +566,11 @@ class TestAgentHealthDashboard:
 
 # ── 7. Metrics Counters ────────────────────────────────────────────────────────
 
+
 class TestAgentMetrics:
     def test_agent_counters_singleton_exists(self):
         from application.agent_monitoring.metrics import agent_counters
+
         assert agent_counters is not None
 
     def test_prometheus_output_contains_agent_metrics(self):
@@ -607,40 +656,46 @@ class TestAgentMetrics:
 
 # ── 8. Auditability — Run Lifecycle ───────────────────────────────────────────
 
+
 class TestAuditabilityRunLifecycle:
     def test_run_started_audit_in_source(self):
         from application.agent_monitoring import agent_service
+
         src = inspect.getsource(agent_service.record_run_start)
         assert "agent.run.started" in src
         assert "_log_audit_event" in src
 
     def test_run_completed_audit_in_source(self):
         from application.agent_monitoring import agent_service
+
         src = inspect.getsource(agent_service.record_run_completed)
         assert "agent.run.completed" in src
         assert "_log_audit_event" in src
 
     def test_run_failed_audit_in_source(self):
         from application.agent_monitoring import agent_service
+
         src = inspect.getsource(agent_service.record_run_failed)
         assert "agent.run.failed" in src
         assert "_log_audit_event" in src
 
     def test_finding_created_audit_in_source(self):
         from application.agent_monitoring import finding_service
+
         src = inspect.getsource(finding_service.create_finding)
         assert "agent.finding.created" in src
 
     def test_alert_escalated_audit_in_source(self):
         from application.agent_monitoring import alert_service
+
         src = inspect.getsource(alert_service.create_alert)
         assert "agent.alert.escalated" in src
 
     def test_all_six_governance_events_covered(self):
         """Verify all 6 required governance action strings are present."""
-        import application.agent_monitoring.finding_service as fs
-        import application.agent_monitoring.alert_service as als
         import application.agent_monitoring.agent_service as ags
+        import application.agent_monitoring.alert_service as als
+        import application.agent_monitoring.finding_service as fs
 
         fs_src = inspect.getsource(fs)
         als_src = inspect.getsource(als)
@@ -664,7 +719,6 @@ class TestAuditabilityRunLifecycle:
     @pytest.mark.asyncio
     async def test_record_run_completed_writes_audit_event(self):
         """record_run_completed must write AuditEventModel."""
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.agent_service import record_run_completed
 
         run = _make_run(status="RUNNING", execution_time_ms=None)
@@ -695,7 +749,6 @@ class TestAuditabilityRunLifecycle:
 
     @pytest.mark.asyncio
     async def test_record_run_failed_writes_audit_event(self):
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.agent_service import record_run_failed
 
         run = _make_run(status="RUNNING")
@@ -731,8 +784,8 @@ class TestAuditabilityRunLifecycle:
     @pytest.mark.asyncio
     async def test_record_run_start_writes_audit_event(self):
         """record_run_start must write agent.run.started to AuditEventModel."""
-        from infrastructure.persistence.models.audit_event import AuditEventModel
         from application.agent_monitoring.agent_service import record_run_start
+        from infrastructure.persistence.models.audit_event import AuditEventModel
 
         session = AsyncMock()
         session.add = MagicMock()
@@ -744,8 +797,7 @@ class TestAuditabilityRunLifecycle:
         assert "AuditEventModel" in added_types
 
         audit_calls = [
-            c.args[0] for c in session.add.call_args_list
-            if isinstance(c.args[0], AuditEventModel)
+            c.args[0] for c in session.add.call_args_list if isinstance(c.args[0], AuditEventModel)
         ]
         assert len(audit_calls) == 1
         assert audit_calls[0].action == "agent.run.started"

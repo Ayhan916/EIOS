@@ -34,6 +34,7 @@ async def _log_activity(
     metadata: dict | None = None,
 ) -> None:
     import json
+
     from infrastructure.persistence.models.supplier_portal import SupplierActivityEventModel
 
     now = datetime.now(UTC)
@@ -96,8 +97,9 @@ async def list_evidence_requests(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.supplier_portal import EvidenceRequestModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import EvidenceRequestModel
 
     stmt = select(EvidenceRequestModel).where(
         EvidenceRequestModel.supplier_id == supplier_id,
@@ -114,8 +116,9 @@ async def get_evidence_request(
     organization_id: str,
     session=None,
 ) -> object | None:
-    from infrastructure.persistence.models.supplier_portal import EvidenceRequestModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import EvidenceRequestModel
 
     stmt = select(EvidenceRequestModel).where(
         EvidenceRequestModel.id == request_id,
@@ -130,8 +133,9 @@ async def get_supplier_evidence_request(
     session=None,
 ) -> object | None:
     """Load an evidence request scoped to the calling supplier."""
-    from infrastructure.persistence.models.supplier_portal import EvidenceRequestModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import EvidenceRequestModel
 
     stmt = select(EvidenceRequestModel).where(
         EvidenceRequestModel.id == request_id,
@@ -148,8 +152,9 @@ async def create_submission(
     session=None,
 ) -> object:
     """F8: return existing draft if one exists; reject if already submitted/reviewed."""
-    from infrastructure.persistence.models.supplier_portal import EvidenceSubmissionModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier_portal import EvidenceSubmissionModel
 
     existing_stmt = select(EvidenceSubmissionModel).where(
         EvidenceSubmissionModel.evidence_request_id == evidence_request_id,
@@ -188,11 +193,12 @@ async def attach_file_to_submission(
     content_type: str,
     session=None,
 ) -> object:
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.supplier_portal import (
         EvidenceSubmissionFileModel,
         EvidenceSubmissionModel,
     )
-    from sqlalchemy import select
 
     # Verify submission belongs to this supplier
     stmt = select(EvidenceSubmissionModel).where(
@@ -229,11 +235,12 @@ async def submit_evidence(
     session=None,
 ) -> object:
     """Transition a draft submission to 'submitted'. F5: logs activity event."""
-    from infrastructure.persistence.models.supplier_portal import (
-        EvidenceSubmissionModel,
-        EvidenceRequestModel,
-    )
     from sqlalchemy import select, update
+
+    from infrastructure.persistence.models.supplier_portal import (
+        EvidenceRequestModel,
+        EvidenceSubmissionModel,
+    )
 
     stmt = select(EvidenceSubmissionModel).where(
         EvidenceSubmissionModel.id == submission_id,
@@ -283,11 +290,12 @@ async def review_submission(
     session=None,
 ) -> object:
     """Internal reviewer accepts, rejects, or requests revision on a submission."""
-    from infrastructure.persistence.models.supplier_portal import (
-        EvidenceSubmissionModel,
-        EvidenceRequestModel,
-    )
     from sqlalchemy import select, update
+
+    from infrastructure.persistence.models.supplier_portal import (
+        EvidenceRequestModel,
+        EvidenceSubmissionModel,
+    )
 
     _VALID = {"accepted", "rejected", "revision_requested"}
     if new_status not in _VALID:

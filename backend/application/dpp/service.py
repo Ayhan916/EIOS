@@ -20,11 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from domain.dpp import DPPFormat, DPPStatus
 from infrastructure.kafka.producer import KafkaEventProducer
 from infrastructure.persistence.models.dpp import DigitalProductPassportModel
-from infrastructure.persistence.models.product import ProductBOMItemModel
 from infrastructure.persistence.models.material import (
     MaterialComplianceFlagModel,
     MaterialSustainabilityMetricModel,
 )
+from infrastructure.persistence.models.product import ProductBOMItemModel
 
 logger = structlog.get_logger(__name__)
 
@@ -135,9 +135,7 @@ class DPPService:
         if dpp_status is not None:
             stmt = stmt.where(DigitalProductPassportModel.dpp_status == dpp_status.value)
         else:
-            stmt = stmt.where(
-                DigitalProductPassportModel.dpp_status != DPPStatus.WITHDRAWN.value
-            )
+            stmt = stmt.where(DigitalProductPassportModel.dpp_status != DPPStatus.WITHDRAWN.value)
         if format is not None:
             stmt = stmt.where(DigitalProductPassportModel.format == format.value)
         if product_id is not None:
@@ -148,7 +146,9 @@ class DPPService:
         )
         total = count_result.scalar_one()
 
-        stmt = stmt.order_by(DigitalProductPassportModel.created_at.desc()).offset(offset).limit(limit)
+        stmt = (
+            stmt.order_by(DigitalProductPassportModel.created_at.desc()).offset(offset).limit(limit)
+        )
         result = await self._session.execute(stmt)
         return list(result.scalars().all()), total
 
@@ -232,7 +232,9 @@ class DPPService:
         await self._session.flush()
         return model
 
-    async def withdraw(self, organization_id: str, dpp_id: str, actor_id: str | None = None) -> bool:
+    async def withdraw(
+        self, organization_id: str, dpp_id: str, actor_id: str | None = None
+    ) -> bool:
         model = await self.get(organization_id, dpp_id)
         if model is None:
             return False
@@ -274,13 +276,10 @@ class DPPService:
 
         non_compliant_count = 0
         if material_ids:
-            nc_stmt = (
-                select(func.count(MaterialComplianceFlagModel.regulation.distinct()))
-                .where(
-                    MaterialComplianceFlagModel.organization_id == organization_id,
-                    MaterialComplianceFlagModel.material_id.in_(material_ids),
-                    MaterialComplianceFlagModel.compliance_status == "NON_COMPLIANT",
-                )
+            nc_stmt = select(func.count(MaterialComplianceFlagModel.regulation.distinct())).where(
+                MaterialComplianceFlagModel.organization_id == organization_id,
+                MaterialComplianceFlagModel.material_id.in_(material_ids),
+                MaterialComplianceFlagModel.compliance_status == "NON_COMPLIANT",
             )
             nc_result = await self._session.execute(nc_stmt)
             non_compliant_count = nc_result.scalar_one()
@@ -304,9 +303,7 @@ class DPPService:
         material_ids: list[str],
     ) -> None:
         """Compute weighted PCF from BOM × material LCA. Updates model in place."""
-        bom_stmt = select(
-            ProductBOMItemModel.material_id, ProductBOMItemModel.weight_pct
-        ).where(
+        bom_stmt = select(ProductBOMItemModel.material_id, ProductBOMItemModel.weight_pct).where(
             ProductBOMItemModel.organization_id == organization_id,
             ProductBOMItemModel.product_id == product_id,
             ProductBOMItemModel.weight_pct.isnot(None),
@@ -330,23 +327,23 @@ class DPPService:
             .group_by(MaterialSustainabilityMetricModel.material_id)
             .subquery()
         )
-        lca_stmt = select(
-            MaterialSustainabilityMetricModel.material_id,
-            MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg,
-        ).join(
-            subq,
-            (MaterialSustainabilityMetricModel.material_id == subq.c.material_id)
-            & (MaterialSustainabilityMetricModel.reporting_year == subq.c.max_year),
-        ).where(
-            MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg.isnot(None)
+        lca_stmt = (
+            select(
+                MaterialSustainabilityMetricModel.material_id,
+                MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg,
+            )
+            .join(
+                subq,
+                (MaterialSustainabilityMetricModel.material_id == subq.c.material_id)
+                & (MaterialSustainabilityMetricModel.reporting_year == subq.c.max_year),
+            )
+            .where(MaterialSustainabilityMetricModel.carbon_footprint_kg_co2e_per_kg.isnot(None))
         )
         lca_result = await self._session.execute(lca_stmt)
         lca_rows = {row[0]: row[1] for row in lca_result.all()}
 
         contributions = [
-            (bom_rows[mid] / 100.0) * co2e
-            for mid, co2e in lca_rows.items()
-            if mid in bom_rows
+            (bom_rows[mid] / 100.0) * co2e for mid, co2e in lca_rows.items() if mid in bom_rows
         ]
         if contributions:
             model.carbon_footprint_kg_co2e = round(sum(contributions), 4)

@@ -1,11 +1,11 @@
 """Repositories — Contractual Assurance (CSDDD Art. 10)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 from uuid import uuid4
 
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from domain.contractual_assurance import ClauseAuditLog, ContractAssurance, ContractClause
@@ -125,8 +125,9 @@ SEED_CLAUSES: list[dict] = [
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _clause_to_domain(m: ContractClauseModel) -> ContractClause:
@@ -179,6 +180,7 @@ def _log_to_domain(m: ClauseAuditLogModel) -> ClauseAuditLog:
 
 
 # ── Clause Repository ─────────────────────────────────────────────────────────
+
 
 class SQLContractClauseRepository:
     def __init__(self, session: Session) -> None:
@@ -252,20 +254,22 @@ class SQLContractClauseRepository:
         count = 0
         for c in SEED_CLAUSES:
             if c["title"] not in existing_titles:
-                self._s.add(ContractClauseModel(
-                    id=str(uuid4()),
-                    organization_id=organization_id,
-                    title=c["title"],
-                    clause_text=c["clause_text"],
-                    category=c["category"],
-                    cascade_required=c["cascade_required"],
-                    is_mandatory=c["is_mandatory"],
-                    version="1.0",
-                    is_active=True,
-                    created_by=created_by,
-                    created_at=_now(),
-                    updated_at=_now(),
-                ))
+                self._s.add(
+                    ContractClauseModel(
+                        id=str(uuid4()),
+                        organization_id=organization_id,
+                        title=c["title"],
+                        clause_text=c["clause_text"],
+                        category=c["category"],
+                        cascade_required=c["cascade_required"],
+                        is_mandatory=c["is_mandatory"],
+                        version="1.0",
+                        is_active=True,
+                        created_by=created_by,
+                        created_at=_now(),
+                        updated_at=_now(),
+                    )
+                )
                 count += 1
         self._s.flush()
         return count
@@ -285,6 +289,7 @@ class SQLContractClauseRepository:
 
 
 # ── Assurance Repository ──────────────────────────────────────────────────────
+
 
 class SQLContractAssuranceRepository:
     def __init__(self, session: Session) -> None:
@@ -358,21 +363,28 @@ class SQLContractAssuranceRepository:
         if document_ref:
             m.document_ref = document_ref
         m.updated_at = _now()
-        self._s.add(ClauseAuditLogModel(
-            id=str(uuid4()),
-            organization_id=organization_id,
-            assurance_id=assurance_id,
-            changed_by=accepted_by,
-            from_status=old_status,
-            to_status=AssuranceStatus.ACCEPTED.value,
-            note="Accepted by analyst",
-            created_at=_now(),
-        ))
+        self._s.add(
+            ClauseAuditLogModel(
+                id=str(uuid4()),
+                organization_id=organization_id,
+                assurance_id=assurance_id,
+                changed_by=accepted_by,
+                from_status=old_status,
+                to_status=AssuranceStatus.ACCEPTED.value,
+                note="Accepted by analyst",
+                created_at=_now(),
+            )
+        )
         self._s.flush()
         return _assurance_to_domain(m)
 
     def update_status(
-        self, assurance_id: str, organization_id: str, new_status: str, changed_by: str, note: str | None
+        self,
+        assurance_id: str,
+        organization_id: str,
+        new_status: str,
+        changed_by: str,
+        note: str | None,
     ) -> ContractAssurance | None:
         """HUMAN ANALYST/ADMIN ONLY — AI agents MUST NOT call this method."""
         m = self._s.get(ContractAssuranceModel, assurance_id)
@@ -381,16 +393,18 @@ class SQLContractAssuranceRepository:
         old_status = m.status
         m.status = new_status
         m.updated_at = _now()
-        self._s.add(ClauseAuditLogModel(
-            id=str(uuid4()),
-            organization_id=organization_id,
-            assurance_id=assurance_id,
-            changed_by=changed_by,
-            from_status=old_status,
-            to_status=new_status,
-            note=note,
-            created_at=_now(),
-        ))
+        self._s.add(
+            ClauseAuditLogModel(
+                id=str(uuid4()),
+                organization_id=organization_id,
+                assurance_id=assurance_id,
+                changed_by=changed_by,
+                from_status=old_status,
+                to_status=new_status,
+                note=note,
+                created_at=_now(),
+            )
+        )
         self._s.flush()
         return _assurance_to_domain(m)
 
@@ -404,16 +418,18 @@ class SQLContractAssuranceRepository:
         m.cascade_confirmed = True
         m.cascade_confirmed_at = _now()
         m.updated_at = _now()
-        self._s.add(ClauseAuditLogModel(
-            id=str(uuid4()),
-            organization_id=organization_id,
-            assurance_id=assurance_id,
-            changed_by=confirmed_by,
-            from_status=m.status,
-            to_status=m.status,
-            note="Cascade obligation confirmed",
-            created_at=_now(),
-        ))
+        self._s.add(
+            ClauseAuditLogModel(
+                id=str(uuid4()),
+                organization_id=organization_id,
+                assurance_id=assurance_id,
+                changed_by=confirmed_by,
+                from_status=m.status,
+                to_status=m.status,
+                note="Cascade obligation confirmed",
+                created_at=_now(),
+            )
+        )
         self._s.flush()
         return _assurance_to_domain(m)
 

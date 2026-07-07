@@ -17,12 +17,12 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.external_intelligence.freshness_service import get_freshness_dashboard
 from application.external_intelligence.health_service import (
     classify_overall_health,
     get_all_connector_health,
     get_connector_health,
 )
-from application.external_intelligence.freshness_service import get_freshness_dashboard
 from application.external_intelligence.metrics import ext_counters
 from application.external_intelligence.scheduler import trigger_connector_refresh
 from application.external_intelligence.scheduler_health import get_scheduler_health_report
@@ -170,9 +170,15 @@ async def list_dataset_freshness(
     ]
     return DatasetFreshnessListResponse(
         items=items,
-        stale_count=sum(1 for f in freshness_list if f.freshness_status == FreshnessStatus.STALE.value),
-        expired_count=sum(1 for f in freshness_list if f.freshness_status == FreshnessStatus.EXPIRED.value),
-        fresh_count=sum(1 for f in freshness_list if f.freshness_status == FreshnessStatus.FRESH.value),
+        stale_count=sum(
+            1 for f in freshness_list if f.freshness_status == FreshnessStatus.STALE.value
+        ),
+        expired_count=sum(
+            1 for f in freshness_list if f.freshness_status == FreshnessStatus.EXPIRED.value
+        ),
+        fresh_count=sum(
+            1 for f in freshness_list if f.freshness_status == FreshnessStatus.FRESH.value
+        ),
     )
 
 
@@ -215,6 +221,7 @@ async def trigger_refresh(
             from application.external_intelligence.benchmark_refresh_service import (
                 refresh_for_dataset,
             )
+
             await refresh_for_dataset(result.dataset_id, body.connector_name, db)
         except Exception:
             pass  # benchmark refresh failure does not fail the trigger response

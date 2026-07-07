@@ -10,9 +10,7 @@ import re
 from domain.enums import CitationType
 
 _CITATION_PATTERN = re.compile(
-    r"\[("
-    + "|".join(re.escape(t.value) for t in CitationType)
-    + r"):([a-zA-Z0-9_-]+)\]"
+    r"\[(" + "|".join(re.escape(t.value) for t in CitationType) + r"):([a-zA-Z0-9_-]+)\]"
 )
 
 _VALID_TYPES = frozenset(t.value for t in CitationType)

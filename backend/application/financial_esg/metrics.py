@@ -68,21 +68,81 @@ class _FinancialESGCounters:
 
     def to_prometheus_lines(self, env: str) -> list[str]:
         metrics = [
-            ("eios_financial_esg_kpis_total", "Total Financial ESG KPIs created", self.financial_esg_kpis_total),
-            ("eios_financial_kpi_measurements_total", "Total KPI measurements recorded", self.financial_kpi_measurements_total),
-            ("eios_taxonomy_assessments_total", "Total taxonomy alignment assessments", self.taxonomy_assessments_total),
-            ("eios_green_revenue_records_total", "Total green revenue records", self.green_revenue_records_total),
-            ("eios_green_capex_records_total", "Total green capex records", self.green_capex_records_total),
-            ("eios_green_opex_records_total", "Total green opex records", self.green_opex_records_total),
-            ("eios_finance_instruments_total", "Total sustainable finance instruments", self.finance_instruments_total),
-            ("eios_value_creation_initiatives_total", "Total value creation initiatives", self.value_creation_initiatives_total),
-            ("eios_carbon_cost_models_total", "Total carbon cost models", self.carbon_cost_models_total),
-            ("eios_cost_of_risk_assessments_total", "Total cost of risk assessments", self.cost_of_risk_assessments_total),
-            ("eios_financial_reports_total", "Total financial ESG reports generated", self.financial_reports_total),
-            ("eios_financial_reports_finalized_total", "Total financial ESG reports finalized", self.financial_reports_finalized_total),
-            ("eios_disclosure_packages_total", "Total investor disclosure packages", self.disclosure_packages_total),
-            ("eios_capital_markets_assessments_total", "Total capital markets assessments", self.capital_markets_assessments_total),
-            ("eios_climate_finance_analyses_total", "Total climate finance analyses", self.climate_finance_analyses_total),
+            (
+                "eios_financial_esg_kpis_total",
+                "Total Financial ESG KPIs created",
+                self.financial_esg_kpis_total,
+            ),
+            (
+                "eios_financial_kpi_measurements_total",
+                "Total KPI measurements recorded",
+                self.financial_kpi_measurements_total,
+            ),
+            (
+                "eios_taxonomy_assessments_total",
+                "Total taxonomy alignment assessments",
+                self.taxonomy_assessments_total,
+            ),
+            (
+                "eios_green_revenue_records_total",
+                "Total green revenue records",
+                self.green_revenue_records_total,
+            ),
+            (
+                "eios_green_capex_records_total",
+                "Total green capex records",
+                self.green_capex_records_total,
+            ),
+            (
+                "eios_green_opex_records_total",
+                "Total green opex records",
+                self.green_opex_records_total,
+            ),
+            (
+                "eios_finance_instruments_total",
+                "Total sustainable finance instruments",
+                self.finance_instruments_total,
+            ),
+            (
+                "eios_value_creation_initiatives_total",
+                "Total value creation initiatives",
+                self.value_creation_initiatives_total,
+            ),
+            (
+                "eios_carbon_cost_models_total",
+                "Total carbon cost models",
+                self.carbon_cost_models_total,
+            ),
+            (
+                "eios_cost_of_risk_assessments_total",
+                "Total cost of risk assessments",
+                self.cost_of_risk_assessments_total,
+            ),
+            (
+                "eios_financial_reports_total",
+                "Total financial ESG reports generated",
+                self.financial_reports_total,
+            ),
+            (
+                "eios_financial_reports_finalized_total",
+                "Total financial ESG reports finalized",
+                self.financial_reports_finalized_total,
+            ),
+            (
+                "eios_disclosure_packages_total",
+                "Total investor disclosure packages",
+                self.disclosure_packages_total,
+            ),
+            (
+                "eios_capital_markets_assessments_total",
+                "Total capital markets assessments",
+                self.capital_markets_assessments_total,
+            ),
+            (
+                "eios_climate_finance_analyses_total",
+                "Total climate finance analyses",
+                self.climate_finance_analyses_total,
+            ),
         ]
         lines: list[str] = []
         for name, help_text, value in metrics:

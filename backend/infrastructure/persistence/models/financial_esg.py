@@ -17,7 +17,16 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import BaseModel
@@ -25,14 +34,22 @@ from .base import BaseModel
 # ── Enum constants ─────────────────────────────────────────────────────────────
 
 FINANCIAL_KPI_CATEGORIES = (
-    "VALUE_CREATION", "COST_REDUCTION", "CARBON_ECONOMICS",
-    "RISK_REDUCTION", "INVESTMENT", "TAXONOMY", "DISCLOSURE",
+    "VALUE_CREATION",
+    "COST_REDUCTION",
+    "CARBON_ECONOMICS",
+    "RISK_REDUCTION",
+    "INVESTMENT",
+    "TAXONOMY",
+    "DISCLOSURE",
 )
 FINANCIAL_KPI_FREQUENCIES = ("MONTHLY", "QUARTERLY", "ANNUAL")
 
 INSTRUMENT_TYPES = (
-    "GREEN_BOND", "SUSTAINABILITY_LINKED_LOAN", "SUSTAINABILITY_LINKED_BOND",
-    "TRANSITION_FINANCE", "ESG_FUND",
+    "GREEN_BOND",
+    "SUSTAINABILITY_LINKED_LOAN",
+    "SUSTAINABILITY_LINKED_BOND",
+    "TRANSITION_FINANCE",
+    "ESG_FUND",
 )
 COVENANT_STATUSES = ("COMPLIANT", "AT_RISK", "BREACHED", "MONITORING")
 
@@ -46,8 +63,10 @@ INITIATIVE_STATUSES_FIN = ("PLANNED", "ACTIVE", "COMPLETED", "CANCELLED")
 PLAN_STATUSES = ("DRAFT", "ACTIVE", "COMPLETED")
 
 SCENARIO_TYPES_FIN = (
-    "CARBON_PRICE_INCREASE", "SUPPLIER_DISRUPTION",
-    "CLIMATE_REGULATION", "ACCELERATED_TRANSITION",
+    "CARBON_PRICE_INCREASE",
+    "SUPPLIER_DISRUPTION",
+    "CLIMATE_REGULATION",
+    "ACCELERATED_TRANSITION",
 )
 REPORT_STATUSES_FIN = ("DRAFT", "FINAL")
 
@@ -55,6 +74,7 @@ THRESHOLD_DIRECTIONS = ("ABOVE", "BELOW")
 
 
 # ── Section 1: Financial ESG KPI Framework ────────────────────────────────────
+
 
 class FinancialESGKPIModel(BaseModel):
     __tablename__ = "financial_esg_kpis"
@@ -71,12 +91,16 @@ class FinancialESGKPIModel(BaseModel):
 
 # ── Section 2: Financial KPI Measurements ─────────────────────────────────────
 
+
 class FinancialKPIMeasurementModel(BaseModel):
     __tablename__ = "financial_kpi_measurements"
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     kpi_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("financial_esg_kpis.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36),
+        ForeignKey("financial_esg_kpis.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     period: Mapped[str] = mapped_column(String(20), nullable=False)  # e.g., "2024-Q1", "2024"
     value: Mapped[float] = mapped_column(Float, nullable=False)
@@ -87,6 +111,7 @@ class FinancialKPIMeasurementModel(BaseModel):
 
 
 # ── Section 3: Cost of Carbon Framework ──────────────────────────────────────
+
 
 class CarbonCostModelRecord(BaseModel):
     __tablename__ = "carbon_cost_models"
@@ -110,6 +135,7 @@ class CarbonCostModelRecord(BaseModel):
 
 
 # ── Section 4: Cost of Risk Engine ───────────────────────────────────────────
+
 
 class CostOfRiskAssessmentModel(BaseModel):
     __tablename__ = "cost_of_risk_assessments"
@@ -135,6 +161,7 @@ class CostOfRiskAssessmentModel(BaseModel):
 
 # ── Section 5: ESG Value Creation Model ──────────────────────────────────────
 
+
 class ValueCreationInitiativeModel(BaseModel):
     __tablename__ = "value_creation_initiatives"
 
@@ -155,6 +182,7 @@ class ValueCreationInitiativeModel(BaseModel):
 
 # ── Section 6: Sustainable Finance Framework ──────────────────────────────────
 
+
 class SustainableFinanceInstrumentModel(BaseModel):
     __tablename__ = "sustainable_finance_instruments"
 
@@ -173,11 +201,14 @@ class SustainableFinanceInstrumentModel(BaseModel):
 
 # ── Section 7: Taxonomy Alignment Engine ──────────────────────────────────────
 
+
 class TaxonomyAlignmentAssessmentModel(BaseModel):
     __tablename__ = "taxonomy_alignment_assessments"
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    taxonomy_framework: Mapped[str] = mapped_column(String(50), nullable=False, default="EU_TAXONOMY")
+    taxonomy_framework: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="EU_TAXONOMY"
+    )
     assessment_year: Mapped[int] = mapped_column(Integer, nullable=False)
     eligible_activities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     aligned_activities: Mapped[dict | None] = mapped_column(JSON, nullable=True)
@@ -191,6 +222,7 @@ class TaxonomyAlignmentAssessmentModel(BaseModel):
 
 
 # ── Section 8: Green Revenue Tracking ────────────────────────────────────────
+
 
 class GreenRevenueRecordModel(BaseModel):
     __tablename__ = "green_revenue_records"
@@ -209,6 +241,7 @@ class GreenRevenueRecordModel(BaseModel):
 
 # ── Section 9: Green CapEx Tracking ──────────────────────────────────────────
 
+
 class GreenCapexRecordModel(BaseModel):
     __tablename__ = "green_capex_records"
 
@@ -224,6 +257,7 @@ class GreenCapexRecordModel(BaseModel):
 
 # ── Section 10: Green OpEx Tracking ──────────────────────────────────────────
 
+
 class GreenOpexRecordModel(BaseModel):
     __tablename__ = "green_opex_records"
 
@@ -238,6 +272,7 @@ class GreenOpexRecordModel(BaseModel):
 
 
 # ── Section 11: Transition Finance Planning ───────────────────────────────────
+
 
 class TransitionPlanModel(BaseModel):
     __tablename__ = "transition_plans"
@@ -260,7 +295,10 @@ class TransitionPlanMilestoneModel(BaseModel):
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     plan_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("transition_plans.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36),
+        ForeignKey("transition_plans.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -270,13 +308,16 @@ class TransitionPlanMilestoneModel(BaseModel):
 
 # ── Section 12: Sustainability Linked KPI Management ─────────────────────────
 
+
 class FinanceLinkedKPIModel(BaseModel):
     __tablename__ = "finance_linked_kpis"
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     instrument_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("sustainable_finance_instruments.id", ondelete="CASCADE"),
-        nullable=False, index=True
+        String(36),
+        ForeignKey("sustainable_finance_instruments.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     esg_target_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     kpi_name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -284,18 +325,25 @@ class FinanceLinkedKPIModel(BaseModel):
     threshold_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     threshold_direction: Mapped[str] = mapped_column(String(10), nullable=False, default="BELOW")
     covenant_status: Mapped[str] = mapped_column(String(20), nullable=False, default="COMPLIANT")
-    last_assessed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_assessed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     current_value: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 # ── Section 13: Capital Markets Readiness ────────────────────────────────────
 
+
 class CapitalMarketsAssessmentModel(BaseModel):
     __tablename__ = "capital_markets_assessments"
 
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    disclosure_readiness: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_READY")
-    assurance_readiness: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_READY")
+    disclosure_readiness: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="NOT_READY"
+    )
+    assurance_readiness: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="NOT_READY"
+    )
     taxonomy_readiness: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_READY")
     kpi_readiness: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_READY")
     overall_readiness: Mapped[str] = mapped_column(String(20), nullable=False, default="NOT_READY")
@@ -304,6 +352,7 @@ class CapitalMarketsAssessmentModel(BaseModel):
 
 
 # ── Section 14: Investor Disclosure Package ───────────────────────────────────
+
 
 class InvestorDisclosurePackageModel(BaseModel):
     __tablename__ = "investor_disclosure_packages"
@@ -325,6 +374,7 @@ class InvestorDisclosurePackageModel(BaseModel):
 
 # ── Section 15: Climate Finance Analytics ────────────────────────────────────
 
+
 class ClimateFinanceAnalysisModel(BaseModel):
     __tablename__ = "climate_finance_analyses"
 
@@ -342,6 +392,7 @@ class ClimateFinanceAnalysisModel(BaseModel):
 
 
 # ── Section 16: Sustainability Valuation Analytics ────────────────────────────
+
 
 class SustainabilityValuationModelRecord(BaseModel):
     __tablename__ = "sustainability_valuation_models"
@@ -361,6 +412,7 @@ class SustainabilityValuationModelRecord(BaseModel):
 
 # ── Section 19: ESG + Financial Correlation Engine ────────────────────────────
 
+
 class ESGFinancialCorrelationModel(BaseModel):
     __tablename__ = "esg_financial_correlations"
 
@@ -378,6 +430,7 @@ class ESGFinancialCorrelationModel(BaseModel):
 
 # ── Section 22: Scenario & Sensitivity Analysis ───────────────────────────────
 
+
 class FinancialScenarioAnalysisModel(BaseModel):
     __tablename__ = "financial_scenario_analyses"
 
@@ -391,6 +444,7 @@ class FinancialScenarioAnalysisModel(BaseModel):
 
 
 # ── Section 23: Financial ESG Reporting ──────────────────────────────────────
+
 
 class FinancialESGReportModel(BaseModel):
     __tablename__ = "financial_esg_reports"

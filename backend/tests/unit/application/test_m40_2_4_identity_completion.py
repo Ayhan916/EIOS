@@ -15,13 +15,11 @@ TestEnterpriseIdentitySecurity — no raw secret, no raw token, idp-bound enforc
 
 from __future__ import annotations
 
-import hashlib
 import uuid
 from datetime import UTC, datetime, timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -69,8 +67,10 @@ class TestVaultProvider:
         class _Client:
             def read_secret(self, path):
                 return stored.get(path)
+
             def write_secret(self, path, value):
                 stored[path] = value
+
             def delete_secret(self, path):
                 stored.pop(path, None)
 
@@ -78,12 +78,14 @@ class TestVaultProvider:
 
     def test_provider_name(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, _ = self._make_client()
         p = VaultSecretProvider(client=client)
         assert p.provider_name == "vault"
 
     def test_store_and_retrieve(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, store = self._make_client()
         p = VaultSecretProvider(client=client)
         result = p.store("eios/idp/secret", "mysecret")
@@ -92,12 +94,14 @@ class TestVaultProvider:
 
     def test_retrieve_missing_returns_none(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, _ = self._make_client()
         p = VaultSecretProvider(client=client)
         assert p.retrieve("nonexistent") is None
 
     def test_delete_removes_secret(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, store = self._make_client({"k": "v"})
         p = VaultSecretProvider(client=client)
         p.delete("k")
@@ -105,12 +109,14 @@ class TestVaultProvider:
 
     def test_delete_nonexistent_is_noop(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, _ = self._make_client()
         p = VaultSecretProvider(client=client)
         p.delete("does_not_exist")  # must not raise
 
     def test_ping_returns_bool(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, _ = self._make_client()
         p = VaultSecretProvider(client=client)
         result = p.ping()
@@ -122,8 +128,12 @@ class TestVaultProvider:
         class _BadClient:
             def read_secret(self, path):
                 raise ConnectionError("Vault unreachable")
-            def write_secret(self, path, value): pass
-            def delete_secret(self, path): pass
+
+            def write_secret(self, path, value):
+                pass
+
+            def delete_secret(self, path):
+                pass
 
         p = VaultSecretProvider(client=_BadClient())
         # Our ping catches all exceptions — returns True/False, never raises
@@ -133,6 +143,7 @@ class TestVaultProvider:
 
     def test_mount_property(self) -> None:
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, _ = self._make_client()
         p = VaultSecretProvider(client=client, mount="kv2")
         assert p.mount == "kv2"
@@ -140,6 +151,7 @@ class TestVaultProvider:
     def test_is_secret_provider_subclass(self) -> None:
         from infrastructure.secrets.provider import SecretProvider
         from infrastructure.secrets.vault_provider import VaultSecretProvider
+
         client, _ = self._make_client()
         p = VaultSecretProvider(client=client)
         assert isinstance(p, SecretProvider)
@@ -155,8 +167,10 @@ class TestAwsSecretsProvider:
         class _Client:
             def get_secret(self, secret_id):
                 return stored.get(secret_id)
+
             def put_secret(self, secret_id, value):
                 stored[secret_id] = value
+
             def delete_secret(self, secret_id):
                 stored.pop(secret_id, None)
 
@@ -164,12 +178,14 @@ class TestAwsSecretsProvider:
 
     def test_provider_name(self) -> None:
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+
         client, _ = self._make_client()
         p = AwsSecretsManagerProvider(client=client)
         assert p.provider_name == "aws_secrets_manager"
 
     def test_store_and_retrieve(self) -> None:
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+
         client, store = self._make_client()
         p = AwsSecretsManagerProvider(client=client)
         result = p.store("eios/prod/idp/secret", "topsecret")
@@ -178,12 +194,14 @@ class TestAwsSecretsProvider:
 
     def test_retrieve_missing_returns_none(self) -> None:
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+
         client, _ = self._make_client()
         p = AwsSecretsManagerProvider(client=client)
         assert p.retrieve("not/there") is None
 
     def test_delete_removes_secret(self) -> None:
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+
         client, store = self._make_client({"k": "v"})
         p = AwsSecretsManagerProvider(client=client)
         p.delete("k")
@@ -191,19 +209,22 @@ class TestAwsSecretsProvider:
 
     def test_ping_returns_bool(self) -> None:
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+
         client, _ = self._make_client()
         p = AwsSecretsManagerProvider(client=client)
         assert isinstance(p.ping(), bool)
 
     def test_is_secret_provider_subclass(self) -> None:
-        from infrastructure.secrets.provider import SecretProvider
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+        from infrastructure.secrets.provider import SecretProvider
+
         client, _ = self._make_client()
         p = AwsSecretsManagerProvider(client=client)
         assert isinstance(p, SecretProvider)
 
     def test_multiple_secrets_isolated(self) -> None:
         from infrastructure.secrets.aws_provider import AwsSecretsManagerProvider
+
         client, _ = self._make_client()
         p = AwsSecretsManagerProvider(client=client)
         p.store("a", "alpha")
@@ -218,6 +239,7 @@ class TestAwsSecretsProvider:
 class TestSecretRotation:
     def _make_idp(self, secret_reference_id=None):
         from infrastructure.persistence.models.enterprise import IdentityProviderModel
+
         idp = MagicMock(spec=IdentityProviderModel)
         idp.id = str(uuid.uuid4())
         idp.enterprise_id = "ent-1"
@@ -227,6 +249,7 @@ class TestSecretRotation:
 
     def _make_ref(self, secret_identifier="EIOS_IDP_old_SECRET"):
         from infrastructure.persistence.models.enterprise import SecretReferenceModel
+
         ref = MagicMock(spec=SecretReferenceModel)
         ref.id = str(uuid.uuid4())
         ref.secret_identifier = secret_identifier
@@ -235,7 +258,11 @@ class TestSecretRotation:
     @pytest.mark.asyncio
     async def test_rotate_creates_new_reference(self) -> None:
         from application.enterprise.sso_service import rotate_identity_provider_secret
-        from infrastructure.secrets.provider import InMemorySecretProvider, set_secret_provider, get_secret_provider
+        from infrastructure.secrets.provider import (
+            InMemorySecretProvider,
+            get_secret_provider,
+            set_secret_provider,
+        )
 
         mem = InMemorySecretProvider()
         original = get_secret_provider()
@@ -272,7 +299,11 @@ class TestSecretRotation:
     @pytest.mark.asyncio
     async def test_rotate_deletes_old_secret_from_provider(self) -> None:
         from application.enterprise.sso_service import rotate_identity_provider_secret
-        from infrastructure.secrets.provider import InMemorySecretProvider, set_secret_provider, get_secret_provider
+        from infrastructure.secrets.provider import (
+            InMemorySecretProvider,
+            get_secret_provider,
+            set_secret_provider,
+        )
 
         mem = InMemorySecretProvider()
         old_identifier = "EIOS_IDP_old_SECRET"
@@ -324,7 +355,11 @@ class TestSecretRotation:
     @pytest.mark.asyncio
     async def test_rotate_audits_secret_rotated_event(self) -> None:
         from application.enterprise.sso_service import rotate_identity_provider_secret
-        from infrastructure.secrets.provider import InMemorySecretProvider, set_secret_provider, get_secret_provider
+        from infrastructure.secrets.provider import (
+            InMemorySecretProvider,
+            get_secret_provider,
+            set_secret_provider,
+        )
 
         mem = InMemorySecretProvider()
         original = get_secret_provider()
@@ -352,6 +387,7 @@ class TestSecretRotation:
 
             added_models = [call.args[0] for call in session.add.call_args_list]
             from infrastructure.persistence.models.audit_event import AuditEventModel
+
             audit_events = [m for m in added_models if isinstance(m, AuditEventModel)]
             assert any("secret_rotated" in (e.action or "") for e in audit_events)
         finally:
@@ -365,7 +401,11 @@ class TestSecretCleanup:
     @pytest.mark.asyncio
     async def test_delete_removes_secret_from_provider(self) -> None:
         from application.enterprise.sso_service import delete_identity_provider
-        from infrastructure.secrets.provider import InMemorySecretProvider, set_secret_provider, get_secret_provider
+        from infrastructure.secrets.provider import (
+            InMemorySecretProvider,
+            get_secret_provider,
+            set_secret_provider,
+        )
 
         mem = InMemorySecretProvider()
         identifier = "EIOS_IDP_DELETE_TEST"
@@ -375,8 +415,10 @@ class TestSecretCleanup:
         try:
             ref_id = str(uuid.uuid4())
             from infrastructure.persistence.models.enterprise import (
-                IdentityProviderModel, SecretReferenceModel
+                IdentityProviderModel,
+                SecretReferenceModel,
             )
+
             idp = MagicMock(spec=IdentityProviderModel)
             idp.id = str(uuid.uuid4())
             idp.name = "test-idp"
@@ -434,10 +476,8 @@ class TestSecretCleanup:
 
         added = [call.args[0] for call in session.add.call_args_list]
         from infrastructure.persistence.models.audit_event import AuditEventModel
-        assert any(
-            isinstance(m, AuditEventModel) and "deleted" in (m.action or "")
-            for m in added
-        )
+
+        assert any(isinstance(m, AuditEventModel) and "deleted" in (m.action or "") for m in added)
 
     @pytest.mark.asyncio
     async def test_delete_without_secret_reference_is_safe(self) -> None:
@@ -495,7 +535,9 @@ class TestValidatedIdentity:
 
     def test_is_dataclass(self) -> None:
         import dataclasses
+
         from application.enterprise.sso_validation import ValidatedIdentity
+
         assert dataclasses.is_dataclass(ValidatedIdentity)
 
 
@@ -638,7 +680,8 @@ class TestOidcCallback:
 
     def test_oidc_protocol_matches_mock(self) -> None:
         """MockOIDCValidator must implement OIDCTokenValidator protocol."""
-        from application.enterprise.sso_validation import MockOIDCValidator, OIDCTokenValidator
+        from application.enterprise.sso_validation import MockOIDCValidator
+
         v = MockOIDCValidator()
         assert hasattr(v, "validate")
 
@@ -649,6 +692,7 @@ class TestOidcCallback:
 class TestScimIdpBinding:
     def test_scim_token_model_has_idp_id(self) -> None:
         import sqlalchemy as sa
+
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         cols = {c.name for c in sa.inspect(SCIMTokenModel).columns}
@@ -656,6 +700,7 @@ class TestScimIdpBinding:
 
     def test_scim_token_model_has_scope(self) -> None:
         import sqlalchemy as sa
+
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         cols = {c.name for c in sa.inspect(SCIMTokenModel).columns}
@@ -713,7 +758,7 @@ class TestScimIdpBinding:
         from application.enterprise.scim_token_service import list_scim_tokens
 
         tok1 = _make_scim_token(idp_id="idp-1")
-        tok2 = _make_scim_token(idp_id="idp-2")
+        _make_scim_token(idp_id="idp-2")
 
         session = AsyncMock()
         all_result = MagicMock()
@@ -731,38 +776,47 @@ class TestScimIdpBinding:
 class TestScimScopes:
     def test_full_admin_can_provision(self) -> None:
         from application.enterprise.scim_token_service import can_provision
+
         assert can_provision("FULL_ADMIN") is True
 
     def test_provisioning_can_provision(self) -> None:
         from application.enterprise.scim_token_service import can_provision
+
         assert can_provision("PROVISIONING") is True
 
     def test_read_only_cannot_provision(self) -> None:
         from application.enterprise.scim_token_service import can_provision
+
         assert can_provision("READ_ONLY") is False
 
     def test_full_admin_can_read(self) -> None:
         from application.enterprise.scim_token_service import can_read
+
         assert can_read("FULL_ADMIN") is True
 
     def test_read_only_can_read(self) -> None:
         from application.enterprise.scim_token_service import can_read
+
         assert can_read("READ_ONLY") is True
 
     def test_full_admin_can_admin(self) -> None:
         from application.enterprise.scim_token_service import can_admin
+
         assert can_admin("FULL_ADMIN") is True
 
     def test_provisioning_cannot_admin(self) -> None:
         from application.enterprise.scim_token_service import can_admin
+
         assert can_admin("PROVISIONING") is False
 
     def test_read_only_cannot_admin(self) -> None:
         from application.enterprise.scim_token_service import can_admin
+
         assert can_admin("READ_ONLY") is False
 
     def test_scope_values_are_complete(self) -> None:
         from application.enterprise.scim_token_service import SCIM_SCOPES
+
         assert set(SCIM_SCOPES) == {"READ_ONLY", "PROVISIONING", "FULL_ADMIN"}
 
 
@@ -921,6 +975,7 @@ class TestEnterpriseIdentitySecurity:
 
     def test_scim_token_orm_has_idp_id_column(self) -> None:
         import sqlalchemy as sa
+
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         cols = {c.name for c in sa.inspect(SCIMTokenModel).columns}
@@ -928,6 +983,7 @@ class TestEnterpriseIdentitySecurity:
 
     def test_scim_token_orm_token_hash_unique(self) -> None:
         import sqlalchemy as sa
+
         from infrastructure.persistence.models.enterprise import SCIMTokenModel
 
         col = sa.inspect(SCIMTokenModel).columns["token_hash"]
@@ -935,6 +991,7 @@ class TestEnterpriseIdentitySecurity:
 
     def test_idp_model_no_client_secret_encrypted_column(self) -> None:
         import sqlalchemy as sa
+
         from infrastructure.persistence.models.enterprise import IdentityProviderModel
 
         cols = {c.name for c in sa.inspect(IdentityProviderModel).columns}
@@ -958,13 +1015,15 @@ class TestEnterpriseIdentitySecurity:
         assert vi.groups == ["injected-group"]
 
     def test_sso_rate_limit_rejects_excessive_requests(self) -> None:
-        from application.enterprise.sso_validation import check_sso_rate_limit, _SSO_MAX_PER_WINDOW
         import uuid as _uuid
+
+        from application.enterprise.sso_validation import _SSO_MAX_PER_WINDOW, check_sso_rate_limit
 
         enterprise_id = str(_uuid.uuid4())
         ip = "10.0.0.1"
         # Force a fresh key by using unique enterprise_id
         from application.enterprise import sso_validation as _sv
+
         key = f"{enterprise_id}:{ip}"
         _sv._sso_rate_store.pop(key, None)
 

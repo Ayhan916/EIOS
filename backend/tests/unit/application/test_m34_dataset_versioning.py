@@ -6,9 +6,10 @@ Ingesting a new version of the same source must:
   3. Idempotent: ingesting the same hash a second time returns existing record
 """
 
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from datetime import datetime, UTC
-from unittest.mock import AsyncMock, MagicMock, call
 
 from application.external_intelligence.base_adapter import RawDataset
 from application.external_intelligence.dataset_service import (
@@ -53,6 +54,7 @@ def _make_dataset_model(dataset_hash="hash123", dataset_status="active"):
 
 
 # ── ingest_dataset ────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_ingest_creates_new_dataset():
@@ -113,6 +115,7 @@ async def test_ingest_new_version_supersedes_active():
 
 # ── get_active_dataset ────────────────────────────────────────────────────────
 
+
 @pytest.mark.asyncio
 async def test_get_active_dataset_returns_active():
     active = _make_dataset_model(dataset_status="active")
@@ -138,6 +141,7 @@ async def test_get_active_dataset_none_when_missing():
 
 
 # ── list_datasets ─────────────────────────────────────────────────────────────
+
 
 @pytest.mark.asyncio
 async def test_list_datasets_returns_all():

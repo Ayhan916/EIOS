@@ -57,7 +57,9 @@ def build_block_kit_message(
 
     fields = []
     if entity_type:
-        fields.append({"type": "mrkdwn", "text": f"*Type*\n{entity_type.replace('_', ' ').title()}"})
+        fields.append(
+            {"type": "mrkdwn", "text": f"*Type*\n{entity_type.replace('_', ' ').title()}"}
+        )
     if severity:
         fields.append({"type": "mrkdwn", "text": f"*Severity*\n{severity}"})
     if entity_id:
@@ -67,17 +69,19 @@ def build_block_kit_message(
         blocks.append({"type": "section", "fields": fields})
 
     if action_url:
-        blocks.append({
-            "type": "actions",
-            "elements": [
-                {
-                    "type": "button",
-                    "text": {"type": "plain_text", "text": "View in EIOS"},
-                    "url": action_url,
-                    "action_id": "view_in_eios",
-                }
-            ],
-        })
+        blocks.append(
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "View in EIOS"},
+                        "url": action_url,
+                        "action_id": "view_in_eios",
+                    }
+                ],
+            }
+        )
 
     blocks.append({"type": "divider"})
 

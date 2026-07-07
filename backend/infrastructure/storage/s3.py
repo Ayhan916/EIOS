@@ -28,6 +28,7 @@ logger = structlog.get_logger(__name__)
 
 def _get_client() -> Any:
     import boto3  # noqa: PLC0415
+
     from shared.config import settings  # noqa: PLC0415
 
     kwargs: dict[str, Any] = {"region_name": settings.s3_region}
@@ -41,6 +42,7 @@ def _get_client() -> Any:
 
 def _upload_sync(content: bytes, key: str, content_type: str) -> None:
     from shared.config import settings  # noqa: PLC0415
+
     _get_client().put_object(
         Bucket=settings.s3_bucket,
         Key=key,
@@ -52,17 +54,20 @@ def _upload_sync(content: bytes, key: str, content_type: str) -> None:
 
 def _download_sync(key: str) -> bytes:
     from shared.config import settings  # noqa: PLC0415
+
     resp = _get_client().get_object(Bucket=settings.s3_bucket, Key=key)
     return resp["Body"].read()
 
 
 def _delete_sync(key: str) -> None:
     from shared.config import settings  # noqa: PLC0415
+
     _get_client().delete_object(Bucket=settings.s3_bucket, Key=key)
 
 
 def _presign_sync(key: str, expires_in: int) -> str:
     from shared.config import settings  # noqa: PLC0415
+
     return _get_client().generate_presigned_url(
         "get_object",
         Params={"Bucket": settings.s3_bucket, "Key": key},
@@ -73,6 +78,7 @@ def _presign_sync(key: str, expires_in: int) -> str:
 def _ensure_bucket_sync() -> None:
     """Create the bucket if it doesn't exist (dev/MinIO helper)."""
     from shared.config import settings  # noqa: PLC0415
+
     client = _get_client()
     try:
         client.head_bucket(Bucket=settings.s3_bucket)
@@ -120,5 +126,6 @@ async def delete_file(key: str) -> None:
 async def generate_presigned_url(key: str, expires_in: int | None = None) -> str:
     """Generate a time-limited presigned GET URL for the given object key."""
     from shared.config import settings  # noqa: PLC0415
+
     ttl = expires_in or settings.s3_presigned_url_expire_seconds
     return await asyncio.to_thread(_presign_sync, key, ttl)

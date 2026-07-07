@@ -24,11 +24,6 @@ from domain.supplier_extensions import (
     ESGRatingProvider,
     LocationType,
     OwnershipType,
-    SupplierCertification,
-    SupplierContact,
-    SupplierESGMetric,
-    SupplierLocation,
-    SupplierOwnership,
 )
 from infrastructure.kafka.events import DomainEvent
 from infrastructure.kafka.producer import KafkaEventProducer
@@ -40,7 +35,6 @@ from infrastructure.persistence.models.supplier_extensions import (
     SupplierLocationModel,
     SupplierOwnershipModel,
 )
-from shared.config import settings
 
 logger = structlog.get_logger(__name__)
 
@@ -54,6 +48,7 @@ def _uid() -> str:
 
 
 # ── Locations ─────────────────────────────────────────────────────────────────
+
 
 class SupplierLocationService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -132,9 +127,7 @@ class SupplierLocationService:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get(
-        self, organization_id: str, location_id: str
-    ) -> SupplierLocationModel | None:
+    async def get(self, organization_id: str, location_id: str) -> SupplierLocationModel | None:
         model = await self._session.get(SupplierLocationModel, location_id)
         if model is None or model.organization_id != organization_id:
             return None
@@ -151,6 +144,7 @@ class SupplierLocationService:
 
 
 # ── Contacts ──────────────────────────────────────────────────────────────────
+
 
 class SupplierContactService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -213,9 +207,7 @@ class SupplierContactService:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get(
-        self, organization_id: str, contact_id: str
-    ) -> SupplierContactModel | None:
+    async def get(self, organization_id: str, contact_id: str) -> SupplierContactModel | None:
         model = await self._session.get(SupplierContactModel, contact_id)
         if model is None or model.organization_id != organization_id:
             return None
@@ -267,6 +259,7 @@ class SupplierContactService:
 
 
 # ── Certifications ────────────────────────────────────────────────────────────
+
 
 class SupplierCertificationService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -341,9 +334,7 @@ class SupplierCertificationService:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def get(
-        self, organization_id: str, cert_id: str
-    ) -> SupplierCertificationModel | None:
+    async def get(self, organization_id: str, cert_id: str) -> SupplierCertificationModel | None:
         model = await self._session.get(SupplierCertificationModel, cert_id)
         if model is None or model.organization_id != organization_id:
             return None
@@ -351,6 +342,7 @@ class SupplierCertificationService:
 
 
 # ── Ownership ─────────────────────────────────────────────────────────────────
+
 
 class SupplierOwnershipService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -447,6 +439,7 @@ class SupplierOwnershipService:
 
 
 # ── ESG Metrics ───────────────────────────────────────────────────────────────
+
 
 class SupplierESGMetricService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:
@@ -551,6 +544,7 @@ class SupplierESGMetricService:
 
 
 # ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
+
 
 class SupplierExternalESGRatingService:
     def __init__(self, session: AsyncSession, kafka: KafkaEventProducer) -> None:

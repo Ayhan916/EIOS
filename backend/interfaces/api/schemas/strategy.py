@@ -7,8 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Digital Twin ──────────────────────────────────────────────────────────────
+
 
 class DigitalTwinCreate(BaseModel):
     name: str
@@ -76,6 +76,7 @@ class SnapshotResponse(BaseModel):
 
 # ── Strategic Plan ─────────────────────────────────────────────────────────────
 
+
 class StrategicPlanCreate(BaseModel):
     title: str
     planning_horizon: str
@@ -139,6 +140,7 @@ class StrategicObjectiveResponse(BaseModel):
 
 
 # ── Scenario ──────────────────────────────────────────────────────────────────
+
 
 class ScenarioCreate(BaseModel):
     name: str
@@ -218,6 +220,7 @@ class ExecutionResponse(BaseModel):
 
 
 # ── Stress Tests ──────────────────────────────────────────────────────────────
+
 
 class ClimateStressTestCreate(BaseModel):
     test_name: str
@@ -311,6 +314,7 @@ class FinancialStressTestResponse(BaseModel):
 
 # ── Pathways ──────────────────────────────────────────────────────────────────
 
+
 class TransitionPathwayCreate(BaseModel):
     pathway_name: str
     pathway_type: str
@@ -364,6 +368,7 @@ class NetZeroPathwayResponse(BaseModel):
 
 
 # ── Forecasts ─────────────────────────────────────────────────────────────────
+
 
 class ForecastModelCreate(BaseModel):
     model_name: str
@@ -422,6 +427,7 @@ class ForecastResultResponse(BaseModel):
 
 # ── Board Simulation ──────────────────────────────────────────────────────────
 
+
 class BoardSimulationCreate(BaseModel):
     simulation_name: str
     scenario_a_id: str | None = None
@@ -451,6 +457,7 @@ class BoardSimulationResponse(BaseModel):
 
 
 # ── Reports ───────────────────────────────────────────────────────────────────
+
 
 class StrategicReportCreate(BaseModel):
     report_title: str
@@ -483,6 +490,7 @@ class StrategicReportResponse(BaseModel):
 
 # ── Rollup ────────────────────────────────────────────────────────────────────
 
+
 class StrategyRollupResponse(BaseModel):
     organization_id: str
     digital_twins: int
@@ -505,6 +513,7 @@ class StrategyRollupResponse(BaseModel):
 
 
 # ── M44.1: Scenario Templates ─────────────────────────────────────────────────
+
 
 class ScenarioTemplateCreate(BaseModel):
     template_name: str
@@ -540,6 +549,7 @@ class TemplateInstantiateCreate(BaseModel):
 
 # ── M44.1: Stress Test Templates ─────────────────────────────────────────────
 
+
 class StressTestTemplateCreate(BaseModel):
     template_name: str
     template_type: str
@@ -564,6 +574,7 @@ class StressTestTemplateResponse(BaseModel):
 
 
 # ── M44.1: Strategy Methodologies ─────────────────────────────────────────────
+
 
 class StrategyMethodologyCreate(BaseModel):
     methodology_name: str
@@ -592,6 +603,7 @@ class StrategyMethodologyResponse(BaseModel):
 
 # ── M44.1: Scenario Comparisons ───────────────────────────────────────────────
 
+
 class ScenarioComparisonCreate(BaseModel):
     comparison_name: str
     scenario_ids: list[str]
@@ -616,6 +628,7 @@ class ScenarioComparisonResponse(BaseModel):
 
 
 # ── M44.1: Forecast Window Policies ───────────────────────────────────────────
+
 
 class ForecastWindowPolicyCreate(BaseModel):
     policy_name: str

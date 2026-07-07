@@ -33,9 +33,15 @@ _GAP_VERSION = "1.0"
 _SEVERITY_RANK = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
 _RANK_SEVERITY = {v: k for k, v in _SEVERITY_RANK.items()}
 
-_DISCLOSURE_CODES = frozenset({
-    "CSRD", "ESRS", "ISSB", "TCFD", "EU_TAXONOMY",
-})
+_DISCLOSURE_CODES = frozenset(
+    {
+        "CSRD",
+        "ESRS",
+        "ISSB",
+        "TCFD",
+        "EU_TAXONOMY",
+    }
+)
 
 
 def _max_severity(a: str, b: str) -> str:
@@ -82,9 +88,7 @@ def compute_gaps(
         if not has_mapping:
             # No mapping at all — missing evidence / missing disclosure
             gap_type = (
-                "missing_disclosure"
-                if _is_disclosure_framework(req.code)
-                else "missing_evidence"
+                "missing_disclosure" if _is_disclosure_framework(req.code) else "missing_evidence"
             )
             gaps.append(
                 ComplianceGap(

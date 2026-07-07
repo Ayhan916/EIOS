@@ -11,6 +11,7 @@ Create Date: 2026-06-20
 """
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "037"
@@ -49,7 +50,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
     )
-    op.create_index("ix_supplier_pwd_reset_token_hash", "supplier_password_reset_tokens", ["token_hash"])
+    op.create_index(
+        "ix_supplier_pwd_reset_token_hash", "supplier_password_reset_tokens", ["token_hash"]
+    )
     op.create_index("ix_supplier_pwd_reset_email", "supplier_password_reset_tokens", ["email"])
 
 
@@ -57,6 +60,8 @@ def downgrade() -> None:
     op.drop_index("ix_supplier_pwd_reset_email", "supplier_password_reset_tokens")
     op.drop_index("ix_supplier_pwd_reset_token_hash", "supplier_password_reset_tokens")
     op.drop_table("supplier_password_reset_tokens")
-    op.drop_constraint("uq_evidence_submission_per_supplier", "evidence_submissions", type_="unique")
+    op.drop_constraint(
+        "uq_evidence_submission_per_supplier", "evidence_submissions", type_="unique"
+    )
     op.drop_column("supplier_users", "locked_until")
     op.drop_column("supplier_users", "failed_login_attempts")

@@ -10,15 +10,17 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.operating_system.metrics import os_counters
 
 
-async def _log_audit(session: AsyncSession, action: str, entity_id: str,
-                     organization_id: str, detail: str = "") -> None:
+async def _log_audit(
+    session: AsyncSession, action: str, entity_id: str, organization_id: str, detail: str = ""
+) -> None:
     from infrastructure.persistence.models.audit_event import AuditEventModel
+
     evt = AuditEventModel(
         id=str(uuid.uuid4()),
         status="Active",
@@ -38,6 +40,7 @@ async def _log_audit(session: AsyncSession, action: str, entity_id: str,
 
 # ── Objectives ────────────────────────────────────────────────────────────────
 
+
 async def create_objective(
     organization_id: str,
     title: str,
@@ -50,6 +53,7 @@ async def create_objective(
     due_date: datetime | None = None,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ESGObjectiveModel
+
     now = datetime.now(UTC)
     obj = ESGObjectiveModel(
         id=str(uuid.uuid4()),
@@ -71,8 +75,13 @@ async def create_objective(
     session.add(obj)
     await session.flush()
     os_counters.record_objective_created()
-    await _log_audit(session, "objective.created", obj.id, organization_id,
-                     detail=f"title={title} category={category}")
+    await _log_audit(
+        session,
+        "objective.created",
+        obj.id,
+        organization_id,
+        detail=f"title={title} category={category}",
+    )
     return _obj_to_dict(obj)
 
 
@@ -84,9 +93,8 @@ async def list_objectives(
     limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGObjectiveModel
-    stmt = select(ESGObjectiveModel).where(
-        ESGObjectiveModel.organization_id == organization_id
-    )
+
+    stmt = select(ESGObjectiveModel).where(ESGObjectiveModel.organization_id == organization_id)
     if category:
         stmt = stmt.where(ESGObjectiveModel.category == category)
     if objective_status:
@@ -100,6 +108,7 @@ async def get_objective(
     organization_id: str, objective_id: str, session: AsyncSession
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGObjectiveModel
+
     stmt = select(ESGObjectiveModel).where(
         ESGObjectiveModel.organization_id == organization_id,
         ESGObjectiveModel.id == objective_id,
@@ -115,6 +124,7 @@ async def update_objective(
     **fields,
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGObjectiveModel
+
     stmt = select(ESGObjectiveModel).where(
         ESGObjectiveModel.organization_id == organization_id,
         ESGObjectiveModel.id == objective_id,
@@ -127,13 +137,17 @@ async def update_objective(
             setattr(row, k, v)
     row.updated_at = datetime.now(UTC)
     await session.flush()
-    action = "objective.completed" if fields.get("objective_status") == "COMPLETED" \
+    action = (
+        "objective.completed"
+        if fields.get("objective_status") == "COMPLETED"
         else "objective.updated"
+    )
     await _log_audit(session, action, row.id, organization_id)
     return _obj_to_dict(row)
 
 
 # ── Key Results ───────────────────────────────────────────────────────────────
+
 
 async def create_key_result(
     organization_id: str,
@@ -145,6 +159,7 @@ async def create_key_result(
     current_value: float = 0.0,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import ESGKeyResultModel
+
     progress = _calc_progress(current_value, target_value)
     now = datetime.now(UTC)
     kr = ESGKeyResultModel(
@@ -176,6 +191,7 @@ async def update_key_result(
     **fields,
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import ESGKeyResultModel
+
     stmt = select(ESGKeyResultModel).where(
         ESGKeyResultModel.organization_id == organization_id,
         ESGKeyResultModel.id == kr_id,
@@ -200,15 +216,21 @@ async def list_key_results(
     organization_id: str, objective_id: str, session: AsyncSession
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGKeyResultModel
-    stmt = select(ESGKeyResultModel).where(
-        ESGKeyResultModel.organization_id == organization_id,
-        ESGKeyResultModel.objective_id == objective_id,
-    ).order_by(ESGKeyResultModel.created_at.asc())
+
+    stmt = (
+        select(ESGKeyResultModel)
+        .where(
+            ESGKeyResultModel.organization_id == organization_id,
+            ESGKeyResultModel.objective_id == objective_id,
+        )
+        .order_by(ESGKeyResultModel.created_at.asc())
+    )
     rows = (await session.execute(stmt)).scalars().all()
     return [_kr_to_dict(r) for r in rows]
 
 
 # ── Internal helpers ──────────────────────────────────────────────────────────
+
 
 def _calc_progress(current: float, target: float) -> float:
     if target <= 0:
@@ -231,8 +253,10 @@ async def _rollup_objective_status(
 ) -> None:
     """Recompute objective status from the mean progress of its key results."""
     from infrastructure.persistence.models.operating_system import (
-        ESGKeyResultModel, ESGObjectiveModel,
+        ESGKeyResultModel,
+        ESGObjectiveModel,
     )
+
     avg_stmt = select(func.avg(ESGKeyResultModel.progress_percent)).where(
         ESGKeyResultModel.organization_id == organization_id,
         ESGKeyResultModel.objective_id == objective_id,

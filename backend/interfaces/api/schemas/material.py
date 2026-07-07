@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date
 from typing import Any
 
 from pydantic import BaseModel, Field
@@ -14,10 +14,11 @@ from domain.material import (
     MaterialType,
     SourcingRisk,
 )
+
 from .base import EntityResponse
 
-
 # ── Material Core ─────────────────────────────────────────────────────────────
+
 
 class MaterialCreate(BaseModel):
     name: str = Field(min_length=1, max_length=500)
@@ -79,7 +80,7 @@ class MaterialResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "MaterialResponse":
+    def from_model(cls, m: Any) -> MaterialResponse:
         return cls(
             id=m.id,
             status=m.status,
@@ -117,6 +118,7 @@ class MaterialListResponse(BaseModel):
 
 # ── Composition / BOM ─────────────────────────────────────────────────────────
 
+
 class MaterialCompositionCreate(BaseModel):
     child_material_id: str
     weight_pct: float | None = Field(default=None, ge=0, le=100)
@@ -135,7 +137,7 @@ class MaterialCompositionResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "MaterialCompositionResponse":
+    def from_model(cls, m: Any) -> MaterialCompositionResponse:
         return cls(
             id=m.id,
             status=m.status,
@@ -153,6 +155,7 @@ class MaterialCompositionResponse(EntityResponse):
 
 
 # ── Sourcing ──────────────────────────────────────────────────────────────────
+
 
 class MaterialSourcingCreate(BaseModel):
     supplier_id: str
@@ -182,7 +185,7 @@ class MaterialSourcingResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "MaterialSourcingResponse":
+    def from_model(cls, m: Any) -> MaterialSourcingResponse:
         return cls(
             id=m.id,
             status=m.status,
@@ -205,6 +208,7 @@ class MaterialSourcingResponse(EntityResponse):
 
 
 # ── Compliance Flags ──────────────────────────────────────────────────────────
+
 
 class MaterialComplianceUpsert(BaseModel):
     regulation: ComplianceRegulation
@@ -231,8 +235,9 @@ class MaterialComplianceResponse(EntityResponse):
     is_expired: bool
 
     @classmethod
-    def from_model(cls, m: Any) -> "MaterialComplianceResponse":
+    def from_model(cls, m: Any) -> MaterialComplianceResponse:
         from datetime import date as _date
+
         today = _date.today()
         is_expired = m.valid_until is not None and m.valid_until < today
         return cls(
@@ -256,6 +261,7 @@ class MaterialComplianceResponse(EntityResponse):
 
 
 # ── Sustainability Metrics ────────────────────────────────────────────────────
+
 
 class MaterialSustainabilityUpsert(BaseModel):
     reporting_year: int = Field(ge=2000, le=2100)
@@ -293,7 +299,7 @@ class MaterialSustainabilityResponse(EntityResponse):
     notes: str | None
 
     @classmethod
-    def from_model(cls, m: Any) -> "MaterialSustainabilityResponse":
+    def from_model(cls, m: Any) -> MaterialSustainabilityResponse:
         return cls(
             id=m.id,
             status=m.status,

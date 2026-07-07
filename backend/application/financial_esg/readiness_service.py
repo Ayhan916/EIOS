@@ -3,12 +3,17 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.financial_esg.kpi_service import FinancialESGError, FinancialESGConflict, _assert_org, _now
+from application.financial_esg.kpi_service import (
+    FinancialESGConflict,
+    FinancialESGError,
+    _assert_org,
+    _now,
+)
 from application.financial_esg.metrics import financial_esg_counters
 from infrastructure.persistence.models.financial_esg import (
     READINESS_STATUSES,
@@ -139,7 +144,11 @@ def generate_disclosure_package(
         actor_id=actor_id,
         resource_type="investor_disclosure_package",
         resource_id=pkg.id,
-        details={"title": title, "period_start": period_start.isoformat(), "period_end": period_end.isoformat()},
+        details={
+            "title": title,
+            "period_start": period_start.isoformat(),
+            "period_end": period_end.isoformat(),
+        },
     )
     financial_esg_counters.record_disclosure_package()
     return pkg

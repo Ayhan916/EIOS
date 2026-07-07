@@ -13,16 +13,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-
 from .base_entity import BaseEntity
 from .enums import (
     CountryRiskLevel,
     DatasetStatus,
-    ExternalSourceName,
     PercentileRank,
-    RiskSignalType,
     SanctionsExposure,
-    SignalSeverity,
 )
 
 
@@ -54,12 +50,12 @@ class CountryRiskProfile(BaseEntity):
     country_code: str  # ISO 3166-1 alpha-2 (e.g. "CN", "BR")
     country_name: str
     dataset_id: str  # FK to ExternalDataset
-    governance_score: float = 0.0     # Higher = worse governance
-    corruption_score: float = 0.0     # Higher = more corruption (CPI inverted)
+    governance_score: float = 0.0  # Higher = worse governance
+    corruption_score: float = 0.0  # Higher = more corruption (CPI inverted)
     labour_rights_score: float = 0.0  # Higher = more labour rights risk
     environmental_risk_score: float = 0.0
     human_rights_score: float = 0.0
-    sanctions_status: str = "none"    # none / partial / comprehensive
+    sanctions_status: str = "none"  # none / partial / comprehensive
     overall_risk_score: float = 0.0
     risk_level: str = CountryRiskLevel.LOW
     source_name: str = ""
@@ -103,21 +99,23 @@ class ExternalRiskSignal(BaseEntity):
     """
 
     signal_type: str  # RiskSignalType value
-    severity: str     # SignalSeverity value
+    severity: str  # SignalSeverity value
     description: str
     source_name: str
     source_version: str
     observed_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     dataset_id: str = ""
-    country_code: str = ""   # ISO code if country-level signal
-    sector_code: str = ""    # NACE code if sector-level signal
-    supplier_id: str = ""    # Filled when signal is linked to a specific supplier
+    country_code: str = ""  # ISO code if country-level signal
+    sector_code: str = ""  # NACE code if sector-level signal
+    supplier_id: str = ""  # Filled when signal is linked to a specific supplier
     organization_id: str = ""  # Tenant scope when supplier_id is set
     is_active: bool = True
     # GAP-10: Event-Attribution completeness (FR-005)
-    esg_category: str | None = None     # EsgCategory value
+    esg_category: str | None = None  # EsgCategory value
     protected_right: str | None = None  # CSDDDRight value
-    frequency: int = 0                  # Occurrences of this signal type for supplier/sector/country in last 12 months
+    frequency: int = (
+        0  # Occurrences of this signal type for supplier/sector/country in last 12 months
+    )
 
 
 @dataclass(slots=True, kw_only=True)
@@ -131,7 +129,7 @@ class SupplierEnrichment(BaseEntity):
     supplier_id: str
     organization_id: str
     country_code: str = ""
-    country_risk_id: str = ""    # FK to CountryRiskProfile
+    country_risk_id: str = ""  # FK to CountryRiskProfile
     country_risk_level: str = CountryRiskLevel.LOW
     country_risk_score: float = 0.0
     sanctions_exposure: str = SanctionsExposure.NONE

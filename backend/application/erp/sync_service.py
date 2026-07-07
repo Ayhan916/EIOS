@@ -23,7 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from application.erp.adapters.base import BaseERPAdapter, ERPDPPRecord
 from infrastructure.persistence.models.dpp import DigitalProductPassportModel
-from infrastructure.persistence.models.erp import ERPConnectorModel, ERPSyncJobModel
+from infrastructure.persistence.models.erp import ERPSyncJobModel
 from infrastructure.persistence.models.material import MaterialModel
 from infrastructure.persistence.models.product import ProductBOMItemModel, ProductModel
 
@@ -223,14 +223,23 @@ class ERPSyncService:
 
         except Exception as exc:
             await self._finish_job(
-                job, fetched=fetched, created=created, updated=updated,
-                failed=failed, error_message=str(exc), error_details=errors,
+                job,
+                fetched=fetched,
+                created=created,
+                updated=updated,
+                failed=failed,
+                error_message=str(exc),
+                error_details=errors,
             )
             return job
 
         await self._finish_job(
-            job, fetched=fetched, created=created, updated=updated,
-            failed=failed, error_details=errors,
+            job,
+            fetched=fetched,
+            created=created,
+            updated=updated,
+            failed=failed,
+            error_details=errors,
         )
         return job
 
@@ -244,9 +253,7 @@ class ERPSyncService:
         actor_id: str | None = None,
     ) -> ERPSyncJobModel:
         """Collect all active DPPs and push them to the ERP system."""
-        job = await self._create_job(
-            organization_id, connector_id, "OUTBOUND", "DPP", actor_id
-        )
+        job = await self._create_job(organization_id, connector_id, "OUTBOUND", "DPP", actor_id)
 
         try:
             stmt = select(DigitalProductPassportModel).where(
@@ -299,6 +306,7 @@ class ERPSyncService:
         offset: int = 0,
     ) -> tuple[list[ERPSyncJobModel], int]:
         from sqlalchemy import func
+
         stmt = select(ERPSyncJobModel).where(
             ERPSyncJobModel.organization_id == organization_id,
         )

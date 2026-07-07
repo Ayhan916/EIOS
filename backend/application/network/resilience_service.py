@@ -59,19 +59,23 @@ async def compute_resilience(
     supplier_id: str | None = None,
     session=None,
 ) -> object:
-    from infrastructure.persistence.models.supplier import SupplierModel
+    from sqlalchemy import func, select
+
     from infrastructure.persistence.models.network import (
-        ResilienceAssessmentModel,
         SupplierCriticalityModel,
         SupplierRelationshipModel,
     )
-    from sqlalchemy import func, select
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     now = datetime.now(UTC)
 
-    total_stmt = select(func.count()).select_from(SupplierModel).where(
-        SupplierModel.organization_id == organization_id,
-        SupplierModel.supplier_status == "Active",
+    total_stmt = (
+        select(func.count())
+        .select_from(SupplierModel)
+        .where(
+            SupplierModel.organization_id == organization_id,
+            SupplierModel.supplier_status == "Active",
+        )
     )
     total = max((await session.execute(total_stmt)).scalar_one(), 1)
 
@@ -101,19 +105,21 @@ async def compute_resilience(
         SupplierCriticalityModel.organization_id == organization_id,
         SupplierCriticalityModel.criticality.in_(["CRITICAL", "HIGH"]),
     )
-    critical_ids = list(
-        (await session.execute(crit_stmt)).scalars().all()
-    )
+    critical_ids = list((await session.execute(crit_stmt)).scalars().all())
 
     if not critical_ids:
         redundancy_score = 1.0
     else:
         with_peers = 0
         for sid in critical_ids:
-            peer_stmt = select(func.count()).select_from(SupplierRelationshipModel).where(
-                SupplierRelationshipModel.organization_id == organization_id,
-                SupplierRelationshipModel.relationship_status == "ACTIVE",
-                SupplierRelationshipModel.supplier_id == sid,
+            peer_stmt = (
+                select(func.count())
+                .select_from(SupplierRelationshipModel)
+                .where(
+                    SupplierRelationshipModel.organization_id == organization_id,
+                    SupplierRelationshipModel.relationship_status == "ACTIVE",
+                    SupplierRelationshipModel.supplier_id == sid,
+                )
             )
             peer_count = (await session.execute(peer_stmt)).scalar_one()
             if peer_count > 0:
@@ -121,9 +127,7 @@ async def compute_resilience(
         redundancy_score = round(with_peers / len(critical_ids), 4)
 
     resilience_score = round(
-        0.40 * diversification_score
-        + 0.35 * redundancy_score
-        + 0.25 * (1.0 - concentration_score),
+        0.40 * diversification_score + 0.35 * redundancy_score + 0.25 * (1.0 - concentration_score),
         4,
     )
 
@@ -167,8 +171,9 @@ async def _upsert_resilience(
     now: datetime,
     session,
 ) -> object:
-    from infrastructure.persistence.models.network import ResilienceAssessmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import ResilienceAssessmentModel
 
     stmt = select(ResilienceAssessmentModel).where(
         ResilienceAssessmentModel.organization_id == organization_id,
@@ -212,8 +217,9 @@ async def get_resilience(
     supplier_id: str | None = None,
     session=None,
 ) -> object | None:
-    from infrastructure.persistence.models.network import ResilienceAssessmentModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import ResilienceAssessmentModel
 
     stmt = select(ResilienceAssessmentModel).where(
         ResilienceAssessmentModel.organization_id == organization_id,

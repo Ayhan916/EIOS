@@ -6,29 +6,33 @@ Reports are immutable once finalized (is_final=True).
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
-from application.financial_esg.kpi_service import FinancialESGError, FinancialESGConflict, _assert_org, _now
+from application.financial_esg.kpi_service import (
+    FinancialESGConflict,
+    FinancialESGError,
+    _assert_org,
+    _now,
+)
 from application.financial_esg.metrics import financial_esg_counters
 from infrastructure.persistence.models.financial_esg import (
     SCENARIO_TYPES_FIN,
+    CapitalMarketsAssessmentModel,
+    CarbonCostModelRecord,
     ESGFinancialCorrelationModel,
     FinancialESGReportModel,
     FinancialScenarioAnalysisModel,
     GreenRevenueRecordModel,
-    TaxonomyAlignmentAssessmentModel,
-    CarbonCostModelRecord,
-    ValueCreationInitiativeModel,
     SustainableFinanceInstrumentModel,
-    CapitalMarketsAssessmentModel,
+    TaxonomyAlignmentAssessmentModel,
+    ValueCreationInitiativeModel,
 )
 
-
 # ── Financial ESG Reports ─────────────────────────────────────────────────────
+
 
 def generate_financial_esg_report(
     organization_id: str,
@@ -128,10 +132,13 @@ def list_financial_esg_reports(
 
 # ── Snapshot helpers ──────────────────────────────────────────────────────────
 
+
 def _value_creation_snapshot(org_id: str, session: Session) -> dict:
-    rows = session.query(ValueCreationInitiativeModel).filter(
-        ValueCreationInitiativeModel.organization_id == org_id
-    ).all()
+    rows = (
+        session.query(ValueCreationInitiativeModel)
+        .filter(ValueCreationInitiativeModel.organization_id == org_id)
+        .all()
+    )
     total_investment = sum(r.investment_amount for r in rows)
     total_realized = sum(r.realized_value for r in rows)
     return {
@@ -140,15 +147,18 @@ def _value_creation_snapshot(org_id: str, session: Session) -> dict:
         "total_realized_value": total_realized,
         "avg_roi_percent": (
             round(sum(r.roi_percent for r in rows if r.roi_percent is not None) / len(rows), 2)
-            if rows else None
+            if rows
+            else None
         ),
     }
 
 
 def _carbon_economics_snapshot(org_id: str, session: Session) -> dict:
-    rows = session.query(CarbonCostModelRecord).filter(
-        CarbonCostModelRecord.organization_id == org_id
-    ).all()
+    rows = (
+        session.query(CarbonCostModelRecord)
+        .filter(CarbonCostModelRecord.organization_id == org_id)
+        .all()
+    )
     return {
         "total_carbon_cost_models": len(rows),
         "total_carbon_cost": sum(r.total_carbon_cost for r in rows),
@@ -175,9 +185,11 @@ def _taxonomy_snapshot(org_id: str, session: Session) -> dict:
 
 
 def _green_revenue_snapshot(org_id: str, session: Session) -> dict:
-    rows = session.query(GreenRevenueRecordModel).filter(
-        GreenRevenueRecordModel.organization_id == org_id
-    ).all()
+    rows = (
+        session.query(GreenRevenueRecordModel)
+        .filter(GreenRevenueRecordModel.organization_id == org_id)
+        .all()
+    )
     total_green = sum(r.amount for r in rows if r.alignment_status in ("ALIGNED", "ELIGIBLE"))
     total_rev = rows[0].total_revenue if rows else 0.0
     return {
@@ -189,9 +201,11 @@ def _green_revenue_snapshot(org_id: str, session: Session) -> dict:
 
 
 def _sustainable_finance_snapshot(org_id: str, session: Session) -> dict:
-    rows = session.query(SustainableFinanceInstrumentModel).filter(
-        SustainableFinanceInstrumentModel.organization_id == org_id
-    ).all()
+    rows = (
+        session.query(SustainableFinanceInstrumentModel)
+        .filter(SustainableFinanceInstrumentModel.organization_id == org_id)
+        .all()
+    )
     return {
         "total_instruments": len(rows),
         "total_exposure": sum(r.amount for r in rows),
@@ -217,6 +231,7 @@ def _readiness_snapshot(org_id: str, session: Session) -> dict:
 
 
 # ── Scenario Analysis ─────────────────────────────────────────────────────────
+
 
 def create_scenario_analysis(
     organization_id: str,
@@ -324,6 +339,7 @@ def list_scenario_analyses(
 
 # ── ESG Financial Correlation ─────────────────────────────────────────────────
 
+
 def create_esg_correlation(
     organization_id: str,
     esg_score: float,
@@ -344,7 +360,10 @@ def create_esg_correlation(
     weighted_fin = round(
         risk_reduction * 0.4 + cost_reduction * 0.3 + financial_performance * 0.3, 4
     )
-    coefficient = round(esg_score / 100.0 * (1 if weighted_fin >= 0 else -1) * min(abs(weighted_fin) / 100.0, 1.0), 6)
+    coefficient = round(
+        esg_score / 100.0 * (1 if weighted_fin >= 0 else -1) * min(abs(weighted_fin) / 100.0, 1.0),
+        6,
+    )
 
     now = _now()
     rec = ESGFinancialCorrelationModel(

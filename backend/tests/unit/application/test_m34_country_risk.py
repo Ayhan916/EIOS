@@ -1,8 +1,9 @@
 """M34 country risk service tests."""
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 from application.external_intelligence.country_risk_service import (
     compute_overall_risk,
@@ -19,6 +20,7 @@ def _now():
 
 
 # ── compute_overall_risk (pure) ────────────────────────────────────────────────
+
 
 class TestComputeOverallRisk:
     def test_all_zero_returns_zero_and_low(self):
@@ -61,6 +63,7 @@ class TestComputeOverallRisk:
 
 
 # ── get_country_risk (DB-backed) ───────────────────────────────────────────────
+
 
 def _make_country_model(**kwargs):
     m = MagicMock()

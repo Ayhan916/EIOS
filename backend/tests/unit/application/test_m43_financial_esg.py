@@ -13,15 +13,16 @@ Tests cover:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from unittest.mock import MagicMock, patch
-import pytest
 
+import pytest
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+
 def _now():
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def _session():
@@ -30,9 +31,11 @@ def _session():
 
 # ── 1. Carbon Economics ───────────────────────────────────────────────────────
 
+
 class TestCarbonEconomics:
     def test_compute_carbon_cost_formula(self):
         from application.financial_esg.carbon_cost_service import _compute_carbon_cost
+
         result = _compute_carbon_cost(
             total_emissions=1000.0,
             internal_carbon_price=50.0,
@@ -45,6 +48,7 @@ class TestCarbonEconomics:
 
     def test_compute_carbon_cost_zero_avoided(self):
         from application.financial_esg.carbon_cost_service import _compute_carbon_cost
+
         result = _compute_carbon_cost(
             total_emissions=500.0,
             internal_carbon_price=30.0,
@@ -56,12 +60,14 @@ class TestCarbonEconomics:
 
     def test_compute_carbon_cost_formula_stored(self):
         from application.financial_esg.carbon_cost_service import _compute_carbon_cost
+
         result = _compute_carbon_cost(100.0, 50.0, 60.0, 10.0)
         assert "formula" in result
         assert isinstance(result["formula"], dict)
 
     def test_risk_composite_formula(self):
         from application.financial_esg.risk_service import _compute_risk
+
         result = _compute_risk(
             supplier_risk=80.0,
             climate_risk=60.0,
@@ -73,13 +79,15 @@ class TestCarbonEconomics:
         assert abs(result["composite_risk_score"] - expected) < 0.01
 
     def test_risk_composite_validates_range(self):
-        from application.financial_esg.risk_service import _compute_risk
         from application.financial_esg.kpi_service import FinancialESGError
+        from application.financial_esg.risk_service import _compute_risk
+
         with pytest.raises(FinancialESGError):
             _compute_risk(150.0, 60.0, 40.0, 20.0, 1_000_000.0)
 
     def test_risk_expected_loss_formula(self):
         from application.financial_esg.risk_service import _compute_risk
+
         result = _compute_risk(50.0, 50.0, 50.0, 50.0, 1_000_000.0)
         composite = 50.0
         expected_loss = round(1_000_000.0 * (composite / 100.0), 6) * (composite / 100.0)
@@ -88,18 +96,21 @@ class TestCarbonEconomics:
 
 # ── 2. Taxonomy ───────────────────────────────────────────────────────────────
 
+
 class TestTaxonomy:
     def test_compute_percent_basic(self):
         from application.financial_esg.taxonomy_service import _compute_percent
+
         assert _compute_percent(200.0, 1000.0) == 20.0
 
     def test_compute_percent_zero_denominator(self):
         from application.financial_esg.taxonomy_service import _compute_percent
+
         assert _compute_percent(100.0, 0.0) == 0.0
 
     def test_taxonomy_status_lock_on_verified(self):
-        from application.financial_esg.taxonomy_service import update_assessment_status
         from application.financial_esg.kpi_service import FinancialESGError
+        from application.financial_esg.taxonomy_service import update_assessment_status
         from infrastructure.persistence.models.financial_esg import TaxonomyAlignmentAssessmentModel
 
         mock_rec = MagicMock(spec=TaxonomyAlignmentAssessmentModel)
@@ -114,6 +125,7 @@ class TestTaxonomy:
 
     def test_taxonomy_aligned_activities_sum(self):
         from application.financial_esg.taxonomy_service import _compute_percent
+
         aligned_activities = {"solar": 300.0, "wind": 200.0}
         total_revenue = 1000.0
         total_aligned = sum(aligned_activities.values())
@@ -123,10 +135,10 @@ class TestTaxonomy:
 
 # ── 3. Green Revenue ─────────────────────────────────────────────────────────
 
+
 class TestGreenRevenue:
     def test_green_revenue_percent_formula(self):
         from application.financial_esg.revenue_service import create_green_revenue
-        from infrastructure.persistence.models.financial_esg import GreenRevenueRecordModel
 
         session = _session()
         captured = {}
@@ -148,26 +160,33 @@ class TestGreenRevenue:
         assert captured["rec"].green_revenue_percent == 20.0
 
     def test_green_capex_alignment_validation(self):
-        from application.financial_esg.revenue_service import create_green_capex
         from application.financial_esg.kpi_service import FinancialESGError
+        from application.financial_esg.revenue_service import create_green_capex
+
         with pytest.raises(FinancialESGError, match="alignment_percent"):
             create_green_capex("org-1", "proj", 100.0, 150.0, "2024", "user-1", _session())
 
     def test_green_opex_alignment_validation(self):
-        from application.financial_esg.revenue_service import create_green_opex
         from application.financial_esg.kpi_service import FinancialESGError
+        from application.financial_esg.revenue_service import create_green_opex
+
         with pytest.raises(FinancialESGError, match="alignment_percent"):
             create_green_opex("org-1", "desc", 100.0, -5.0, "2024", "user-1", _session())
 
 
 # ── 4. Rollup ────────────────────────────────────────────────────────────────
 
+
 class TestRollup:
     def test_rollup_empty_org_list(self):
         from application.financial_esg.rollup_service import (
-            _carbon_rollup, _green_revenue_rollup, _taxonomy_rollup,
-            _finance_rollup, _value_creation_rollup,
+            _carbon_rollup,
+            _finance_rollup,
+            _green_revenue_rollup,
+            _taxonomy_rollup,
+            _value_creation_rollup,
         )
+
         s = _session()
         assert _carbon_rollup([], s).model_count == 0
         assert _green_revenue_rollup([], s).record_count == 0
@@ -176,14 +195,14 @@ class TestRollup:
         assert _value_creation_rollup([], s).initiative_count == 0
 
     def test_rollup_invalid_entity_type(self):
-        from application.financial_esg.rollup_service import compute_financial_rollup
         from application.financial_esg.kpi_service import FinancialESGError
+        from application.financial_esg.rollup_service import compute_financial_rollup
+
         with pytest.raises(FinancialESGError, match="entity_type"):
             compute_financial_rollup("invalid_type", "entity-1", "actor-1", _session())
 
     def test_rollup_org_lookup_by_enterprise(self):
         from application.financial_esg.rollup_service import _org_ids_for_entity
-        from infrastructure.persistence.models.organization import OrganizationModel
 
         session = _session()
         mock_rows = [MagicMock(id="org-1"), MagicMock(id="org-2")]
@@ -210,6 +229,7 @@ class TestRollup:
 
 # ── 5. Valuation ─────────────────────────────────────────────────────────────
 
+
 class TestValuation:
     def test_valuation_total_is_sum(self):
         from application.financial_esg.value_service import create_sustainability_valuation
@@ -225,7 +245,9 @@ class TestValuation:
 
         with patch("application.financial_esg.value_service.emit_audit_event"):
             create_sustainability_valuation(
-                "org-1", "2024 Valuation", 2024,
+                "org-1",
+                "2024 Valuation",
+                2024,
                 risk_reduction_value=100_000.0,
                 carbon_reduction_value=200_000.0,
                 operational_efficiency_value=50_000.0,
@@ -237,24 +259,29 @@ class TestValuation:
 
     def test_climate_finance_roi_formula(self):
         from application.financial_esg.value_service import _compute_roi
+
         roi = _compute_roi(realized=150.0, investment=100.0)
         assert roi == 50.0
 
     def test_climate_finance_roi_zero_investment(self):
         from application.financial_esg.value_service import _compute_roi
+
         assert _compute_roi(realized=100.0, investment=0.0) is None
 
     def test_climate_finance_roi_negative(self):
         from application.financial_esg.value_service import _compute_roi
+
         roi = _compute_roi(realized=50.0, investment=100.0)
         assert roi == -50.0
 
 
 # ── 6. Finance Linkage ───────────────────────────────────────────────────────
 
+
 class TestFinanceLinkage:
     def test_covenant_compliant_below(self):
         from application.financial_esg.finance_service import _evaluate_covenant
+
         status = _evaluate_covenant(
             threshold_value=50.0,
             threshold_direction="BELOW",
@@ -264,6 +291,7 @@ class TestFinanceLinkage:
 
     def test_covenant_at_risk_below(self):
         from application.financial_esg.finance_service import _evaluate_covenant
+
         status = _evaluate_covenant(
             threshold_value=50.0,
             threshold_direction="BELOW",
@@ -273,6 +301,7 @@ class TestFinanceLinkage:
 
     def test_covenant_compliant_above(self):
         from application.financial_esg.finance_service import _evaluate_covenant
+
         status = _evaluate_covenant(
             threshold_value=50.0,
             threshold_direction="ABOVE",
@@ -282,6 +311,7 @@ class TestFinanceLinkage:
 
     def test_covenant_at_risk_above(self):
         from application.financial_esg.finance_service import _evaluate_covenant
+
         status = _evaluate_covenant(
             threshold_value=50.0,
             threshold_direction="ABOVE",
@@ -291,6 +321,7 @@ class TestFinanceLinkage:
 
     def test_covenant_no_threshold_returns_monitoring(self):
         from application.financial_esg.finance_service import _evaluate_covenant
+
         status = _evaluate_covenant(
             threshold_value=None,
             threshold_direction="BELOW",
@@ -300,6 +331,7 @@ class TestFinanceLinkage:
 
 
 # ── 7. Report Immutability ────────────────────────────────────────────────────
+
 
 class TestReportImmutability:
     def test_finalize_report_sets_is_final(self):
@@ -321,8 +353,8 @@ class TestReportImmutability:
         assert mock_report.overall_status == "FINAL"
 
     def test_finalize_report_conflict_on_already_final(self):
-        from application.financial_esg.reporting_service import finalize_financial_esg_report
         from application.financial_esg.kpi_service import FinancialESGConflict
+        from application.financial_esg.reporting_service import finalize_financial_esg_report
         from infrastructure.persistence.models.financial_esg import FinancialESGReportModel
 
         mock_report = MagicMock(spec=FinancialESGReportModel)
@@ -336,8 +368,8 @@ class TestReportImmutability:
             finalize_financial_esg_report("rep-1", "user-1", session, organization_id="org-1")
 
     def test_finalize_disclosure_package_conflict(self):
-        from application.financial_esg.readiness_service import finalize_disclosure_package
         from application.financial_esg.kpi_service import FinancialESGConflict
+        from application.financial_esg.readiness_service import finalize_disclosure_package
         from infrastructure.persistence.models.financial_esg import InvestorDisclosurePackageModel
 
         mock_pkg = MagicMock(spec=InvestorDisclosurePackageModel)
@@ -353,9 +385,10 @@ class TestReportImmutability:
 
 # ── 8. Tenant Isolation ───────────────────────────────────────────────────────
 
+
 class TestTenantIsolation:
     def test_assert_org_raises_for_wrong_org(self):
-        from application.financial_esg.kpi_service import _assert_org, FinancialESGError
+        from application.financial_esg.kpi_service import FinancialESGError, _assert_org
 
         mock_record = MagicMock()
         mock_record.organization_id = "org-A"
@@ -372,7 +405,7 @@ class TestTenantIsolation:
         _assert_org(mock_record, "org-A", "KPI")  # should not raise
 
     def test_assert_org_raises_for_none_record(self):
-        from application.financial_esg.kpi_service import _assert_org, FinancialESGError
+        from application.financial_esg.kpi_service import FinancialESGError, _assert_org
 
         with pytest.raises(FinancialESGError, match="not found"):
             _assert_org(None, "org-A", "KPI")

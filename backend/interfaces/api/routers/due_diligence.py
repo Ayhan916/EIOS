@@ -39,18 +39,16 @@ from domain.due_diligence_report import DueDiligenceReport
 from domain.enums import DueDiligenceReportType, EntityStatus
 from domain.user import User
 from infrastructure.persistence.models.assessment import AssessmentModel
+from infrastructure.persistence.models.associations import control_risk
 from infrastructure.persistence.models.control import ControlModel
-from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 from infrastructure.persistence.models.risk import RiskModel
-from infrastructure.persistence.models.associations import control_risk
 from infrastructure.persistence.repositories.due_diligence import SQLDueDiligenceReportRepository
 from infrastructure.persistence.repositories.regulatory import SQLComplianceGapRepository
 from infrastructure.persistence.repositories.supplier import SQLSupplierRepository
 from infrastructure.persistence.repositories.supplier_score import SQLSupplierScoreRepository
 from interfaces.api.deps import (
-    get_current_user,
     get_db,
     require_analyst,
     require_executive,
@@ -90,10 +88,14 @@ _RESOLVED_STATUSES = frozenset({"resolved", "verified"})
 
 async def _get_org_assessments(session: AsyncSession, org_id: str) -> list[AssessmentModel]:
     rows = (
-        await session.execute(
-            select(AssessmentModel).where(AssessmentModel.organization_id == org_id)
+        (
+            await session.execute(
+                select(AssessmentModel).where(AssessmentModel.organization_id == org_id)
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -101,10 +103,14 @@ async def _get_org_findings(session: AsyncSession, assessment_ids: set[str]) -> 
     if not assessment_ids:
         return []
     rows = (
-        await session.execute(
-            select(FindingModel).where(FindingModel.assessment_id.in_(assessment_ids))
+        (
+            await session.execute(
+                select(FindingModel).where(FindingModel.assessment_id.in_(assessment_ids))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -112,10 +118,14 @@ async def _get_org_risks(session: AsyncSession, assessment_ids: set[str]) -> lis
     if not assessment_ids:
         return []
     rows = (
-        await session.execute(
-            select(RiskModel).where(RiskModel.assessment_id.in_(assessment_ids))
+        (
+            await session.execute(
+                select(RiskModel).where(RiskModel.assessment_id.in_(assessment_ids))
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -125,28 +135,34 @@ async def _get_org_recommendations(
     if not assessment_ids:
         return []
     rows = (
-        await session.execute(
-            select(RecommendationModel).where(
-                RecommendationModel.assessment_id.in_(assessment_ids)
+        (
+            await session.execute(
+                select(RecommendationModel).where(
+                    RecommendationModel.assessment_id.in_(assessment_ids)
+                )
             )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
-async def _get_org_controls(
-    session: AsyncSession, risk_ids: set[str]
-) -> list[ControlModel]:
+async def _get_org_controls(session: AsyncSession, risk_ids: set[str]) -> list[ControlModel]:
     if not risk_ids:
         return []
     rows = (
-        await session.execute(
-            select(ControlModel)
-            .join(control_risk, ControlModel.id == control_risk.c.control_id)
-            .where(control_risk.c.risk_id.in_(risk_ids))
-            .distinct()
+        (
+            await session.execute(
+                select(ControlModel)
+                .join(control_risk, ControlModel.id == control_risk.c.control_id)
+                .where(control_risk.c.risk_id.in_(risk_ids))
+                .distinct()
+            )
         )
-    ).scalars().all()
+        .scalars()
+        .all()
+    )
     return list(rows)
 
 
@@ -255,8 +271,11 @@ async def _gather_org_data(
 
     # Grievances (GAP-16 / LkSG §8) — for §10 statement section (f)
     grievance_result = await session.execute(
-        select(GrievanceReportModel.id, GrievanceReportModel.category, GrievanceReportModel.grievance_status)
-        .where(GrievanceReportModel.organization_id == org_id)
+        select(
+            GrievanceReportModel.id,
+            GrievanceReportModel.category,
+            GrievanceReportModel.grievance_status,
+        ).where(GrievanceReportModel.organization_id == org_id)
     )
     grievances = [
         {"id": row.id, "category": row.category, "grievance_status": row.grievance_status}
@@ -289,10 +308,14 @@ def _to_engine_inputs(data: dict) -> dict:
         {
             "id": s.id,
             "name": s.name,
-            "tier": s.supplier_tier.value if hasattr(s.supplier_tier, "value") else str(s.supplier_tier),
+            "tier": s.supplier_tier.value
+            if hasattr(s.supplier_tier, "value")
+            else str(s.supplier_tier),
             "country": s.country,
             "industry": s.industry,
-            "status": s.supplier_status.value if hasattr(s.supplier_status, "value") else str(s.supplier_status),
+            "status": s.supplier_status.value
+            if hasattr(s.supplier_status, "value")
+            else str(s.supplier_status),
         }
         for s in data["suppliers"]
     ]
@@ -303,7 +326,9 @@ def _to_engine_inputs(data: dict) -> dict:
             "social_score": sc.social_score,
             "governance_score": sc.governance_score,
             "risk_score": sc.risk_score,
-            "risk_band": sc.risk_band.value if hasattr(sc.risk_band, "value") else str(sc.risk_band),
+            "risk_band": sc.risk_band.value
+            if hasattr(sc.risk_band, "value")
+            else str(sc.risk_band),
             "trend": sc.trend.value if hasattr(sc.trend, "value") else str(sc.trend),
         }
         for sid, sc in scores_by_supplier.items()
@@ -386,7 +411,7 @@ async def due_diligence_dashboard(
     findings = inputs["findings"]
     risks = inputs["risks"]
     recs = inputs["recommendations"]
-    gaps = inputs["compliance_gaps"]
+    inputs["compliance_gaps"]
 
     critical_suppliers = sum(
         1 for s in suppliers if (scores.get(s["id"]) or {}).get("risk_band") == "Critical"
@@ -396,37 +421,53 @@ async def due_diligence_dashboard(
     )
 
     # HR and Env unresolved risks
-    from application.due_diligence.human_rights_engine import _TOPIC_KEYWORDS as _HR_KWS
     from application.due_diligence.environmental_engine import _TOPIC_KEYWORDS as _ENV_KWS
+    from application.due_diligence.human_rights_engine import _TOPIC_KEYWORDS as _HR_KWS
 
-    hr_finding_ids = {
-        f["id"] for f in findings
+    {
+        f["id"]
+        for f in findings
         if any(
-            any(kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower() for kw in kws)
+            any(
+                kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower()
+                for kw in kws
+            )
             for kws in _HR_KWS.values()
         )
     }
-    env_finding_ids = {
-        f["id"] for f in findings
+    {
+        f["id"]
+        for f in findings
         if any(
-            any(kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower() for kw in kws)
+            any(
+                kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower()
+                for kw in kws
+            )
             for kws in _ENV_KWS.values()
         )
     }
 
     unresolved_hr = sum(
-        1 for r in risks
+        1
+        for r in risks
         if r.get("risk_level") in ("Critical", "High")
         and any(
-            any(kw in ((r.get("title") or "") + " " + (r.get("category") or "")).lower() for kw in kws)
+            any(
+                kw in ((r.get("title") or "") + " " + (r.get("category") or "")).lower()
+                for kw in kws
+            )
             for kws in _HR_KWS.values()
         )
     )
     unresolved_env = sum(
-        1 for r in risks
+        1
+        for r in risks
         if r.get("risk_level") in ("Critical", "High")
         and any(
-            any(kw in ((r.get("title") or "") + " " + (r.get("category") or "")).lower() for kw in kws)
+            any(
+                kw in ((r.get("title") or "") + " " + (r.get("category") or "")).lower()
+                for kw in kws
+            )
             for kws in _ENV_KWS.values()
         )
     )
@@ -439,11 +480,13 @@ async def due_diligence_dashboard(
 
     avg_esg = (
         sum((scores.get(s["id"]) or {}).get("esg_score", 100.0) for s in suppliers) / len(suppliers)
-        if suppliers else 100.0
+        if suppliers
+        else 100.0
     )
     avg_risk = (
         sum((scores.get(s["id"]) or {}).get("risk_score", 0.0) for s in suppliers) / len(suppliers)
-        if suppliers else 0.0
+        if suppliers
+        else 0.0
     )
 
     rpt_repo = SQLDueDiligenceReportRepository(session)
@@ -583,11 +626,13 @@ async def generate_report(
         raise HTTPException(status_code=422, detail="Unsupported report_type")
 
     # Add meta for PDF rendering
-    report_data.setdefault("meta", {}).update({
-        "report_type": body.report_type,
-        "generated_at": now.isoformat(),
-        "organization_id": org_id,
-    })
+    report_data.setdefault("meta", {}).update(
+        {
+            "report_type": body.report_type,
+            "generated_at": now.isoformat(),
+            "organization_id": org_id,
+        }
+    )
 
     snapshot_bytes = json.dumps(report_data, sort_keys=True, default=str).encode()
     report_hash = hashlib.sha256(snapshot_bytes).hexdigest()
@@ -642,7 +687,9 @@ async def download_report(
     if rpt is None or rpt.organization_id != current_user.organization_id:
         raise HTTPException(status_code=404, detail="Due diligence report not found")
 
-    from infrastructure.reporting.due_diligence_pdf_renderer import render_due_diligence_report  # noqa: PLC0415
+    from infrastructure.reporting.due_diligence_pdf_renderer import (
+        render_due_diligence_report,  # noqa: PLC0415
+    )
 
     pdf_bytes = render_due_diligence_report(
         org_name=current_user.organization_id,
@@ -695,60 +742,66 @@ async def download_report_xml(
     s_f = d.get("section_f_grievance", {})
 
     def _x(v: object) -> str:
-        return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+        return (
+            str(v)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
 
     xml_lines = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<LkSGStatement xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">',
-        f'  <Meta>',
-        f'    <Framework>{_x(meta.get("framework", "LkSG"))}</Framework>',
-        f'    <FrameworkVersion>{_x(meta.get("framework_version", "2023"))}</FrameworkVersion>',
-        f'    <LegalBasis>{_x(meta.get("legal_basis", ""))}</LegalBasis>',
-        f'    <OrganizationId>{_x(meta.get("organization_id", ""))}</OrganizationId>',
-        f'    <OrganizationName>{_x(meta.get("organization_name", ""))}</OrganizationName>',
-        f'    <ReportingYear>{_x(meta.get("reporting_year", ""))}</ReportingYear>',
-        f'    <GeneratedAt>{_x(rpt.generated_at.isoformat())}</GeneratedAt>',
-        f'    <ReportHash>{_x(rpt.report_hash)}</ReportHash>',
-        f'  </Meta>',
-        f'  <SectionA_DueDiligenceMeasures>',
-        f'    <RiskAnalysisConducted>{_x(s_a.get("risk_analysis_conducted", True))}</RiskAnalysisConducted>',
-        f'    <TotalControls>{_x(s_a.get("total_controls", 0))}</TotalControls>',
-        f'    <PreventiveControls>{_x(s_a.get("preventive_count", 0))}</PreventiveControls>',
-        f'    <ComplaintMechanismOperational>{_x(s_a.get("complaint_mechanism_operational", True))}</ComplaintMechanismOperational>',
-        f'  </SectionA_DueDiligenceMeasures>',
-        f'  <SectionB_RiskAnalysis>',
-        f'    <TotalSuppliersInScope>{_x(s_b.get("total_suppliers_in_scope", 0))}</TotalSuppliersInScope>',
-        f'    <HighRiskSupplierCount>{_x(s_b.get("high_risk_supplier_count", 0))}</HighRiskSupplierCount>',
-        f'    <TotalFindings>{_x(s_b.get("total_findings", 0))}</TotalFindings>',
-        f'    <TotalRisks>{_x(s_b.get("total_risks", 0))}</TotalRisks>',
-        f'    <OpenComplianceGaps>{_x(s_b.get("open_compliance_gaps", 0))}</OpenComplianceGaps>',
-        f'  </SectionB_RiskAnalysis>',
-        f'  <SectionC_Prioritisation>',
-        f'    <Framework>{_x(s_c.get("framework", ""))}</Framework>',
-        f'    <Priority1Suppliers>{_x(s_c.get("priority_1_suppliers", 0))}</Priority1Suppliers>',
-        f'    <Priority2Suppliers>{_x(s_c.get("priority_2_suppliers", 0))}</Priority2Suppliers>',
-        f'    <Justification>{_x(s_c.get("justification", ""))}</Justification>',
-        f'  </SectionC_Prioritisation>',
-        f'  <SectionD_Actions>',
-        f'    <PreventiveControls>{_x(s_d.get("preventive", {}).get("total_controls", 0))}</PreventiveControls>',
-        f'    <RemediationTotal>{_x(s_d.get("remediation", {}).get("total_recommendations", 0))}</RemediationTotal>',
-        f'    <RemediationResolved>{_x(s_d.get("remediation", {}).get("resolved", 0))}</RemediationResolved>',
-        f'    <RemediationOverdue>{_x(s_d.get("remediation", {}).get("overdue", 0))}</RemediationOverdue>',
-        f'    <ClosureRate>{_x(s_d.get("remediation", {}).get("closure_rate", 0))}</ClosureRate>',
-        f'  </SectionD_Actions>',
-        f'  <SectionE_Effectiveness>',
-        f'    <OverallLabel>{_x(s_e.get("overall_label", ""))}</OverallLabel>',
-        f'    <RemediationClosureRate>{_x(s_e.get("remediation_closure_rate", 0))}</RemediationClosureRate>',
-        f'    <ControlEffectivenessRate>{_x(s_e.get("control_effectiveness_rate", 0))}</ControlEffectivenessRate>',
-        f'  </SectionE_Effectiveness>',
-        f'  <SectionF_GrievanceMechanism>',
-        f'    <MechanismInPlace>{_x(s_f.get("mechanism_in_place", True))}</MechanismInPlace>',
-        f'    <LegalBasis>{_x(s_f.get("legal_basis", "LkSG §8"))}</LegalBasis>',
-        f'    <TotalReportsReceived>{_x(s_f.get("total_reports_received", 0))}</TotalReportsReceived>',
-        f'    <Resolved>{_x(s_f.get("resolved", 0))}</Resolved>',
-        f'    <ResolutionRate>{_x(s_f.get("resolution_rate", 0))}</ResolutionRate>',
-        f'  </SectionF_GrievanceMechanism>',
-        f'</LkSGStatement>',
+        "  <Meta>",
+        f"    <Framework>{_x(meta.get('framework', 'LkSG'))}</Framework>",
+        f"    <FrameworkVersion>{_x(meta.get('framework_version', '2023'))}</FrameworkVersion>",
+        f"    <LegalBasis>{_x(meta.get('legal_basis', ''))}</LegalBasis>",
+        f"    <OrganizationId>{_x(meta.get('organization_id', ''))}</OrganizationId>",
+        f"    <OrganizationName>{_x(meta.get('organization_name', ''))}</OrganizationName>",
+        f"    <ReportingYear>{_x(meta.get('reporting_year', ''))}</ReportingYear>",
+        f"    <GeneratedAt>{_x(rpt.generated_at.isoformat())}</GeneratedAt>",
+        f"    <ReportHash>{_x(rpt.report_hash)}</ReportHash>",
+        "  </Meta>",
+        "  <SectionA_DueDiligenceMeasures>",
+        f"    <RiskAnalysisConducted>{_x(s_a.get('risk_analysis_conducted', True))}</RiskAnalysisConducted>",
+        f"    <TotalControls>{_x(s_a.get('total_controls', 0))}</TotalControls>",
+        f"    <PreventiveControls>{_x(s_a.get('preventive_count', 0))}</PreventiveControls>",
+        f"    <ComplaintMechanismOperational>{_x(s_a.get('complaint_mechanism_operational', True))}</ComplaintMechanismOperational>",
+        "  </SectionA_DueDiligenceMeasures>",
+        "  <SectionB_RiskAnalysis>",
+        f"    <TotalSuppliersInScope>{_x(s_b.get('total_suppliers_in_scope', 0))}</TotalSuppliersInScope>",
+        f"    <HighRiskSupplierCount>{_x(s_b.get('high_risk_supplier_count', 0))}</HighRiskSupplierCount>",
+        f"    <TotalFindings>{_x(s_b.get('total_findings', 0))}</TotalFindings>",
+        f"    <TotalRisks>{_x(s_b.get('total_risks', 0))}</TotalRisks>",
+        f"    <OpenComplianceGaps>{_x(s_b.get('open_compliance_gaps', 0))}</OpenComplianceGaps>",
+        "  </SectionB_RiskAnalysis>",
+        "  <SectionC_Prioritisation>",
+        f"    <Framework>{_x(s_c.get('framework', ''))}</Framework>",
+        f"    <Priority1Suppliers>{_x(s_c.get('priority_1_suppliers', 0))}</Priority1Suppliers>",
+        f"    <Priority2Suppliers>{_x(s_c.get('priority_2_suppliers', 0))}</Priority2Suppliers>",
+        f"    <Justification>{_x(s_c.get('justification', ''))}</Justification>",
+        "  </SectionC_Prioritisation>",
+        "  <SectionD_Actions>",
+        f"    <PreventiveControls>{_x(s_d.get('preventive', {}).get('total_controls', 0))}</PreventiveControls>",
+        f"    <RemediationTotal>{_x(s_d.get('remediation', {}).get('total_recommendations', 0))}</RemediationTotal>",
+        f"    <RemediationResolved>{_x(s_d.get('remediation', {}).get('resolved', 0))}</RemediationResolved>",
+        f"    <RemediationOverdue>{_x(s_d.get('remediation', {}).get('overdue', 0))}</RemediationOverdue>",
+        f"    <ClosureRate>{_x(s_d.get('remediation', {}).get('closure_rate', 0))}</ClosureRate>",
+        "  </SectionD_Actions>",
+        "  <SectionE_Effectiveness>",
+        f"    <OverallLabel>{_x(s_e.get('overall_label', ''))}</OverallLabel>",
+        f"    <RemediationClosureRate>{_x(s_e.get('remediation_closure_rate', 0))}</RemediationClosureRate>",
+        f"    <ControlEffectivenessRate>{_x(s_e.get('control_effectiveness_rate', 0))}</ControlEffectivenessRate>",
+        "  </SectionE_Effectiveness>",
+        "  <SectionF_GrievanceMechanism>",
+        f"    <MechanismInPlace>{_x(s_f.get('mechanism_in_place', True))}</MechanismInPlace>",
+        f"    <LegalBasis>{_x(s_f.get('legal_basis', 'LkSG §8'))}</LegalBasis>",
+        f"    <TotalReportsReceived>{_x(s_f.get('total_reports_received', 0))}</TotalReportsReceived>",
+        f"    <Resolved>{_x(s_f.get('resolved', 0))}</Resolved>",
+        f"    <ResolutionRate>{_x(s_f.get('resolution_rate', 0))}</ResolutionRate>",
+        "  </SectionF_GrievanceMechanism>",
+        "</LkSGStatement>",
     ]
     xml_content = "\n".join(xml_lines).encode("utf-8")
 
@@ -782,15 +835,19 @@ async def list_supplier_due_diligence(
     findings = inputs["findings"]
     recs = inputs["recommendations"]
 
-    from application.due_diligence.human_rights_engine import _TOPIC_KEYWORDS as _HR_KWS
     from application.due_diligence.environmental_engine import _TOPIC_KEYWORDS as _ENV_KWS
+    from application.due_diligence.human_rights_engine import _TOPIC_KEYWORDS as _HR_KWS
 
     def _count_topic_findings(supplier_id: str, topic_kws: dict) -> int:
         return sum(
-            1 for f in findings
+            1
+            for f in findings
             if f.get("supplier_id") == supplier_id
             and any(
-                any(kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower() for kw in kws)
+                any(
+                    kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower()
+                    for kw in kws
+                )
                 for kws in topic_kws.values()
             )
         )
@@ -808,22 +865,28 @@ async def list_supplier_due_diligence(
         supplier_findings = [f for f in findings if f.get("supplier_id") == s["id"]]
         supplier_recs = [r for r in recs if r.get("supplier_id") == s["id"]]
 
-        result.append(SupplierDueDiligenceSummary(
-            supplier_id=s["id"],
-            supplier_name=s["name"],
-            country=s.get("country", ""),
-            tier=s.get("tier", ""),
-            risk_band=band,
-            esg_score=sc.get("esg_score", 100.0),
-            risk_score=sc.get("risk_score", 0.0),
-            trend=sc.get("trend", "Stable"),
-            critical_findings=sum(1 for f in supplier_findings if f.get("severity") == "Critical"),
-            high_findings=sum(1 for f in supplier_findings if f.get("severity") == "High"),
-            open_actions=sum(1 for r in supplier_recs if r.get("action_status") in ("open", "in_progress")),
-            overdue_actions=sum(1 for r in supplier_recs if r.get("overdue", False)),
-            hr_findings=_count_topic_findings(s["id"], _HR_KWS),
-            env_findings=_count_topic_findings(s["id"], _ENV_KWS),
-        ))
+        result.append(
+            SupplierDueDiligenceSummary(
+                supplier_id=s["id"],
+                supplier_name=s["name"],
+                country=s.get("country", ""),
+                tier=s.get("tier", ""),
+                risk_band=band,
+                esg_score=sc.get("esg_score", 100.0),
+                risk_score=sc.get("risk_score", 0.0),
+                trend=sc.get("trend", "Stable"),
+                critical_findings=sum(
+                    1 for f in supplier_findings if f.get("severity") == "Critical"
+                ),
+                high_findings=sum(1 for f in supplier_findings if f.get("severity") == "High"),
+                open_actions=sum(
+                    1 for r in supplier_recs if r.get("action_status") in ("open", "in_progress")
+                ),
+                overdue_actions=sum(1 for r in supplier_recs if r.get("overdue", False)),
+                hr_findings=_count_topic_findings(s["id"], _HR_KWS),
+                env_findings=_count_topic_findings(s["id"], _ENV_KWS),
+            )
+        )
 
     result.sort(key=lambda x: -x.risk_score)
     return result
@@ -860,36 +923,46 @@ async def get_supplier_due_diligence(
     supplier_id_by_assessment: dict[str, str | None] = {a.id: a.supplier_id for a in assessments}
 
     findings_dicts = [_finding_to_dict(f, supplier_id_by_assessment) for f in findings]
-    risks_dicts = [_risk_to_dict(r, supplier_id_by_assessment) for r in risks]
+    [_risk_to_dict(r, supplier_id_by_assessment) for r in risks]
     recs_dicts = [_rec_to_dict(r, supplier_id_by_assessment, now) for r in recs]
 
-    from application.due_diligence.human_rights_engine import _TOPIC_KEYWORDS as _HR_KWS
     from application.due_diligence.environmental_engine import _TOPIC_KEYWORDS as _ENV_KWS
+    from application.due_diligence.human_rights_engine import _TOPIC_KEYWORDS as _HR_KWS
 
     def _count_by_kws(dicts: list[dict], kws_map: dict) -> int:
         return sum(
-            1 for f in dicts
+            1
+            for f in dicts
             if any(
-                any(kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower() for kw in kws)
+                any(
+                    kw in ((f.get("title") or "") + " " + (f.get("category") or "")).lower()
+                    for kw in kws
+                )
                 for kws in kws_map.values()
             )
         )
 
     band = sc.risk_band.value if sc else "Low"
     lksgg_coverage = (
-        "High" if unresolved_gaps == 0 and band in ("Low", "Moderate") else
-        "Partial" if unresolved_gaps <= 2 else "Low"
+        "High"
+        if unresolved_gaps == 0 and band in ("Low", "Moderate")
+        else "Partial"
+        if unresolved_gaps <= 2
+        else "Low"
     )
     csddd_coverage = (
-        "Compliant" if band in ("Low", "Moderate") else
-        "Partially Compliant" if band == "High" else "Non-Compliant"
+        "Compliant"
+        if band in ("Low", "Moderate")
+        else "Partially Compliant"
+        if band == "High"
+        else "Non-Compliant"
     )
 
     explainability = [
         {
             "factor": "risk_band",
             "value": band,
-            "detail": f"Risk band derived from ESG and finding analysis",
+            "detail": "Risk band derived from ESG and finding analysis",
         },
         {
             "factor": "unresolved_gaps",
@@ -898,7 +971,9 @@ async def get_supplier_due_diligence(
         },
         {
             "factor": "open_actions",
-            "value": sum(1 for r in recs_dicts if r.get("action_status") in ("open", "in_progress")),
+            "value": sum(
+                1 for r in recs_dicts if r.get("action_status") in ("open", "in_progress")
+            ),
             "detail": "Open remediation actions pending resolution",
         },
     ]
@@ -908,7 +983,9 @@ async def get_supplier_due_diligence(
         supplier_name=supplier.name,
         country=supplier.country,
         industry=supplier.industry,
-        tier=supplier.supplier_tier.value if hasattr(supplier.supplier_tier, "value") else str(supplier.supplier_tier),
+        tier=supplier.supplier_tier.value
+        if hasattr(supplier.supplier_tier, "value")
+        else str(supplier.supplier_tier),
         risk_band=band,
         esg_score=sc.esg_score if sc else 100.0,
         environmental_score=sc.environmental_score if sc else 100.0,
@@ -918,7 +995,9 @@ async def get_supplier_due_diligence(
         trend=sc.trend.value if sc else "Stable",
         critical_findings=sum(1 for f in findings_dicts if f.get("severity") == "Critical"),
         high_findings=sum(1 for f in findings_dicts if f.get("severity") == "High"),
-        open_actions=sum(1 for r in recs_dicts if r.get("action_status") in ("open", "in_progress")),
+        open_actions=sum(
+            1 for r in recs_dicts if r.get("action_status") in ("open", "in_progress")
+        ),
         overdue_actions=sum(1 for r in recs_dicts if r.get("overdue", False)),
         hr_findings=_count_by_kws(findings_dicts, _HR_KWS),
         env_findings=_count_by_kws(findings_dicts, _ENV_KWS),

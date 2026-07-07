@@ -1,4 +1,5 @@
 """Demo Mode API — activate/reset/status endpoints."""
+
 from __future__ import annotations
 
 import structlog

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
+from typing import Any
 
 from .base_entity import BaseEntity
 
@@ -20,7 +21,7 @@ class DetectedContradiction(BaseEntity):
     organization_id: str
     contradiction_type: str  # ContradictionType value
     description: str
-    involved_objects: list = field(default_factory=list)
+    involved_objects: list[Any] = field(default_factory=list)
     severity: str = "warning"
     detected_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
@@ -39,7 +40,7 @@ class CopilotCitationIntegrity(BaseEntity):
     object_id: str
     integrity_status: str  # CitationIntegrityStatus value
     citation_hash: str = ""
-    citation_snapshot: dict = field(default_factory=dict)
+    citation_snapshot: dict[str, Any] = field(default_factory=dict)
     verified_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
@@ -84,7 +85,7 @@ class CopilotAuditPackage(BaseEntity):
     message_id: str
     organization_id: str
     package_hash: str
-    json_payload: dict = field(default_factory=dict)
+    json_payload: dict[str, Any] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     verification_status: str = "pending"  # AuditVerificationStatus value
     verified_at: datetime | None = None

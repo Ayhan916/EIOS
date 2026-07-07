@@ -76,25 +76,28 @@ def validate_sbti_target(
     4. Scope 3: ≥25% reduction by 2030 (if data provided).
     """
     criteria: list[dict[str, Any]] = []
-    current_year = 2026
 
     # ── Criterion 1: Base year ────────────────────────────────────────────────
     base_year_valid = 2015 <= base_year <= 2021
-    criteria.append({
-        "criterion": "Base year",
-        "requirement": "2015–2021",
-        "value": base_year,
-        "met": base_year_valid,
-    })
+    criteria.append(
+        {
+            "criterion": "Base year",
+            "requirement": "2015–2021",
+            "value": base_year,
+            "met": base_year_valid,
+        }
+    )
 
     # ── Criterion 2: Target year ──────────────────────────────────────────────
     target_year_valid = 2025 <= target_year <= 2050
-    criteria.append({
-        "criterion": "Target year",
-        "requirement": "2025–2050 (near-term ≤ 2035)",
-        "value": target_year,
-        "met": target_year_valid,
-    })
+    criteria.append(
+        {
+            "criterion": "Target year",
+            "requirement": "2025–2050 (near-term ≤ 2035)",
+            "value": target_year,
+            "met": target_year_valid,
+        }
+    )
 
     # ── Criterion 3: Scope 1+2 reduction rate ────────────────────────────────
     base_s12 = base_year_scope1_tco2e + base_year_scope2_tco2e
@@ -111,45 +114,53 @@ def validate_sbti_target(
         annual_rate = 0.0
         scope_1_2_aligned = False
 
-    criteria.append({
-        "criterion": "Scope 1+2 annual reduction",
-        "requirement": "≥4.2% per year (1.5°C pathway)",
-        "value": round(annual_rate, 2),
-        "unit": "%/year",
-        "met": scope_1_2_aligned,
-        "detail": f"Total reduction: {round(total_reduction_pct, 1)}% over {years} years",
-    })
+    criteria.append(
+        {
+            "criterion": "Scope 1+2 annual reduction",
+            "requirement": "≥4.2% per year (1.5°C pathway)",
+            "value": round(annual_rate, 2),
+            "unit": "%/year",
+            "met": scope_1_2_aligned,
+            "detail": f"Total reduction: {round(total_reduction_pct, 1)}% over {years} years",
+        }
+    )
 
     # ── Criterion 4: Scope 3 ─────────────────────────────────────────────────
     if base_year_scope3_tco2e is not None and target_scope3_tco2e is not None:
         if base_year_scope3_tco2e > 0:
-            s3_reduction_pct = (base_year_scope3_tco2e - target_scope3_tco2e) / base_year_scope3_tco2e * 100
+            s3_reduction_pct = (
+                (base_year_scope3_tco2e - target_scope3_tco2e) / base_year_scope3_tco2e * 100
+            )
             scope_3_aligned = s3_reduction_pct >= 25.0 and target_year <= 2030
         else:
             s3_reduction_pct = 0.0
             scope_3_aligned = False
-        criteria.append({
-            "criterion": "Scope 3 reduction",
-            "requirement": "≥25% by 2030",
-            "value": round(s3_reduction_pct, 1),
-            "unit": "%",
-            "met": scope_3_aligned,
-        })
+        criteria.append(
+            {
+                "criterion": "Scope 3 reduction",
+                "requirement": "≥25% by 2030",
+                "value": round(s3_reduction_pct, 1),
+                "unit": "%",
+                "met": scope_3_aligned,
+            }
+        )
     else:
         scope_3_aligned = True  # Not required if data not submitted
-        criteria.append({
-            "criterion": "Scope 3 reduction",
-            "requirement": "≥25% by 2030 (data not provided — marked N/A)",
-            "value": None,
-            "met": None,
-            "detail": "Submit Scope 3 data for full SBTi validation",
-        })
+        criteria.append(
+            {
+                "criterion": "Scope 3 reduction",
+                "requirement": "≥25% by 2030 (data not provided — marked N/A)",
+                "value": None,
+                "met": None,
+                "detail": "Submit Scope 3 data for full SBTi validation",
+            }
+        )
 
     overall = base_year_valid and target_year_valid and scope_1_2_aligned
     note = (
         "Preliminary assessment passes SBTi 1.5°C Scope 1+2 criteria."
-        if overall else
-        "One or more SBTi criteria not met. Review criteria detail."
+        if overall
+        else "One or more SBTi criteria not met. Review criteria detail."
     )
 
     return SBTiValidationResult(

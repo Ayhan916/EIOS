@@ -1,4 +1,5 @@
 """Repository — CSDDD Readiness Snapshots (CSDDD-011)."""
+
 from __future__ import annotations
 
 import json
@@ -40,18 +41,20 @@ class SQLReadinessRepository:
         self._s = session
 
     def save(self, snapshot: ReadinessSnapshot) -> ReadinessSnapshot:
-        article_scores_json = json.dumps([
-            {
-                "article": a.article,
-                "title": a.title,
-                "earned_points": a.earned_points,
-                "max_points": a.max_points,
-                "score_pct": a.score_pct,
-                "level": a.level,
-                "gaps": a.gaps,
-            }
-            for a in snapshot.article_scores
-        ])
+        article_scores_json = json.dumps(
+            [
+                {
+                    "article": a.article,
+                    "title": a.title,
+                    "earned_points": a.earned_points,
+                    "max_points": a.max_points,
+                    "score_pct": a.score_pct,
+                    "level": a.level,
+                    "gaps": a.gaps,
+                }
+                for a in snapshot.article_scores
+            ]
+        )
         m = ReadinessSnapshotModel(
             id=snapshot.id,
             organization_id=snapshot.organization_id,

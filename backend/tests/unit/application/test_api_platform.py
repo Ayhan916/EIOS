@@ -10,8 +10,6 @@ import hashlib
 import hmac
 import json
 
-import pytest
-
 from application.api_platform.key_service import (
     generate_api_key,
     hash_api_key,
@@ -23,7 +21,6 @@ from application.api_platform.webhook_service import (
     payload_hash,
     sign_payload,
 )
-
 
 # ── Key generation ─────────────────────────────────────────────────────────────
 
@@ -89,7 +86,7 @@ class TestSignPayload:
 
     def test_signature_is_hex(self) -> None:
         sig = sign_payload(_PAYLOAD, _SECRET)
-        hex_part = sig[len("sha256="):]
+        hex_part = sig[len("sha256=") :]
         assert len(hex_part) == 64
         int(hex_part, 16)  # raises if not valid hex
 
@@ -129,7 +126,8 @@ class TestNextRetryAt:
         assert result is not None
 
     def test_attempt_1_one_minute(self) -> None:
-        from datetime import UTC, datetime, timedelta
+        from datetime import UTC, datetime
+
         before = datetime.now(UTC)
         result = next_retry_at(1)
         assert result is not None
@@ -138,6 +136,7 @@ class TestNextRetryAt:
 
     def test_attempt_2_five_minutes(self) -> None:
         from datetime import UTC, datetime
+
         before = datetime.now(UTC)
         result = next_retry_at(2)
         assert result is not None

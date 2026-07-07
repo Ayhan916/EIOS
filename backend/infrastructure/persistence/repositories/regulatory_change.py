@@ -15,9 +15,7 @@ from infrastructure.persistence.models.regulatory_change import (
 from infrastructure.persistence.repositories.base import BaseRepository
 
 
-class SQLRegulatoryChangeRepository(
-    BaseRepository[RegulatoryChange, RegulatoryChangeModel]
-):
+class SQLRegulatoryChangeRepository(BaseRepository[RegulatoryChange, RegulatoryChangeModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, RegulatoryChangeModel)
 
@@ -177,9 +175,7 @@ class SQLRegulatoryChangeImpactRepository(
         result = await self._session.execute(stmt)
         return [self._to_domain(row) for row in result.scalars().all()]
 
-    async def list_pending_re_review(
-        self, organization_id: str
-    ) -> list[RegulatoryChangeImpact]:
+    async def list_pending_re_review(self, organization_id: str) -> list[RegulatoryChangeImpact]:
         stmt = (
             select(RegulatoryChangeImpactModel)
             .where(

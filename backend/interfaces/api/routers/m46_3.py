@@ -51,6 +51,7 @@ _ADMIN = Depends(require_admin)
 # G-040 — Remediation Milestones
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 @router.post(
     "/remediation/{plan_id}/milestones",
     response_model=RemediationMilestoneResponse,
@@ -63,17 +64,23 @@ async def create_milestone(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> RemediationMilestoneResponse:
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel  # noqa: PLC0415
     from infrastructure.persistence.models.m46_3 import RemediationMilestoneModel  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier_portal import (
+        RemediationPlanModel,  # noqa: PLC0415
+    )
 
-    plan = (await session.execute(
-        select(RemediationPlanModel).where(
-            RemediationPlanModel.id == plan_id,
-            RemediationPlanModel.organization_id == current_user.organization_id,
+    plan = (
+        await session.execute(
+            select(RemediationPlanModel).where(
+                RemediationPlanModel.id == plan_id,
+                RemediationPlanModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Remediation plan not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Remediation plan not found"
+        )
 
     now = datetime.now(UTC)
     milestone = RemediationMilestoneModel(
@@ -104,17 +111,23 @@ async def list_milestones(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> list[RemediationMilestoneResponse]:
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel  # noqa: PLC0415
     from infrastructure.persistence.models.m46_3 import RemediationMilestoneModel  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier_portal import (
+        RemediationPlanModel,  # noqa: PLC0415
+    )
 
-    plan = (await session.execute(
-        select(RemediationPlanModel).where(
-            RemediationPlanModel.id == plan_id,
-            RemediationPlanModel.organization_id == current_user.organization_id,
+    plan = (
+        await session.execute(
+            select(RemediationPlanModel).where(
+                RemediationPlanModel.id == plan_id,
+                RemediationPlanModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if plan is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Remediation plan not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Remediation plan not found"
+        )
 
     result = await session.execute(
         select(RemediationMilestoneModel)
@@ -136,21 +149,27 @@ async def update_milestone(
     session: AsyncSession = Depends(get_db),
 ) -> RemediationMilestoneResponse:
     from infrastructure.persistence.models.m46_3 import RemediationMilestoneModel  # noqa: PLC0415
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier_portal import (
+        RemediationPlanModel,  # noqa: PLC0415
+    )
 
-    milestone = (await session.execute(
-        select(RemediationMilestoneModel).where(RemediationMilestoneModel.id == milestone_id)
-    )).scalar_one_or_none()
+    milestone = (
+        await session.execute(
+            select(RemediationMilestoneModel).where(RemediationMilestoneModel.id == milestone_id)
+        )
+    ).scalar_one_or_none()
     if milestone is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Milestone not found")
 
     # Scope check via plan → org
-    plan = (await session.execute(
-        select(RemediationPlanModel).where(
-            RemediationPlanModel.id == milestone.plan_id,
-            RemediationPlanModel.organization_id == current_user.organization_id,
+    plan = (
+        await session.execute(
+            select(RemediationPlanModel).where(
+                RemediationPlanModel.id == milestone.plan_id,
+                RemediationPlanModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Milestone not found")
 
@@ -184,20 +203,26 @@ async def delete_milestone(
     session: AsyncSession = Depends(get_db),
 ) -> None:
     from infrastructure.persistence.models.m46_3 import RemediationMilestoneModel  # noqa: PLC0415
-    from infrastructure.persistence.models.supplier_portal import RemediationPlanModel  # noqa: PLC0415
+    from infrastructure.persistence.models.supplier_portal import (
+        RemediationPlanModel,  # noqa: PLC0415
+    )
 
-    milestone = (await session.execute(
-        select(RemediationMilestoneModel).where(RemediationMilestoneModel.id == milestone_id)
-    )).scalar_one_or_none()
+    milestone = (
+        await session.execute(
+            select(RemediationMilestoneModel).where(RemediationMilestoneModel.id == milestone_id)
+        )
+    ).scalar_one_or_none()
     if milestone is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Milestone not found")
 
-    plan = (await session.execute(
-        select(RemediationPlanModel).where(
-            RemediationPlanModel.id == milestone.plan_id,
-            RemediationPlanModel.organization_id == current_user.organization_id,
+    plan = (
+        await session.execute(
+            select(RemediationPlanModel).where(
+                RemediationPlanModel.id == milestone.plan_id,
+                RemediationPlanModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Milestone not found")
 
@@ -207,6 +232,7 @@ async def delete_milestone(
 # ─────────────────────────────────────────────────────────────────────────────
 # G-041 — Assessment Schedules
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/assessments/schedules",
@@ -222,7 +248,9 @@ async def create_assessment_schedule(
     from infrastructure.persistence.models.m46_3 import AssessmentScheduleModel  # noqa: PLC0415
 
     if not current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization"
+        )
 
     now = datetime.now(UTC)
     next_due = body.next_due_at or (now + timedelta(days=body.frequency_days))
@@ -248,7 +276,9 @@ async def create_assessment_schedule(
             status_code=status.HTTP_409_CONFLICT,
             detail="An assessment schedule already exists for this supplier",
         )
-    logger.info("assessment_schedule_created", schedule_id=schedule.id, supplier_id=body.supplier_id)
+    logger.info(
+        "assessment_schedule_created", schedule_id=schedule.id, supplier_id=body.supplier_id
+    )
     return AssessmentScheduleResponse.model_validate(schedule)
 
 
@@ -289,12 +319,14 @@ async def delete_assessment_schedule(
 ) -> None:
     from infrastructure.persistence.models.m46_3 import AssessmentScheduleModel  # noqa: PLC0415
 
-    schedule = (await session.execute(
-        select(AssessmentScheduleModel).where(
-            AssessmentScheduleModel.id == schedule_id,
-            AssessmentScheduleModel.organization_id == current_user.organization_id,
+    schedule = (
+        await session.execute(
+            select(AssessmentScheduleModel).where(
+                AssessmentScheduleModel.id == schedule_id,
+                AssessmentScheduleModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if schedule is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
     await session.delete(schedule)
@@ -303,6 +335,7 @@ async def delete_assessment_schedule(
 # ─────────────────────────────────────────────────────────────────────────────
 # G-046 — Supplier Certificates
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/suppliers/{supplier_id}/certificates",
@@ -320,15 +353,19 @@ async def create_certificate(
     from infrastructure.persistence.models.supplier import SupplierModel  # noqa: PLC0415
 
     if not current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
-
-    supplier = (await session.execute(
-        select(SupplierModel).where(
-            SupplierModel.id == supplier_id,
-            SupplierModel.organization_id == current_user.organization_id,
-            SupplierModel.status != "Deleted",
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization"
         )
-    )).scalar_one_or_none()
+
+    supplier = (
+        await session.execute(
+            select(SupplierModel).where(
+                SupplierModel.id == supplier_id,
+                SupplierModel.organization_id == current_user.organization_id,
+                SupplierModel.status != "Deleted",
+            )
+        )
+    ).scalar_one_or_none()
     if supplier is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
 
@@ -369,10 +406,12 @@ async def list_certificates(
     from infrastructure.persistence.models.m46_3 import SupplierCertificateModel  # noqa: PLC0415
 
     result = await session.execute(
-        select(SupplierCertificateModel).where(
+        select(SupplierCertificateModel)
+        .where(
             SupplierCertificateModel.supplier_id == supplier_id,
             SupplierCertificateModel.organization_id == current_user.organization_id,
-        ).order_by(SupplierCertificateModel.expires_at)
+        )
+        .order_by(SupplierCertificateModel.expires_at)
     )
     return [SupplierCertificateResponse.model_validate(c) for c in result.scalars().all()]
 
@@ -390,13 +429,15 @@ async def delete_certificate(
 ) -> None:
     from infrastructure.persistence.models.m46_3 import SupplierCertificateModel  # noqa: PLC0415
 
-    cert = (await session.execute(
-        select(SupplierCertificateModel).where(
-            SupplierCertificateModel.id == cert_id,
-            SupplierCertificateModel.supplier_id == supplier_id,
-            SupplierCertificateModel.organization_id == current_user.organization_id,
+    cert = (
+        await session.execute(
+            select(SupplierCertificateModel).where(
+                SupplierCertificateModel.id == cert_id,
+                SupplierCertificateModel.supplier_id == supplier_id,
+                SupplierCertificateModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if cert is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Certificate not found")
     await session.delete(cert)
@@ -407,6 +448,7 @@ async def delete_certificate(
 # INVARIANT: Agents ONLY create RiskDraft (recommend). Never Risk (approve).
 # Human promotion via /accept is the ONLY path to a real Risk record.
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 @router.post(
     "/surveillance/signals/{signal_id}/draft-risk",
@@ -420,18 +462,24 @@ async def queue_risk_draft(
     session: AsyncSession = Depends(get_db),
 ) -> dict:
     """Queue an AI risk draft for a surveillance signal. Returns task_id for polling."""
-    from infrastructure.persistence.models.external_intelligence import ExternalRiskSignalModel  # noqa: PLC0415
     from infrastructure.celery.tasks.risk_draft import generate_risk_draft_task  # noqa: PLC0415
+    from infrastructure.persistence.models.external_intelligence import (
+        ExternalRiskSignalModel,  # noqa: PLC0415
+    )
 
     if not current_user.organization_id:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization")
-
-    signal = (await session.execute(
-        select(ExternalRiskSignalModel).where(
-            ExternalRiskSignalModel.id == signal_id,
-            ExternalRiskSignalModel.organization_id == current_user.organization_id,
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="User must belong to an organization"
         )
-    )).scalar_one_or_none()
+
+    signal = (
+        await session.execute(
+            select(ExternalRiskSignalModel).where(
+                ExternalRiskSignalModel.id == signal_id,
+                ExternalRiskSignalModel.organization_id == current_user.organization_id,
+            )
+        )
+    ).scalar_one_or_none()
     if signal is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Signal not found")
 
@@ -492,12 +540,14 @@ async def accept_risk_draft(
     from infrastructure.persistence.models.m46_3 import RiskDraftModel  # noqa: PLC0415
     from infrastructure.persistence.models.risk import RiskModel  # noqa: PLC0415
 
-    draft = (await session.execute(
-        select(RiskDraftModel).where(
-            RiskDraftModel.id == draft_id,
-            RiskDraftModel.organization_id == current_user.organization_id,
+    draft = (
+        await session.execute(
+            select(RiskDraftModel).where(
+                RiskDraftModel.id == draft_id,
+                RiskDraftModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if draft is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Draft not found")
     if draft.review_status != "pending":
@@ -547,12 +597,14 @@ async def reject_risk_draft(
 ) -> dict:
     from infrastructure.persistence.models.m46_3 import RiskDraftModel  # noqa: PLC0415
 
-    draft = (await session.execute(
-        select(RiskDraftModel).where(
-            RiskDraftModel.id == draft_id,
-            RiskDraftModel.organization_id == current_user.organization_id,
+    draft = (
+        await session.execute(
+            select(RiskDraftModel).where(
+                RiskDraftModel.id == draft_id,
+                RiskDraftModel.organization_id == current_user.organization_id,
+            )
         )
-    )).scalar_one_or_none()
+    ).scalar_one_or_none()
     if draft is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Draft not found")
     if draft.review_status != "pending":

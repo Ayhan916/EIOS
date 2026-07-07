@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from .base_entity import BaseEntity
-from .enums import ConsultationBarrier, ConsultationFormat, CSDDDRight, StakeholderType
+from .enums import ConsultationBarrier, ConsultationFormat, StakeholderType
 
 
 @dataclass(slots=True, kw_only=True)

@@ -57,7 +57,9 @@ class TestCitationMapValidation:
         content = "The supplier s-retrieved is mentioned without brackets."
         cmap = {"s-retrieved": "Supplier"}
         citations = extract_citations(content, cmap)
-        assert any(c["object_id"] == "s-retrieved" and c["relevance"] == "retrieved" for c in citations)
+        assert any(
+            c["object_id"] == "s-retrieved" and c["relevance"] == "retrieved" for c in citations
+        )
 
     def test_explicit_beats_retrieved_for_same_id(self):
         """When same ID appears bracketed AND in cmap, explicit relevance takes priority."""
@@ -78,12 +80,20 @@ class TestCitationMapValidation:
     def test_all_nine_types_accepted_when_in_cmap(self):
         """All 9 citation types are accepted when their IDs exist in citation_map."""
         ids = {
-            "s1": "Supplier", "f1": "Finding", "r1": "Risk",
-            "rec1": "Recommendation", "e1": "Evidence", "a1": "Assessment",
-            "g1": "ComplianceGap", "d1": "Disclosure", "rpt1": "Report",
+            "s1": "Supplier",
+            "f1": "Finding",
+            "r1": "Risk",
+            "rec1": "Recommendation",
+            "e1": "Evidence",
+            "a1": "Assessment",
+            "g1": "ComplianceGap",
+            "d1": "Disclosure",
+            "rpt1": "Report",
         }
-        content = "[Supplier:s1][Finding:f1][Risk:r1][Recommendation:rec1][Evidence:e1]" \
-                  "[Assessment:a1][ComplianceGap:g1][Disclosure:d1][Report:rpt1]"
+        content = (
+            "[Supplier:s1][Finding:f1][Risk:r1][Recommendation:rec1][Evidence:e1]"
+            "[Assessment:a1][ComplianceGap:g1][Disclosure:d1][Report:rpt1]"
+        )
         citations = extract_citations(content, ids)
         found_types = {c["citation_type"] for c in citations}
         assert len(found_types) == 9

@@ -21,12 +21,13 @@ Security:
   - Rate limit on public /submit enforced via RateLimiterMiddleware config
   - organization_id MANDATORY on all internal queries
 """
+
 from __future__ import annotations
 
 import hashlib
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any, Optional
+from typing import Any
 
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
@@ -76,6 +77,7 @@ def _hash(token: str) -> str:
 
 # ── Schemas ────────────────────────────────────────────────────────────────────
 
+
 class TemplateOut(BaseModel):
     id: str
     organization_id: str
@@ -121,8 +123,8 @@ class AssessmentOut(BaseModel):
     reference_code: str
     token_expires_at: Any
     created_at: Any
-    submitted_at: Optional[Any]
-    portal_link: Optional[str] = None  # only on creation
+    submitted_at: Any | None
+    portal_link: str | None = None  # only on creation
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -230,6 +232,7 @@ def create_assessment(
     real_token = _make_token(assessment.id, body.supplier_id, expires_at)
     # update token_hash in DB
     from infrastructure.persistence.models.supplier_assessment import SupplierAssessmentModel
+
     m = db.get(SupplierAssessmentModel, assessment.id)
     m.token_hash = _hash(real_token)
     db.commit()
@@ -240,7 +243,7 @@ def create_assessment(
 
 @router.get("/", response_model=list[AssessmentOut])
 def list_assessments(
-    status_filter: Optional[str] = Query(default=None, alias="status"),
+    status_filter: str | None = Query(default=None, alias="status"),
     db: Session = Depends(get_sync_db),
     user: User = Depends(get_current_user),
 ):
@@ -299,7 +302,9 @@ def _resolve_token(token: str, db: Session):
     try:
         payload = _decode_token(token)
     except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Assessment link has expired. Please request a new one.")
+        raise HTTPException(
+            status_code=401, detail="Assessment link has expired. Please request a new one."
+        )
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid assessment link.")
 
@@ -326,7 +331,10 @@ def portal_get_assessment(
     trepo = SQLAssessmentTemplateRepository(db)
     questions = trepo.get_questions(m.template_id)
     tmpl = db.get(
-        __import__("infrastructure.persistence.models.supplier_assessment", fromlist=["AssessmentTemplateModel"]).AssessmentTemplateModel,
+        __import__(
+            "infrastructure.persistence.models.supplier_assessment",
+            fromlist=["AssessmentTemplateModel"],
+        ).AssessmentTemplateModel,
         m.template_id,
     )
     existing_responses = arepo.get_responses(m.id)
@@ -350,7 +358,8 @@ def portal_get_assessment(
                 "sort_order": q.sort_order,
                 "saved_answer": saved.get(q.id, ""),
             }
-            for q in questions if q.is_active
+            for q in questions
+            if q.is_active
         ],
     }
 
@@ -381,7 +390,9 @@ def portal_submit(
     IP address NEVER returned in response.
     """
     if not body.confirm_accuracy:
-        raise HTTPException(status_code=422, detail="You must confirm the accuracy of your answers.")
+        raise HTTPException(
+            status_code=422, detail="You must confirm the accuracy of your answers."
+        )
 
     m, arepo, _ = _resolve_token(token, db)
     assessment, ref_code = arepo.submit(

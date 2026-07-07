@@ -10,9 +10,7 @@ Covers:
 
 from __future__ import annotations
 
-import pytest
-
-from domain.enums import UserRole, has_min_role, is_valid_review_transition, ReviewStatus
+from domain.enums import ReviewStatus, UserRole, has_min_role, is_valid_review_transition
 
 
 class TestFourEyesRoleGuard:

@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, Field
 
@@ -40,7 +39,7 @@ class SupplierDigitalTwinResponse(BaseModel):
     open_actions: int
     event_count: int
     critical_event_count: int
-    last_event_at: Optional[datetime]
+    last_event_at: datetime | None
     last_updated_at: datetime
     twin_version: int
 

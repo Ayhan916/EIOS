@@ -8,7 +8,7 @@ All calculations are deterministic — simple arithmetic over projected outputs.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -22,7 +22,7 @@ from infrastructure.persistence.models.strategy import (
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def compare_scenarios(
@@ -56,9 +56,7 @@ def compare_scenarios(
             executions[sid] = exec_rec
 
     if len(executions) < 2:
-        raise StrategyError(
-            "At least 2 scenarios must have completed executions to compare"
-        )
+        raise StrategyError("At least 2 scenarios must have completed executions to compare")
 
     # First scenario with an execution is the base
     base_sid = next(sid for sid in scenario_ids if sid in executions)
@@ -126,9 +124,7 @@ def compare_scenarios(
     return comparison
 
 
-def list_comparisons(
-    organization_id: str, session: Session
-) -> list[ScenarioComparisonModel]:
+def list_comparisons(organization_id: str, session: Session) -> list[ScenarioComparisonModel]:
     return (
         session.query(ScenarioComparisonModel)
         .filter(ScenarioComparisonModel.organization_id == organization_id)

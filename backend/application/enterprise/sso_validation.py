@@ -40,11 +40,11 @@ class ValidatedIdentity:
     signature/token verification.  Never constructed from raw client claims.
     """
 
-    external_id: str          # subject NameID (SAML) or sub (OIDC)
+    external_id: str  # subject NameID (SAML) or sub (OIDC)
     email: str
-    groups: list[str]         # group claims extracted from assertion/token
-    issuer: str               # IdP issuer URI — must match IdentityProviderModel.issuer
-    idp_id: str               # internal IdentityProviderModel.id
+    groups: list[str]  # group claims extracted from assertion/token
+    issuer: str  # IdP issuer URI — must match IdentityProviderModel.issuer
+    idp_id: str  # internal IdentityProviderModel.id
     display_name: str | None = None
     raw_claims: dict[str, Any] = field(default_factory=dict)
 

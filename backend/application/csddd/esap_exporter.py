@@ -5,11 +5,12 @@ Deterministic — same DB state always produces same output.
 
 ESAP Taxonomy Mapping (Art. 16 CSDDD → ESAP/XBRL concepts, schema version 2024-01):
 """
+
 from __future__ import annotations
 
 import json
 import xml.etree.ElementTree as ET
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -96,7 +97,9 @@ def build_export(
     dd_policy = ""
     try:
         row = session.execute(
-            text("SELECT description FROM dd_governance_documents WHERE organization_id = :oid AND status = 'approved' ORDER BY updated_at DESC LIMIT 1"),
+            text(
+                "SELECT description FROM dd_governance_documents WHERE organization_id = :oid AND status = 'approved' ORDER BY updated_at DESC LIMIT 1"
+            ),
             {"oid": org_id},
         ).fetchone()
         if row:
@@ -122,7 +125,9 @@ def build_export(
         "SELECT id, title, status FROM remedy_cases WHERE organization_id = :oid ORDER BY created_at DESC LIMIT 20",
         {"oid": org_id},
     )
-    actions_summary = [{"type": "cap", **r} for r in caps] + [{"type": "remedy", **r} for r in remedies]
+    actions_summary = [{"type": "cap", **r} for r in caps] + [
+        {"type": "remedy", **r} for r in remedies
+    ]
 
     # Art. 22 — Board approvals
     board_approvals = _safe_list(
@@ -139,7 +144,9 @@ def build_export(
             {"oid": org_id},
         ).fetchone()
         if row and row[0]:
-            effectiveness_summary = f"{row[0]} effectiveness review(s) conducted for reporting year {report_year}."
+            effectiveness_summary = (
+                f"{row[0]} effectiveness review(s) conducted for reporting year {report_year}."
+            )
     except Exception:
         effectiveness_summary = "Effectiveness reviews status not available."
 
@@ -149,7 +156,8 @@ def build_export(
     )
     stakeholder_consultation = (
         f"{stakeholder_count} stakeholder(s) identified and engaged per Art. 13."
-        if stakeholder_count else ""
+        if stakeholder_count
+        else ""
     )
 
     # Validation
@@ -168,7 +176,7 @@ def build_export(
     return ESAPExportBundle(
         organization_id=org_id,
         report_year=report_year,
-        generated_at=datetime.now(timezone.utc),
+        generated_at=datetime.now(UTC),
         schema_version=SCHEMA_VERSION,
         dd_policy_description=dd_policy,
         risks_summary=risks,
@@ -206,13 +214,16 @@ def to_json(bundle: ESAPExportBundle) -> str:
 
 def to_xml(bundle: ESAPExportBundle) -> str:
     """Serialize export bundle to XML string (XBRL-like structure)."""
-    root = ET.Element("CSDDDReport", {
-        "xmlns:csddd": "urn:esap:csddd:2024-01",
-        "schemaVersion": bundle.schema_version,
-        "organizationId": bundle.organization_id,
-        "reportYear": str(bundle.report_year),
-        "generatedAt": bundle.generated_at.isoformat(),
-    })
+    root = ET.Element(
+        "CSDDDReport",
+        {
+            "xmlns:csddd": "urn:esap:csddd:2024-01",
+            "schemaVersion": bundle.schema_version,
+            "organizationId": bundle.organization_id,
+            "reportYear": str(bundle.report_year),
+            "generatedAt": bundle.generated_at.isoformat(),
+        },
+    )
 
     def add(parent: ET.Element, tag: str, text_val: str) -> ET.Element:
         el = ET.SubElement(parent, tag)

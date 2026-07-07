@@ -48,9 +48,16 @@ async def _log_audit_event(
 
 
 _VALID_TYPES = {
-    "PARENT_COMPANY", "SUBSIDIARY", "SISTER_COMPANY", "SHARED_COUNTRY",
-    "SHARED_SECTOR", "SHARED_SUPPLY_CHAIN", "SHARED_INCIDENT",
-    "SHARED_LOGISTICS", "SHARED_REGULATORY_EXPOSURE", "CUSTOM",
+    "PARENT_COMPANY",
+    "SUBSIDIARY",
+    "SISTER_COMPANY",
+    "SHARED_COUNTRY",
+    "SHARED_SECTOR",
+    "SHARED_SUPPLY_CHAIN",
+    "SHARED_INCIDENT",
+    "SHARED_LOGISTICS",
+    "SHARED_REGULATORY_EXPOSURE",
+    "CUSTOM",
 }
 
 
@@ -66,8 +73,9 @@ async def create_relationship(
     created_by: str | None = None,
     session,
 ) -> object:
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     rel_type = relationship_type.upper()
     if rel_type not in _VALID_TYPES:
@@ -97,9 +105,7 @@ async def create_relationship(
         SupplierRelationshipModel.relationship_status == "ACTIVE",
     )
     if (await session.execute(dup_stmt)).scalar_one_or_none() is not None:
-        raise ValueError(
-            f"Active {rel_type} relationship already exists between these suppliers"
-        )
+        raise ValueError(f"Active {rel_type} relationship already exists between these suppliers")
 
     now = datetime.now(UTC)
     rel = SupplierRelationshipModel(
@@ -132,8 +138,7 @@ async def create_relationship(
         "network.relationship.created",
         rel.id,
         detail=(
-            f"type={rel_type} supplier={supplier_id} "
-            f"related={related_supplier_id} source={source}"
+            f"type={rel_type} supplier={supplier_id} related={related_supplier_id} source={source}"
         ),
         actor_id=created_by or "network_engine",
     )
@@ -145,8 +150,9 @@ async def get_relationship(
     organization_id: str,
     session,
 ) -> object | None:
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     stmt = select(SupplierRelationshipModel).where(
         SupplierRelationshipModel.id == relationship_id,
@@ -164,6 +170,7 @@ async def list_relationships(
     session=None,
 ) -> list:
     from application.network.graph_service import get_relationships
+
     return await get_relationships(
         organization_id=organization_id,
         supplier_id=supplier_id,
@@ -179,8 +186,9 @@ async def remove_relationship(
     removed_by: str,
     session,
 ) -> object:
-    from infrastructure.persistence.models.network import SupplierRelationshipModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.network import SupplierRelationshipModel
 
     stmt = select(SupplierRelationshipModel).where(
         SupplierRelationshipModel.id == relationship_id,

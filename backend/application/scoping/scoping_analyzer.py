@@ -16,10 +16,10 @@ Priority logic (deterministic, in order of precedence):
   P2: risk_score >= config.risk_score_threshold_p2 (but < P1 threshold)
   P3: everything else
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
 
 from domain.enums import ScopingPriority
 from domain.scoping import ScopingConfig, ScopingResult
@@ -39,7 +39,7 @@ def analyze(config: ScopingConfig, suppliers: list[SupplierInput]) -> list[Scopi
     """Run deterministic scoping analysis. Returns one ScopingResult per supplier."""
     results = []
     high_risk_countries_lower = {c.lower().strip() for c in config.high_risk_countries}
-    high_risk_sectors_lower = {s.lower().strip() for s in config.high_risk_sectors}
+    {s.lower().strip() for s in config.high_risk_sectors}
 
     for s in suppliers:
         reasons: list[str] = []
@@ -60,7 +60,9 @@ def analyze(config: ScopingConfig, suppliers: list[SupplierInput]) -> list[Scopi
             p1_triggers = True
 
         # sector match: check if any high-risk sector is contained in the supplier's industry string
-        matched_sectors = [sec for sec in config.high_risk_sectors if sec.lower().strip() in industry_lower]
+        matched_sectors = [
+            sec for sec in config.high_risk_sectors if sec.lower().strip() in industry_lower
+        ]
         if matched_sectors:
             reasons.append(f"Hochrisikobranche: {', '.join(matched_sectors)}")
             p1_triggers = True
@@ -96,6 +98,10 @@ def analyze(config: ScopingConfig, suppliers: list[SupplierInput]) -> list[Scopi
         )
 
     # Sort: P1 first, then P2, then P3, then by score desc within each tier
-    _order = {ScopingPriority.PRIORITY_1: 0, ScopingPriority.PRIORITY_2: 1, ScopingPriority.PRIORITY_3: 2}
+    _order = {
+        ScopingPriority.PRIORITY_1: 0,
+        ScopingPriority.PRIORITY_2: 1,
+        ScopingPriority.PRIORITY_3: 2,
+    }
     results.sort(key=lambda r: (_order[r.priority], -r.risk_score))
     return results

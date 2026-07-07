@@ -26,13 +26,9 @@ from application.supplier_twin.service import (
     SupplierOwnershipService,
 )
 from domain.supplier_extensions import (
-    CertificationType,
-    ContactRole,
-    ESGMetricType,
     ESGRatingProvider,
-    LocationType,
-    OwnershipType,
 )
+from domain.user import User
 from infrastructure.kafka.producer import KafkaEventProducer, get_kafka_producer
 from infrastructure.persistence.models.supplier import SupplierModel
 from interfaces.api.deps import (
@@ -53,11 +49,9 @@ from interfaces.api.schemas.supplier_extensions import (
     SupplierESGMetricResponse,
     SupplierLocationCreate,
     SupplierLocationResponse,
-    SupplierLocationUpdate,
     SupplierOwnershipResponse,
     SupplierOwnershipUpsert,
 )
-from domain.user import User
 
 router = APIRouter(
     prefix="/suppliers",
@@ -81,6 +75,7 @@ async def _assert_supplier_access(
 
 
 # ── Locations ─────────────────────────────────────────────────────────────────
+
 
 @router.get("/{supplier_id}/locations", response_model=list[SupplierLocationResponse])
 async def list_locations(
@@ -168,6 +163,7 @@ async def delete_location(
 
 # ── Contacts ──────────────────────────────────────────────────────────────────
 
+
 @router.get("/{supplier_id}/contacts", response_model=list[SupplierContactResponse])
 async def list_contacts(
     supplier_id: str,
@@ -244,6 +240,7 @@ async def update_contact(
 
 # ── Certifications ────────────────────────────────────────────────────────────
 
+
 @router.get("/{supplier_id}/certifications", response_model=list[SupplierCertificationResponse])
 async def list_certifications(
     supplier_id: str,
@@ -293,6 +290,7 @@ async def create_certification(
 
 # ── Ownership ─────────────────────────────────────────────────────────────────
 
+
 @router.get("/{supplier_id}/ownership", response_model=SupplierOwnershipResponse | None)
 async def get_ownership(
     supplier_id: str,
@@ -333,6 +331,7 @@ async def upsert_ownership(
 
 
 # ── ESG Metrics ───────────────────────────────────────────────────────────────
+
 
 @router.get("/{supplier_id}/esg-metrics", response_model=list[SupplierESGMetricResponse])
 async def list_esg_metrics(
@@ -389,6 +388,7 @@ async def record_esg_metric(
 
 # ── External ESG Ratings (KAN-90) ─────────────────────────────────────────────
 
+
 @router.get("/{supplier_id}/esg-ratings", response_model=list[ExternalESGRatingResponse])
 async def list_esg_ratings(
     supplier_id: str,
@@ -399,9 +399,7 @@ async def list_esg_ratings(
 ) -> list[ExternalESGRatingResponse]:
     await _assert_supplier_access(supplier_id, current_user.organization_id or "", db)
     svc = SupplierExternalESGRatingService(db, kafka)
-    models = await svc.list_for_supplier(
-        current_user.organization_id or "", supplier_id, provider
-    )
+    models = await svc.list_for_supplier(current_user.organization_id or "", supplier_id, provider)
     return [ExternalESGRatingResponse.from_model(m) for m in models]
 
 

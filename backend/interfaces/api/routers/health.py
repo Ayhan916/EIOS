@@ -113,12 +113,15 @@ async def readiness() -> ReadinessResponse:
     # ── Redis (rate-limit / session) ──────────────────────────────────────────
     try:
         from infrastructure.redis.client import get_redis  # noqa: PLC0415
+
         redis = get_redis()
         if redis is not None:
             await redis.ping()
             components["redis"] = ComponentStatus(status="ok")
         else:
-            components["redis"] = ComponentStatus(status="unconfigured", detail="Redis not connected")
+            components["redis"] = ComponentStatus(
+                status="unconfigured", detail="Redis not connected"
+            )
     except Exception as exc:  # noqa: BLE001
         logger.warning("health_redis_failed", error=str(exc))
         components["redis"] = ComponentStatus(status="degraded", detail=str(exc)[:120])
@@ -127,6 +130,7 @@ async def readiness() -> ReadinessResponse:
     # ── Redis Blacklist ───────────────────────────────────────────────────────
     try:
         from infrastructure.redis.blacklist import get_redis_blacklist  # noqa: PLC0415
+
         bl = get_redis_blacklist()
         if bl is not None:
             await bl.ping()
@@ -170,7 +174,7 @@ async def readiness() -> ReadinessResponse:
 async def health_details() -> DetailsResponse:
     """Verbose diagnostics for ops: DB pool stats, replica lag, backup age (admin only)."""
     import os  # noqa: PLC0415
-    from datetime import datetime, UTC  # noqa: PLC0415
+    from datetime import UTC, datetime  # noqa: PLC0415
 
     uptime = round(time.time() - _start_time, 1)
 
@@ -193,6 +197,7 @@ async def health_details() -> DetailsResponse:
     redis_status = ComponentStatus(status="unconfigured")
     try:
         from infrastructure.redis.client import get_redis  # noqa: PLC0415
+
         r = get_redis()
         if r is not None:
             info = await r.info("server")
@@ -207,6 +212,7 @@ async def health_details() -> DetailsResponse:
     bl_status = ComponentStatus(status="unconfigured")
     try:
         from infrastructure.redis.blacklist import get_redis_blacklist  # noqa: PLC0415
+
         bl = get_redis_blacklist()
         if bl is not None:
             info = await bl.info("server")
@@ -222,10 +228,9 @@ async def health_details() -> DetailsResponse:
     if settings.database_readonly_url:
         try:
             from infrastructure.persistence.database import _readonly_engine  # noqa: PLC0415
+
             async with _readonly_engine.connect() as conn:
-                row = await conn.execute(
-                    text("SELECT pg_is_in_recovery()::text, now()::text")
-                )
+                row = await conn.execute(text("SELECT pg_is_in_recovery()::text, now()::text"))
                 is_replica, ts = row.fetchone()
             replica_status = ComponentStatus(
                 status="ok",

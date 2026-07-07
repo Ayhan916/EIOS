@@ -51,6 +51,7 @@ async def _log_audit_event(
     except Exception as exc:
         logger.warning("network_cascade_audit_failed", action=action, error=str(exc))
 
+
 _CASCADE_WINDOW_HOURS = 72
 _CASCADE_MIN_SUPPLIERS = 2
 
@@ -67,12 +68,13 @@ async def detect_cascading_risk(
 
     Returns list of created NetworkExposureSignalModel records.
     """
+    from sqlalchemy import select
+
     from infrastructure.persistence.models.network import (
         NetworkExposureSignalModel,
         SupplierRelationshipModel,
     )
     from infrastructure.persistence.models.surveillance import SurveillanceSignalModel
-    from sqlalchemy import select
 
     cutoff = datetime.now(UTC) - timedelta(hours=_CASCADE_WINDOW_HOURS)
 
@@ -237,9 +239,10 @@ async def cluster_incidents(
     Skips groupings with fewer than 2 affected suppliers.
     Returns created IncidentClusterModel records.
     """
-    from infrastructure.persistence.models.network import IncidentClusterModel
-    from infrastructure.persistence.models.finding import FindingModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.finding import FindingModel
+    from infrastructure.persistence.models.network import IncidentClusterModel
 
     try:
         finding_stmt = select(
@@ -282,9 +285,7 @@ async def cluster_incidents(
             existing_suppliers = set(existing.affected_supplier_ids)
             existing_suppliers.update(data["suppliers"])
             existing.affected_supplier_ids = list(existing_suppliers)
-            existing.finding_ids = list(
-                set(existing.finding_ids) | set(data["findings"])
-            )
+            existing.finding_ids = list(set(existing.finding_ids) | set(data["findings"]))
             existing.updated_at = now
             await session.flush()
             await _log_audit_event(
@@ -328,6 +329,7 @@ async def cluster_incidents(
         # M39 cross-module: new incident cluster → ESGAction (idempotent)
         try:
             from application.operating_system.action_service import ingest_from_module_idempotent
+
             await ingest_from_module_idempotent(
                 organization_id=organization_id,
                 source_type="NETWORK_EXPOSURE",

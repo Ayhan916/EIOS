@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from interfaces.api.schemas.sustainability import SustainabilityExecutiveSummary  # noqa: F401 re-exported
-from interfaces.api.schemas.financial_esg import FinancialSustainabilitySummary  # noqa: F401 re-exported
-
+from interfaces.api.schemas.financial_esg import (
+    FinancialSustainabilitySummary,  # noqa: F401 re-exported
+)
+from interfaces.api.schemas.sustainability import (
+    SustainabilityExecutiveSummary,  # noqa: F401 re-exported
+)
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
 
@@ -38,6 +41,7 @@ class GovernanceSummary(BaseModel):
 
 class ESGOperatingSummary(BaseModel):
     """M39 ESG Operating System summary surfaced on the executive dashboard."""
+
     status: str = "ok"
     degraded_reason: str | None = None
     objectives_at_risk: int = 0

@@ -69,6 +69,7 @@ def _to_response(report: GrievanceReport) -> GrievanceReportResponse:
 
 # ── Public endpoints (no auth) ────────────────────────────────────────────────
 
+
 @router.post(
     "/grievances/submit",
     response_model=GrievanceSubmitResponse,
@@ -125,7 +126,9 @@ async def check_grievance_status(
     repo = SQLGrievanceRepository(session)
     report = await repo.get_by_reference_code(reference_code)
     if report is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Reference code not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Reference code not found"
+        )
 
     return GrievanceStatusCheckResponse(
         reference_code=report.anonymized_reference_code,
@@ -137,6 +140,7 @@ async def check_grievance_status(
 
 
 # ── Internal endpoints (analyst+ auth required) ───────────────────────────────
+
 
 @router.get(
     "/grievances/",
@@ -178,9 +182,10 @@ async def grievance_summary(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_db),
 ) -> GrievanceSummary:
-    from infrastructure.persistence.repositories.grievance import SQLGrievanceRepository
     from sqlalchemy import func, select
+
     from infrastructure.persistence.models.supplier_portal import GrievanceReportModel
+    from infrastructure.persistence.repositories.grievance import SQLGrievanceRepository
 
     if not current_user.organization_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No organization context")

@@ -14,10 +14,9 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, Index, Integer, String, Text, UniqueConstraint
+from sqlalchemy import DateTime, Float, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
-from sqlalchemy import text
 
 from .base import BaseModel
 
@@ -50,12 +49,8 @@ class SupplierRelationshipModel(BaseModel):
     confidence: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
     source: Mapped[str] = mapped_column(String(30), nullable=False, default="MANUAL")
     rationale: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    relationship_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="ACTIVE"
-    )
-    removed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    relationship_status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE")
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     removed_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
@@ -83,13 +78,9 @@ class SuggestedRelationshipModel(BaseModel):
     rationale: Mapped[str] = mapped_column(Text, nullable=False, default="")
     suggestion_source: Mapped[str] = mapped_column(String(50), nullable=False)
     # PENDING | APPROVED | REJECTED
-    suggestion_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="PENDING"
-    )
+    suggestion_status: Mapped[str] = mapped_column(String(20), nullable=False, default="PENDING")
     reviewed_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
-    reviewed_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     review_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
@@ -133,15 +124,9 @@ class NetworkExposureSignalModel(BaseModel):
     source_signal_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     source_finding_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     # ACTIVE | RESOLVED | DISMISSED
-    exposure_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="ACTIVE"
-    )
-    detected_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
-    resolved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    exposure_status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE")
+    detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 
 
@@ -167,19 +152,13 @@ class SupplierCriticalityModel(BaseModel):
     degree_centrality: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     inbound_degree: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     outbound_degree: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    connected_component_size: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=1
-    )
+    connected_component_size: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     dependency_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     assessment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     finding_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    open_remediation_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
+    open_remediation_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class DependencyAnalysisModel(BaseModel):
@@ -197,22 +176,12 @@ class DependencyAnalysisModel(BaseModel):
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
     supplier_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     dependency_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    concentration_score: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
-    )
-    diversification_score: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
-    )
-    critical_supplier_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
-    single_point_of_failure_count: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0
-    )
+    concentration_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    diversification_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    critical_supplier_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    single_point_of_failure_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class ResilienceAssessmentModel(BaseModel):
@@ -230,17 +199,11 @@ class ResilienceAssessmentModel(BaseModel):
     organization_id: Mapped[str] = mapped_column(String(36), nullable=False)
     supplier_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     resilience_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
-    diversification_score: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
-    )
-    concentration_score: Mapped[float] = mapped_column(
-        Float, nullable=False, default=0.0
-    )
+    diversification_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    concentration_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     redundancy_score: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
-    calculated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    calculated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class IncidentClusterModel(BaseModel):
@@ -263,19 +226,13 @@ class IncidentClusterModel(BaseModel):
     root_cause: Mapped[str] = mapped_column(Text, nullable=False, default="")
     severity: Mapped[str] = mapped_column(String(20), nullable=False, default="MEDIUM")
     # ACTIVE | RESOLVED
-    cluster_status: Mapped[str] = mapped_column(
-        String(20), nullable=False, default="ACTIVE"
-    )
-    affected_supplier_ids: Mapped[list] = mapped_column(
-        JSONB, nullable=False, default=list
-    )
+    cluster_status: Mapped[str] = mapped_column(String(20), nullable=False, default="ACTIVE")
+    affected_supplier_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     finding_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     signal_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     risk_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
     compliance_gap_ids: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
-    resolved_at: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
-    )
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     resolved_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     calculation_inputs: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
 

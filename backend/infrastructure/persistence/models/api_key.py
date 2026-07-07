@@ -23,9 +23,13 @@ class ApiKeyModel(BaseModel):
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     requests_total: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     requests_this_minute: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    minute_window_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    minute_window_start: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     requests_this_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
-    hour_window_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    hour_window_start: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     rate_limit_per_minute: Mapped[int] = mapped_column(Integer, nullable=False, default=60)
     rate_limit_per_hour: Mapped[int] = mapped_column(Integer, nullable=False, default=1000)
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

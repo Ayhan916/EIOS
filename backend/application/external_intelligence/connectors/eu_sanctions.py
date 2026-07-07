@@ -9,6 +9,7 @@ https://webgate.ec.europa.eu/fsd/fsf/public/files/xmlFullSanctionsList_1_1/conte
 
 from __future__ import annotations
 
+import contextlib
 from datetime import UTC, datetime
 from typing import Any
 
@@ -44,20 +45,22 @@ class EUSanctionsConnector(BaseLiveConnector):
         today = datetime.now(UTC).date().isoformat()
         records = []
         for entry in raw_records:
-            records.append({
-                "signal_type": "sanctions",
-                "severity": "high",
-                "description": (
-                    f"EU sanctions designation: {entry.get('name', 'Unknown')}. "
-                    f"Regulation: {entry.get('regulation', 'Unknown')}."
-                ),
-                "country_code": entry.get("country_code", ""),
-                "entity_name": entry.get("name", ""),
-                "entity_type": entry.get("entity_type", "individual"),
-                "regulation": entry.get("regulation", ""),
-                "source": ExternalSourceName.EU_SANCTIONS.value,
-                "observed_at": today,
-            })
+            records.append(
+                {
+                    "signal_type": "sanctions",
+                    "severity": "high",
+                    "description": (
+                        f"EU sanctions designation: {entry.get('name', 'Unknown')}. "
+                        f"Regulation: {entry.get('regulation', 'Unknown')}."
+                    ),
+                    "country_code": entry.get("country_code", ""),
+                    "entity_name": entry.get("name", ""),
+                    "entity_type": entry.get("entity_type", "individual"),
+                    "regulation": entry.get("regulation", ""),
+                    "source": ExternalSourceName.EU_SANCTIONS.value,
+                    "observed_at": today,
+                }
+            )
         return RawDataset(
             source_name=ExternalSourceName.EU_SANCTIONS.value,
             source_version=today,
@@ -81,6 +84,7 @@ class EUSanctionsConnector(BaseLiveConnector):
 def _parse_eu_sanctions_xml(xml_text: str) -> list[dict[str, Any]]:
     """Parse EU Financial Sanctions XML."""
     import xml.etree.ElementTree as ET
+
     records = []
     try:
         root = ET.fromstring(xml_text)
@@ -95,12 +99,14 @@ def _parse_eu_sanctions_xml(xml_text: str) -> list[dict[str, Any]]:
             reg_node = subject.find(".//regulation")
             if reg_node is not None:
                 regulation = reg_node.get("numberTitle", "")
-            records.append({
-                "name": name,
-                "entity_type": subject.get("subjectType", "individual").lower(),
-                "country_code": country,
-                "regulation": regulation,
-            })
+            records.append(
+                {
+                    "name": name,
+                    "entity_type": subject.get("subjectType", "individual").lower(),
+                    "country_code": country,
+                    "regulation": regulation,
+                }
+            )
     except ET.ParseError as exc:
         logger.warning("eu_sanctions_xml_parse_failed", error=str(exc))
     return records
@@ -108,14 +114,14 @@ def _parse_eu_sanctions_xml(xml_text: str) -> list[dict[str, Any]]:
 
 async def _create_eu_signals(dataset, session: Any) -> None:
     """Create ExternalRiskSignal records for EU sanctions entries."""
+    from application.external_intelligence.signal_service import create_signal
     from domain.enums import RiskSignalType, SignalSeverity
     from domain.external_intelligence import ExternalRiskSignal
-    from application.external_intelligence.signal_service import create_signal
 
     source_version = dataset.source_version if hasattr(dataset, "source_version") else "live"
     dataset_id = dataset.id if hasattr(dataset, "id") else ""
 
-    for record in (dataset.records if hasattr(dataset, "records") else []):
+    for record in dataset.records if hasattr(dataset, "records") else []:
         signal = ExternalRiskSignal(
             signal_type=RiskSignalType.SANCTIONS,
             severity=SignalSeverity.HIGH,
@@ -129,7 +135,5 @@ async def _create_eu_signals(dataset, session: Any) -> None:
             organization_id="",
             is_active=True,
         )
-        try:
+        with contextlib.suppress(Exception):
             await create_signal(signal, session)
-        except Exception:
-            pass

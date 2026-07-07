@@ -11,10 +11,10 @@ from __future__ import annotations
 
 import csv
 import io
-from datetime import UTC, datetime, timezone
-
+from datetime import UTC, datetime
 
 # ── CSV helper ─────────────────────────────────────────────────────────────────
+
 
 def _rows_to_csv(headers: list[str], rows: list[list[str]]) -> str:
     buf = io.StringIO()
@@ -67,6 +67,7 @@ class TestCsvHelper:
 
 # ── is_overdue logic ──────────────────────────────────────────────────────────
 
+
 def _is_overdue(action_status: str, due_date, now: datetime) -> bool:
     return (
         action_status not in ("resolved", "verified")
@@ -81,18 +82,22 @@ class TestIsOverdue:
 
     def test_open_past_due_is_overdue(self):
         from datetime import date
+
         assert _is_overdue("open", date(2026, 1, 1), self.now) is True
 
     def test_open_future_due_not_overdue(self):
         from datetime import date
+
         assert _is_overdue("open", date(2026, 12, 31), self.now) is False
 
     def test_resolved_past_due_not_overdue(self):
         from datetime import date
+
         assert _is_overdue("resolved", date(2026, 1, 1), self.now) is False
 
     def test_verified_past_due_not_overdue(self):
         from datetime import date
+
         assert _is_overdue("verified", date(2026, 1, 1), self.now) is False
 
     def test_no_due_date_not_overdue(self):
@@ -100,6 +105,7 @@ class TestIsOverdue:
 
     def test_in_progress_past_due_is_overdue(self):
         from datetime import date
+
         assert _is_overdue("in_progress", date(2026, 1, 1), self.now) is True
 
 
@@ -143,9 +149,38 @@ class TestRiskLevelSortOrder:
 
 # ── Findings CSV column structure ─────────────────────────────────────────────
 
-FINDINGS_CSV_HEADERS = ["id", "title", "severity", "category", "status", "assessment_id", "created_at", "supplier_name"]
-RISKS_CSV_HEADERS = ["id", "title", "risk_level", "category", "probability", "impact", "assessment_id", "created_at", "supplier_name"]
-RECOMMENDATIONS_CSV_HEADERS = ["id", "title", "action_status", "priority", "due_date", "is_overdue", "assessment_id", "created_at", "supplier_name"]
+FINDINGS_CSV_HEADERS = [
+    "id",
+    "title",
+    "severity",
+    "category",
+    "status",
+    "assessment_id",
+    "created_at",
+    "supplier_name",
+]
+RISKS_CSV_HEADERS = [
+    "id",
+    "title",
+    "risk_level",
+    "category",
+    "probability",
+    "impact",
+    "assessment_id",
+    "created_at",
+    "supplier_name",
+]
+RECOMMENDATIONS_CSV_HEADERS = [
+    "id",
+    "title",
+    "action_status",
+    "priority",
+    "due_date",
+    "is_overdue",
+    "assessment_id",
+    "created_at",
+    "supplier_name",
+]
 
 
 class TestCsvColumnStructure:

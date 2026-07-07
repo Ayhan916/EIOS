@@ -66,10 +66,7 @@ def parse_sdn_entries(xml_bytes: bytes) -> list[dict[str, Any]]:
         first = (firstname_el.text or "") if firstname_el is not None else ""
         full_name = f"{first} {last}".strip() if first else last
 
-        programs = [
-            p.text or ""
-            for p in sdn_entry.findall(f".//{_ns('program')}")
-        ]
+        programs = [p.text or "" for p in sdn_entry.findall(f".//{_ns('program')}")]
 
         addresses = []
         for addr in sdn_entry.findall(f".//{_ns('address')}"):
@@ -81,13 +78,15 @@ def parse_sdn_entries(xml_bytes: bytes) -> list[dict[str, Any]]:
             if parts:
                 addresses.append(", ".join(parts))
 
-        entries.append({
-            "uid": uid,
-            "type": sdn_type,
-            "name": full_name,
-            "programs": programs,
-            "addresses": addresses,
-        })
+        entries.append(
+            {
+                "uid": uid,
+                "type": sdn_type,
+                "name": full_name,
+                "programs": programs,
+                "addresses": addresses,
+            }
+        )
 
     logger.info("ofac_sdn_parsed: %d entries", len(entries))
     return entries
@@ -108,10 +107,7 @@ def match_supplier_against_sdn(
     matches = []
     for entry in sdn_entries:
         haystack = entry["name"].lower()
-        if fuzzy:
-            hit = needle in haystack or haystack in needle
-        else:
-            hit = needle == haystack
+        hit = needle in haystack or haystack in needle if fuzzy else needle == haystack
         if hit:
             matches.append(entry)
     return matches
@@ -130,9 +126,7 @@ def sdn_entry_to_signal(
         "programs": entry["programs"],
         "addresses": entry["addresses"],
     }
-    signal_hash = hashlib.sha256(
-        f"ofac:{entry['uid']}:{supplier_id}".encode()
-    ).hexdigest()[:16]
+    signal_hash = hashlib.sha256(f"ofac:{entry['uid']}:{supplier_id}".encode()).hexdigest()[:16]
 
     return {
         "signal_type": "SANCTIONS_MATCH",

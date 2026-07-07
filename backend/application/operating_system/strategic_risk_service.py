@@ -25,13 +25,25 @@ async def create_strategic_risk(
     linked_compliance_programs: list | None = None,
 ) -> dict:
     from infrastructure.persistence.models.operating_system import StrategicRiskModel
+
     now = datetime.now(UTC)
     risk = StrategicRiskModel(
-        id=str(uuid.uuid4()), status="Active", version=1, created_at=now, updated_at=now,
-        organization_id=organization_id, title=title, description=description,
-        category=category, risk_level=risk_level, probability=probability, impact=impact,
-        risk_status="IDENTIFIED", owner_user_id=owner_user_id,
-        linked_suppliers=linked_suppliers or [], linked_objectives=linked_objectives or [],
+        id=str(uuid.uuid4()),
+        status="Active",
+        version=1,
+        created_at=now,
+        updated_at=now,
+        organization_id=organization_id,
+        title=title,
+        description=description,
+        category=category,
+        risk_level=risk_level,
+        probability=probability,
+        impact=impact,
+        risk_status="IDENTIFIED",
+        owner_user_id=owner_user_id,
+        linked_suppliers=linked_suppliers or [],
+        linked_objectives=linked_objectives or [],
         linked_initiatives=linked_initiatives or [],
         linked_compliance_programs=linked_compliance_programs or [],
     )
@@ -41,13 +53,15 @@ async def create_strategic_risk(
 
 
 async def list_strategic_risks(
-    organization_id: str, session: AsyncSession,
-    risk_level: str | None = None, risk_status: str | None = None, limit: int = 100,
+    organization_id: str,
+    session: AsyncSession,
+    risk_level: str | None = None,
+    risk_status: str | None = None,
+    limit: int = 100,
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import StrategicRiskModel
-    stmt = select(StrategicRiskModel).where(
-        StrategicRiskModel.organization_id == organization_id
-    )
+
+    stmt = select(StrategicRiskModel).where(StrategicRiskModel.organization_id == organization_id)
     if risk_level:
         stmt = stmt.where(StrategicRiskModel.risk_level == risk_level)
     if risk_status:
@@ -61,6 +75,7 @@ async def get_strategic_risk(
     organization_id: str, risk_id: str, session: AsyncSession
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import StrategicRiskModel
+
     stmt = select(StrategicRiskModel).where(
         StrategicRiskModel.organization_id == organization_id,
         StrategicRiskModel.id == risk_id,
@@ -73,6 +88,7 @@ async def update_strategic_risk(
     organization_id: str, risk_id: str, session: AsyncSession, **fields
 ) -> dict | None:
     from infrastructure.persistence.models.operating_system import StrategicRiskModel
+
     stmt = select(StrategicRiskModel).where(
         StrategicRiskModel.organization_id == organization_id,
         StrategicRiskModel.id == risk_id,
@@ -90,11 +106,20 @@ async def update_strategic_risk(
 
 def _to_dict(r) -> dict:
     return {
-        "id": r.id, "organization_id": r.organization_id, "title": r.title,
-        "description": r.description, "category": r.category, "risk_level": r.risk_level,
-        "probability": r.probability, "impact": r.impact, "risk_status": r.risk_status,
-        "owner_user_id": r.owner_user_id, "linked_suppliers": r.linked_suppliers,
-        "linked_objectives": r.linked_objectives, "linked_initiatives": r.linked_initiatives,
+        "id": r.id,
+        "organization_id": r.organization_id,
+        "title": r.title,
+        "description": r.description,
+        "category": r.category,
+        "risk_level": r.risk_level,
+        "probability": r.probability,
+        "impact": r.impact,
+        "risk_status": r.risk_status,
+        "owner_user_id": r.owner_user_id,
+        "linked_suppliers": r.linked_suppliers,
+        "linked_objectives": r.linked_objectives,
+        "linked_initiatives": r.linked_initiatives,
         "linked_compliance_programs": r.linked_compliance_programs,
-        "created_at": r.created_at, "updated_at": r.updated_at,
+        "created_at": r.created_at,
+        "updated_at": r.updated_at,
     }

@@ -105,7 +105,9 @@ class TestGetConversationMessages:
         mock_conv_result = MagicMock()
         mock_conv_result.scalar_one_or_none = MagicMock(return_value=conv)
         mock_msg_result = MagicMock()
-        mock_msg_result.scalars = MagicMock(return_value=MagicMock(all=MagicMock(return_value=[msg1, msg2])))
+        mock_msg_result.scalars = MagicMock(
+            return_value=MagicMock(all=MagicMock(return_value=[msg1, msg2]))
+        )
 
         async def execute_side_effect(stmt):
             call_count[0] += 1
@@ -145,7 +147,7 @@ class TestAddParticipant:
         mock_result.scalar_one_or_none = MagicMock(return_value=conv)
         session.execute = AsyncMock(return_value=mock_result)
 
-        participant = await add_participant(
+        await add_participant(
             conversation_id="conv-1",
             participant_id="new-user",
             participant_type="internal",

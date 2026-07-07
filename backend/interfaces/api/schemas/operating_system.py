@@ -7,8 +7,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-
 # ── Objectives ────────────────────────────────────────────────────────────────
+
 
 class CreateObjectiveRequest(BaseModel):
     title: str
@@ -48,6 +48,7 @@ class ESGObjectiveResponse(BaseModel):
 
 # ── Key Results ───────────────────────────────────────────────────────────────
 
+
 class CreateKeyResultRequest(BaseModel):
     title: str
     metric_name: str
@@ -77,6 +78,7 @@ class ESGKeyResultResponse(BaseModel):
 
 
 # ── Initiatives ───────────────────────────────────────────────────────────────
+
 
 class CreateInitiativeRequest(BaseModel):
     title: str
@@ -117,6 +119,7 @@ class ESGInitiativeResponse(BaseModel):
 
 # ── Actions ───────────────────────────────────────────────────────────────────
 
+
 class CreateActionRequest(BaseModel):
     title: str
     description: str = ""
@@ -155,6 +158,7 @@ class ESGActionResponse(BaseModel):
 
 # ── Playbooks ─────────────────────────────────────────────────────────────────
 
+
 class CreatePlaybookRequest(BaseModel):
     title: str
     description: str = ""
@@ -181,6 +185,7 @@ class ESGPlaybookResponse(BaseModel):
 
 
 # ── Workflow Executions ───────────────────────────────────────────────────────
+
 
 class StartWorkflowRequest(BaseModel):
     workflow_type: str
@@ -217,6 +222,7 @@ class WorkflowExecutionResponse(BaseModel):
 
 
 # ── Strategic Risks ───────────────────────────────────────────────────────────
+
 
 class CreateStrategicRiskRequest(BaseModel):
     title: str
@@ -261,6 +267,7 @@ class StrategicRiskResponse(BaseModel):
 
 # ── Health Score ──────────────────────────────────────────────────────────────
 
+
 class ESGHealthScoreResponse(BaseModel):
     id: str
     organization_id: str
@@ -281,6 +288,7 @@ class ESGHealthScoreResponse(BaseModel):
 
 
 # ── Escalation Rules ──────────────────────────────────────────────────────────
+
 
 class CreateEscalationRuleRequest(BaseModel):
     rule_name: str
@@ -324,6 +332,7 @@ class EscalationTriggeredResponse(BaseModel):
 
 # ── Governance Calendar ───────────────────────────────────────────────────────
 
+
 class CreateCalendarEventRequest(BaseModel):
     title: str
     event_type: str
@@ -364,6 +373,7 @@ class CalendarEventResponse(BaseModel):
 
 # ── ESG Programs ──────────────────────────────────────────────────────────────
 
+
 class CreateProgramRequest(BaseModel):
     title: str
     description: str = ""
@@ -397,6 +407,7 @@ class ESGProgramResponse(BaseModel):
 
 
 # ── ESG Controls ──────────────────────────────────────────────────────────────
+
 
 class CreateControlRequest(BaseModel):
     control_name: str
@@ -432,6 +443,7 @@ class ESGControlResponse(BaseModel):
 
 # ── Control Tests ─────────────────────────────────────────────────────────────
 
+
 class CreateControlTestRequest(BaseModel):
     control_id: str
     test_result: str
@@ -460,6 +472,7 @@ class ControlTestResponse(BaseModel):
 
 
 # ── Compliance Operations ─────────────────────────────────────────────────────
+
 
 class CreateComplianceOperationRequest(BaseModel):
     framework_name: str
@@ -493,6 +506,7 @@ class ComplianceOperationResponse(BaseModel):
 
 # ── Accountability ────────────────────────────────────────────────────────────
 
+
 class AssignAccountabilityRequest(BaseModel):
     entity_type: str
     entity_id: str
@@ -519,6 +533,7 @@ class AccountabilityAssignmentResponse(BaseModel):
 
 # ── Timeline ──────────────────────────────────────────────────────────────────
 
+
 class TimelineEntry(BaseModel):
     event_type: str
     entity_type: str
@@ -529,6 +544,7 @@ class TimelineEntry(BaseModel):
 
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
+
 
 class OperatingSystemDashboard(BaseModel):
     objectives_total: int

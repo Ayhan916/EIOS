@@ -30,6 +30,7 @@ async def create_escalation_rule(
     notification_message: str = "",
 ) -> dict:
     from infrastructure.persistence.models.operating_system import GovernanceEscalationRuleModel
+
     now = datetime.now(UTC)
     rule = GovernanceEscalationRuleModel(
         id=str(uuid.uuid4()),
@@ -53,10 +54,9 @@ async def create_escalation_rule(
     return _rule_to_dict(rule)
 
 
-async def list_escalation_rules(
-    organization_id: str, session: AsyncSession
-) -> list[dict]:
+async def list_escalation_rules(organization_id: str, session: AsyncSession) -> list[dict]:
     from infrastructure.persistence.models.operating_system import GovernanceEscalationRuleModel
+
     stmt = select(GovernanceEscalationRuleModel).where(
         GovernanceEscalationRuleModel.organization_id == organization_id,
         GovernanceEscalationRuleModel.rule_status == "ACTIVE",
@@ -65,16 +65,15 @@ async def list_escalation_rules(
     return [_rule_to_dict(r) for r in rows]
 
 
-async def evaluate_escalations(
-    organization_id: str, session: AsyncSession
-) -> list[dict]:
+async def evaluate_escalations(organization_id: str, session: AsyncSession) -> list[dict]:
     """Evaluate all ACTIVE escalation rules and return triggered escalations.
 
     Only surfaces escalations — no autonomous action is taken.
     """
     from infrastructure.persistence.models.operating_system import (
-        GovernanceEscalationRuleModel, ESGActionModel,
+        GovernanceEscalationRuleModel,
     )
+
     rules_stmt = select(GovernanceEscalationRuleModel).where(
         GovernanceEscalationRuleModel.organization_id == organization_id,
         GovernanceEscalationRuleModel.rule_status == "ACTIVE",
@@ -86,11 +85,9 @@ async def evaluate_escalations(
 
     for rule in rules:
         if rule.condition_entity_type == "ESGAction":
-            triggered.extend(
-                await _evaluate_action_rule(rule, organization_id, now, session)
-            )
+            triggered.extend(await _evaluate_action_rule(rule, organization_id, now, session))
 
-    for esc in triggered:
+    for _esc in triggered:
         os_counters.record_escalation()
 
     return triggered
@@ -100,6 +97,7 @@ async def _evaluate_action_rule(
     rule, organization_id: str, now: datetime, session: AsyncSession
 ) -> list[dict]:
     from infrastructure.persistence.models.operating_system import ESGActionModel
+
     stmt = select(ESGActionModel).where(
         ESGActionModel.organization_id == organization_id,
         ESGActionModel.action_status == rule.condition_status,

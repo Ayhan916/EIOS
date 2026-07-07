@@ -14,14 +14,15 @@ from application.surveillance.watchlist_service import auto_watchlist_from_alert
 
 logger = structlog.get_logger(__name__)
 
-_FINDING_SURGE_THRESHOLD = 5        # new agent findings in 7 days
-_REMEDIATION_FAIL_THRESHOLD = 3     # consecutive remediation failures
-_SANCTIONS_EXPOSURE_THRESHOLD = 1   # any sanctions hit triggers
+_FINDING_SURGE_THRESHOLD = 5  # new agent findings in 7 days
+_REMEDIATION_FAIL_THRESHOLD = 3  # consecutive remediation failures
+_SANCTIONS_EXPOSURE_THRESHOLD = 1  # any sanctions hit triggers
 
 
 async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -> int:
-    from infrastructure.persistence.models.supplier import SupplierModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.supplier import SupplierModel
 
     suppliers_stmt = select(SupplierModel).where(
         SupplierModel.organization_id == organization_id,
@@ -43,22 +44,29 @@ async def run(agent_id: str, agent_run_id: str, organization_id: str, session) -
 
 async def _check_finding_surge(supplier, organization_id: str, session) -> int:
     """Detect sudden increase in agent findings (M36 integration)."""
-    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
-    from sqlalchemy import func, select
     from datetime import UTC, datetime, timedelta
 
+    from sqlalchemy import func, select
+
+    from infrastructure.persistence.models.agent_monitoring import AgentFindingModel
+
     cutoff = datetime.now(UTC) - timedelta(days=7)
-    stmt = select(func.count()).select_from(AgentFindingModel).where(
-        AgentFindingModel.organization_id == organization_id,
-        AgentFindingModel.supplier_id == supplier.id,
-        AgentFindingModel.finding_status == "OPEN",
-        AgentFindingModel.created_at >= cutoff,
+    stmt = (
+        select(func.count())
+        .select_from(AgentFindingModel)
+        .where(
+            AgentFindingModel.organization_id == organization_id,
+            AgentFindingModel.supplier_id == supplier.id,
+            AgentFindingModel.finding_status == "OPEN",
+            AgentFindingModel.created_at >= cutoff,
+        )
     )
     count = (await session.execute(stmt)).scalar_one()
     if count < _FINDING_SURGE_THRESHOLD:
         return 0
 
     from datetime import UTC, datetime
+
     week = datetime.now(UTC).strftime("%Y-W%V")
     dedupe = f"emerging:finding_surge:{supplier.id}:{week}"
     await create_signal(
@@ -84,14 +92,20 @@ async def _check_finding_surge(supplier, organization_id: str, session) -> int:
 async def _check_remediation_failures(supplier, organization_id: str, session) -> int:
     """Detect repeated remediation overdue plans (M35 integration)."""
     try:
-        from infrastructure.persistence.models.risk import RemediationPlanModel
-        from sqlalchemy import func, select
         from datetime import UTC, datetime
 
-        stmt = select(func.count()).select_from(RemediationPlanModel).where(
-            RemediationPlanModel.organization_id == organization_id,
-            RemediationPlanModel.supplier_id == supplier.id,
-            RemediationPlanModel.plan_status == "OVERDUE",
+        from sqlalchemy import func, select
+
+        from infrastructure.persistence.models.risk import RemediationPlanModel
+
+        stmt = (
+            select(func.count())
+            .select_from(RemediationPlanModel)
+            .where(
+                RemediationPlanModel.organization_id == organization_id,
+                RemediationPlanModel.supplier_id == supplier.id,
+                RemediationPlanModel.plan_status == "OVERDUE",
+            )
         )
         count = (await session.execute(stmt)).scalar_one()
     except Exception:
@@ -101,6 +115,7 @@ async def _check_remediation_failures(supplier, organization_id: str, session) -
         return 0
 
     from datetime import UTC, datetime
+
     month = datetime.now(UTC).strftime("%Y-%m")
     dedupe = f"emerging:remediation_fail:{supplier.id}:{month}"
     await create_signal(
@@ -126,8 +141,11 @@ async def _check_remediation_failures(supplier, organization_id: str, session) -
 async def _check_sanctions_exposure(supplier, organization_id: str, session) -> int:
     """Detect active sanctions exposure from M34 external intelligence."""
     try:
-        from infrastructure.persistence.models.external_intelligence import ExternalIntelligenceModel
         from sqlalchemy import select
+
+        from infrastructure.persistence.models.external_intelligence import (
+            ExternalIntelligenceModel,
+        )
 
         stmt = (
             select(ExternalIntelligenceModel)
@@ -171,8 +189,11 @@ async def _check_sanctions_exposure(supplier, organization_id: str, session) -> 
 async def _check_country_risk(supplier, organization_id: str, session) -> int:
     """Detect deteriorating country risk indicators from M34."""
     try:
-        from infrastructure.persistence.models.external_intelligence import ExternalIntelligenceModel
         from sqlalchemy import select
+
+        from infrastructure.persistence.models.external_intelligence import (
+            ExternalIntelligenceModel,
+        )
 
         if not getattr(supplier, "country", None):
             return 0
@@ -204,6 +225,7 @@ async def _check_country_risk(supplier, organization_id: str, session) -> int:
         return 0
 
     from datetime import UTC, datetime
+
     month = datetime.now(UTC).strftime("%Y-%m")
     dedupe = f"emerging:country_risk:{supplier.id}:{supplier.country}:{month}"
     await create_signal(

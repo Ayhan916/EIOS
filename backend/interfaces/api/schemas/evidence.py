@@ -55,10 +55,11 @@ class DocumentUploadResponse(BaseModel):
 
 class IngestionStatusResponse(BaseModel):
     """Polling response for async Celery ingestion (M45.2)."""
+
     evidence_id: str
     task_id: str | None
-    task_state: str          # PENDING | STARTED | SUCCESS | FAILURE | RETRY
-    ingestion_status: str    # evidence record's current ingestion_status
+    task_state: str  # PENDING | STARTED | SUCCESS | FAILURE | RETRY
+    ingestion_status: str  # evidence record's current ingestion_status
     result: dict | None = None  # task result payload once SUCCESS
 
 

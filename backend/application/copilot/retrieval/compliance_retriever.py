@@ -35,9 +35,7 @@ async def retrieve_compliance_context(
     gaps = (await session.execute(gaps_stmt)).scalars().all()
 
     req_ids = list({g.requirement_id for g in gaps if g.requirement_id})
-    reqs_stmt = select(RegulationRequirementModel).where(
-        RegulationRequirementModel.id.in_(req_ids)
-    )
+    reqs_stmt = select(RegulationRequirementModel).where(RegulationRequirementModel.id.in_(req_ids))
     reqs = (await session.execute(reqs_stmt)).scalars().all()
     req_map = {r.id: r for r in reqs}
 
@@ -49,18 +47,20 @@ async def retrieve_compliance_context(
     data = []
     for g in gaps:
         req = req_map.get(g.requirement_id or "")
-        reg = reg_map.get(req.regulation_id if req else "", None) if req else None
-        data.append({
-            "gap_id": g.id,
-            "gap_type": g.gap_type,
-            "severity": g.severity,
-            "description": g.description if hasattr(g, "description") else "",
-            "requirement_code": req.code if req else "",
-            "requirement_title": req.title if req else "",
-            "regulation_name": reg.name if reg else "",
-            "regulation_code": reg.reg_code if reg and hasattr(reg, "reg_code") else "",
-            "remediation_steps": g.remediation_steps if hasattr(g, "remediation_steps") else "",
-        })
+        reg = reg_map.get(req.regulation_id if req else "") if req else None
+        data.append(
+            {
+                "gap_id": g.id,
+                "gap_type": g.gap_type,
+                "severity": g.severity,
+                "description": g.description if hasattr(g, "description") else "",
+                "requirement_code": req.code if req else "",
+                "requirement_title": req.title if req else "",
+                "regulation_name": reg.name if reg else "",
+                "regulation_code": reg.reg_code if reg and hasattr(reg, "reg_code") else "",
+                "remediation_steps": g.remediation_steps if hasattr(g, "remediation_steps") else "",
+            }
+        )
 
     retrieved_at = datetime.now(UTC).isoformat()
     freshness_metadata = [

@@ -67,6 +67,7 @@ async def _log_audit_event(
             error=str(exc),
         )
 
+
 # Built-in escalation thresholds (applied before user-defined rules)
 _AUTO_ESCALATION: list[dict] = [
     {"severity": "CRITICAL", "alert_severity": "CRITICAL"},
@@ -88,24 +89,33 @@ async def _find_open_alert_duplicate(
     When agent_finding_id is set, dedupe on (org, finding_id, severity).
     When not set (direct alert), dedupe on (org, supplier_id, severity, title[:100]).
     """
-    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
     from sqlalchemy import select
 
+    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
+
     if agent_finding_id:
-        stmt = select(AgentAlertModel).where(
-            AgentAlertModel.organization_id == organization_id,
-            AgentAlertModel.agent_finding_id == agent_finding_id,
-            AgentAlertModel.severity == severity.upper(),
-            AgentAlertModel.acknowledged_at.is_(None),
-        ).limit(1)
+        stmt = (
+            select(AgentAlertModel)
+            .where(
+                AgentAlertModel.organization_id == organization_id,
+                AgentAlertModel.agent_finding_id == agent_finding_id,
+                AgentAlertModel.severity == severity.upper(),
+                AgentAlertModel.acknowledged_at.is_(None),
+            )
+            .limit(1)
+        )
     else:
-        stmt = select(AgentAlertModel).where(
-            AgentAlertModel.organization_id == organization_id,
-            AgentAlertModel.supplier_id == supplier_id,
-            AgentAlertModel.severity == severity.upper(),
-            AgentAlertModel.title == title[:500],
-            AgentAlertModel.acknowledged_at.is_(None),
-        ).limit(1)
+        stmt = (
+            select(AgentAlertModel)
+            .where(
+                AgentAlertModel.organization_id == organization_id,
+                AgentAlertModel.supplier_id == supplier_id,
+                AgentAlertModel.severity == severity.upper(),
+                AgentAlertModel.title == title[:500],
+                AgentAlertModel.acknowledged_at.is_(None),
+            )
+            .limit(1)
+        )
     return (await session.execute(stmt)).scalar_one_or_none()
 
 
@@ -189,8 +199,9 @@ async def evaluate_finding(
 
     Returns list of created AgentAlertModel records.
     """
-    from infrastructure.persistence.models.agent_monitoring import EscalationRuleModel
     from sqlalchemy import or_, select
+
+    from infrastructure.persistence.models.agent_monitoring import EscalationRuleModel
 
     created_alerts = []
 
@@ -314,8 +325,9 @@ async def acknowledge_alert(
     acknowledged_by: str,
     session,
 ) -> object:
-    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
 
     stmt = select(AgentAlertModel).where(
         AgentAlertModel.id == alert_id,
@@ -343,12 +355,11 @@ async def list_alerts(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
     from sqlalchemy import select
 
-    stmt = select(AgentAlertModel).where(
-        AgentAlertModel.organization_id == organization_id
-    )
+    from infrastructure.persistence.models.agent_monitoring import AgentAlertModel
+
+    stmt = select(AgentAlertModel).where(AgentAlertModel.organization_id == organization_id)
     if supplier_id:
         stmt = stmt.where(AgentAlertModel.supplier_id == supplier_id)
     if severity:
@@ -394,8 +405,9 @@ async def list_escalation_rules(
     organization_id: str,
     session,
 ) -> list:
-    from infrastructure.persistence.models.agent_monitoring import EscalationRuleModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import EscalationRuleModel
 
     stmt = (
         select(EscalationRuleModel)
@@ -420,9 +432,8 @@ async def create_recommendation_draft(
     Human approval model: agents may ONLY create PENDING drafts.
     Only humans may approve or reject via approve_draft() / reject_draft().
     """
-    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
-
     from application.agent_monitoring.metrics import agent_counters
+    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
 
     now = datetime.now(UTC)
     draft = RecommendationDraftModel(
@@ -456,8 +467,9 @@ async def approve_draft(
 
     Human approval model: this is the only path to a real Recommendation.
     """
-    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
 
     stmt = select(RecommendationDraftModel).where(
         RecommendationDraftModel.id == draft_id,
@@ -504,8 +516,9 @@ async def reject_draft(
     reason: str,
     session,
 ) -> object:
-    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
 
     stmt = select(RecommendationDraftModel).where(
         RecommendationDraftModel.id == draft_id,
@@ -546,8 +559,9 @@ async def list_recommendation_drafts(
     limit: int = 50,
     session=None,
 ) -> list:
-    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
     from sqlalchemy import select
+
+    from infrastructure.persistence.models.agent_monitoring import RecommendationDraftModel
 
     stmt = select(RecommendationDraftModel).where(
         RecommendationDraftModel.organization_id == organization_id

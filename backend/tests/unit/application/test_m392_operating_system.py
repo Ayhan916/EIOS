@@ -13,17 +13,16 @@ Covers:
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, patch, call
-
-import pytest
-
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
 
+
 def _gap(**kwargs):
     """Simple object with arbitrary attributes for gap testing."""
+
     class Gap:
         pass
+
     g = Gap()
     for k, v in kwargs.items():
         setattr(g, k, v)
@@ -36,6 +35,7 @@ def _gap(**kwargs):
 class TestResolveFrameworkName:
     def _fn(self):
         from application.operating_system.compliance_operation_service import resolve_framework_name
+
         return resolve_framework_name
 
     def test_path1_framework_attribute(self):
@@ -117,7 +117,9 @@ class TestTimelineAggregation:
                 entity_type="GovernanceCalendarEvent",
                 entity_id="c1",
                 title="Mid calendar",
-                timestamp=now.replace(month=now.month - 1) if now.month > 1 else now.replace(year=now.year - 1, month=12),
+                timestamp=now.replace(month=now.month - 1)
+                if now.month > 1
+                else now.replace(year=now.year - 1, month=12),
                 status=None,
             ),
         ]
@@ -139,6 +141,7 @@ class TestTimelineAggregation:
 
     def test_result_truncated_to_limit(self):
         from interfaces.api.schemas.operating_system import TimelineEntry
+
         now = datetime.now(UTC)
         limit = 3
         all_entries = [
@@ -162,46 +165,56 @@ class TestTimelineAggregation:
 class TestExecutiveSchemaStructure:
     def test_esg_operating_summary_has_status_field(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "status" in ESGOperatingSummary.model_fields
 
     def test_esg_operating_summary_has_degraded_reason(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "degraded_reason" in ESGOperatingSummary.model_fields
 
     def test_esg_operating_summary_has_objectives_by_status(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "objectives_by_status" in ESGOperatingSummary.model_fields
 
     def test_esg_operating_summary_has_initiatives_by_status(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "initiatives_by_status" in ESGOperatingSummary.model_fields
 
     def test_esg_operating_summary_has_compliance_readiness(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "compliance_readiness" in ESGOperatingSummary.model_fields
 
     def test_esg_operating_summary_has_accountability_coverage(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "accountability_coverage" in ESGOperatingSummary.model_fields
 
     def test_esg_operating_summary_has_controls_failing(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         assert "controls_failing" in ESGOperatingSummary.model_fields
 
     def test_default_status_is_ok(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         s = ESGOperatingSummary()
         assert s.status == "ok"
         assert s.degraded_reason is None
 
     def test_degraded_construction(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         s = ESGOperatingSummary(status="degraded", degraded_reason="DB unavailable")
         assert s.status == "degraded"
         assert s.degraded_reason == "DB unavailable"
 
     def test_new_fields_have_defaults(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         s = ESGOperatingSummary()
         assert isinstance(s.objectives_by_status, dict)
         assert isinstance(s.initiatives_by_status, dict)
@@ -216,6 +229,7 @@ class TestExecutiveSchemaStructure:
 class TestMetricsNewCounters:
     def _counters(self):
         from application.operating_system.metrics import _OperatingSystemCounters
+
         return _OperatingSystemCounters()
 
     def test_programs_counter_exists(self):
@@ -290,41 +304,29 @@ class TestAuditEventTypes:
     """Verify that all M39 audit actions use the correct event type strings."""
 
     def test_calendar_service_emits_correct_audit_actions(self):
-        content = open(
-            "application/operating_system/calendar_service.py"
-        ).read()
+        content = open("application/operating_system/calendar_service.py").read()
         assert '"calendar.event_created"' in content
         assert '"calendar.event_updated"' in content or "calendar.event" in content
 
     def test_program_service_emits_correct_audit_actions(self):
-        content = open(
-            "application/operating_system/program_service.py"
-        ).read()
+        content = open("application/operating_system/program_service.py").read()
         assert '"program.created"' in content
 
     def test_control_service_emits_correct_audit_actions(self):
-        content = open(
-            "application/operating_system/control_service.py"
-        ).read()
+        content = open("application/operating_system/control_service.py").read()
         assert '"control.created"' in content
 
     def test_control_test_service_emits_correct_audit_actions(self):
-        content = open(
-            "application/operating_system/control_test_service.py"
-        ).read()
+        content = open("application/operating_system/control_test_service.py").read()
         assert '"control.tested"' in content
 
     def test_compliance_op_service_emits_correct_audit_actions(self):
-        content = open(
-            "application/operating_system/compliance_operation_service.py"
-        ).read()
+        content = open("application/operating_system/compliance_operation_service.py").read()
         assert '"compliance_op.created"' in content
         assert '"compliance_op.synced"' in content
 
     def test_accountability_service_emits_correct_audit_actions(self):
-        content = open(
-            "application/operating_system/accountability_service.py"
-        ).read()
+        content = open("application/operating_system/accountability_service.py").read()
         assert '"accountability.assigned"' in content
 
 
@@ -334,18 +336,22 @@ class TestAuditEventTypes:
 class TestDashboardWidgetCoverage:
     def test_operating_system_dashboard_has_programs_total(self):
         from interfaces.api.schemas.operating_system import OperatingSystemDashboard
+
         assert "programs_total" in OperatingSystemDashboard.model_fields
 
     def test_operating_system_dashboard_has_controls_total(self):
         from interfaces.api.schemas.operating_system import OperatingSystemDashboard
+
         assert "controls_total" in OperatingSystemDashboard.model_fields
 
     def test_operating_system_dashboard_has_compliance_operations(self):
         from interfaces.api.schemas.operating_system import OperatingSystemDashboard
+
         assert "compliance_operations" in OperatingSystemDashboard.model_fields
 
     def test_operating_system_dashboard_has_governance_calendar_events(self):
         from interfaces.api.schemas.operating_system import OperatingSystemDashboard
+
         assert "governance_calendar_events" in OperatingSystemDashboard.model_fields
 
 
@@ -355,23 +361,32 @@ class TestDashboardWidgetCoverage:
 class TestExecutiveDashboardFieldCompleteness:
     def test_executive_dashboard_has_esg_summary(self):
         from interfaces.api.schemas.executive import ExecutiveDashboard
+
         assert "esg_summary" in ExecutiveDashboard.model_fields
 
     def test_esg_summary_is_optional(self):
         from interfaces.api.schemas.executive import ExecutiveDashboard
+
         field = ExecutiveDashboard.model_fields["esg_summary"]
         # optional means default is None
         assert field.default is None
 
     def test_esg_summary_all_required_fields(self):
         from interfaces.api.schemas.executive import ESGOperatingSummary
+
         required = {
-            "status", "degraded_reason",
-            "objectives_at_risk", "initiatives_at_risk",
-            "strategic_risks_critical", "strategic_risks_total",
-            "overdue_esg_actions", "objectives_by_status",
-            "initiatives_by_status", "compliance_readiness",
-            "accountability_coverage", "controls_failing",
+            "status",
+            "degraded_reason",
+            "objectives_at_risk",
+            "initiatives_at_risk",
+            "strategic_risks_critical",
+            "strategic_risks_total",
+            "overdue_esg_actions",
+            "objectives_by_status",
+            "initiatives_by_status",
+            "compliance_readiness",
+            "accountability_coverage",
+            "controls_failing",
         }
         actual = set(ESGOperatingSummary.model_fields.keys())
         missing = required - actual

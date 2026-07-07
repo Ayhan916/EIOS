@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -13,11 +13,11 @@ from infrastructure.persistence.models.ai_governance import (
     PromptTemplateModel,
 )
 
-from .inventory_service import AIGovernanceError, _assert_org_ownership
+from .inventory_service import _assert_org_ownership
 
 
 def _now() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def create_prompt_template(

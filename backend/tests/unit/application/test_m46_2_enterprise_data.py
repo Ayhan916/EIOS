@@ -9,18 +9,18 @@ Coverage:
 
 from __future__ import annotations
 
-import io
 import csv
+import io
 import uuid
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 def _make_csv(*rows: dict) -> str:
     """Build a CSV string from a list of dicts."""
@@ -36,6 +36,7 @@ def _make_csv(*rows: dict) -> str:
 # ─────────────────────────────────────────────────────────────────────────────
 # G-008 — CSV parsing helper
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestCsvParsing:
     def test_parses_basic_rows(self):
@@ -82,6 +83,7 @@ class TestCsvParsing:
 # ─────────────────────────────────────────────────────────────────────────────
 # G-008 — Async bulk import task
 # ─────────────────────────────────────────────────────────────────────────────
+
 
 class TestBulkImportTask:
     def test_missing_name_creates_error(self):
@@ -194,6 +196,7 @@ class TestBulkImportTask:
 # G-030 — GHG Protocol engine
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestGHGEngine:
     def _make_factor(self, **overrides):
         from infrastructure.persistence.models.ghg import GHGEmissionFactorModel
@@ -247,7 +250,9 @@ class TestGHGEngine:
     async def test_calculate_returns_correct_factor_metadata(self):
         from application.ghg.ghg_engine import calculate_emissions
 
-        factor = self._make_factor(source="EPA_2023", region="US", factor_kgco2e_per_unit=10.21, unit="gallon")
+        factor = self._make_factor(
+            source="EPA_2023", region="US", factor_kgco2e_per_unit=10.21, unit="gallon"
+        )
         mock_session = AsyncMock()
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = factor
@@ -274,7 +279,7 @@ class TestGHGEngine:
 
     @pytest.mark.asyncio
     async def test_factor_not_found_raises(self):
-        from application.ghg.ghg_engine import calculate_emissions, GHGFactorNotFound
+        from application.ghg.ghg_engine import GHGFactorNotFound, calculate_emissions
 
         mock_session = AsyncMock()
         mock_result = MagicMock()
@@ -339,6 +344,7 @@ class TestGHGEngine:
     def test_result_tco2e_is_kgco2e_divided_by_1000(self):
         """Determinism invariant: tCO2e must always equal kgCO2e / 1000."""
         import asyncio
+
         from application.ghg.ghg_engine import calculate_emissions
 
         factor = self._make_factor(factor_kgco2e_per_unit=0.207)
@@ -371,10 +377,12 @@ class TestGHGEngine:
 # G-030 — GHG API schemas validation
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestGHGSchemas:
     def test_calculate_request_requires_positive_amount(self):
-        from interfaces.api.schemas.ghg import GHGCalculateRequest
         import pydantic
+
+        from interfaces.api.schemas.ghg import GHGCalculateRequest
 
         with pytest.raises(pydantic.ValidationError):
             GHGCalculateRequest(
@@ -388,13 +396,19 @@ class TestGHGSchemas:
             )
 
     def test_bulk_request_max_500_activities(self):
-        from interfaces.api.schemas.ghg import GHGBulkCalculateRequest, GHGBulkCalculateItem
         import pydantic
+
+        from interfaces.api.schemas.ghg import GHGBulkCalculateItem, GHGBulkCalculateRequest
 
         items = [
             GHGBulkCalculateItem(
-                scope="SCOPE1", category="fuel_combustion", subcategory="diesel",
-                amount=1.0, unit="litre", source="EPA_2023", region="US",
+                scope="SCOPE1",
+                category="fuel_combustion",
+                subcategory="diesel",
+                amount=1.0,
+                unit="litre",
+                source="EPA_2023",
+                region="US",
             )
             for _ in range(501)
         ]
@@ -402,8 +416,8 @@ class TestGHGSchemas:
             GHGBulkCalculateRequest(activities=items)
 
     def test_emission_factor_response_from_orm(self):
-        from interfaces.api.schemas.ghg import GHGEmissionFactorResponse
         from infrastructure.persistence.models.ghg import GHGEmissionFactorModel
+        from interfaces.api.schemas.ghg import GHGEmissionFactorResponse
 
         model = GHGEmissionFactorModel()
         model.id = "test-id"
@@ -427,11 +441,12 @@ class TestGHGSchemas:
 # G-009 — Email task
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestEmailTask:
     def test_skips_when_smtp_not_configured(self):
         import infrastructure.celery.tasks.email as email_mod
-
         import shared.config as _cfg_mod
+
         original_host = _cfg_mod.settings.smtp_host
         _cfg_mod.settings.smtp_host = ""
         try:
@@ -480,6 +495,7 @@ class TestEmailTask:
 # G-045 — Evidence versioning (ORM model)
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 class TestEvidenceVersionModel:
     def test_model_fields_exist(self):
         from infrastructure.persistence.models.evidence_version import EvidenceVersionModel
@@ -501,21 +517,29 @@ class TestEvidenceVersionModel:
 # Migration sanity — load via spec to avoid local alembic/ package shadow
 # ─────────────────────────────────────────────────────────────────────────────
 
+
 def _load_migration_056():
     import importlib.util
     import pathlib
 
-    path = pathlib.Path(__file__).parent.parent.parent.parent / "alembic" / "versions" / "056_m46_2_enterprise_data.py"
+    path = (
+        pathlib.Path(__file__).parent.parent.parent.parent
+        / "alembic"
+        / "versions"
+        / "056_m46_2_enterprise_data.py"
+    )
     spec = importlib.util.spec_from_file_location("migration_056", path)
     mod = importlib.util.module_from_spec(spec)
     # The module imports alembic.op at module level — mock it before exec
     import sys
     import types
+
     fake_alembic_pkg = types.ModuleType("alembic")
     fake_alembic_pkg.op = MagicMock()
     sys.modules.setdefault("alembic", fake_alembic_pkg)
     # Make sure alembic.op is patchable
     import unittest.mock
+
     with unittest.mock.patch.dict(sys.modules, {"alembic": fake_alembic_pkg}):
         spec.loader.exec_module(mod)
     return mod

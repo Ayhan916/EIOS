@@ -39,12 +39,12 @@ async def run_webhook_recovery_loop() -> None:
 
 
 async def _recover_pending() -> None:
+    from application.api_platform.webhook_service import attempt_delivery  # noqa: PLC0415
     from infrastructure.persistence.database import AsyncSessionFactory  # noqa: PLC0415
     from infrastructure.persistence.repositories.webhook import (  # noqa: PLC0415
         SQLWebhookDeliveryRepository,
         SQLWebhookSubscriptionRepository,
     )
-    from application.api_platform.webhook_service import attempt_delivery  # noqa: PLC0415
 
     now = datetime.now(UTC)
     async with AsyncSessionFactory() as session, session.begin():

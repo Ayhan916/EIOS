@@ -10,10 +10,12 @@ Revision ID: 097
 Revises: 096
 Create Date: 2026-07-06
 """
+
 from __future__ import annotations
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "097"
 down_revision = "096"
@@ -38,7 +40,12 @@ def upgrade() -> None:
     op.create_table(
         "assessment_questions",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("template_id", sa.String(36), sa.ForeignKey("assessment_templates.id", ondelete="CASCADE"), nullable=False),
+        sa.Column(
+            "template_id",
+            sa.String(36),
+            sa.ForeignKey("assessment_templates.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
         sa.Column("section", sa.String(30), nullable=False),
         sa.Column("question_text", sa.Text, nullable=False),
         sa.Column("question_type", sa.String(20), nullable=False, server_default="yes_no"),
@@ -56,7 +63,9 @@ def upgrade() -> None:
         "supplier_assessments",
         sa.Column("id", sa.String(36), primary_key=True),
         sa.Column("organization_id", sa.String(36), nullable=False),
-        sa.Column("template_id", sa.String(36), sa.ForeignKey("assessment_templates.id"), nullable=False),
+        sa.Column(
+            "template_id", sa.String(36), sa.ForeignKey("assessment_templates.id"), nullable=False
+        ),
         sa.Column("supplier_id", sa.String(36), nullable=False),
         sa.Column("token_hash", sa.String(64), nullable=False, unique=True),
         sa.Column("token_expires_at", sa.DateTime(timezone=True), nullable=False),
@@ -68,15 +77,24 @@ def upgrade() -> None:
         sa.Column("submitted_at", sa.DateTime(timezone=True), nullable=True),
     )
     op.create_index("ix_supplier_assessments_org", "supplier_assessments", ["organization_id"])
-    op.create_index("ix_supplier_assessments_org_status", "supplier_assessments", ["organization_id", "status"])
+    op.create_index(
+        "ix_supplier_assessments_org_status", "supplier_assessments", ["organization_id", "status"]
+    )
     op.create_index("ix_supplier_assessments_supplier", "supplier_assessments", ["supplier_id"])
     op.create_index("ix_supplier_assessments_token_hash", "supplier_assessments", ["token_hash"])
 
     op.create_table(
         "assessment_responses",
         sa.Column("id", sa.String(36), primary_key=True),
-        sa.Column("assessment_id", sa.String(36), sa.ForeignKey("supplier_assessments.id", ondelete="CASCADE"), nullable=False),
-        sa.Column("question_id", sa.String(36), sa.ForeignKey("assessment_questions.id"), nullable=False),
+        sa.Column(
+            "assessment_id",
+            sa.String(36),
+            sa.ForeignKey("supplier_assessments.id", ondelete="CASCADE"),
+            nullable=False,
+        ),
+        sa.Column(
+            "question_id", sa.String(36), sa.ForeignKey("assessment_questions.id"), nullable=False
+        ),
         sa.Column("answer_value", sa.Text, nullable=False, server_default=""),
         sa.Column("answered_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
     )

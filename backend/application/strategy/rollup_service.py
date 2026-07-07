@@ -18,9 +18,9 @@ from infrastructure.persistence.models.strategy import (
     ScenarioComparisonModel,
     ScenarioExecutionModel,
     ScenarioTemplateModel,
+    StrategicScenarioReportModel,
     StrategyMethodologyModel,
     StrategyScenarioModel,
-    StrategicScenarioReportModel,
     StressTestTemplateModel,
     TransitionPathwayModel,
 )
@@ -144,8 +144,12 @@ def strategy_rollup(organization_id: str, session: Session) -> dict:
         "transition_pathways": pathway_count,
         "finalized_reports": finalized_reports,
         "avg_forecast_value": round(float(avg_forecast_value), 4) if avg_forecast_value else None,
-        "avg_forecast_emissions": round(float(avg_forecast_emissions), 4) if avg_forecast_emissions else None,
-        "avg_pathway_reduction_pct": round(float(avg_pathway_reduction_pct), 4) if avg_pathway_reduction_pct else None,
+        "avg_forecast_emissions": round(float(avg_forecast_emissions), 4)
+        if avg_forecast_emissions
+        else None,
+        "avg_pathway_reduction_pct": round(float(avg_pathway_reduction_pct), 4)
+        if avg_pathway_reduction_pct
+        else None,
         "scenario_templates": scenario_template_count,
         "stress_test_templates": stress_test_template_count,
         "strategy_methodologies": methodology_count,

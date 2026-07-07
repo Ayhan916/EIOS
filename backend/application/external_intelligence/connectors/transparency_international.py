@@ -42,14 +42,16 @@ class TransparencyInternationalConnector(BaseLiveConnector):
             if cpi is None:
                 continue
             corruption_risk = max(0.0, min(100.0, 100.0 - float(cpi)))
-            records.append({
-                "country_code": entry.get("iso3") or entry.get("country_code", ""),
-                "country_name": entry.get("country") or entry.get("name", ""),
-                "corruption_score": round(corruption_risk, 2),
-                "cpi_score": float(cpi),
-                "year": entry.get("year", self.connector_version),
-                "source": ExternalSourceName.TRANSPARENCY_INTERNATIONAL.value,
-            })
+            records.append(
+                {
+                    "country_code": entry.get("iso3") or entry.get("country_code", ""),
+                    "country_name": entry.get("country") or entry.get("name", ""),
+                    "corruption_score": round(corruption_risk, 2),
+                    "cpi_score": float(cpi),
+                    "year": entry.get("year", self.connector_version),
+                    "source": ExternalSourceName.TRANSPARENCY_INTERNATIONAL.value,
+                }
+            )
         return RawDataset(
             source_name=ExternalSourceName.TRANSPARENCY_INTERNATIONAL.value,
             source_version=self.connector_version,

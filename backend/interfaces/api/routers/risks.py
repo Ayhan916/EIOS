@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from sqlalchemy import update
@@ -24,7 +24,10 @@ from interfaces.api.schemas.risk import RiskCreate, RiskPatch, RiskResponse
 router = APIRouter(
     prefix="/risks",
     tags=["risks"],
-    dependencies=[Depends(get_current_user), Depends(scope_gate("risks:read", "assessments:write"))],
+    dependencies=[
+        Depends(get_current_user),
+        Depends(scope_gate("risks:read", "assessments:write")),
+    ],
 )
 
 
@@ -133,14 +136,16 @@ async def patch_risk(
     _VALID_STATUSES = {"Active", "Reviewed", "Archived"}
     _VALID_LEVELS = {"Critical", "High", "Medium", "Low"}
 
-    values: dict = {"updated_at": datetime.now(timezone.utc)}
+    values: dict = {"updated_at": datetime.now(UTC)}
     if body.status is not None:
         if body.status not in _VALID_STATUSES:
             raise HTTPException(status_code=422, detail=f"status must be one of {_VALID_STATUSES}")
         values["status"] = body.status
     if body.risk_level is not None:
         if body.risk_level not in _VALID_LEVELS:
-            raise HTTPException(status_code=422, detail=f"risk_level must be one of {_VALID_LEVELS}")
+            raise HTTPException(
+                status_code=422, detail=f"risk_level must be one of {_VALID_LEVELS}"
+            )
         values["risk_level"] = body.risk_level
     if body.owner is not None:
         values["owner"] = body.owner or None
@@ -167,20 +172,28 @@ async def list_risk_findings(
     repo: SQLRiskRepository = Depends(get_risk_repo),
     assessment_repo: SQLAssessmentRepository = Depends(get_assessment_repo),
 ) -> list[FindingResponse]:
-    from infrastructure.persistence.models.finding import FindingModel
-    from infrastructure.persistence.models.associations import risk_finding
-    from infrastructure.persistence.database import AsyncSessionFactory
     from sqlalchemy import select
+
+    from infrastructure.persistence.database import AsyncSessionFactory
+    from infrastructure.persistence.models.associations import risk_finding
+    from infrastructure.persistence.models.finding import FindingModel
+
     risk = await repo.get_by_id(risk_id)
     if risk is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Risk not found")
     await _assert_risk_org_access(risk, current_user.organization_id, assessment_repo)
     async with AsyncSessionFactory() as session:
-        rows = (await session.execute(
-            select(FindingModel)
-            .join(risk_finding, FindingModel.id == risk_finding.c.finding_id)
-            .where(risk_finding.c.risk_id == risk_id)
-        )).scalars().all()
+        rows = (
+            (
+                await session.execute(
+                    select(FindingModel)
+                    .join(risk_finding, FindingModel.id == risk_finding.c.finding_id)
+                    .where(risk_finding.c.risk_id == risk_id)
+                )
+            )
+            .scalars()
+            .all()
+        )
     return [FindingResponse.model_validate(f) for f in rows]
 
 

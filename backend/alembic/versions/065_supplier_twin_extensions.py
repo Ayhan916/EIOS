@@ -16,6 +16,7 @@ Create Date: 2026-06-29
 from __future__ import annotations
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision = "065"
@@ -188,7 +189,11 @@ def upgrade() -> None:
         sa.Column("evidence_id", sa.String(36), nullable=True),
         sa.Column("notes", sa.Text, nullable=True),
         sa.UniqueConstraint(
-            "supplier_id", "organization_id", "reporting_year", "reporting_period", "metric_type",
+            "supplier_id",
+            "organization_id",
+            "reporting_year",
+            "reporting_period",
+            "metric_type",
             name="uq_esg_metric_supplier_period_type",
         ),
     )

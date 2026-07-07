@@ -47,10 +47,14 @@ class SQLServiceAccountRepository(BaseRepository[ServiceAccount, ServiceAccountM
 
     async def list_for_org(self, organization_id: str) -> list[ServiceAccount]:
         rows = (
-            await self._session.execute(
-                select(ServiceAccountModel)
-                .where(ServiceAccountModel.organization_id == organization_id)
-                .order_by(ServiceAccountModel.created_at.desc())
+            (
+                await self._session.execute(
+                    select(ServiceAccountModel)
+                    .where(ServiceAccountModel.organization_id == organization_id)
+                    .order_by(ServiceAccountModel.created_at.desc())
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
         return [self._to_domain(r) for r in rows]

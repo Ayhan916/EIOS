@@ -6,9 +6,7 @@ Green Revenue % = green_amount / total_revenue × 100
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
-from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from application.ai_governance._audit import emit_audit_event
@@ -29,6 +27,7 @@ def _green_pct(amount: float, total: float) -> float:
 
 
 # ── Green Revenue ─────────────────────────────────────────────────────────────
+
 
 def create_green_revenue(
     organization_id: str,
@@ -121,6 +120,7 @@ def compute_green_revenue_percent(
 
 # ── Green CapEx ───────────────────────────────────────────────────────────────
 
+
 def create_green_capex(
     organization_id: str,
     project_name: str,
@@ -160,7 +160,11 @@ def create_green_capex(
         actor_id=actor_id,
         resource_type="green_capex_record",
         resource_id=rec.id,
-        details={"project_name": project_name, "amount": amount, "alignment_percent": alignment_percent},
+        details={
+            "project_name": project_name,
+            "amount": amount,
+            "alignment_percent": alignment_percent,
+        },
     )
     financial_esg_counters.record_green_capex()
     return rec
@@ -184,6 +188,7 @@ def list_green_capex(
 
 
 # ── Green OpEx ────────────────────────────────────────────────────────────────
+
 
 def create_green_opex(
     organization_id: str,
@@ -224,7 +229,11 @@ def create_green_opex(
         actor_id=actor_id,
         resource_type="green_opex_record",
         resource_id=rec.id,
-        details={"description": description, "amount": amount, "alignment_percent": alignment_percent},
+        details={
+            "description": description,
+            "amount": amount,
+            "alignment_percent": alignment_percent,
+        },
     )
     financial_esg_counters.record_green_opex()
     return rec

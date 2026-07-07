@@ -17,7 +17,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from infrastructure.persistence.models.erp import (
     ERPConnectorModel,
     ERPFieldMappingModel,
-    ERPSyncJobModel,
 )
 
 logger = structlog.get_logger(__name__)
@@ -224,9 +223,7 @@ class ERPConnectorService:
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 
-    async def delete_field_mapping(
-        self, organization_id: str, mapping_id: str
-    ) -> bool:
+    async def delete_field_mapping(self, organization_id: str, mapping_id: str) -> bool:
         model = await self._session.get(ERPFieldMappingModel, mapping_id)
         if model is None or model.organization_id != organization_id:
             return False
