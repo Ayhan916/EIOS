@@ -46,9 +46,8 @@ celery:
 postgresql:
   enabled: false
 
-# Enable PgBouncer pointing to external DB
-pgbouncer:
-  enabled: true
+# PgBouncer is deployed as a separate Helm release — not a subchart.
+# See: helm install pgbouncer bitnami/pgbouncer -f helm/pgbouncer-values.yaml
 
 # Disable in-cluster Redis — use ElastiCache / Memorystore in production
 redis:

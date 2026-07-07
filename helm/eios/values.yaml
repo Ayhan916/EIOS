@@ -136,10 +136,6 @@ postgresql:
     persistence:
       size: 10Gi
 
-# ── PgBouncer (subchart) ──────────────────────────────────────────────────────
-pgbouncer:
-  enabled: false   # enable when postgresql.enabled=false (prod external DB)
-
 # ── External secrets (production) ────────────────────────────────────────────
 # When existingSecret is set, the chart reads credentials from it instead of
 # creating a Secret from values. Recommended for production (External Secrets Operator).

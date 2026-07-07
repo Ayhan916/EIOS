@@ -23,8 +23,5 @@ dependencies:
     repository: "https://charts.bitnami.com/bitnami"
     condition: postgresql.enabled
 
-  # PgBouncer — session-mode connection pooler (REQUIRED for RLS SET LOCAL).
-  - name: pgbouncer
-    version: "1.x.x"
-    repository: "https://helm.pgbouncer.io"
-    condition: pgbouncer.enabled
+  # PgBouncer is deployed as a separate Helm release in production (not a subchart).
+  # See: helm install pgbouncer bitnami/pgbouncer -f helm/pgbouncer-values.yaml
