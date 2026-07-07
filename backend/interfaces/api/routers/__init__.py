@@ -43,6 +43,7 @@ from .mfa import router as mfa_router
 from .network import router as network_router
 from .news import router as news_router
 from .rag import router as rag_router
+from .documents import router as documents_router
 from .notifications import router as notifications_router
 from .operating_system import router as operating_system_router
 from .operations import router as operations_router
@@ -184,4 +185,5 @@ __all__ = [
     "regulatory_radar_router",
     "workflow_context_router",
     "rag_router",
+    "documents_router",
 ]
