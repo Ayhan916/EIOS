@@ -23,13 +23,13 @@ from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from infrastructure.persistence.database import get_db
 from infrastructure.persistence.models.document_pipeline import (
     DocumentFileModel,
     DocumentSourceModel,
 )
 from application.rag.document_ingestion import ingest_all_active_sources, ingest_source
-from shared.security import get_current_user
+from domain.user import User
+from interfaces.api.deps import get_current_user, get_db
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["Document Intelligence"])
@@ -103,9 +103,9 @@ class DocumentFileOut(BaseModel):
 async def create_source(
     payload: DocumentSourceCreate,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     source = DocumentSourceModel(
         id=str(uuid.uuid4()),
         organization_id=org_id,
@@ -119,8 +119,7 @@ async def create_source(
         updated_at=datetime.now(UTC),
     )
     db.add(source)
-    await db.commit()
-    await db.refresh(source)
+    await db.flush()
     logger.info("documents.source_created", org=org_id, source_id=source.id, doc_type=payload.doc_type)
     return source
 
@@ -128,9 +127,9 @@ async def create_source(
 @router.get("/sources", response_model=list[DocumentSourceOut])
 async def list_sources(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     stmt = select(DocumentSourceModel).where(
         DocumentSourceModel.organization_id == org_id
     ).order_by(DocumentSourceModel.created_at.desc())
@@ -143,9 +142,9 @@ async def update_source(
     source_id: str,
     payload: DocumentSourceUpdate,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     source = await _get_source_or_404(source_id, org_id, db)
     if payload.company_name is not None:
         source.company_name = payload.company_name
@@ -156,8 +155,7 @@ async def update_source(
     if payload.is_active is not None:
         source.is_active = payload.is_active
     source.updated_at = datetime.now(UTC)
-    await db.commit()
-    await db.refresh(source)
+    await db.flush()
     return source
 
 
@@ -165,21 +163,21 @@ async def update_source(
 async def delete_source(
     source_id: str,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     source = await _get_source_or_404(source_id, org_id, db)
     await db.delete(source)
-    await db.commit()
+    await db.flush()
 
 
 @router.post("/sources/{source_id}/ingest")
 async def trigger_ingest(
     source_id: str,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     source = await _get_source_or_404(source_id, org_id, db)
     stats = await ingest_source(source, db)
     return {"source_id": source_id, "stats": stats}
@@ -193,9 +191,9 @@ async def list_files(
     supplier_id: str | None = None,
     status: str | None = None,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     stmt = select(DocumentFileModel).where(
         DocumentFileModel.organization_id == org_id
     )
@@ -214,9 +212,9 @@ async def list_files(
 async def get_file(
     file_id: str,
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     stmt = select(DocumentFileModel).where(
         DocumentFileModel.id == file_id,
         DocumentFileModel.organization_id == org_id,
@@ -232,9 +230,9 @@ async def get_file(
 @router.post("/ingest-all")
 async def ingest_all(
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(get_current_user),
+    user: User = Depends(get_current_user),
 ):
-    org_id = user["organization_id"]
+    org_id = user.organization_id
     stats = await ingest_all_active_sources(org_id, db)
     return {"organization_id": org_id, "stats": stats}
 

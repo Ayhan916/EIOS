@@ -62,13 +62,13 @@ async def ingest_source(
         source.last_fetched_at = datetime.now(UTC)
         source.last_status = "ok"
         source.last_error = None
-        await session.commit()
+        await session.flush()
 
     except Exception as exc:
         source.last_fetched_at = datetime.now(UTC)
         source.last_status = "error"
         source.last_error = str(exc)
-        await session.commit()
+        await session.flush()
         stats["errors"].append(str(exc))
 
     logger.info("doc_ingest.done", source_id=source.id, **stats)
