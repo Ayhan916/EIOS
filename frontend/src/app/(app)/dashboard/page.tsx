@@ -218,15 +218,17 @@ function HBar({
 }) {
   const pct = max > 0 ? Math.round((count / max) * 100) : 0;
   const inner = (
-    <div className={`flex items-center gap-3 ${href ? "hover:opacity-80 transition-opacity cursor-pointer" : ""}`}>
-      <span className="w-20 text-xs text-muted-foreground text-right flex-shrink-0">{label}</span>
-      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+    <div className={`space-y-1 ${href ? "hover:opacity-80 transition-opacity cursor-pointer" : ""}`}>
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs text-muted-foreground">{label}</span>
+        <span className="text-xs font-semibold tabular-nums">{count}</span>
+      </div>
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full ${colorClass}`}
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-7 text-xs font-semibold text-right flex-shrink-0">{count}</span>
     </div>
   );
   if (href) return <Link href={href}>{inner}</Link>;
@@ -510,6 +512,86 @@ function PendingDecisionsCard({
 
 // ── External Signal Feed Widget ───────────────────────────────────────────────
 
+interface ActiveWorkflowItem {
+  workflow_id: string;
+  workflow_name: string;
+  entity_type: string;
+  entity_id: string;
+  entity_label: string;
+  supplier_id: string | null;
+  supplier_name: string | null;
+  completion_pct: number;
+  next_step_label: string | null;
+  route: string;
+}
+
+function ActiveWorkflowsPanel({ workflows }: { workflows: ActiveWorkflowItem[] }) {
+  const { t } = useLanguage();
+  const WORKFLOW_COLORS: Record<string, string> = {
+    lieferketten_sorgfalt: "bg-blue-500",
+    grievance_remedy: "bg-rose-500",
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
+        <div>
+          <CardTitle className="text-base flex items-center gap-2">
+            <GitPullRequest className="h-4 w-4 text-violet-500" />
+            {t("dashboard.activeWorkflows")}
+          </CardTitle>
+          <CardDescription>{t("dashboard.activeWorkflowsDesc")}</CardDescription>
+        </div>
+        <span className="text-xs text-muted-foreground">{workflows.length}</span>
+      </CardHeader>
+      <CardContent>
+        {workflows.length === 0 ? (
+          <p className="py-6 text-center text-xs text-muted-foreground">
+            {t("dashboard.noActiveWorkflows")}
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {workflows.slice(0, 8).map((w) => (
+              <Link
+                key={`${w.workflow_id}-${w.entity_id}`}
+                href={w.route}
+                className="flex items-center gap-3 rounded-lg border p-3 hover:bg-muted/40 transition-colors"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {w.workflow_name}
+                    </span>
+                    {w.supplier_name && (
+                      <span className="text-[10px] text-muted-foreground">· {w.supplier_name}</span>
+                    )}
+                  </div>
+                  <p className="text-sm font-medium truncate">{w.entity_label}</p>
+                  {w.next_step_label && (
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("dashboard.nextStep")}: {w.next_step_label}</p>
+                  )}
+                  <div className="mt-2 flex items-center gap-2">
+                    <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${WORKFLOW_COLORS[w.workflow_id] ?? "bg-primary"}`}
+                        style={{ width: `${w.completion_pct}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-muted-foreground flex-shrink-0">
+                      {w.completion_pct}% {t("dashboard.workflowCompletion")}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              </Link>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 interface RiskSignal {
   id: string;
   signal_type: string;
@@ -666,6 +748,15 @@ export default function DashboardPage() {
     queryFn: async () => {
       const res = await apiClient.get("/grievances/summary");
       return res.data as { total: number; by_status: Record<string, number> };
+    },
+    staleTime: 120_000,
+  });
+
+  const { data: activeWorkflows } = useQuery({
+    queryKey: ["dashboard-active-workflows"],
+    queryFn: async () => {
+      const res = await apiClient.get("/workflow/active");
+      return res.data as ActiveWorkflowItem[];
     },
     staleTime: 120_000,
   });
@@ -913,39 +1004,87 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Findings breakdown */}
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t("dashboard.findingsBreakdown")}</CardTitle>
-            <CardDescription>
-              {totalFindings} {t("dashboard.totalFindingsDesc")}
-            </CardDescription>
+        {/* Findings breakdown — redesigned */}
+        <Card className="flex flex-col">
+          <CardHeader className="pb-4">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-base">{t("dashboard.findingsBreakdown")}</CardTitle>
+                <CardDescription>{t("dashboard.totalFindingsDesc")}</CardDescription>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-3xl font-bold leading-none tabular-nums">{totalFindings}</p>
+                <p className="text-[11px] text-muted-foreground mt-1 uppercase tracking-wide">{t("dashboard.findingsLabel")}</p>
+              </div>
+            </div>
           </CardHeader>
-          <CardContent className="space-y-5">
+
+          <CardContent className="flex-1 space-y-6">
+
+            {/* ── Severity: 2×2 colored tiles ─────────────────────── */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
                 {t("dashboard.bySeverity")}
               </p>
-              <div className="space-y-2">
-                <HBar label={t("findings.critical")} count={data.findings_by_severity["Critical"] ?? 0} max={maxSeverity} colorClass="bg-red-500"    href="/findings?severity=Critical" />
-                <HBar label={t("findings.high")}     count={data.findings_by_severity["High"] ?? 0}     max={maxSeverity} colorClass="bg-orange-400" href="/findings?severity=High" />
-                <HBar label={t("findings.medium")}   count={data.findings_by_severity["Medium"] ?? 0}   max={maxSeverity} colorClass="bg-amber-400" href="/findings?severity=Medium" />
-                <HBar label={t("findings.low")}      count={data.findings_by_severity["Low"] ?? 0}      max={maxSeverity} colorClass="bg-slate-300" href="/findings?severity=Low" />
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: "Critical", label: t("findings.critical"), border: "border-red-200",    bg: "bg-red-50",    text: "text-red-600",    bar: "bg-red-500" },
+                  { key: "High",     label: t("findings.high"),     border: "border-orange-200", bg: "bg-orange-50", text: "text-orange-600", bar: "bg-orange-400" },
+                  { key: "Medium",   label: t("findings.medium"),   border: "border-amber-200",  bg: "bg-amber-50",  text: "text-amber-600",  bar: "bg-amber-400" },
+                  { key: "Low",      label: t("findings.low"),      border: "border-slate-200",  bg: "bg-slate-50",  text: "text-slate-600",  bar: "bg-slate-400" },
+                ].map(({ key, label, border, bg, text, bar }) => {
+                  const cnt  = data.findings_by_severity[key] ?? 0;
+                  const pct  = totalFindings > 0 ? Math.round((cnt / totalFindings) * 100) : 0;
+                  return (
+                    <Link key={key} href={`/findings?severity=${key}`}>
+                      <div className={`rounded-xl border ${border} ${bg} p-3 hover:brightness-95 transition-all`}>
+                        <p className={`text-2xl font-bold tabular-nums leading-none ${text}`}>{cnt}</p>
+                        <p className="text-xs font-medium text-muted-foreground mt-1">{label}</p>
+                        <div className="mt-2.5 h-1.5 rounded-full bg-white/70 overflow-hidden">
+                          <div className={`h-full rounded-full ${bar} transition-all`} style={{ width: `${pct}%` }} />
+                        </div>
+                        <p className={`text-[10px] font-semibold mt-1 ${text}`}>{pct}%</p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
+
+            {/* ── ESG Category: dot + label + bar + stats ──────────── */}
             <div>
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+              <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-widest mb-3">
                 {t("dashboard.byEsgCategory")}
               </p>
-              <div className="space-y-2">
-                <HBar label={t("dashboard.environmental")} count={data.findings_by_category["E"] ?? 0}     max={maxCategory} colorClass="bg-emerald-500" href="/findings?category=E" />
-                <HBar label={t("dashboard.social")}        count={data.findings_by_category["S"] ?? 0}     max={maxCategory} colorClass="bg-blue-500"    href="/findings?category=S" />
-                <HBar label={t("dashboard.governance")}    count={data.findings_by_category["G"] ?? 0}     max={maxCategory} colorClass="bg-purple-500"  href="/findings?category=G" />
-                {(data.findings_by_category["Other"] ?? 0) > 0 && (
-                  <HBar label={t("materials.other")} count={data.findings_by_category["Other"]} max={maxCategory} colorClass="bg-slate-400" href="/findings?category=Other" />
-                )}
+              <div className="space-y-3">
+                {[
+                  { key: "E", label: t("dashboard.environmental"), dot: "bg-emerald-500", bar: "bg-emerald-500", ring: "ring-emerald-200" },
+                  { key: "S", label: t("dashboard.social"),        dot: "bg-blue-500",    bar: "bg-blue-500",    ring: "ring-blue-200" },
+                  { key: "G", label: t("dashboard.governance"),    dot: "bg-purple-500",  bar: "bg-purple-500",  ring: "ring-purple-200" },
+                  ...((data.findings_by_category["Other"] ?? 0) > 0
+                    ? [{ key: "Other", label: t("materials.other"), dot: "bg-slate-400", bar: "bg-slate-400", ring: "ring-slate-200" }]
+                    : []),
+                ].map(({ key, label, dot, bar, ring }) => {
+                  const cnt     = data.findings_by_category[key] ?? 0;
+                  const barPct  = maxCategory > 0 ? Math.round((cnt / maxCategory) * 100) : 0;
+                  const totPct  = totalFindings > 0 ? Math.round((cnt / totalFindings) * 100) : 0;
+                  return (
+                    <Link key={key} href={`/findings?category=${key}`} className="block group">
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <span className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ring-2 ${dot} ${ring}`} />
+                        <span className="flex-1 text-sm font-medium text-foreground group-hover:text-foreground/80 transition-colors">{label}</span>
+                        <span className="text-xs font-bold tabular-nums text-foreground">{cnt}</span>
+                        <span className="w-9 text-right text-[11px] text-muted-foreground tabular-nums">{totPct}%</span>
+                      </div>
+                      <div className="ml-5 h-2 rounded-full bg-muted overflow-hidden">
+                        <div className={`h-full rounded-full ${bar} transition-all`} style={{ width: `${barPct}%` }} />
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
+
           </CardContent>
         </Card>
       </div>
@@ -1232,6 +1371,11 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Active Workflows ───────────────────────────────────────────────── */}
+      {activeWorkflows !== undefined && (
+        <ActiveWorkflowsPanel workflows={activeWorkflows} />
+      )}
 
       {/* ── Live News Feed ─────────────────────────────────────────────────── */}
       <NewsFeedWidget />

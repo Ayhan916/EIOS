@@ -35,13 +35,15 @@ import {
   Cell,
 } from "recharts";
 import { listSuppliers, createSupplier, archiveSupplier } from "@/lib/api/suppliers";
+import { collectIntelligence, collectIntelligenceBatch, type CollectIntelligenceResponse } from "@/lib/api/supplier-twin";
 import apiClient from "@/lib/api/client";
 import { useLanguage } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import type { SupplierCreate, SupplierTier } from "@/types/api";
+import type { SupplierCreate, SupplierResponse, SupplierTier, SupplierType } from "@/types/api";
+import type { Page } from "@/types/api";
 
 interface GleifCompany {
   lei: string;
@@ -62,6 +64,15 @@ interface CompanyDetail {
   children: { lei: string; name: string; country: string; city: string; status: string; category: string }[];
   total_children: number;
 }
+
+const COMMODITIES = [
+  { code: "cobalt",    label: "Kobalt",     icon: "⚫", sector: "Bergbau (Metall)",       nace: "B07.29", origins: "DRC, Sambia, Australien" },
+  { code: "lithium",   label: "Lithium",    icon: "🔋", sector: "Bergbau (Metall)",       nace: "B07.29", origins: "Chile, Argentinien, Australien" },
+  { code: "copper",    label: "Kupfer",     icon: "🟤", sector: "Bergbau (Metall)",       nace: "B07.29", origins: "Chile, Peru, DRC" },
+  { code: "cotton",    label: "Baumwolle",  icon: "🌿", sector: "Landwirtschaft",         nace: "A01.16", origins: "Usbekistan, China, Indien" },
+  { code: "soy",       label: "Soja",       icon: "🌱", sector: "Landwirtschaft",         nace: "A01.11", origins: "Brasilien, Argentinien, USA" },
+  { code: "palm_oil",  label: "Palmöl",     icon: "🌴", sector: "Landwirtschaft",         nace: "A01.26", origins: "Indonesien, Malaysia" },
+];
 
 const LEGAL_FORMS = [
   { value: "", label: "Alle Rechtsformen" },
@@ -164,7 +175,8 @@ function statusBadge(s: string) {
 }
 
 function OfacBadge({ status }: { status: string | null }) {
-  if (!status || status === "none") return <span className="text-xs text-muted-foreground/50">—</span>;
+  if (!status) return <span className="text-xs text-muted-foreground/50">—</span>;
+  if (status === "unavailable") return <span className="inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium bg-slate-100 text-slate-500">N/A</span>;
   const colors: Record<string, string> = {
     none: "bg-emerald-50 text-emerald-700",
     low: "bg-amber-50 text-amber-700",
@@ -270,12 +282,14 @@ export default function SuppliersPage() {
   const [riskFilter, setRiskFilter] = useState(() => searchParams.get("risk_level") || "");
   const [viewMode, setViewMode] = useState<"table" | "grid">("table");
   const [showCreate, setShowCreate] = useState(false);
-  const [createTab, setCreateTab] = useState<"search" | "manual">("search");
+  const [createTab, setCreateTab] = useState<"search" | "manual" | "commodity">("search");
   const [createError, setCreateError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [collecting, setCollecting] = useState(false);
+  const [collectResult, setCollectResult] = useState<CollectIntelligenceResponse | null>(null);
 
   // ── Company search state (Tab 1) ──────────────────────────
   const [quickQuery, setQuickQuery] = useState("");
@@ -305,6 +319,10 @@ export default function SuppliersPage() {
   const [companySelected, setCompanySelected] = useState<GleifCompany | null>(null);
   const [enrichedData, setEnrichedData] = useState<{ website: string; industry: string; nace_code: string; nace_label?: string; notes: string } | null>(null);
 
+  // Manual-tab auto-enrichment
+  const [manualEnriching, setManualEnriching] = useState(false);
+  const [manualEnrichedFields, setManualEnrichedFields] = useState<Set<string>>(new Set());
+
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -321,6 +339,7 @@ export default function SuppliersPage() {
   const [form, setForm] = useState<SupplierCreate>({
     name: "", legal_name: "", country: "", industry: "",
     nace_code: "", website: "", supplier_tier: "Tier 1", notes: "",
+    supplier_type: "manufacturing", commodity: null, commodity_code: null,
   });
 
   const PAGE_SIZE = 15;
@@ -343,24 +362,54 @@ export default function SuppliersPage() {
   const createMutation = useMutation({
     mutationFn: createSupplier,
     onSuccess: async (newSupplier) => {
-      queryClient.invalidateQueries({ queryKey: ["suppliers"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["supplier-scores-overview"] });
+      // Write directly into the active query's cache using the EXACT key —
+      // partial-key setQueriesData can race against the concurrent invalidation refetch.
+      if (newSupplier) {
+        queryClient.setQueryData<Page<SupplierResponse>>(
+          ["suppliers", { page, page_size: PAGE_SIZE, search, tierFilter, statusFilter }],
+          (old) => {
+            if (!old) return old;
+            if (old.items.some((s) => s.id === newSupplier.id)) return old;
+            return {
+              ...old,
+              items: [newSupplier, ...old.items].slice(0, PAGE_SIZE),
+              total: old.total + 1,
+            };
+          },
+        );
+      }
+      // Close modal + reset form
       setShowCreate(false);
       setCreateError(null);
       setCreateTab("search");
-      setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" });
+      setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "", supplier_type: "manufacturing", commodity: null, commodity_code: null });
       resetCompanySearch();
-      // #159 Auto-trigger OFAC scan if rule is enabled in automation settings
+      // Mark stale without an immediate network refetch — React Query will auto-refetch
+      // on the next focus/mount so the optimistic entry above is rendered first.
+      queryClient.invalidateQueries({ queryKey: ["suppliers"], refetchType: "none" });
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["supplier-scores-overview"] });
+      // #159 Auto-trigger OFAC scan in background — must not block the list update
       try {
         const stored = JSON.parse(localStorage.getItem("eios_automation_rules") ?? "{}");
         if (stored?.supplier_ofac_scan?.enabled !== false && newSupplier?.id) {
           await apiClient.post(`/integrations/sanctions/ofac/scan/supplier/${newSupplier.id}`);
+          // Re-invalidate after the scan has persisted its result to DB
+          queryClient.invalidateQueries({ queryKey: ["supplier-scores-overview"] });
         }
-      } catch { /* silent — OFAC scan failure should not block supplier creation */ }
+      } catch { /* silent — OFAC scan failure must not block supplier creation */ }
     },
     onError: (err: unknown) => {
-      setCreateError(err instanceof Error ? err.message : "Failed to create supplier");
+      const axiosErr = err as { response?: { data?: { detail?: string | { msg: string }[] } } };
+      const detail = axiosErr.response?.data?.detail;
+      const msg = Array.isArray(detail)
+        ? detail.map((d) => d.msg).join("; ")
+        : typeof detail === "string"
+          ? detail
+          : err instanceof Error
+            ? err.message
+            : "Lieferant konnte nicht erstellt werden.";
+      setCreateError(msg);
     },
   });
 
@@ -402,6 +451,31 @@ export default function SuppliersPage() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Auto-enrich on manual tab: when name >= 4 chars, fetch industry/NACE/website in background
+  useEffect(() => {
+    if (createTab !== "manual" || form.name.trim().length < 4) return;
+    const timer = setTimeout(async () => {
+      setManualEnriching(true);
+      try {
+        const result = await enrichCompany("", form.name.trim());
+        if (!result) return;
+        const filled = new Set<string>();
+        setForm((f) => {
+          const next = { ...f };
+          if (!f.industry && result.industry)   { next.industry   = result.industry;   filled.add("industry"); }
+          if (!f.nace_code && result.nace_code) { next.nace_code  = result.nace_code;  filled.add("nace_code"); }
+          if (!f.website && result.website)     { next.website    = result.website;    filled.add("website"); }
+          if (!f.notes && result.notes)         { next.notes      = result.notes; }
+          return next;
+        });
+        setManualEnrichedFields(filled);
+      } catch { /* silent */ }
+      finally { setManualEnriching(false); }
+    }, 800);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.name, createTab]);
 
   // Open the detail modal for any clicked company
   async function openDetail(c: GleifCompany) {
@@ -489,6 +563,8 @@ export default function SuppliersPage() {
     setDetailTarget(null); setDetailData(null); setDetailEnriched(null);
     setCompanySelected(null);
     setEnrichedData(null);
+    setManualEnrichedFields(new Set());
+    setManualEnriching(false);
   }
 
   const allSuppliers = data?.items ?? [];
@@ -576,11 +652,37 @@ export default function SuppliersPage() {
             {t("dashboard.supplierPortfolioDesc")}
           </p>
         </div>
-        <Button onClick={() => setShowCreate(true)} className="gap-2">
-          <Plus className="h-4 w-4" />
-          {t("suppliers.newSupplier")}
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            disabled={collecting}
+            onClick={async () => {
+              setCollecting(true);
+              setCollectResult(null);
+              try {
+                const r = await collectIntelligence();
+                setCollectResult(r);
+              } catch { /* silent */ } finally {
+                setCollecting(false);
+              }
+            }}
+            className="gap-2"
+          >
+            <Globe className={`h-4 w-4 ${collecting ? "animate-spin" : ""}`} />
+            {collecting ? "Sammle…" : "Intelligence sammeln"}
+          </Button>
+          <Button onClick={() => setShowCreate(true)} className="gap-2">
+            <Plus className="h-4 w-4" />
+            {t("suppliers.newSupplier")}
+          </Button>
+        </div>
       </div>
+      {collectResult && (
+        <div className={`rounded-lg border px-4 py-2.5 text-sm flex items-center justify-between ${collectResult.signals_created > 0 ? "border-blue-300 bg-blue-50 text-blue-800" : "border-slate-200 bg-slate-50 text-slate-600"}`}>
+          <span>{collectResult.message} · {collectResult.sources_ok}/{collectResult.sources_attempted} Quellen · {collectResult.duration_seconds.toFixed(1)}s</span>
+          <button onClick={() => setCollectResult(null)} className="ml-4 text-slate-400 hover:text-slate-600">✕</button>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
@@ -647,10 +749,27 @@ export default function SuppliersPage() {
 
       {/* Selection action bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5">
-          <span className="text-sm font-medium text-red-800">
+        <div className="flex items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 px-4 py-2.5">
+          <span className="text-sm font-medium text-blue-800">
             {selectedIds.size} Lieferant{selectedIds.size !== 1 ? "en" : ""} ausgewählt
           </span>
+          <button
+            disabled={collecting}
+            onClick={async () => {
+              setCollecting(true);
+              setCollectResult(null);
+              try {
+                const r = await collectIntelligenceBatch(Array.from(selectedIds));
+                setCollectResult(r);
+              } catch { /* silent */ } finally {
+                setCollecting(false);
+              }
+            }}
+            className="flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Globe className={`h-3.5 w-3.5 ${collecting ? "animate-spin" : ""}`} />
+            {collecting ? "Sammle…" : "Intelligence sammeln"}
+          </button>
           <button
             onClick={() => { setDeleteError(null); setShowDeleteConfirm(true); }}
             className="flex items-center gap-1.5 rounded-md bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
@@ -659,7 +778,7 @@ export default function SuppliersPage() {
           </button>
           <button
             onClick={() => setSelectedIds(new Set())}
-            className="text-xs text-red-700 hover:text-red-900 underline"
+            className="text-xs text-blue-700 hover:text-blue-900 underline"
           >
             Abwählen
           </button>
@@ -779,9 +898,16 @@ export default function SuppliersPage() {
                           />
                         </td>
                         <td className="px-4 py-3">
-                          <Link href={`/suppliers/${s.id}`} className="font-medium text-foreground hover:text-blue-600 hover:underline">
-                            {s.name}
-                          </Link>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link href={`/suppliers/${s.id}`} className="font-medium text-foreground hover:text-blue-600 hover:underline">
+                              {s.name}
+                            </Link>
+                            {s.supplier_type === "commodity" && s.commodity && (
+                              <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                                ⛏ {s.commodity}
+                              </span>
+                            )}
+                          </div>
                           {s.legal_name && s.legal_name !== s.name && (
                             <p className="text-xs text-muted-foreground">{s.legal_name}</p>
                           )}
@@ -883,7 +1009,7 @@ export default function SuppliersPage() {
             <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-border shrink-0">
               <h2 className="text-lg font-semibold">{t("suppliers.createTitle")}</h2>
               <button
-                onClick={() => { setShowCreate(false); setCreateError(null); resetCompanySearch(); setCreateTab("search"); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" }); }}
+                onClick={() => { setShowCreate(false); setCreateError(null); resetCompanySearch(); setCreateTab("search"); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "", supplier_type: "manufacturing", commodity: null, commodity_code: null }); }}
                 className="text-muted-foreground hover:text-foreground"
               >
                 <X className="h-5 w-5" />
@@ -914,6 +1040,20 @@ export default function SuppliersPage() {
                 <Building2 className="h-3.5 w-3.5" />
                 Manuelle Eingabe
               </button>
+              <button
+                onClick={() => {
+                  setCreateTab("commodity");
+                  setForm((f) => ({ ...f, supplier_type: "commodity" }));
+                }}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${
+                  createTab === "commodity"
+                    ? "border-b-2 border-amber-600 text-amber-600"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span className="text-sm">⛏</span>
+                Rohstofflieferant
+              </button>
             </div>
 
             {/* Tab content — scrollable */}
@@ -933,7 +1073,7 @@ export default function SuppliersPage() {
                           <span className="shrink-0 rounded bg-emerald-100 px-1.5 py-0.5 text-[10px] font-mono text-emerald-700">{companySelected.country}</span>
                           {companySelected.city && <span className="text-[11px] text-emerald-700 truncate hidden sm:block">{companySelected.city}</span>}
                         </div>
-                        <button type="button" onClick={() => { setCompanySelected(null); setEnrichedData(null); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" }); }} className="text-emerald-400 hover:text-emerald-700 shrink-0 ml-2">
+                        <button type="button" onClick={() => { setCompanySelected(null); setEnrichedData(null); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "", supplier_type: "manufacturing", commodity: null, commodity_code: null }); }} className="text-emerald-400 hover:text-emerald-700 shrink-0 ml-2">
                           <X className="h-4 w-4" />
                         </button>
                       </div>
@@ -1098,7 +1238,26 @@ export default function SuppliersPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="mb-1 block text-sm font-medium">{t("common.name")} *</label>
-                    <Input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} placeholder={t("suppliers.namePlaceholder")} />
+                    <div className="relative">
+                      <Input
+                        value={form.name}
+                        onChange={(e) => {
+                          setManualEnrichedFields(new Set());
+                          setForm((f) => ({ ...f, name: e.target.value, industry: "", nace_code: "", website: "" }));
+                        }}
+                        placeholder={t("suppliers.namePlaceholder")}
+                      />
+                      {manualEnriching && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-[11px] text-muted-foreground">
+                          <Spinner size="sm" /> Anreicherung…
+                        </span>
+                      )}
+                    </div>
+                    {manualEnrichedFields.size > 0 && !manualEnriching && (
+                      <p className="mt-1 text-[11px] text-emerald-600 flex items-center gap-1">
+                        <CheckCircle2 className="h-3 w-3" /> Branche, NACE &amp; Webseite automatisch befüllt · anpassbar
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="mb-1 block text-sm font-medium">{t("suppliers.legalName")}</label>
@@ -1110,12 +1269,18 @@ export default function SuppliersPage() {
                       <Input value={form.country ?? ""} onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))} placeholder="DE, US, FR…" />
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium">NACE Code</label>
+                      <label className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+                        NACE Code
+                        {manualEnrichedFields.has("nace_code") && <span className="text-[10px] font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Auto</span>}
+                      </label>
                       <Input value={form.nace_code ?? ""} onChange={(e) => setForm((f) => ({ ...f, nace_code: e.target.value }))} placeholder="C27, C29.32…" />
                     </div>
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">{t("common.industry")}</label>
+                    <label className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+                      {t("common.industry")}
+                      {manualEnrichedFields.has("industry") && <span className="text-[10px] font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Auto</span>}
+                    </label>
                     <Input value={form.industry ?? ""} onChange={(e) => setForm((f) => ({ ...f, industry: e.target.value }))} placeholder="Maschinenbau, Chemie…" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
@@ -1129,7 +1294,10 @@ export default function SuppliersPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1 block text-sm font-medium">{t("suppliers.website")}</label>
+                      <label className="mb-1 flex items-center gap-1.5 text-sm font-medium">
+                        {t("suppliers.website")}
+                        {manualEnrichedFields.has("website") && <span className="text-[10px] font-normal text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-full">Auto</span>}
+                      </label>
                       <Input value={form.website ?? ""} onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))} placeholder="https://…" />
                     </div>
                   </div>
@@ -1145,6 +1313,103 @@ export default function SuppliersPage() {
                   </div>
                 </div>
               )}
+
+              {/* ── TAB 3: Rohstofflieferant ── */}
+              {createTab === "commodity" && (
+                <div className="space-y-5">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
+                    <strong>Rohstofflieferanten</strong> werden mit einer speziellen Commodity Risk Matrix analysiert —
+                    statt NACE-Codes nutzt EIOS rohstoffspezifische CSDDD-Risikoprofile für Metalle und Agrarprodukte.
+                  </div>
+
+                  {/* Commodity selector */}
+                  <div>
+                    <label className="mb-2 block text-sm font-medium">Rohstoff auswählen *</label>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {COMMODITIES.map((c) => (
+                        <button
+                          key={c.code}
+                          type="button"
+                          onClick={() => setForm((f) => ({
+                            ...f,
+                            commodity_code: c.code,
+                            commodity: c.label,
+                            industry: c.sector,
+                            nace_code: c.nace,
+                            name: f.name || "",
+                          }))}
+                          className={`rounded-lg border p-3 text-left transition-all ${
+                            form.commodity_code === c.code
+                              ? "border-amber-400 bg-amber-100 ring-2 ring-amber-300"
+                              : "border-border bg-background hover:border-amber-300 hover:bg-amber-50"
+                          }`}
+                        >
+                          <div className="text-xl mb-1">{c.icon}</div>
+                          <div className="text-xs font-semibold">{c.label}</div>
+                          <div className="text-[10px] text-muted-foreground mt-0.5">{c.sector}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono mt-0.5">{c.nace}</div>
+                        </button>
+                      ))}
+                    </div>
+                    {form.commodity_code && (
+                      <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700">
+                        Typische Herkunftsländer: {COMMODITIES.find((c) => c.code === form.commodity_code)?.origins}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Supplier name */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Lieferantenname *</label>
+                    <input
+                      type="text"
+                      value={form.name}
+                      onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                      placeholder="z.B. Congo DRC Minerals SA, Atacama Lithium Corp."
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  {/* Country */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Herkunftsland (ISO)</label>
+                      <input
+                        type="text"
+                        value={form.country ?? ""}
+                        onChange={(e) => setForm((f) => ({ ...f, country: e.target.value.toUpperCase().slice(0, 2) }))}
+                        placeholder="CD, CL, UZ…"
+                        maxLength={2}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-sm font-medium">Lieferanten-Tier</label>
+                      <select
+                        value={form.supplier_tier}
+                        onChange={(e) => setForm((f) => ({ ...f, supplier_tier: e.target.value as SupplierTier }))}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="Tier 1">Tier 1</option>
+                        <option value="Tier 2">Tier 2</option>
+                        <option value="Tier 3">Tier 3</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">{t("common.notes")}</label>
+                    <textarea
+                      value={form.notes ?? ""}
+                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
+                      rows={2}
+                      placeholder="Interne Notizen, Zertifizierungen, Vertragsinfo…"
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Modal footer — always visible */}
@@ -1153,7 +1418,7 @@ export default function SuppliersPage() {
               <div className="flex justify-end gap-3">
                 <Button
                   variant="outline"
-                  onClick={() => { setShowCreate(false); setCreateError(null); resetCompanySearch(); setCreateTab("search"); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "" }); }}
+                  onClick={() => { setShowCreate(false); setCreateError(null); resetCompanySearch(); setCreateTab("search"); setForm({ name: "", legal_name: "", country: "", industry: "", nace_code: "", website: "", supplier_tier: "Tier 1", notes: "", supplier_type: "manufacturing", commodity: null, commodity_code: null }); }}
                 >
                   {t("common.cancel")}
                 </Button>
@@ -1161,15 +1426,28 @@ export default function SuppliersPage() {
                   onClick={() => {
                     const name = form.name.trim();
                     if (!name) { setCreateError("Name ist erforderlich."); return; }
+                    if (createTab === "commodity" && !form.commodity_code) {
+                      setCreateError("Bitte einen Rohstoff auswählen.");
+                      return;
+                    }
                     createMutation.mutate({
                       ...form,
                       legal_name: form.legal_name || undefined,
                       nace_code: form.nace_code || undefined,
                       website: form.website || undefined,
                       notes: form.notes || undefined,
+                      supplier_type: (form.supplier_type || "manufacturing") as SupplierType,
+                      commodity: form.commodity || undefined,
+                      commodity_code: form.commodity_code || undefined,
                     });
                   }}
-                  disabled={createMutation.isPending || (createTab === "search" && !companySelected)}
+                  disabled={
+                    createMutation.isPending ||
+                    (createTab === "search" && !companySelected) ||
+                    (createTab === "manual" && manualEnriching) ||
+                    (createTab === "commodity" && !form.name.trim())
+                  }
+                  className={createTab === "commodity" ? "bg-amber-600 hover:bg-amber-700 text-white" : ""}
                 >
                   {createMutation.isPending ? <Spinner size="sm" className="mr-2" /> : null}
                   {createMutation.isPending ? t("suppliers.creating") : t("suppliers.createTitle")}
@@ -1266,14 +1544,19 @@ export default function SuppliersPage() {
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Diesen Eintrag auswählen</p>
                 <button
                   type="button"
+                  disabled={detailEnrichLoading}
                   onClick={() => confirmEntity({ lei: detailTarget.lei, name: detailTarget.name, country: detailTarget.country, city: detailTarget.city })}
-                  className="flex w-full items-center justify-between rounded-lg border-2 border-blue-400 bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors"
+                  className="flex w-full items-center justify-between rounded-lg border-2 border-blue-400 bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-wait"
                 >
                   <div className="text-left">
                     <p className="text-sm font-semibold text-blue-900">{toTitleCase(detailTarget.name)}</p>
-                    <p className="text-xs text-blue-700">{[detailTarget.city, detailTarget.country].filter(Boolean).join(", ")} · Hauptgesellschaft</p>
+                    <p className="text-xs text-blue-700">
+                      {[detailTarget.city, detailTarget.country].filter(Boolean).join(", ")} · Hauptgesellschaft
+                    </p>
                   </div>
-                  <CheckCircle2 className="h-5 w-5 text-blue-500 shrink-0" />
+                  {detailEnrichLoading
+                    ? <Spinner size="sm" />
+                    : <CheckCircle2 className="h-5 w-5 text-blue-500 shrink-0" />}
                 </button>
               </div>
 
@@ -1312,8 +1595,9 @@ export default function SuppliersPage() {
                         <button
                           key={ch.lei}
                           type="button"
+                          disabled={detailEnrichLoading}
                           onClick={() => confirmEntity(ch)}
-                          className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-2.5 text-left hover:bg-muted/70 hover:border-blue-300 transition-colors group"
+                          className="flex w-full items-center justify-between rounded-md border border-border bg-background px-3 py-2.5 text-left hover:bg-muted/70 hover:border-blue-300 transition-colors group disabled:opacity-60 disabled:cursor-wait"
                         >
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate group-hover:text-blue-700">{toTitleCase(ch.name)}</p>

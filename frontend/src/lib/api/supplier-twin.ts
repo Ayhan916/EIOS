@@ -113,6 +113,17 @@ export interface CollectIntelligenceResponse {
 }
 
 export async function collectIntelligence(): Promise<CollectIntelligenceResponse> {
-  const r = await apiClient.post("/intelligence/collect");
+  // Multi-source collection can take 40-90 s — override the default 30 s client timeout
+  const r = await apiClient.post("/intelligence/collect", undefined, { timeout: 120_000 });
+  return r.data;
+}
+
+export async function collectIntelligenceForSupplier(supplierId: string): Promise<CollectIntelligenceResponse> {
+  const r = await apiClient.post(`/suppliers/${supplierId}/intelligence/collect`, undefined, { timeout: 120_000 });
+  return r.data;
+}
+
+export async function collectIntelligenceBatch(supplierIds: string[]): Promise<CollectIntelligenceResponse> {
+  const r = await apiClient.post("/intelligence/collect/batch", supplierIds, { timeout: 120_000 });
   return r.data;
 }

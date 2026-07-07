@@ -173,6 +173,7 @@ function NetworkGraphSection() {
   const [tierFilter, setTierFilter] = useState<string>("");
   const [riskFilter, setRiskFilter] = useState<string>("");
   const [countryFilter, setCountryFilter] = useState<string>("");
+  const [sectorFilter, setSectorFilter] = useState<string>("");
 
   const allSuppliers = data?.suppliers ?? [];
 
@@ -181,21 +182,27 @@ function NetworkGraphSection() {
     [allSuppliers]
   );
 
+  const sectors = useMemo(
+    () => [...new Set(allSuppliers.map((s) => s.industry).filter(Boolean))].sort() as string[],
+    [allSuppliers]
+  );
+
   const filteredSuppliers = useMemo(() => {
     return allSuppliers.filter((s) => {
       if (tierFilter && s.tier !== Number(tierFilter)) return false;
       if (riskFilter && (s.overall_risk_level ?? "LOW") !== riskFilter) return false;
       if (countryFilter && s.country !== countryFilter) return false;
+      if (sectorFilter && s.industry !== sectorFilter) return false;
       return true;
     });
-  }, [allSuppliers, tierFilter, riskFilter, countryFilter]);
+  }, [allSuppliers, tierFilter, riskFilter, countryFilter, sectorFilter]);
 
   const filteredIds = new Set(filteredSuppliers.map((s) => s.id));
   const filteredRelationships = (data?.relationships ?? []).filter(
     (r) => filteredIds.has(r.source) && filteredIds.has(r.target)
   );
 
-  const hasFilter = tierFilter || riskFilter || countryFilter;
+  const hasFilter = tierFilter || riskFilter || countryFilter || sectorFilter;
 
   if (isLoading) return <div className="flex justify-center p-12"><Spinner /></div>;
 
@@ -236,9 +243,21 @@ function NetworkGraphSection() {
             ))}
           </select>
         )}
+        {sectors.length > 0 && (
+          <select
+            value={sectorFilter}
+            onChange={(e) => setSectorFilter(e.target.value)}
+            className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-sm text-slate-200"
+          >
+            <option value="">{t("network.allSectors")}</option>
+            {sectors.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        )}
         {hasFilter && (
           <button
-            onClick={() => { setTierFilter(""); setRiskFilter(""); setCountryFilter(""); }}
+            onClick={() => { setTierFilter(""); setRiskFilter(""); setCountryFilter(""); setSectorFilter(""); }}
             className="flex items-center gap-1 rounded-md border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors"
           >
             <X className="h-3 w-3" /> {t("network.clearFilters")}

@@ -107,6 +107,8 @@ export interface AssessmentResponse extends EntityResponse {
 export type SupplierTier = "Tier 1" | "Tier 2" | "Tier 3" | "Other";
 export type SupplierStatus = "Active" | "Inactive";
 
+export type SupplierType = "manufacturing" | "commodity" | "service";
+
 export interface SupplierResponse extends EntityResponse {
   organization_id: string;
   name: string;
@@ -118,6 +120,9 @@ export interface SupplierResponse extends EntityResponse {
   supplier_tier: SupplierTier;
   supplier_status: SupplierStatus;
   notes: string | null;
+  supplier_type: SupplierType;
+  commodity: string | null;
+  commodity_code: string | null;
 }
 
 export interface SupplierCreate {
@@ -129,6 +134,9 @@ export interface SupplierCreate {
   website?: string | null;
   supplier_tier?: SupplierTier;
   notes?: string | null;
+  supplier_type?: SupplierType;
+  commodity?: string | null;
+  commodity_code?: string | null;
 }
 
 export interface SupplierUpdate {
@@ -141,6 +149,9 @@ export interface SupplierUpdate {
   supplier_tier?: SupplierTier;
   supplier_status?: SupplierStatus;
   notes?: string | null;
+  supplier_type?: SupplierType;
+  commodity?: string | null;
+  commodity_code?: string | null;
 }
 
 export interface SupplierRiskProfile {

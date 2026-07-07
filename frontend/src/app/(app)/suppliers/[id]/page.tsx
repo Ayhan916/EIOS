@@ -47,7 +47,7 @@ import {
   getSupplierHeatmap,
 } from "@/lib/api/supplier-scores";
 import {
-  collectIntelligence,
+  collectIntelligenceForSupplier,
   getSupplierTwin,
   getSupplierTwinTimeline,
   processSupplierSignals,
@@ -84,6 +84,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { SupplierTier, SupplierStatus, SupplierUpdate } from "@/types/api";
+import { RagAnalyzeWidget } from "@/components/rag/RagAnalyzeWidget";
+import { RagSimulateWidget } from "@/components/rag/RagSimulateWidget";
+import { RagHistoryWidget } from "@/components/rag/RagHistoryWidget";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -3062,7 +3065,7 @@ export default function SupplierDetailPage() {
                   setCollectResult(null);
                   setCollectError(null);
                   try {
-                    const r = await collectIntelligence();
+                    const r = await collectIntelligenceForSupplier(id);
                     setCollectResult(r);
                     refetchTwin?.();
                     refetchTimeline?.();
@@ -3616,6 +3619,15 @@ export default function SupplierDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          {/* ── Lernhistorie ─────────────────────────────────────────────── */}
+          <RagHistoryWidget supplierId={id} supplierName={supplier?.name ?? ""} />
+
+          {/* ── KI-Risikoanalyse ─────────────────────────────────────────── */}
+          <RagAnalyzeWidget supplierId={id} supplierName={supplier?.name ?? ""} />
+
+          {/* ── Szenario-Simulation ──────────────────────────────────────── */}
+          <RagSimulateWidget supplierId={id} supplierName={supplier?.name ?? ""} />
         </div>
       )}
 

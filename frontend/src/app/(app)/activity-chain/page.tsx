@@ -10,6 +10,7 @@ import {
   getVisualizationData, getChainStats,
   type ChainNode,
 } from "@/lib/api/activity-chain";
+import { useLanguage } from "@/lib/i18n/context";
 
 const DIRECTION_LABELS: Record<string, string> = {
   upstream: "Upstream",
@@ -189,6 +190,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ActivityChainPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"viz" | "stats">("viz");
   const [riskFilter, setRiskFilter] = useState(false);
   const [selected, setSelected] = useState<ChainNode | null>(null);
@@ -211,8 +213,8 @@ export default function ActivityChainPage() {
         <div className="flex items-center gap-3">
           <Network className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Aktivitätskette</h1>
-            <p className="text-sm text-slate-500">CSDDD Art. 2/3 — Upstream & Downstream Partner</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("actChain.title")}</h1>
+            <p className="text-sm text-slate-500">{t("actChain.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -220,18 +222,18 @@ export default function ActivityChainPage() {
       {/* KPIs */}
       {vizData && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <KpiCard label="Partner gesamt" value={vizData.summary.total} />
-          <KpiCard label="Upstream" value={vizData.summary.upstream} color="text-blue-600" icon={<ChevronLeft className="w-5 h-5" />} />
-          <KpiCard label="Downstream" value={vizData.summary.downstream} color="text-emerald-600" icon={<ChevronRight className="w-5 h-5" />} />
-          <KpiCard label="Hohes Risiko" value={vizData.summary.high_risk} color="text-red-600" icon={<AlertTriangle className="w-5 h-5" />} />
+          <KpiCard label={t("actChain.totalPartners")} value={vizData.summary.total} />
+          <KpiCard label={t("actChain.upstream")} value={vizData.summary.upstream} color="text-blue-600" icon={<ChevronLeft className="w-5 h-5" />} />
+          <KpiCard label={t("actChain.downstream")} value={vizData.summary.downstream} color="text-emerald-600" icon={<ChevronRight className="w-5 h-5" />} />
+          <KpiCard label={t("actChain.highRisk")} value={vizData.summary.high_risk} color="text-red-600" icon={<AlertTriangle className="w-5 h-5" />} />
         </div>
       )}
 
       {/* Tabs */}
       <div className="flex gap-4 border-b">
         {[
-          { id: "viz", label: "Kettenvisualisierung" },
-          { id: "stats", label: "Statistiken" },
+          { id: "viz", label: t("actChain.tabViz") },
+          { id: "stats", label: t("actChain.tabStats") },
         ].map((t) => (
           <button key={t.id} onClick={() => setActiveTab(t.id as typeof activeTab)}
             className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
@@ -244,7 +246,7 @@ export default function ActivityChainPage() {
       {activeTab === "viz" && (
         <div className="bg-white border rounded-xl overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b bg-slate-50">
-            <p className="text-sm font-medium text-slate-700">Vollständige Aktivitätskette</p>
+            <p className="text-sm font-medium text-slate-700">{t("actChain.fullChain")}</p>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-2 text-sm text-slate-600 cursor-pointer">
                 <input type="checkbox" className="rounded" checked={riskFilter} onChange={(e) => setRiskFilter(e.target.checked)} />
