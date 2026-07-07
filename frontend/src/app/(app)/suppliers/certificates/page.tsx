@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -60,13 +61,6 @@ const LIFECYCLE_CONFIG = {
 
 type LifecycleStatus = keyof typeof LIFECYCLE_CONFIG;
 
-const FILTER_TABS: { key: LifecycleStatus | "ALL"; label: string }[] = [
-  { key: "ALL",           label: "All alerts" },
-  { key: "EXPIRED",       label: "Expired" },
-  { key: "EXPIRING_SOON", label: "≤30 days" },
-  { key: "EXPIRING_60D",  label: "≤60 days" },
-  { key: "EXPIRING_90D",  label: "≤90 days" },
-];
 
 // ── Countdown badge ───────────────────────────────────────────────────────────
 
@@ -170,6 +164,14 @@ function CertTypeTable({ items }: { items: CertTypeCount[] }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function CertificatesPage() {
+  const { t } = useLanguage();
+  const FILTER_TABS: { key: LifecycleStatus | "ALL"; label: string }[] = [
+    { key: "ALL",           label: t("certLifecycle.allAlerts") },
+    { key: "EXPIRED",       label: t("certLifecycle.expired") },
+    { key: "EXPIRING_SOON", label: t("certLifecycle.expiringSoon") },
+    { key: "EXPIRING_60D",  label: t("certLifecycle.expiring60d") },
+    { key: "EXPIRING_90D",  label: t("certLifecycle.expiring90d") },
+  ];
   const [activeFilter, setActiveFilter] = useState<LifecycleStatus | "ALL">("ALL");
   const [daysWindow, setDaysWindow] = useState(90);
 
@@ -198,10 +200,10 @@ export default function CertificatesPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-              Certificate Lifecycle
+              {t("certLifecycle.title")}
             </h1>
             <p className="text-xs text-gray-500">
-              Track expiry and verification status across all supplier certifications
+              {t("certLifecycle.subtitle")}
             </p>
           </div>
         </div>
@@ -229,14 +231,14 @@ export default function CertificatesPage() {
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
           {[
-            { label: "Total",          value: data.total,          color: "text-gray-700" },
-            { label: "Active",         value: data.active,         color: "text-emerald-600" },
-            { label: "Verified",       value: data.verified,       color: "text-blue-600" },
-            { label: "Expiring ≤30d",  value: data.expiring_soon,  color: data.expiring_soon  > 0 ? "text-orange-600" : "text-gray-400" },
-            { label: "Expiring ≤60d",  value: data.expiring_60d,   color: data.expiring_60d   > 0 ? "text-amber-600"  : "text-gray-400" },
-            { label: "Expired",        value: data.expired,        color: data.expired        > 0 ? "text-red-600"    : "text-gray-400" },
+            { id: "total",    label: t("certLifecycle.total"),        value: data.total,          color: "text-gray-700" },
+            { id: "active",   label: t("certLifecycle.active"),       value: data.active,         color: "text-emerald-600" },
+            { id: "verified", label: t("certLifecycle.verified"),     value: data.verified,       color: "text-blue-600" },
+            { id: "exp30",    label: t("certLifecycle.expiringSoon"), value: data.expiring_soon,  color: data.expiring_soon  > 0 ? "text-orange-600" : "text-gray-400" },
+            { id: "exp60",    label: t("certLifecycle.expiring60d"),  value: data.expiring_60d,   color: data.expiring_60d   > 0 ? "text-amber-600"  : "text-gray-400" },
+            { id: "expired",  label: t("certLifecycle.expired"),      value: data.expired,        color: data.expired        > 0 ? "text-red-600"    : "text-gray-400" },
           ].map((k) => (
-            <div key={k.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3">
+            <div key={k.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3">
               <p className="text-xs text-gray-400 mb-1">{k.label}</p>
               <p className={`text-2xl font-bold tabular-nums ${k.color}`}>{k.value}</p>
             </div>

@@ -6,6 +6,7 @@ import {
   ScrollText, Plus, CheckCircle2, Clock, AlertTriangle,
   X, ChevronRight, FileText, Shield, Calendar, RotateCcw,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   listPolicies, createPolicy, activatePolicy, clonePolicy, archivePolicy,
   listCoCs, createCoC, getReviewStatus, getCalendar,
@@ -182,6 +183,7 @@ function CoCModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => vo
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function GovernancePage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"policies" | "coc" | "calendar">("policies");
   const [showPolicyModal, setShowPolicyModal] = useState(false);
@@ -212,9 +214,9 @@ export default function GovernancePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">DD-Governance & Policies</h1>
+          <h1 className="text-2xl font-bold">{t("governance.title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Art. 7 CSDDD — Due-Diligence-Politik, Verhaltenskodex, 24-Monats-Review
+            {t("governance.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -283,13 +285,13 @@ export default function GovernancePage() {
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
         {([
-          ["policies", `Politiken (${policies.length})`],
-          ["coc", `Verhaltenskodex (${cocs.length})`],
-          ["calendar", "Governance-Kalender"],
-        ] as const).map(([t, label]) => (
-          <button key={t} onClick={() => setTab(t)}
+          ["policies", `${t("governance.tabPolicies")} (${policies.length})`],
+          ["coc", `${t("governance.tabCoc")} (${cocs.length})`],
+          ["calendar", t("governance.tabCalendar")],
+        ] as ["policies" | "coc" | "calendar", string][]).map(([tabId, label]) => (
+          <button key={tabId} onClick={() => setTab(tabId)}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab === t ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+              tab === tabId ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
             {label}
           </button>

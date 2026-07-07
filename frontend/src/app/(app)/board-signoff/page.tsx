@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   BoardDashboard,
   BoardDecision,
@@ -60,6 +61,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function BoardSignoffPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"dashboard" | "requests" | "create">("dashboard");
   const [dashboard, setDashboard] = useState<BoardDashboard | null>(null);
   const [requests, setRequests] = useState<BoardSignoffRequest[]>([]);
@@ -146,8 +148,8 @@ export default function BoardSignoffPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Board Sign-off Trail (Art. 22)</h1>
-        <p className="mt-1 text-sm text-gray-500">CSDDD Art. 22 — Board-Level Due Diligence Oversight</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("boardSignoff.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("boardSignoff.subtitle")}</p>
       </div>
 
       {/* Tabs */}
@@ -160,7 +162,7 @@ export default function BoardSignoffPage() {
               tab === tb ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tb === "dashboard" ? "Dashboard" : tb === "requests" ? "Requests" : "New Request"}
+            {tb === "dashboard" ? t("boardSignoff.tabDashboard") : tb === "requests" ? t("boardSignoff.tabRequests") : t("boardSignoff.tabCreate")}
           </button>
         ))}
       </div>
@@ -169,12 +171,12 @@ export default function BoardSignoffPage() {
       {tab === "dashboard" && dashboard && (
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
-            <KPICard label="Total" value={dashboard.total} />
-            <KPICard label="Pending" value={dashboard.pending} />
-            <KPICard label="Approved" value={dashboard.approved} />
-            <KPICard label="Rejected" value={dashboard.rejected} />
-            <KPICard label="Overdue" value={dashboard.overdue} sub="past due date" />
-            <KPICard label="Approval Rate" value={`${dashboard.approval_rate_pct}%`} />
+            <KPICard label={t("boardSignoff.total")} value={dashboard.total} />
+            <KPICard label={t("boardSignoff.pending")} value={dashboard.pending} />
+            <KPICard label={t("boardSignoff.approved")} value={dashboard.approved} />
+            <KPICard label={t("boardSignoff.rejected")} value={dashboard.rejected} />
+            <KPICard label={t("boardSignoff.overdue")} value={dashboard.overdue} sub={t("boardSignoff.pastDueDate")} />
+            <KPICard label={t("boardSignoff.approvalRate")} value={`${dashboard.approval_rate_pct}%`} />
           </div>
 
           {dashboard.overdue > 0 && (
@@ -200,7 +202,7 @@ export default function BoardSignoffPage() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="rounded border border-gray-300 px-2 py-1.5 text-sm"
             >
-              <option value="">All Statuses</option>
+              <option value="">{t("boardSignoff.allStatuses")}</option>
               {["pending", "approved", "rejected", "withdrawn"].map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
@@ -210,7 +212,7 @@ export default function BoardSignoffPage() {
               onChange={(e) => setFilterType(e.target.value)}
               className="rounded border border-gray-300 px-2 py-1.5 text-sm"
             >
-              <option value="">All Types</option>
+              <option value="">{t("boardSignoff.allTypes")}</option>
               {SIGNOFF_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>{t.label}</option>
               ))}
@@ -218,9 +220,9 @@ export default function BoardSignoffPage() {
           </div>
 
           {loading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-gray-500">{t("boardSignoff.loading")}</p>
           ) : requests.length === 0 ? (
-            <p className="text-sm text-gray-500">No sign-off requests found.</p>
+            <p className="text-sm text-gray-500">{t("boardSignoff.noRequests")}</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="min-w-full text-sm">

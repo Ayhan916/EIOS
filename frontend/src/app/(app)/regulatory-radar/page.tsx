@@ -14,6 +14,7 @@ import {
   seedSources,
   updateChange,
 } from "@/lib/api/regulatory-radar";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   new: "bg-blue-100 text-blue-800",
@@ -38,6 +39,7 @@ function KPI({ label, value, highlight }: { label: string; value: number; highli
 }
 
 export default function RegulatoryRadarPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"inbox" | "sources" | "create">("inbox");
   const [dashboard, setDashboard] = useState<RadarDashboard | null>(null);
   const [changes, setChanges] = useState<RegulatoryChange[]>([]);
@@ -109,17 +111,17 @@ export default function RegulatoryRadarPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Regulatory Change Radar</h1>
-        <p className="mt-1 text-sm text-gray-500">Art. 7 Abs. 4 — Track regulatory changes requiring DD process updates (CSDDD delegated acts, national transpositions, EU guidance)</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("regRadar.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("regRadar.subtitle")}</p>
       </div>
 
       {dashboard && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          <KPI label="Total" value={dashboard.total} />
-          <KPI label="New (to review)" value={dashboard.new} highlight />
-          <KPI label="Action Required" value={dashboard.action_required} highlight />
-          <KPI label="Implemented" value={dashboard.implemented} />
-          <KPI label="Not Relevant" value={dashboard.not_relevant} />
+          <KPI label={t("regRadar.kpiTotal")} value={dashboard.total} />
+          <KPI label={t("regRadar.kpiNew")} value={dashboard.new} highlight />
+          <KPI label={t("regRadar.actionRequired")} value={dashboard.action_required} highlight />
+          <KPI label={t("regRadar.kpiImplemented")} value={dashboard.implemented} />
+          <KPI label={t("regRadar.kpiNotRelevant")} value={dashboard.not_relevant} />
         </div>
       )}
 
@@ -127,7 +129,7 @@ export default function RegulatoryRadarPage() {
         {(["inbox", "sources", "create"] as const).map((tb) => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2 text-sm font-medium capitalize ${tab === tb ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
-            {tb === "inbox" ? "Regulatory Inbox" : tb === "sources" ? "Sources" : "Add Change"}
+            {tb === "inbox" ? t("regRadar.tabInbox") : tb === "sources" ? t("regRadar.tabSources") : t("regRadar.tabAddChange")}
           </button>
         ))}
       </div>
@@ -137,11 +139,11 @@ export default function RegulatoryRadarPage() {
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="rounded border px-2 py-1.5 text-sm">
-              <option value="">All Statuses</option>
+              <option value="">{t("regRadar.allStatuses")}</option>
               {["new", "analysed", "implemented", "not_relevant"].map(s => <option key={s} value={s}>{s.replace("_", " ")}</option>)}
             </select>
             <select value={filterAction} onChange={(e) => setFilterAction(e.target.value)} className="rounded border px-2 py-1.5 text-sm">
-              <option value="">All Actions</option>
+              <option value="">{t("regRadar.allActions")}</option>
               {["yes", "no", "pending"].map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>

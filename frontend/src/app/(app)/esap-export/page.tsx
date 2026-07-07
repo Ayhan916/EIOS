@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   ESAPSubmission,
   ValidationChecklist,
@@ -20,6 +21,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ESAPExportPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"taxonomy" | "export" | "validate" | "submissions">("validate");
   const [reportYear, setReportYear] = useState(2024);
   const [exportFmt, setExportFmt] = useState<"json" | "xml">("json");
@@ -91,19 +93,19 @@ export default function ESAPExportPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">ESAP Export (Art. 16 Abs. 2)</h1>
-        <p className="mt-1 text-sm text-gray-500">European Single Access Point — CSDDD annual report structured export (obligation from ca. 2031 per EU Reg. 2023/2859)</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("esapExport.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("esapExport.subtitle")}</p>
       </div>
 
       <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
-        <strong>Note:</strong> ESAP mandatory filing applies from ca. 2031 for large companies. Use this module now to prepare and validate your report structure.
+        <strong>Note:</strong> {t("esapExport.note")}
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
         {(["validate", "export", "submissions", "taxonomy"] as const).map((tb) => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2 text-sm font-medium capitalize ${tab === tb ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
-            {tb === "validate" ? "Pre-Submission Check" : tb === "submissions" ? "Submission Log" : tb === "export" ? "Export" : "Taxonomy"}
+            {tb === "validate" ? t("esapExport.tabValidate") : tb === "submissions" ? t("esapExport.tabSubmissions") : tb === "export" ? t("esapExport.tabExport") : t("esapExport.tabTaxonomy")}
           </button>
         ))}
       </div>
@@ -115,7 +117,7 @@ export default function ESAPExportPage() {
             <label className="text-sm font-medium">Report Year</label>
             <input type="number" value={reportYear} onChange={(e) => setReportYear(+e.target.value)} min={2024} max={2040} className="w-28 rounded border px-2 py-1.5 text-sm" />
             <button onClick={handleValidate} disabled={validating} className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-40">
-              {validating ? "Checking…" : "Run Validation"}
+              {validating ? t("esapExport.checking") : t("esapExport.runValidation")}
             </button>
           </div>
           {validation && (
@@ -162,13 +164,13 @@ export default function ESAPExportPage() {
               <option value="xml">XML</option>
             </select>
             <button onClick={handleExport} disabled={exportLoading} className="rounded bg-blue-600 px-4 py-1.5 text-sm text-white hover:bg-blue-700 disabled:opacity-40">
-              {exportLoading ? "Generating…" : "Generate Export"}
+              {exportLoading ? t("esapExport.generating") : t("esapExport.generateExport")}
             </button>
           </div>
           {exportData && (
             <div>
               <div className="flex justify-end mb-1">
-                <button onClick={() => navigator.clipboard.writeText(exportData)} className="rounded bg-gray-100 px-2 py-0.5 text-xs hover:bg-gray-200">Copy</button>
+                <button onClick={() => navigator.clipboard.writeText(exportData)} className="rounded bg-gray-100 px-2 py-0.5 text-xs hover:bg-gray-200">{t("esapExport.copy")}</button>
               </div>
               <pre className="max-h-96 overflow-auto rounded-lg bg-gray-900 p-4 text-xs text-gray-100">{exportData}</pre>
               <button
@@ -184,7 +186,7 @@ export default function ESAPExportPage() {
             <div className="flex gap-2 flex-wrap">
               <input value={createNotes} onChange={(e) => setCreateNotes(e.target.value)} placeholder="Notes (optional)" className="flex-1 rounded border px-2 py-1.5 text-sm" />
               <button onClick={handleCreateSubmission} disabled={creating} className="rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-900 disabled:opacity-40">
-                {creating ? "Creating…" : "Create Submission Record"}
+                {creating ? t("esapExport.creating") : t("esapExport.createRecord")}
               </button>
             </div>
           </div>
@@ -194,7 +196,7 @@ export default function ESAPExportPage() {
       {/* Submissions Tab */}
       {tab === "submissions" && (
         <div className="space-y-3">
-          {submissions.length === 0 ? <p className="text-sm text-gray-500">No submission records. Generate and export a report first.</p> : (
+          {submissions.length === 0 ? <p className="text-sm text-gray-500">{t("esapExport.noSubmissions")}</p> : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">
@@ -209,8 +211,8 @@ export default function ESAPExportPage() {
                       <td className="px-3 py-2 text-xs text-gray-500">{s.submitted_by ?? "—"}</td>
                       <td className="px-3 py-2 font-mono text-xs">{s.confirmation_reference ?? "—"}</td>
                       <td className="px-3 py-2 flex gap-1">
-                        {s.status === "draft" && <button onClick={() => handleMarkReady(s.id)} className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800 hover:bg-blue-200">Mark Ready</button>}
-                        {s.status === "ready" && <button onClick={() => setRecordId(s.id)} className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-800 hover:bg-green-200">Record Submission</button>}
+                        {s.status === "draft" && <button onClick={() => handleMarkReady(s.id)} className="rounded bg-blue-100 px-2 py-0.5 text-xs text-blue-800 hover:bg-blue-200">{t("esapExport.markReady")}</button>}
+                        {s.status === "ready" && <button onClick={() => setRecordId(s.id)} className="rounded bg-green-100 px-2 py-0.5 text-xs text-green-800 hover:bg-green-200">{t("esapExport.logSubmission")}</button>}
                       </td>
                     </tr>
                   ))}

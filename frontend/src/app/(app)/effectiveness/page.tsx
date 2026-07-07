@@ -7,6 +7,7 @@ import {
   TrendingDown, TrendingUp, X, BookOpen, ClipboardList, BarChart2,
   ArrowUp, ArrowDown, Minus,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   listIndicators, listReviews, createReview, submitReview, closeReview,
   getEffectivenessDashboard, createIndicator,
@@ -39,6 +40,7 @@ function Badge({ label, colorClass }: { label: string; colorClass: string }) {
 // ── Dashboard Tab ─────────────────────────────────────────────────────────────
 
 function DashboardTab() {
+  const { t } = useLanguage();
   const { data: dash, isLoading } = useQuery({
     queryKey: ["effectiveness-dashboard"],
     queryFn: getEffectivenessDashboard,
@@ -49,37 +51,43 @@ function DashboardTab() {
 
   const metrics = [
     {
-      label: "Offene CAPs",
+      id: "openCaps",
+      label: t("effectiveness.dashOpenCaps"),
       value: dash.open_caps,
       icon: ClipboardList,
       color: dash.open_caps > 10 ? "text-red-600" : "text-slate-700",
     },
     {
-      label: "Überfällige CAPs",
+      id: "overdueCaps",
+      label: t("effectiveness.dashOverdueCaps"),
       value: dash.overdue_caps,
       icon: AlertTriangle,
       color: dash.overdue_caps > 0 ? "text-red-600" : "text-emerald-600",
     },
     {
-      label: "Abg. CAPs (12M)",
+      id: "closedCaps",
+      label: t("effectiveness.dashClosedCaps12m"),
       value: dash.closed_caps_12m,
       icon: CheckCircle2,
       color: "text-emerald-600",
     },
     {
-      label: "Ø Risikoänderung",
+      id: "riskDelta",
+      label: t("effectiveness.dashRiskDelta"),
       value: dash.avg_risk_delta !== null ? `${dash.avg_risk_delta > 0 ? "+" : ""}${dash.avg_risk_delta}` : "—",
       icon: dash.avg_risk_delta !== null && dash.avg_risk_delta < 0 ? TrendingDown : TrendingUp,
       color: dash.avg_risk_delta !== null && dash.avg_risk_delta < 0 ? "text-emerald-600" : "text-amber-600",
     },
     {
-      label: "Stakeh. Konsult. (12M)",
+      id: "consult",
+      label: t("effectiveness.dashConsult12m"),
       value: dash.stakeholder_consultations_12m,
       icon: Activity,
       color: "text-blue-600",
     },
     {
-      label: "Remedy abg. (12M)",
+      id: "remedy",
+      label: t("effectiveness.dashRemedy12m"),
       value: dash.remedy_cases_closed_12m,
       icon: CheckCircle2,
       color: "text-emerald-600",
@@ -99,7 +107,7 @@ function DashboardTab() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {metrics.map((m) => (
-          <div key={m.label} className="bg-white border rounded-xl p-4 flex items-center gap-3">
+          <div key={m.id} className="bg-white border rounded-xl p-4 flex items-center gap-3">
             <m.icon className={`w-8 h-8 ${m.color}`} />
             <div>
               <p className={`text-2xl font-bold ${m.color}`}>{m.value}</p>
@@ -377,6 +385,7 @@ function NewIndicatorModal({ onClose }: { onClose: () => void }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function EffectivenessPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"dashboard" | "reviews" | "indicators">("dashboard");
   const [showNewReview, setShowNewReview] = useState(false);
   const [showNewIndicator, setShowNewIndicator] = useState(false);
@@ -406,8 +415,8 @@ export default function EffectivenessPage() {
         <div className="flex items-center gap-3">
           <Activity className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Effectiveness Monitoring</h1>
-            <p className="text-sm text-slate-500">CSDDD Art. 15 — Überwachung der Wirksamkeit</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("effectiveness.title")}</h1>
+            <p className="text-sm text-slate-500">{t("effectiveness.subtitle")}</p>
           </div>
         </div>
         {activeTab === "reviews" && (
@@ -434,21 +443,21 @@ export default function EffectivenessPage() {
           <ClipboardList className="w-7 h-7 text-slate-500" />
           <div>
             <p className="text-2xl font-bold text-slate-800">{reviews.length}</p>
-            <p className="text-xs text-slate-500">Reviews gesamt</p>
+            <p className="text-xs text-slate-500">{t("effectiveness.kpiTotal")}</p>
           </div>
         </div>
         <div className="bg-white border rounded-xl p-4 flex items-center gap-3">
           <AlertTriangle className="w-7 h-7 text-amber-500" />
           <div>
             <p className="text-2xl font-bold text-slate-800">{reviewsByStatus.submitted}</p>
-            <p className="text-xs text-slate-500">Ausstehend</p>
+            <p className="text-xs text-slate-500">{t("effectiveness.kpiPending")}</p>
           </div>
         </div>
         <div className="bg-white border rounded-xl p-4 flex items-center gap-3">
           <CheckCircle2 className="w-7 h-7 text-emerald-500" />
           <div>
             <p className="text-2xl font-bold text-slate-800">{reviewsByStatus.closed}</p>
-            <p className="text-xs text-slate-500">Abgeschlossen</p>
+            <p className="text-xs text-slate-500">{t("effectiveness.kpiClosed")}</p>
           </div>
         </div>
       </div>
@@ -456,20 +465,20 @@ export default function EffectivenessPage() {
       {/* Tabs */}
       <div className="flex gap-4 border-b">
         {[
-          { id: "dashboard", label: "Live-Dashboard" },
-          { id: "reviews", label: "Wirksamkeits-Reviews" },
-          { id: "indicators", label: `KPI-Bibliothek (${indicators.length || "…"})` },
-        ].map((t) => (
+          { id: "dashboard", label: t("effectiveness.tabDashboard") },
+          { id: "reviews", label: t("effectiveness.tabReviewsList") },
+          { id: "indicators", label: `${t("effectiveness.tabIndicators")} (${indicators.length || "…"})` },
+        ].map((tabItem) => (
           <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id as typeof activeTab)}
+            key={tabItem.id}
+            onClick={() => setActiveTab(tabItem.id as typeof activeTab)}
             className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === t.id
+              activeTab === tabItem.id
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
       </div>

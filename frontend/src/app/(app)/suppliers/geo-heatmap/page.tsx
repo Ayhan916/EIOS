@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -230,6 +231,7 @@ function RiskBarChart({ countries }: { countries: GeoCountryEntry[] }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function GeoHeatmapPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["supplier-geo-heatmap"],
     queryFn: geoHeatmapApi.getHeatmap,
@@ -247,10 +249,10 @@ export default function GeoHeatmapPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            Geographic Portfolio Heatmap
+            {t("geoHeatmap.title")}
           </h1>
           <p className="text-xs text-gray-500">
-            Supplier risk concentration by country · enriched with external country risk profiles
+            {t("geoHeatmap.subtitle")}
           </p>
         </div>
       </div>
@@ -259,12 +261,12 @@ export default function GeoHeatmapPage() {
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Countries",         value: data.countries_count,                                                           color: "text-blue-600" },
-            { label: "Suppliers Mapped",  value: data.total_suppliers,                                                           color: "text-gray-700" },
-            { label: "Critical Countries",value: data.countries.filter((c) => c.worst_band === "Critical").length,               color: "text-red-600" },
-            { label: "High Countries",    value: data.countries.filter((c) => c.worst_band === "High" || c.worst_band === "Critical").length, color: "text-orange-600" },
+            { id: "countries", label: t("geoHeatmap.countries"), value: data.countries_count, color: "text-blue-600" },
+            { id: "mapped", label: t("geoHeatmap.suppliersMapped"), value: data.total_suppliers, color: "text-gray-700" },
+            { id: "critical", label: t("geoHeatmap.criticalCountries"), value: data.countries.filter((c) => c.worst_band === "Critical").length, color: "text-red-600" },
+            { id: "high", label: t("geoHeatmap.highCountries"), value: data.countries.filter((c) => c.worst_band === "High" || c.worst_band === "Critical").length, color: "text-orange-600" },
           ].map((k) => (
-            <div key={k.label} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3">
+            <div key={k.id} className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3">
               <p className="text-xs text-gray-400 mb-1">{k.label}</p>
               <p className={`text-2xl font-bold tabular-nums ${k.color}`}>{k.value}</p>
             </div>

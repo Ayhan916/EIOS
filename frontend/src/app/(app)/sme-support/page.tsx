@@ -6,6 +6,7 @@ import {
   Building2, CheckCircle, Clock, Play, XCircle, AlertTriangle,
   Plus, ChevronDown, ChevronUp, X, Euro, Users,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   listProfiles, getProfileSummary, upsertProfile, confirmProfile,
   listPrograms, createProgram, activateProgram, completeProgram,
@@ -429,6 +430,7 @@ function CreateProgramDialog({
 type Tab = "overview" | "programs" | "report";
 
 export default function SMESupportPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("overview");
   const [showRegister, setShowRegister] = useState(false);
   const [showCreateProgram, setShowCreateProgram] = useState(false);
@@ -466,9 +468,9 @@ export default function SMESupportPage() {
   }
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "overview", label: "KMU-Übersicht" },
-    { id: "programs", label: "Förderprogramme" },
-    { id: "report", label: "Jahresbericht" },
+    { id: "overview", label: t("smeSupport.tabOverview") },
+    { id: "programs", label: t("smeSupport.tabSupportPrograms") },
+    { id: "report", label: t("smeSupport.tabReport") },
   ];
 
   return (
@@ -478,18 +480,18 @@ export default function SMESupportPage() {
         <div className="flex items-center gap-3">
           <Building2 className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">KMU-Unterstützung</h1>
-            <p className="text-sm text-slate-500">CSDDD Art. 10 Abs. 2 lit. b — Gezielte Unterstützung für KMU-Lieferanten</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("smeSupport.title")}</h1>
+            <p className="text-sm text-slate-500">{t("smeSupport.subtitle")}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 border-b">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t.label}
+        {TABS.map((tabItem) => (
+          <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === tabItem.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -499,12 +501,12 @@ export default function SMESupportPage() {
         <div className="space-y-6">
           {summary && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KpiCard label="Lieferanten gesamt" value={summary.total} />
-              <KpiCard label="KMU-Lieferanten" value={summary.sme_count}
+              <KpiCard label={t("smeSupport.kpiTotalSuppliers")} value={summary.total} />
+              <KpiCard label={t("smeSupport.kpiSme")} value={summary.sme_count}
                 color="text-blue-600" sub="Micro + Klein + Mittel" />
-              <KpiCard label="Verifiziert" value={summary.confirmed}
+              <KpiCard label={t("smeSupport.kpiVerified")} value={summary.confirmed}
                 color={summary.confirmed === summary.sme_count ? "text-emerald-600" : "text-amber-600"} />
-              <KpiCard label="Nicht verifiziert"
+              <KpiCard label={t("smeSupport.kpiUnverified")}
                 value={summary.sme_count - summary.confirmed}
                 color={summary.sme_count - summary.confirmed > 0 ? "text-amber-600" : "text-emerald-600"} />
             </div>
@@ -629,9 +631,9 @@ export default function SMESupportPage() {
           {report ? (
             <>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <KpiCard label="Förderprogramme" value={report.programs_total} />
-                <KpiCard label="Abgeschlossen" value={report.programs_completed} color="text-emerald-600" />
-                <KpiCard label="KMU-Lieferanten unterstützt" value={report.sme_suppliers_supported} color="text-blue-600" />
+                <KpiCard label={t("smeSupport.kpiPrograms")} value={report.programs_total} />
+                <KpiCard label={t("smeSupport.kpiCompleted")} value={report.programs_completed} color="text-emerald-600" />
+                <KpiCard label={t("smeSupport.kpiSupported")} value={report.sme_suppliers_supported} color="text-blue-600" />
               </div>
               <div className="bg-white border rounded-xl p-5">
                 <div className="flex items-center gap-3">

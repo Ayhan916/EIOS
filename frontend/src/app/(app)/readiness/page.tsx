@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   Shield, RefreshCw, AlertTriangle, CheckCircle, Clock,
   TrendingUp, ChevronDown, ChevronUp, BarChart2,
@@ -135,6 +136,7 @@ function HistoryChart({ history }: { history: { overall_score_pct: number; compu
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ReadinessPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"score" | "history">("score");
   const qc = useQueryClient();
 
@@ -165,8 +167,8 @@ export default function ReadinessPage() {
     : 0;
 
   const TABS = [
-    { id: "score" as const, label: "Readiness Score" },
-    { id: "history" as const, label: "Verlauf" },
+    { id: "score" as const, label: t("readiness.tabScore") },
+    { id: "history" as const, label: t("readiness.tabHistory") },
   ];
 
   return (
@@ -176,8 +178,8 @@ export default function ReadinessPage() {
         <div className="flex items-center gap-3">
           <Shield className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">CSDDD Readiness Score</h1>
-            <p className="text-sm text-slate-500">Deterministisch · Auditierbar · Kein LLM (M43/M44)</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("readiness.title")}</h1>
+            <p className="text-sm text-slate-500">{t("readiness.subtitle")}</p>
           </div>
         </div>
         <button
@@ -186,16 +188,16 @@ export default function ReadinessPage() {
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm rounded-xl hover:bg-blue-700 disabled:opacity-50"
         >
           <RefreshCw className={`w-4 h-4 ${computeMutation.isPending ? "animate-spin" : ""}`} />
-          {computeMutation.isPending ? "Berechnung…" : "Neu berechnen"}
+          {computeMutation.isPending ? t("readiness.computing") : t("readiness.compute")}
         </button>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 border-b">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t.label}
+        {TABS.map((tabItem) => (
+          <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === tabItem.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -233,13 +235,13 @@ export default function ReadinessPage() {
                         {snapshot.article_scores.filter(a => a.score_pct >= 80).length}
                         <span className="text-sm font-normal text-slate-400">/{snapshot.article_scores.length}</span>
                       </p>
-                      <p className="text-xs text-slate-500">Artikel bereit (≥80%)</p>
+                      <p className="text-xs text-slate-500">{t("readiness.articleReady")}</p>
                     </div>
                     <div className="bg-slate-50 rounded-xl p-3">
                       <p className={`text-xl font-bold ${totalGaps > 0 ? "text-amber-600" : "text-emerald-600"}`}>
                         {totalGaps}
                       </p>
-                      <p className="text-xs text-slate-500">Offene Lücken</p>
+                      <p className="text-xs text-slate-500">{t("readiness.openGaps")}</p>
                     </div>
                   </div>
                   <p className="text-xs text-slate-400">

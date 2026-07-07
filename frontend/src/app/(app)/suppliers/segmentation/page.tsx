@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   AlertTriangle,
   ArrowUpRight,
@@ -181,6 +182,7 @@ function SegmentCard({ segment }: { segment: RiskSegment }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function SupplierSegmentationPage() {
+  const { t } = useLanguage();
   const { data, isLoading } = useQuery({
     queryKey: ["supplier-segmentation"],
     queryFn: segmentationApi.getSegmentation,
@@ -198,10 +200,10 @@ export default function SupplierSegmentationPage() {
         </div>
         <div>
           <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-            Supplier Segmentation
+            {t("supplierSeg.title")}
           </h1>
           <p className="text-xs text-gray-500">
-            Risk tiering based on latest deterministic ESG/Risk scores
+            {t("supplierSeg.subtitle")}
           </p>
         </div>
       </div>
@@ -210,18 +212,19 @@ export default function SupplierSegmentationPage() {
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: "Total Suppliers", value: data.total_suppliers, color: "text-gray-700" },
-            { label: "Scored",          value: data.total_scored,    color: "text-indigo-600" },
+            { id: "total", label: t("supplierSeg.totalSuppliers"), value: data.total_suppliers, color: "text-gray-700" },
+            { id: "scored", label: t("supplierSeg.scored"), value: data.total_scored, color: "text-indigo-600" },
             {
-              label: "Critical + High",
+              id: "criticalHigh",
+              label: t("supplierSeg.criticalHigh"),
               value: (data.segments.find((s) => s.risk_band === "Critical")?.count ?? 0) +
                      (data.segments.find((s) => s.risk_band === "High")?.count ?? 0),
               color: "text-red-600",
             },
-            { label: "Unscored",        value: data.unscored_count,  color: "text-gray-400" },
+            { id: "unscored", label: t("supplierSeg.unscored"), value: data.unscored_count, color: "text-gray-400" },
           ].map((k) => (
             <div
-              key={k.label}
+              key={k.id}
               className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3"
             >
               <p className="text-xs text-gray-400 mb-1">{k.label}</p>

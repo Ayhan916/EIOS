@@ -6,6 +6,7 @@ import {
   FileText, CheckCircle, Clock, XCircle, AlertTriangle,
   Plus, ChevronDown, ChevronUp, X, BookOpen, BarChart2, ArrowRight,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   listClauses, getClauseSummary, seedClauses, createClause,
   listAssurances, createAssurance, acceptAssurance, updateAssuranceStatus,
@@ -297,6 +298,7 @@ function AssuranceRow({
 type Tab = "dashboard" | "assurances" | "clauses";
 
 export default function ContractualAssurancePage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("dashboard");
   const [assignClause, setAssignClause] = useState<ContractClause | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
@@ -330,9 +332,9 @@ export default function ContractualAssurancePage() {
   }
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "dashboard", label: "Dashboard" },
-    { id: "assurances", label: "Zusicherungen" },
-    { id: "clauses", label: "Klauselbibliothek" },
+    { id: "dashboard", label: t("contractAssurance.tabDashboard") },
+    { id: "assurances", label: t("contractAssurance.tabAssurances") },
+    { id: "clauses", label: t("contractAssurance.tabClauseLib") },
   ];
 
   return (
@@ -342,18 +344,18 @@ export default function ContractualAssurancePage() {
         <div className="flex items-center gap-3">
           <FileText className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Contractual Assurance</h1>
-            <p className="text-sm text-slate-500">CSDDD Art. 10 — Vertragliche Sorgfaltspflichten</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("contractAssurance.title")}</h1>
+            <p className="text-sm text-slate-500">{t("contractAssurance.subtitle")}</p>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 border-b">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t.label}
+        {TABS.map((tabItem) => (
+          <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === tabItem.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -364,17 +366,17 @@ export default function ContractualAssurancePage() {
           {dashboard ? (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <KpiCard label="Zusicherungen gesamt" value={dashboard.total} />
-                <KpiCard label="Akzeptanzrate" value={`${dashboard.acceptance_rate_pct}%`}
+                <KpiCard label={t("contractAssurance.kpiTotal")} value={dashboard.total} />
+                <KpiCard label={t("contractAssurance.kpiAcceptRate")} value={`${dashboard.acceptance_rate_pct}%`}
                   color={dashboard.acceptance_rate_pct >= 80 ? "text-emerald-600" : "text-amber-600"} />
-                <KpiCard label="Ausstehend" value={dashboard.pending} color="text-amber-600" />
-                <KpiCard label="Abgelehnt" value={dashboard.rejected} color="text-red-600" />
+                <KpiCard label={t("contractAssurance.kpiPending")} value={dashboard.pending} color="text-amber-600" />
+                <KpiCard label={t("contractAssurance.kpiRejected")} value={dashboard.rejected} color="text-red-600" />
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <KpiCard label="Akzeptiert" value={dashboard.accepted} color="text-emerald-600" />
-                <KpiCard label="Abgelaufen" value={dashboard.expired} color="text-slate-500" />
+                <KpiCard label={t("contractAssurance.kpiAccepted")} value={dashboard.accepted} color="text-emerald-600" />
+                <KpiCard label={t("contractAssurance.kpiExpired")} value={dashboard.expired} color="text-slate-500" />
                 <KpiCard
-                  label="Cascade ausstehend"
+                  label={t("contractAssurance.kpiCascade")}
                   value={dashboard.cascade_unconfirmed}
                   color={dashboard.cascade_unconfirmed > 0 ? "text-purple-600" : "text-emerald-600"}
                   sub="Klauseln mit Cascade-Pflicht ohne Bestätigung"

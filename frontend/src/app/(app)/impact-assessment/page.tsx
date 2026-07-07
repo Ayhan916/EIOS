@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   Zap, AlertTriangle, TrendingUp, Plus, X, Trash2, Edit2, BarChart2,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   previewScore, getImpactDashboard, listAssessments,
   createAssessment, updateAssessment, deleteAssessment,
@@ -221,6 +222,7 @@ function AssessmentRow({
 type Tab = "calculator" | "list" | "dashboard";
 
 export default function ImpactAssessmentPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<Tab>("calculator");
   const [levelFilter, setLevelFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
@@ -271,9 +273,9 @@ export default function ImpactAssessmentPage() {
   }
 
   const TABS: { id: Tab; label: string }[] = [
-    { id: "calculator", label: "Kalkulator" },
-    { id: "list", label: "Bewertungen" },
-    { id: "dashboard", label: "Dashboard" },
+    { id: "calculator", label: t("impactAssess.tabCalc") },
+    { id: "list", label: t("impactAssess.tabList") },
+    { id: "dashboard", label: t("impactAssess.tabDashboard") },
   ];
 
   return (
@@ -282,17 +284,17 @@ export default function ImpactAssessmentPage() {
       <div className="flex items-center gap-3">
         <Zap className="w-7 h-7 text-orange-500" />
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Impact Severity Calculator</h1>
-          <p className="text-sm text-slate-500">CSDDD Art. 3/6 — OECD RBC Schwere-Bewertung · Deterministisch · Auditierbar</p>
+          <h1 className="text-2xl font-bold text-slate-800">{t("impactAssess.title")}</h1>
+          <p className="text-sm text-slate-500">{t("impactAssess.subtitle")}</p>
         </div>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-4 border-b">
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t.label}
+        {TABS.map((tabItem) => (
+          <button key={tabItem.id} onClick={() => setTab(tabItem.id)}
+            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${tab === tabItem.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+            {tabItem.label}
           </button>
         ))}
       </div>

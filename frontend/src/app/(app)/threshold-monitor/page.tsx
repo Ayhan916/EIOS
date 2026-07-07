@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   CompanyProfile,
   ProfileUpsert,
@@ -31,6 +32,7 @@ function CheckIcon({ met }: { met: boolean }) {
 }
 
 export default function ThresholdMonitorPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"status" | "profiles" | "info">("status");
   const [status, setStatus] = useState<ThresholdStatus | null>(null);
   const [statusError, setStatusError] = useState("");
@@ -79,15 +81,15 @@ export default function ThresholdMonitorPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">CSDDD Threshold Monitor</h1>
-        <p className="mt-1 text-sm text-gray-500">Art. 2 — Scope: Tier 1 (≥5,000 MA + ≥€1.5B, from 2027) · Tier 2 (≥1,000 MA + ≥€450M, from 2028)</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("threshMonitor.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("threshMonitor.subtitle")}</p>
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
         {(["status", "profiles", "info"] as const).map((tb) => (
           <button key={tb} onClick={() => setTab(tb)}
             className={`px-4 py-2 text-sm font-medium capitalize ${tab === tb ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"}`}>
-            {tb === "status" ? "Current Status" : tb === "profiles" ? "Company Profiles" : "Reference Info"}
+            {tb === "status" ? t("threshMonitor.tabStatus") : tb === "profiles" ? t("threshMonitor.tabProfiles") : t("threshMonitor.tabInfo")}
           </button>
         ))}
       </div>
@@ -95,7 +97,7 @@ export default function ThresholdMonitorPage() {
       {/* Status Tab */}
       {tab === "status" && (
         <div className="space-y-4">
-          {loading && <p className="text-sm text-gray-500">Loading…</p>}
+          {loading && <p className="text-sm text-gray-500">{t("threshMonitor.loading")}</p>}
           {statusError && !loading && (
             <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
               <p className="text-sm text-gray-500 mb-3">No company profile found. Add your first profile to see your CSDDD threshold status.</p>
@@ -112,8 +114,8 @@ export default function ThresholdMonitorPage() {
                   <span className="text-sm text-gray-500">FY {status.fiscal_year}</span>
                 </div>
                 <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div><p className="text-xs text-gray-500">Employees Worldwide</p><p className="text-xl font-bold">{status.employee_count.toLocaleString()}</p></div>
-                  <div><p className="text-xs text-gray-500">Net Revenue (€M)</p><p className="text-xl font-bold">{status.net_revenue_eur_millions.toLocaleString()}</p></div>
+                  <div><p className="text-xs text-gray-500">{t("threshMonitor.employees")}</p><p className="text-xl font-bold">{status.employee_count.toLocaleString()}</p></div>
+                  <div><p className="text-xs text-gray-500">{t("threshMonitor.revenue")}</p><p className="text-xl font-bold">{status.net_revenue_eur_millions.toLocaleString()}</p></div>
                 </div>
                 <div className="grid grid-cols-2 gap-4 border-t pt-4">
                   <div>
@@ -139,8 +141,8 @@ export default function ThresholdMonitorPage() {
       {/* Profiles Tab */}
       {tab === "profiles" && (
         <div className="space-y-4">
-          <button onClick={() => setShowForm(true)} className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">+ Add / Update Profile</button>
-          {profiles.length === 0 ? <p className="text-sm text-gray-500">No profiles yet.</p> : (
+          <button onClick={() => setShowForm(true)} className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700">{t("threshMonitor.addUpdateProfile")}</button>
+          {profiles.length === 0 ? <p className="text-sm text-gray-500">{t("threshMonitor.noProfiles")}</p> : (
             <div className="overflow-x-auto rounded-lg border border-gray-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-gray-50">

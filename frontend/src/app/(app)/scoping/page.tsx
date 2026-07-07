@@ -6,6 +6,7 @@ import {
   Target, Plus, AlertTriangle, CheckCircle2, ChevronRight,
   X, Settings, Play, FileText, Clock, Shield,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   getLatestConfig, createDefaultConfig, runAnalysis, listStudies,
   createStudy, submitStudy, approveStudy, cloneStudy, getScopingReviewStatus,
@@ -293,6 +294,7 @@ function StudyDetail({ study, onClose }: { study: ScopingStudy; onClose: () => v
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function ScopingPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"studies" | "analyze" | "config">("studies");
   const [analysisResult, setAnalysisResult] = useState<any>(null);
   const [selected, setSelected] = useState<ScopingStudy | null>(null);
@@ -329,8 +331,8 @@ export default function ScopingPage() {
         <div className="flex items-center gap-3">
           <Target className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Scoping Study</h1>
-            <p className="text-sm text-slate-500">CSDDD Art. 8 Abs. 3 — Risikobasierte Priorisierung</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("scoping.title")}</h1>
+            <p className="text-sm text-slate-500">{t("scoping.subtitle")}</p>
           </div>
         </div>
       </div>
@@ -343,21 +345,21 @@ export default function ScopingPage() {
           <FileText className="w-7 h-7 text-slate-500" />
           <div>
             <p className="text-2xl font-bold text-slate-800">{studies.length}</p>
-            <p className="text-xs text-slate-500">Studien gesamt</p>
+            <p className="text-xs text-slate-500">{t("scoping.kpiTotal")}</p>
           </div>
         </div>
         <div className="bg-white border rounded-xl p-4 flex items-center gap-3">
           <CheckCircle2 className="w-7 h-7 text-emerald-500" />
           <div>
             <p className="text-2xl font-bold text-slate-800">{studies.filter((s) => s.status === "approved").length}</p>
-            <p className="text-xs text-slate-500">Genehmigt</p>
+            <p className="text-xs text-slate-500">{t("scoping.approved")}</p>
           </div>
         </div>
         <div className="bg-white border rounded-xl p-4 flex items-center gap-3">
           <Settings className="w-7 h-7 text-blue-500" />
           <div>
             <p className="text-2xl font-bold text-slate-800">{config ? `v${config.version}` : "—"}</p>
-            <p className="text-xs text-slate-500">Aktive Konfiguration</p>
+            <p className="text-xs text-slate-500">{t("scoping.activeConfig")}</p>
           </div>
         </div>
       </div>
@@ -365,13 +367,13 @@ export default function ScopingPage() {
       {/* Tabs */}
       <div className="flex gap-4 border-b">
         {[
-          { id: "studies", label: "Scoping Studies" },
-          { id: "analyze", label: "Neue Analyse" },
-          { id: "config", label: "Konfiguration" },
-        ].map((t) => (
-          <button key={t.id} onClick={() => setActiveTab(t.id as typeof activeTab)}
-            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === t.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
-            {t.label}
+          { id: "studies", label: t("scoping.tabStudies") },
+          { id: "analyze", label: t("scoping.tabAnalyze") },
+          { id: "config", label: t("scoping.tabConfig") },
+        ].map((tabItem) => (
+          <button key={tabItem.id} onClick={() => setActiveTab(tabItem.id as typeof activeTab)}
+            className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${activeTab === tabItem.id ? "border-blue-600 text-blue-600" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+            {tabItem.label}
           </button>
         ))}
       </div>

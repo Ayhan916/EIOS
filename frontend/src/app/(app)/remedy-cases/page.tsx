@@ -6,6 +6,7 @@ import {
   Scale, Plus, AlertTriangle, CheckCircle2, Clock, X,
   ChevronRight, ListChecks, Users, BarChart2,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   listRemedyCases, createRemedyCase, updateRemedyCase, closeRemedyCase,
   listActions, addAction, updateAction, getRemedySummaryReport,
@@ -353,6 +354,7 @@ function CaseDetail({
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function RemedyCasesPage() {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"all" | "report">("all");
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [showNew, setShowNew] = useState(false);
@@ -381,8 +383,8 @@ export default function RemedyCasesPage() {
         <div className="flex items-center gap-3">
           <Scale className="w-7 h-7 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-slate-800">Remedy Case Manager</h1>
-            <p className="text-sm text-slate-500">CSDDD Art. 12 — Wiedergutmachungsmaßnahmen</p>
+            <h1 className="text-2xl font-bold text-slate-800">{t("remedyCases.title")}</h1>
+            <p className="text-sm text-slate-500">{t("remedyCases.subtitle")}</p>
           </div>
         </div>
         <button
@@ -396,12 +398,12 @@ export default function RemedyCasesPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: "Offen", value: open, icon: Clock, color: "text-red-600" },
-          { label: "In Bearbeitung", value: inProgress, icon: ChevronRight, color: "text-amber-600" },
-          { label: "Abgeschlossen", value: completed, icon: CheckCircle2, color: "text-emerald-600" },
-          { label: "Hohes Risiko (≥7)", value: highSeverity, icon: AlertTriangle, color: "text-red-500" },
+          { id: "open", label: t("remedyCases.kpiOpen"), value: open, icon: Clock, color: "text-red-600" },
+          { id: "inProgress", label: t("remedyCases.kpiInProgress"), value: inProgress, icon: ChevronRight, color: "text-amber-600" },
+          { id: "completed", label: t("remedyCases.kpiCompleted"), value: completed, icon: CheckCircle2, color: "text-emerald-600" },
+          { id: "highRisk", label: t("remedyCases.kpiHighRisk"), value: highSeverity, icon: AlertTriangle, color: "text-red-500" },
         ].map((kpi) => (
-          <div key={kpi.label} className="bg-white border rounded-xl p-4 flex items-center gap-3">
+          <div key={kpi.id} className="bg-white border rounded-xl p-4 flex items-center gap-3">
             <kpi.icon className={`w-8 h-8 ${kpi.color}`} />
             <div>
               <p className="text-2xl font-bold text-slate-800">{kpi.value}</p>
@@ -414,19 +416,19 @@ export default function RemedyCasesPage() {
       {/* Tabs */}
       <div className="flex gap-4 border-b">
         {[
-          { id: "all", label: "Alle Fälle" },
-          { id: "report", label: `Jahresbericht ${CURRENT_YEAR}` },
-        ].map((t) => (
+          { id: "all", label: t("remedyCases.tabAllCases") },
+          { id: "report", label: `${t("remedyCases.tabReport")} ${CURRENT_YEAR}` },
+        ].map((tabItem) => (
           <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id as typeof activeTab)}
+            key={tabItem.id}
+            onClick={() => setActiveTab(tabItem.id as typeof activeTab)}
             className={`pb-2 px-1 text-sm font-medium border-b-2 transition-colors ${
-              activeTab === t.id
+              activeTab === tabItem.id
                 ? "border-blue-600 text-blue-600"
                 : "border-transparent text-slate-500 hover:text-slate-700"
             }`}
           >
-            {t.label}
+            {tabItem.label}
           </button>
         ))}
       </div>

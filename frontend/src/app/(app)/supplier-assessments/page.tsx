@@ -11,6 +11,7 @@ import {
   listTemplates,
   seedDefaultTemplate,
 } from "@/lib/api/supplier-assessment";
+import { useLanguage } from "@/lib/i18n/context";
 
 const STATUS_COLORS: Record<string, string> = {
   sent: "bg-blue-100 text-blue-800",
@@ -46,6 +47,7 @@ function TrafficLight({ tl }: { tl: string }) {
 }
 
 export default function SupplierAssessmentsPage() {
+  const { t } = useLanguage();
   const [tab, setTab] = useState<"assessments" | "templates" | "gap">("assessments");
   const [templates, setTemplates] = useState<AssessmentTemplate[]>([]);
   const [assessments, setAssessments] = useState<SupplierAssessment[]>([]);
@@ -118,8 +120,8 @@ export default function SupplierAssessmentsPage() {
   return (
     <div className="p-6 space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Supplier Self-Assessment CSDDD</h1>
-        <p className="mt-1 text-sm text-gray-500">Art. 10 Abs. 2 lit. a — CSDDD compliance questionnaires for indirect business partners</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t("supplierAssessments.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500">{t("supplierAssessments.subtitle")}</p>
       </div>
 
       <div className="flex gap-2 border-b border-gray-200">
@@ -131,7 +133,7 @@ export default function SupplierAssessmentsPage() {
               tab === tb ? "border-b-2 border-blue-600 text-blue-600" : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {tb === "gap" ? "Gap Analysis" : tb === "assessments" ? "Assessments" : "Templates"}
+            {tb === "gap" ? t("supplierAssessments.tabGap") : tb === "assessments" ? t("supplierAssessments.tabAssessments") : t("supplierAssessments.tabTemplates")}
           </button>
         ))}
       </div>

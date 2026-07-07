@@ -6,6 +6,7 @@ import {
   Users, Plus, Calendar, AlertTriangle, CheckCircle2, Clock,
   ChevronRight, X, Building2, Globe, Tag, MessageSquare,
 } from "lucide-react";
+import { useLanguage } from "@/lib/i18n/context";
 import {
   listStakeholders, createStakeholder, deleteStakeholder,
   listConsultations, createConsultation,
@@ -270,6 +271,7 @@ function ConsultationModal({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function StakeholdersPage() {
+  const { t } = useLanguage();
   const qc = useQueryClient();
   const [tab, setTab] = useState<"stakeholders" | "consultations">("stakeholders");
   const [showStakeholderModal, setShowStakeholderModal] = useState(false);
@@ -311,9 +313,9 @@ export default function StakeholdersPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Stakeholder Engagement</h1>
+          <h1 className="text-2xl font-bold text-foreground">{t("stakeholders.title")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Art. 13 CSDDD — Einbeziehung betroffener Interessenträger
+            {t("stakeholders.subtitle")}
           </p>
         </div>
         <div className="flex gap-2">
@@ -339,7 +341,7 @@ export default function StakeholdersPage() {
             <div className="rounded-lg bg-blue-100 p-2"><Users className="h-5 w-5 text-blue-600" /></div>
             <div>
               <p className="text-2xl font-bold">{stakeholders.length}</p>
-              <p className="text-xs text-muted-foreground">Stakeholder gesamt</p>
+              <p className="text-xs text-muted-foreground">{t("stakeholders.kpiTotal")}</p>
             </div>
           </div>
         </div>
@@ -348,7 +350,7 @@ export default function StakeholdersPage() {
             <div className="rounded-lg bg-emerald-100 p-2"><MessageSquare className="h-5 w-5 text-emerald-600" /></div>
             <div>
               <p className="text-2xl font-bold">{consultations.length}</p>
-              <p className="text-xs text-muted-foreground">Konsultationen</p>
+              <p className="text-xs text-muted-foreground">{t("stakeholders.kpiConsultations")}</p>
             </div>
           </div>
         </div>
@@ -359,7 +361,7 @@ export default function StakeholdersPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{overdue.length}</p>
-              <p className="text-xs text-muted-foreground">Überfällig (&gt;12 Mon.)</p>
+              <p className="text-xs text-muted-foreground">{t("stakeholders.kpiOverdue")}</p>
             </div>
           </div>
         </div>
@@ -372,7 +374,7 @@ export default function StakeholdersPage() {
                   ? Math.round(((stakeholders.length - overdue.length) / stakeholders.length) * 100)
                   : 0}%
               </p>
-              <p className="text-xs text-muted-foreground">Abdeckung aktuell</p>
+              <p className="text-xs text-muted-foreground">{t("stakeholders.coverage")}</p>
             </div>
           </div>
         </div>
@@ -380,16 +382,16 @@ export default function StakeholdersPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border">
-        {(["stakeholders", "consultations"] as const).map((t) => (
+        {(["stakeholders", "consultations"] as const).map((tabId) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
+            key={tabId}
+            onClick={() => setTab(tabId)}
             className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
-              tab === t
+              tab === tabId
                 ? "border-primary text-primary"
                 : "border-transparent text-muted-foreground hover:text-foreground"
             }`}>
-            {t === "stakeholders" ? `Stakeholder (${stakeholders.length})` : `Konsultationen (${consultations.length})`}
+            {tabId === "stakeholders" ? `${t("stakeholders.tabStakeholders")} (${stakeholders.length})` : `${t("stakeholders.tabConsultations")} (${consultations.length})`}
           </button>
         ))}
       </div>
