@@ -169,7 +169,7 @@ Kein Feature darf isoliert entwickelt oder dokumentiert werden.
 | **DB Model** | `backend/infrastructure/persistence/models/recommendation.py` |
 | **Migration** | `008_add_recommendation_assessment_id.py`, `076_recommendation_evidence_fields.py` |
 | **Frontend Liste** | `/recommendations` → `frontend/src/app/(app)/recommendations/page.tsx` ✅ |
-| **Frontend Detail** | ❌ FEHLT — keine `/recommendations/[id]` Seite |
+| **Frontend Detail** | `/recommendations/[id]` → `frontend/src/app/(app)/recommendations/[id]/page.tsx` ✅ |
 | **Tests** | Teil von `tests/integration/api/test_assessments_api.py` |
 
 **API-Endpunkte:**
@@ -186,7 +186,6 @@ Kein Feature darf isoliert entwickelt oder dokumentiert werden.
 **Workflow:** WF-01 Step 5
 
 **Gaps:**
-- **Kein Frontend-Detail-Page** — kritische Lücke
 - Kein dedizierter Application-Service
 - Keine eigene Testdatei
 
@@ -201,8 +200,8 @@ Kein Feature darf isoliert entwickelt oder dokumentiert werden.
 | **DB Model** | `backend/infrastructure/persistence/models/corrective_action_plan.py` |
 | **Migration** | `082_corrective_action_plans.py` |
 | **Frontend Liste** | `/corrective-action-plans` → `frontend/src/app/(app)/corrective-action-plans/page.tsx` ✅ |
-| **Frontend Detail** | ❌ FEHLT — kein `/corrective-action-plans/[id]` |
-| **Tests** | ❌ FEHLT — keine Testdatei |
+| **Frontend Detail** | `/corrective-action-plans/[id]` → `frontend/src/app/(app)/corrective-action-plans/[id]/page.tsx` ✅ |
+| **Tests** | `tests/integration/api/test_corrective_action_plans_api.py` ✅ (11 Tests) |
 
 **API-Endpunkte:**
 - `POST /corrective-action-plans/` — erstellen (analyst)
@@ -226,9 +225,7 @@ Kein Feature darf isoliert entwickelt oder dokumentiert werden.
 **Workflow:** WF-01 Step 6, WF-05 Input
 
 **Gaps:**
-- **Kein Frontend-Detail-Page** — kritische Lücke
-- **Keine Tests** — kritische Lücke
-- CAP ist in `findings/[id]` als Tab-Komponente eingebettet, aber kein eigenständiges UI
+- CAP ist in `findings/[id]` als Tab-Komponente zusätzlich eingebettet
 - Overdue-Erkennung implementiert, aber kein Dashboard-Widget
 
 ---
@@ -742,10 +739,10 @@ Kein Feature darf isoliert entwickelt oder dokumentiert werden.
 
 | Prio | Feature | Gap | Typ |
 |------|---------|-----|-----|
-| 🔴 | F-06 CAP | Keine Tests | Fehlende Tests |
-| 🔴 | F-06 CAP | Kein Frontend-Detail-Page | Fehlendes Frontend |
-| 🔴 | F-05 Recommendation | Kein Frontend-Detail-Page | Fehlendes Frontend |
-| 🔴 | F-21 Prioritization | Kein Frontend überhaupt | Fehlendes Frontend |
+| ✅ | F-06 CAP | Keine Tests → 11 Tests geschrieben (2026-07-07) | Geschlossen |
+| ✅ | F-06 CAP | Kein Detail-Page → `/corrective-action-plans/[id]` gebaut (2026-07-07) | Geschlossen |
+| ✅ | F-05 Recommendation | Kein Detail-Page → `/recommendations/[id]` gebaut (2026-07-07) | Geschlossen |
+| ✅ | F-21 Prioritization | Kein Frontend → `/compliance/prioritization` bereits vorhanden | Geschlossen |
 | 🟠 | F-10 Board Signoff | Keine Tests | Fehlende Tests |
 | 🟠 | F-11 Due Diligence Report | Keine Tests | Fehlende Tests |
 | 🟠 | F-12 Disclosure | Keine Tests | Fehlende Tests |
