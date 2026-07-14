@@ -1083,6 +1083,17 @@ export default function DocumentReviewPage() {
       case "analyzing":
         return (
           <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+            {/* Analyse wiederholen — always accessible */}
+            <div className="flex justify-end">
+              <button
+                onClick={() => reanalyzeMut.mutate()}
+                disabled={reanalyzeMut.isPending}
+                className="flex items-center gap-1.5 text-xs border border-blue-200 text-blue-600 rounded-lg px-3 py-1.5 hover:bg-blue-50 disabled:opacity-50"
+              >
+                <RefreshCw size={12} className={reanalyzeMut.isPending ? "animate-spin" : ""} />
+                {reanalyzeMut.isPending ? "Analyse läuft…" : "Analyse wiederholen"}
+              </button>
+            </div>
             {data.summary && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Zusammenfassung</h4>
