@@ -24,6 +24,9 @@ import {
   Zap,
   Activity,
   AlertTriangle,
+  Eye,
+  EyeOff,
+  BookOpen,
 } from "lucide-react";
 
 import DynamicPdfViewer from "@/components/document-review/DynamicPdfViewer";
@@ -39,6 +42,8 @@ import {
   testRetrieval,
   reclassifyFile,
   reanalyzeFile,
+  excludeChunk,
+  toggleCopilotVisibility,
   ReviewData,
   ReviewChunk,
   ReviewMetric,
@@ -149,10 +154,10 @@ function EditableField({ label, value, onSave, readOnly }: { label: string; valu
 
 // ── ChunkCard ─────────────────────────────────────────────────────────────────
 
-function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit, onMergeWith, isLast }: {
+function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit, onMergeWith, onExclude, isLast }: {
   chunk: ReviewChunk; index: number; color: string; isLast: boolean;
   onDelete: () => void; onEdit: (c: string) => void; onFindInPdf: () => void;
-  onSplit: (splitAt: number) => void; onMergeWith: () => void;
+  onSplit: (splitAt: number) => void; onMergeWith: () => void; onExclude: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -171,8 +176,10 @@ function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit
     setEditing(false);
   };
 
+  const isExcluded = Boolean(chunk.excluded_from_index);
+
   return (
-    <div className={`border rounded-lg bg-white shadow-sm ${oversized ? "border-orange-300" : "border-gray-200"}`}>
+    <div className={`border rounded-lg bg-white shadow-sm transition-opacity ${isExcluded ? "opacity-50 border-dashed border-gray-300" : oversized ? "border-orange-300" : "border-gray-200"}`}>
       <div className="flex items-start gap-2 p-3 cursor-pointer hover:bg-gray-50" onClick={() => setExpanded(e => !e)}>
         <div className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ background: color }} />
         {expanded ? <ChevronDown size={14} className="mt-0.5 shrink-0 text-gray-400" /> : <ChevronRight size={14} className="mt-0.5 shrink-0 text-gray-400" />}
@@ -181,8 +188,12 @@ function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit
             <span className="text-xs font-mono text-gray-400">#{index + 1}</span>
             <span className="text-xs bg-gray-100 text-gray-500 rounded px-1.5 py-0.5">{chunk.chunk_level}</span>
             {chunk.doc_class && <span className="text-xs bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">{chunk.doc_class}</span>}
+            {chunk.page_number != null && (
+              <span className="text-xs bg-purple-50 text-purple-600 rounded px-1.5 py-0.5 font-medium">S.{chunk.page_number}</span>
+            )}
             <span className="text-xs text-gray-400">{words} Wörter · ~{tokens} Token</span>
             {oversized && <span className="text-xs text-orange-600 bg-orange-50 rounded px-1.5 py-0.5 flex items-center gap-0.5"><AlertTriangle size={10} /> zu groß</span>}
+            {isExcluded && <span className="text-xs text-gray-400 bg-gray-100 rounded px-1.5 py-0.5 flex items-center gap-0.5"><EyeOff size={9} /> ausgeschlossen</span>}
           </div>
           <p className="text-xs text-gray-600 truncate">{chunk.content.slice(0, 100)}…</p>
         </div>
@@ -197,6 +208,13 @@ function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit
               <svg width={12} height={12} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth={1.5}><path d="M8 3v10M3 8h10"/></svg>
             </button>
           )}
+          <button
+            onClick={onExclude}
+            title={isExcluded ? "Aus Index wieder einschließen" : "Aus Copilot-Index ausschließen"}
+            className={`p-1 rounded ${isExcluded ? "text-gray-500 hover:text-gray-700 hover:bg-gray-100" : "text-gray-400 hover:text-orange-500 hover:bg-orange-50"}`}
+          >
+            {isExcluded ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
           <button onClick={onDelete} title="Löschen" className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"><Trash2 size={12} /></button>
         </div>
       </div>
@@ -540,6 +558,16 @@ export default function DocumentReviewPage() {
 
   const reanalyzeMut = useMutation({
     mutationFn: () => reanalyzeFile(fileId),
+    onSuccess: invalidate,
+  });
+
+  const excludeChunkMut = useMutation({
+    mutationFn: (chunkId: string) => excludeChunk(chunkId),
+    onSuccess: invalidate,
+  });
+
+  const copilotVisibilityMut = useMutation({
+    mutationFn: () => toggleCopilotVisibility(fileId),
     onSuccess: invalidate,
   });
 
@@ -900,6 +928,7 @@ export default function DocumentReviewPage() {
                       const next = data.chunks[i + 1];
                       if (next) mergeChunkMut.mutate({ chunkId: chunk.id, otherChunkId: next.id });
                     }}
+                    onExclude={() => excludeChunkMut.mutate(chunk.id)}
                   />
                 ))}
               </div>
@@ -1014,6 +1043,15 @@ export default function DocumentReviewPage() {
             {data.pages && <span className="text-xs text-gray-400">· {data.pages} Seiten</span>}
           </div>
         </div>
+        <button
+          onClick={() => copilotVisibilityMut.mutate()}
+          disabled={copilotVisibilityMut.isPending}
+          title={data.copilot_hidden ? "Dokument für Copilot sichtbar machen" : "Dokument aus Copilot ausblenden"}
+          className={`flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border font-medium transition-colors ${data.copilot_hidden ? "border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
+        >
+          {data.copilot_hidden ? <EyeOff size={15} /> : <Eye size={15} />}
+          {data.copilot_hidden ? "Copilot: aus" : "Copilot: an"}
+        </button>
         <button
           onClick={() => approveMut.mutate(undefined)}
           disabled={data.review_status === "approved" || approveMut.isPending}

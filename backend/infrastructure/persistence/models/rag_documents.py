@@ -42,6 +42,9 @@ class RagDocumentModel(Base):
     # PDF source page (1-based) — populated by Docling page-aware chunking
     page_number: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
 
+    # Exclude this chunk from retrieval without deleting it
+    excluded_from_index: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, server_default="false")
+
     # ADR-009: Parent-Child hierarchy — "flat" | "parent" | "child"
     chunk_level: Mapped[str] = mapped_column(sa.String(8), nullable=False, server_default="flat")
     # FK to the parent RagDocumentModel.id — NULL for flat/parent chunks

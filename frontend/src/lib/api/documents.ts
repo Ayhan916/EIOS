@@ -204,6 +204,16 @@ export async function reanalyzeFile(id: string): Promise<{ doc_file_id: string; 
   return r.data;
 }
 
+export async function excludeChunk(chunkId: string): Promise<{ excluded: boolean; chunk_id: string }> {
+  const r = await apiClient.patch(`/documents/chunks/${chunkId}/exclude`);
+  return r.data;
+}
+
+export async function toggleCopilotVisibility(fileId: string): Promise<{ copilot_hidden: boolean; file_id: string }> {
+  const r = await apiClient.patch(`/documents/files/${fileId}/copilot-visibility`);
+  return r.data;
+}
+
 // ── Review API ────────────────────────────────────────────────────────────────
 
 export interface ReviewChunk {
@@ -212,6 +222,7 @@ export interface ReviewChunk {
   chunk_level: string;
   doc_class: string | null;
   page_number?: number | null;
+  excluded_from_index?: boolean;
 }
 
 export interface ReviewMetric {
@@ -264,6 +275,7 @@ export interface ReviewData {
   extracted_targets: unknown[] | null;
   extracted_commitments: unknown[] | null;
   has_pdf: boolean;
+  copilot_hidden: boolean;
   created_at: string;
   updated_at: string;
   chunks: ReviewChunk[];

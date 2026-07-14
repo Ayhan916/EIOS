@@ -37,7 +37,14 @@ async def retrieve_document_context(
     retrieved_at = datetime.now(UTC).isoformat()
 
     # Only search uploaded document chunks, not news articles / intelligence events
-    filters = ["organization_id = :org_id", "embedding IS NOT NULL", "document_file_id IS NOT NULL"]
+    # excluded_from_index and copilot_hidden chunks/docs are skipped
+    filters = [
+        "r.organization_id = :org_id",
+        "r.embedding IS NOT NULL",
+        "r.document_file_id IS NOT NULL",
+        "r.excluded_from_index = false",
+        "COALESCE(df.copilot_hidden, false) = false",
+    ]
     params: dict = {"org_id": org_id, "top_k": top_k, "min_sim": _MIN_SIM,
                     "query_vec": str(query_vec)}
 
@@ -57,17 +64,21 @@ async def retrieve_document_context(
         filters.append("doc_class = :doc_class")
         params["doc_class"] = doc_class
 
-    where_clause = " AND ".join(filters)
+    # Fix column refs after adding JOIN alias
+    where_clause = " AND ".join(filters).replace(
+        "LOWER(company_name)", "LOWER(r.company_name)"
+    ).replace("report_year", "r.report_year").replace("doc_class", "r.doc_class")
 
     sql = text(f"""
         SELECT
-            id, supplier_id, doc_type, doc_class, source_id,
-            company_name, report_year, content, signal_type, severity,
-            1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
-        FROM rag_documents
+            r.id, r.supplier_id, r.doc_type, r.doc_class, r.source_id,
+            r.company_name, r.report_year, r.content, r.signal_type, r.severity,
+            1 - (r.embedding <=> CAST(:query_vec AS vector)) AS similarity
+        FROM rag_documents r
+        LEFT JOIN document_files df ON df.id = r.document_file_id
         WHERE {where_clause}
-            AND 1 - (embedding <=> CAST(:query_vec AS vector)) >= :min_sim
-        ORDER BY embedding <=> CAST(:query_vec AS vector)
+            AND 1 - (r.embedding <=> CAST(:query_vec AS vector)) >= :min_sim
+        ORDER BY r.embedding <=> CAST(:query_vec AS vector)
         LIMIT :top_k
     """)
 

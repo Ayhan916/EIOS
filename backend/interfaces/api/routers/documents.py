@@ -118,6 +118,7 @@ class ReviewChunkOut(BaseModel):
     chunk_level: str
     doc_class: str | None
     page_number: int | None = None
+    excluded_from_index: bool = False
 
 class ReviewMetricOut(BaseModel):
     id: str
@@ -166,6 +167,7 @@ class ReviewDataOut(BaseModel):
     extracted_targets: Any | None
     extracted_commitments: Any | None
     has_pdf: bool
+    copilot_hidden: bool
     created_at: datetime
     updated_at: datetime
     chunks: list[ReviewChunkOut]
@@ -709,9 +711,10 @@ async def get_file_review(
         extracted_targets=doc.extracted_targets,
         extracted_commitments=doc.extracted_commitments,
         has_pdf=has_pdf,
+        copilot_hidden=bool(doc.copilot_hidden),
         created_at=doc.created_at,
         updated_at=doc.updated_at,
-        chunks=[ReviewChunkOut(id=c.id, content=c.content, chunk_level=c.chunk_level, doc_class=c.doc_class, page_number=c.page_number) for c in chunks],
+        chunks=[ReviewChunkOut(id=c.id, content=c.content, chunk_level=c.chunk_level, doc_class=c.doc_class, page_number=c.page_number, excluded_from_index=bool(c.excluded_from_index)) for c in chunks],
         metrics=[ReviewMetricOut(id=m.id, metric_type=m.metric_type, value=float(m.value), unit=m.unit, year=m.year, period=m.period, confidence=m.confidence) for m in metrics],
         signals=[ReviewSignalOut(id=s.id, signal_type=s.signal_type, dimension=s.dimension, direction=s.direction, severity=s.severity, description=s.description, year=s.year) for s in signals],
         audit_log=[ReviewAuditEntry(id=str(r["id"]), user_id=r["user_id"], action=r["action"], field=r["field"], old_value=r["old_value"], new_value=r["new_value"], created_at=r["created_at"]) for r in log_rows],
@@ -1028,6 +1031,62 @@ async def merge_chunks(
         )
 
     return {"merged": True, "surviving_chunk_id": chunk_id, "deleted_chunk_id": payload.other_chunk_id}
+
+
+@router.patch("/chunks/{chunk_id}/exclude", status_code=status.HTTP_200_OK)
+async def toggle_chunk_exclusion(
+    chunk_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Toggle excluded_from_index for a chunk. Excluded chunks are skipped in retrieval."""
+    org_id = user.organization_id
+    chunk = (await db.execute(
+        select(RagDocumentModel).where(
+            RagDocumentModel.id == chunk_id,
+            RagDocumentModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not chunk:
+        raise HTTPException(status_code=404, detail="Chunk not found")
+
+    chunk.excluded_from_index = not bool(chunk.excluded_from_index)
+    if chunk.document_file_id:
+        await db.execute(
+            text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+            {"id": str(uuid.uuid4()), "fid": chunk.document_file_id, "org": org_id, "uid": user.id,
+             "action": "toggle_exclude", "field": "excluded_from_index",
+             "old": str(not chunk.excluded_from_index), "new": str(chunk.excluded_from_index)},
+        )
+    return {"excluded": chunk.excluded_from_index, "chunk_id": chunk_id}
+
+
+@router.patch("/files/{file_id}/copilot-visibility", status_code=status.HTTP_200_OK)
+async def toggle_copilot_visibility(
+    file_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Toggle copilot_hidden — hides entire document from retrieval without deleting."""
+    org_id = user.organization_id
+    doc = (await db.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    doc.copilot_hidden = not bool(doc.copilot_hidden)
+    doc.updated_at = datetime.now(UTC)
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": org_id, "uid": user.id,
+         "action": "toggle_copilot_visibility", "field": "copilot_hidden",
+         "old": str(not doc.copilot_hidden), "new": str(doc.copilot_hidden)},
+    )
+    return {"copilot_hidden": doc.copilot_hidden, "file_id": file_id}
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────

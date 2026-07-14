@@ -57,6 +57,9 @@ class DocumentFileModel(Base):
     parsed_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="draft")
     review_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    classification_confidence: Mapped[float | None] = mapped_column(Float, nullable=True)
+    classification_alternatives: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    copilot_hidden: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
