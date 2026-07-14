@@ -57,6 +57,9 @@ export interface DocumentFile {
   extracted_commitments: ExtractedCommitment[] | null;
   extracted_kpis: Record<string, number | string | null> | null;
   status: string;
+  review_status: string;
+  copilot_hidden: boolean;
+  classification_confidence: number | null;
   error_msg: string | null;
   created_at: string;
   updated_at: string;

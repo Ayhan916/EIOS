@@ -105,6 +105,9 @@ class DocumentFileOut(BaseModel):
     extracted_commitments: Any | None
     extracted_kpis: Any | None
     status: str
+    review_status: str
+    copilot_hidden: bool
+    classification_confidence: float | None
     error_msg: str | None
     created_at: datetime
     updated_at: datetime
@@ -369,6 +372,7 @@ async def list_files(
     doc_type: str | None = None,
     supplier_id: str | None = None,
     status: str | None = None,
+    limit: int = 200,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -382,7 +386,7 @@ async def list_files(
         stmt = stmt.where(DocumentFileModel.supplier_id == supplier_id)
     if status:
         stmt = stmt.where(DocumentFileModel.status == status)
-    stmt = stmt.order_by(DocumentFileModel.created_at.desc()).limit(100)
+    stmt = stmt.order_by(DocumentFileModel.created_at.desc()).limit(min(limit, 500))
     result = await db.execute(stmt)
     return result.scalars().all()
 

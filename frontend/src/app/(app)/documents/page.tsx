@@ -12,6 +12,8 @@ import {
   ChevronRight,
   Clock,
   Download,
+  Eye,
+  EyeOff,
   FileText,
   Globe,
   Loader2,
@@ -43,6 +45,7 @@ import {
   processPending,
   cancelProcessing,
   processSingleFile,
+  toggleCopilotVisibility,
   type DocumentSource,
   type DocumentFile,
   type DocumentSourceCreate,
@@ -160,6 +163,11 @@ function SupplierDocsModal({
   const isUploading = !!uploadingSource;
   const currentProgress = uploadingSource ? uploadProgress[uploadingSource.id] : 0;
 
+  const qc = useQueryClient();
+  const copilotToggleMut = useMutation({
+    mutationFn: (fileId: string) => toggleCopilotVisibility(fileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["doc-files"] }),
+  });
   const [classifying, setClassifying] = useState(false);
   const [batch, setBatch] = useState<{ total: number; done: number; currentName: string } | null>(null);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
@@ -360,6 +368,15 @@ function SupplierDocsModal({
                             <Microscope className="w-4 h-4" />
                           </Link>
                         )}
+                        {/* Copilot Visibility */}
+                        <button
+                          onClick={() => copilotToggleMut.mutate(f.id)}
+                          disabled={copilotToggleMut.isPending}
+                          title={f.copilot_hidden ? "Copilot: ausgeblendet — klicken zum Einblenden" : "Copilot: sichtbar — klicken zum Ausblenden"}
+                          className={`p-1.5 rounded-lg transition-colors ${f.copilot_hidden ? "text-orange-500 bg-orange-50 hover:bg-orange-100" : "text-slate-300 hover:text-slate-500 hover:bg-slate-50"}`}
+                        >
+                          {f.copilot_hidden ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                         {/* Download wenn echte URL */}
                         {f.file_url && !f.file_url.startsWith("upload://") && (
                           <a
@@ -958,6 +975,13 @@ export default function DocumentLibraryPage() {
           >
             <BarChart3 className="w-4 h-4" />
             Metriken & Signale
+          </Link>
+          <Link
+            href="/documents/review-queue"
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 font-medium"
+          >
+            <Microscope className="w-4 h-4" />
+            Review Queue
           </Link>
           <button
             onClick={() => { setEditingSource(null); setShowForm(true); }}
