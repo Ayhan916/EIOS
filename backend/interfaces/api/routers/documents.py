@@ -45,6 +45,8 @@ from infrastructure.persistence.models.rag_documents import RagDocumentModel
 from infrastructure.persistence.models.company_intelligence import CompanyMetricModel, CompanySignalModel
 from domain.user import User
 from interfaces.api.deps import get_current_user, get_db
+from infrastructure.llm.deps import get_llm_provider
+from application.ports.llm import Message
 
 logger = structlog.get_logger(__name__)
 router = APIRouter(prefix="/documents", tags=["Document Intelligence"])
@@ -823,6 +825,32 @@ async def approve_document(
     return {"review_status": "approved"}
 
 
+@router.post("/files/{file_id}/unapprove", status_code=status.HTTP_200_OK)
+async def unapprove_document(
+    file_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Revoke approval and set document back to draft."""
+    org_id = user.organization_id
+    stmt = select(DocumentFileModel).where(
+        DocumentFileModel.id == file_id,
+        DocumentFileModel.organization_id == org_id,
+    )
+    doc = (await db.execute(stmt)).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    old_status = doc.review_status
+    doc.review_status = "draft"
+    doc.updated_at = datetime.now(UTC)
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": org_id, "uid": user.id, "action": "unapprove", "field": "review_status", "old": old_status, "new": "draft"},
+    )
+    return {"review_status": "draft"}
+
+
 @router.delete("/chunks/{chunk_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_chunk(
     chunk_id: str,
@@ -1206,6 +1234,78 @@ async def add_metric(
         period=metric.period,
         confidence=metric.confidence,
     )
+
+
+class SandboxRequest(BaseModel):
+    query: str
+
+
+@router.post("/files/{file_id}/sandbox", status_code=status.HTTP_200_OK)
+async def copilot_sandbox(
+    file_id: str,
+    payload: SandboxRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Test copilot retrieval against a single document (sandbox mode).
+    Searches all chunks of the document regardless of excluded_from_index or copilot_hidden.
+    Returns matching chunks with similarity scores + an LLM-generated answer.
+    """
+    org_id = user.organization_id
+
+    doc = (await db.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    query_vec = embed_query(payload.query)
+
+    rows = (await db.execute(text("""
+        SELECT id, content, page_number, excluded_from_index,
+               1 - (embedding <=> CAST(:qv AS vector)) AS similarity
+        FROM rag_documents
+        WHERE document_file_id = :fid
+          AND organization_id  = :org
+          AND embedding IS NOT NULL
+        ORDER BY embedding <=> CAST(:qv AS vector)
+        LIMIT 8
+    """), {"qv": str(query_vec), "fid": file_id, "org": org_id})).fetchall()
+
+    chunks = [
+        {
+            "chunk_id": str(r.id),
+            "content": r.content,
+            "page_number": r.page_number,
+            "excluded_from_index": bool(r.excluded_from_index),
+            "similarity": round(float(r.similarity), 4),
+        }
+        for r in rows
+    ]
+
+    answer = None
+    if chunks:
+        context = "\n\n---\n\n".join(
+            f"[Chunk {i+1}{' | S.' + str(c['page_number']) if c['page_number'] else ''}]\n{c['content'][:800]}"
+            for i, c in enumerate(chunks)
+        )
+        llm = get_llm_provider()
+        resp = await llm.complete(
+            messages=[Message(role="user", content=payload.query)],
+            system=(
+                "Du bist ein Dokumenten-Assistent. Beantworte die Frage ausschließlich auf Basis der folgenden Dokumentausschnitte. "
+                "Antworte präzise und zitiere die Chunk-Nummer wenn möglich. "
+                "Wenn die Information nicht in den Ausschnitten enthalten ist, sage das klar.\n\n"
+                f"DOKUMENTAUSSCHNITTE:\n{context}"
+            ),
+            max_tokens=600,
+        )
+        answer = resp.content
+
+    return {"query": payload.query, "answer": answer, "chunks": chunks}
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────

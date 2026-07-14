@@ -338,6 +338,30 @@ export async function approveDocument(
   return r.data;
 }
 
+export async function unapproveDocument(fileId: string): Promise<{ review_status: string }> {
+  const r = await apiClient.post(`/documents/files/${fileId}/unapprove`, {});
+  return r.data;
+}
+
+export interface SandboxChunk {
+  chunk_id: string;
+  content: string;
+  page_number: number | null;
+  excluded_from_index: boolean;
+  similarity: number;
+}
+
+export interface SandboxResult {
+  query: string;
+  answer: string | null;
+  chunks: SandboxChunk[];
+}
+
+export async function runCopilotSandbox(fileId: string, query: string): Promise<SandboxResult> {
+  const r = await apiClient.post(`/documents/files/${fileId}/sandbox`, { query }, { timeout: 60_000 });
+  return r.data;
+}
+
 export async function deleteChunk(chunkId: string): Promise<void> {
   await apiClient.delete(`/documents/chunks/${chunkId}`);
 }

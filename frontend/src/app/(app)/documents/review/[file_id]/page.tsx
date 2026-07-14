@@ -27,6 +27,7 @@ import {
   Eye,
   EyeOff,
   BookOpen,
+  XCircle,
 } from "lucide-react";
 
 import DynamicPdfViewer from "@/components/document-review/DynamicPdfViewer";
@@ -35,6 +36,9 @@ import {
   updateClassification,
   updateKpis,
   approveDocument,
+  unapproveDocument,
+  runCopilotSandbox,
+  type SandboxResult,
   deleteChunk,
   updateChunk,
   splitChunk,
@@ -63,6 +67,7 @@ const PIPELINE_STEPS = [
   { key: "embedding",  icon: Zap,        label: "Embedding",      desc: "multilingual-e5-large 1024d" },
   { key: "indexing",   icon: Search,     label: "Indexierung",    desc: "pgvector · Cosine · GIN" },
   { key: "metrics",    icon: BarChart3,  label: "Metriken",       desc: "ESG · Finanz · Signale" },
+  { key: "sandbox",    icon: BookOpen,   label: "Copilot-Test",   desc: "Testfragen direkt ans Dokument stellen" },
 ] as const;
 type StepKey = (typeof PIPELINE_STEPS)[number]["key"];
 
@@ -704,6 +709,10 @@ export default function DocumentReviewPage() {
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
   const blobUrlRef = useRef<string | null>(null);
+  const [sandboxQuery, setSandboxQuery] = useState("");
+  const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
+  const [sandboxLoading, setSandboxLoading] = useState(false);
+  const [expandedChunk, setExpandedChunk] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery<ReviewData>({
     queryKey: ["doc-review", fileId],
@@ -745,6 +754,11 @@ export default function DocumentReviewPage() {
 
   const approveMut = useMutation({
     mutationFn: (notes?: string) => approveDocument(fileId, notes),
+    onSuccess: invalidate,
+  });
+
+  const unapproveMut = useMutation({
+    mutationFn: () => unapproveDocument(fileId),
     onSuccess: invalidate,
   });
 
@@ -1312,6 +1326,103 @@ export default function DocumentReviewPage() {
           </div>
         );
       }
+      case "sandbox": {
+        const simColor = (s: number) => s >= 0.7 ? "bg-green-500" : s >= 0.45 ? "bg-yellow-500" : "bg-red-400";
+        const simLabel = (s: number) => s >= 0.7 ? "✅" : s >= 0.45 ? "⚠️" : "❌";
+        return (
+          <div className="space-y-4">
+            <p className="text-xs text-gray-400">Stelle eine Testfrage direkt an dieses Dokument — ohne Freigabe, alle Chunks sichtbar.</p>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-200"
+                placeholder="z.B. Was sind die CO₂-Ziele von BMW?"
+                value={sandboxQuery}
+                onChange={e => setSandboxQuery(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter" && sandboxQuery.trim() && !sandboxLoading) {
+                    setSandboxLoading(true);
+                    setSandboxResult(null);
+                    runCopilotSandbox(fileId, sandboxQuery.trim())
+                      .then(r => setSandboxResult(r))
+                      .finally(() => setSandboxLoading(false));
+                  }
+                }}
+              />
+              <button
+                disabled={!sandboxQuery.trim() || sandboxLoading}
+                onClick={() => {
+                  setSandboxLoading(true);
+                  setSandboxResult(null);
+                  runCopilotSandbox(fileId, sandboxQuery.trim())
+                    .then(r => setSandboxResult(r))
+                    .finally(() => setSandboxLoading(false));
+                }}
+                className="flex items-center gap-1.5 text-sm bg-blue-600 text-white rounded-lg px-4 py-2 hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                {sandboxLoading ? <><div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" /> Läuft…</> : <><Search size={13} /> Fragen</>}
+              </button>
+            </div>
+
+            {sandboxResult && (
+              <div className="space-y-3">
+                {/* Answer */}
+                {sandboxResult.answer && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                    <p className="text-xs font-semibold text-blue-600 mb-2 flex items-center gap-1"><BookOpen size={12} /> Copilot-Antwort</p>
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{sandboxResult.answer}</p>
+                  </div>
+                )}
+
+                {/* Source chunks */}
+                <div>
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Quell-Chunks ({sandboxResult.chunks.length})</p>
+                    <p className="text-xs text-gray-400 mt-0.5">% = Relevanz zur Frage · 🟢 ≥70% sehr relevant · 🟡 45–69% teilweise · 🔴 &lt;45% kaum relevant</p>
+                  </div>
+                  <div className="space-y-2">
+                    {sandboxResult.chunks.map((c, i) => (
+                      <div
+                        key={c.chunk_id}
+                        title={c.page_number ? `Zur Seite ${c.page_number} springen` : "Inhalt anzeigen"}
+                        className={`rounded-xl border p-3 cursor-pointer hover:border-blue-300 transition-colors ${c.excluded_from_index ? "border-orange-200 bg-orange-50" : "border-gray-200 bg-white"}`}
+                        onClick={() => {
+                          if (c.page_number) {
+                            setTargetPage(undefined);
+                            setTimeout(() => setTargetPage(c.page_number!), 0);
+                          } else {
+                            setExpandedChunk(expandedChunk === c.chunk_id ? null : c.chunk_id);
+                          }
+                        }}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-xs font-mono text-gray-400">#{i + 1}</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div className={`h-1.5 rounded-full ${simColor(c.similarity)}`} style={{ width: `${Math.round(c.similarity * 100)}%` }} />
+                          </div>
+                          <span className="text-xs font-semibold text-gray-600">{Math.round(c.similarity * 100)}%</span>
+                          <span className="text-xs">{simLabel(c.similarity)}</span>
+                          {c.page_number && <span className="text-xs bg-purple-50 text-purple-600 border border-purple-200 rounded px-1.5 py-0.5">S.{c.page_number}</span>}
+                          {c.excluded_from_index && <span className="text-xs bg-orange-100 text-orange-600 rounded px-1.5 py-0.5">ausgeschlossen</span>}
+                        </div>
+                        <p className={`text-xs text-gray-600 ${expandedChunk === c.chunk_id ? "whitespace-pre-wrap" : "line-clamp-3"}`}>{c.content}</p>
+                        {!c.page_number && expandedChunk !== c.chunk_id && (
+                          <p className="text-xs text-gray-400 mt-1 italic">↓ Klicken zum Aufklappen (keine Seitennummer)</p>
+                        )}
+                      </div>
+                    ))}
+                    {sandboxResult.chunks.length === 0 && (
+                      <div className="text-center py-6 text-gray-400">
+                        <Search size={24} className="mx-auto mb-2 opacity-40" />
+                        <p className="text-sm">Keine passenden Chunks gefunden — Similarity zu niedrig</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
     }
   };
 
@@ -1342,14 +1453,32 @@ export default function DocumentReviewPage() {
           {data.copilot_hidden ? <EyeOff size={15} /> : <Eye size={15} />}
           {data.copilot_hidden ? "Copilot: aus" : "Copilot: an"}
         </button>
-        <button
-          onClick={() => approveMut.mutate(undefined)}
-          disabled={data.review_status === "approved" || approveMut.isPending}
-          className={`flex items-center gap-1.5 text-sm rounded-lg px-4 py-2 font-medium transition-colors ${data.review_status === "approved" ? "bg-green-100 text-green-700 cursor-default" : "bg-green-600 text-white hover:bg-green-700"}`}
-        >
-          <CheckCircle2 size={15} />
-          {data.review_status === "approved" ? "Freigegeben" : "Freigeben"}
-        </button>
+        {data.review_status === "approved" ? (
+          <div className="flex items-center gap-2">
+            <span className="flex items-center gap-1.5 text-sm rounded-lg px-4 py-2 font-medium bg-green-100 text-green-700">
+              <CheckCircle2 size={15} />
+              Freigegeben
+            </span>
+            <button
+              onClick={() => unapproveMut.mutate()}
+              disabled={unapproveMut.isPending}
+              className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+              title="Freigabe widerrufen"
+            >
+              <XCircle size={13} />
+              Widerrufen
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => approveMut.mutate(undefined)}
+            disabled={approveMut.isPending}
+            className="flex items-center gap-1.5 text-sm rounded-lg px-4 py-2 font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+          >
+            <CheckCircle2 size={15} />
+            Freigeben
+          </button>
+        )}
       </header>
 
       {/* Split pane */}
