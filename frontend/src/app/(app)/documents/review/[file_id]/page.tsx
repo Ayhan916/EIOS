@@ -44,6 +44,9 @@ import {
   reanalyzeFile,
   excludeChunk,
   toggleCopilotVisibility,
+  updateMetric,
+  deleteMetric,
+  addMetric,
   ReviewData,
   ReviewChunk,
   ReviewMetric,
@@ -511,9 +514,74 @@ function KpiTable({ kpis }: { kpis: Record<string, unknown> }) {
   );
 }
 
-// ── MetricsTable ──────────────────────────────────────────────────────────────
+// ── AddMetricForm ─────────────────────────────────────────────────────────────
 
-function MetricsTable({ metrics }: { metrics: ReviewMetric[] }) {
+function AddMetricForm({ onAdd, saving }: { onAdd: (p: { metric_type: string; value: number; unit: string; year: number; period?: string; confidence?: string }) => void; saving: boolean }) {
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ metric_type: "", value: "", unit: "", year: new Date().getFullYear().toString(), period: "FY", confidence: "exact" });
+
+  const submit = () => {
+    if (!f.metric_type || !f.value || !f.unit || !f.year) return;
+    onAdd({ metric_type: f.metric_type, value: parseFloat(f.value), unit: f.unit, year: parseInt(f.year), period: f.period, confidence: f.confidence });
+    setF({ metric_type: "", value: "", unit: "", year: new Date().getFullYear().toString(), period: "FY", confidence: "exact" });
+    setShow(false);
+  };
+
+  if (!show) return (
+    <button onClick={() => setShow(true)} className="text-xs text-blue-500 hover:text-blue-700 flex items-center gap-1">
+      + Metrik hinzufügen
+    </button>
+  );
+
+  return (
+    <div className="bg-white border border-blue-200 rounded-xl p-3 space-y-2">
+      <p className="text-xs font-semibold text-gray-600">Neue Metrik</p>
+      <div className="grid grid-cols-2 gap-2">
+        <input className="col-span-2 text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-300" placeholder="metric_type (z.B. co2_scope1)" value={f.metric_type} onChange={e => setF(d => ({ ...d, metric_type: e.target.value }))} />
+        <input className="text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-300" placeholder="Wert (z.B. 12500.0)" value={f.value} onChange={e => setF(d => ({ ...d, value: e.target.value }))} />
+        <input className="text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-300" placeholder="Einheit (z.B. tCO2e)" value={f.unit} onChange={e => setF(d => ({ ...d, unit: e.target.value }))} />
+        <input className="text-xs border border-gray-200 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-blue-300" placeholder="Jahr" value={f.year} onChange={e => setF(d => ({ ...d, year: e.target.value }))} />
+        <select className="text-xs border border-gray-200 rounded px-2 py-1" value={f.confidence} onChange={e => setF(d => ({ ...d, confidence: e.target.value }))}>
+          <option value="exact">exact</option>
+          <option value="estimated">estimated</option>
+          <option value="calculated">calculated</option>
+        </select>
+      </div>
+      <div className="flex gap-2">
+        <button onClick={submit} disabled={saving || !f.metric_type || !f.value} className="text-xs bg-blue-600 text-white rounded px-3 py-1 hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1">
+          <Save size={11} />{saving ? "Speichern…" : "Speichern"}
+        </button>
+        <button onClick={() => setShow(false)} className="text-xs text-gray-400 hover:text-gray-600">Abbrechen</button>
+      </div>
+    </div>
+  );
+}
+
+// ── MetricsTable (editable) ───────────────────────────────────────────────────
+
+function MetricsTable({ metrics, onUpdate, onDelete }: {
+  metrics: ReviewMetric[];
+  onUpdate: (id: string, payload: { value?: number; unit?: string; year?: number; confidence?: string }) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState<{ value: string; unit: string; year: string; confidence: string }>({ value: "", unit: "", year: "", confidence: "" });
+
+  const startEdit = (m: ReviewMetric) => {
+    setEditingId(m.id);
+    setEditDraft({ value: String(m.value), unit: m.unit, year: String(m.year), confidence: m.confidence });
+  };
+
+  const commitEdit = (id: string) => {
+    onUpdate(id, {
+      value: parseFloat(editDraft.value) || undefined,
+      unit: editDraft.unit || undefined,
+      year: parseInt(editDraft.year) || undefined,
+      confidence: editDraft.confidence || undefined,
+    });
+    setEditingId(null);
+  };
+
   return (
     <div className="overflow-x-auto rounded-xl border border-gray-200">
       <table className="w-full text-xs">
@@ -525,23 +593,68 @@ function MetricsTable({ metrics }: { metrics: ReviewMetric[] }) {
             <th className="text-right px-3 py-2 text-gray-500 font-medium">Jahr</th>
             <th className="text-right px-3 py-2 text-gray-500 font-medium">Periode</th>
             <th className="text-center px-3 py-2 text-gray-500 font-medium">Konfidenz</th>
+            <th className="w-12" />
           </tr>
         </thead>
         <tbody>
-          {metrics.map((m, i) => (
-            <tr key={m.id} className={i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}>
-              <td className="px-3 py-2 text-gray-600">{m.metric_type}</td>
-              <td className="px-3 py-2 text-right font-mono font-semibold text-gray-800">{m.value.toLocaleString("de-DE")}</td>
-              <td className="px-3 py-2 text-right text-gray-500">{m.unit}</td>
-              <td className="px-3 py-2 text-right text-gray-600">{m.year}</td>
-              <td className="px-3 py-2 text-right text-gray-500">{m.period}</td>
-              <td className="px-3 py-2 text-center">
-                <span className={`rounded px-1.5 py-0.5 ${m.confidence === "exact" ? "bg-green-50 text-green-700" : m.confidence === "estimated" ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>
-                  {m.confidence}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {metrics.map((m, i) => {
+            const editing = editingId === m.id;
+            return (
+              <tr key={m.id} className={`group ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
+                <td className="px-3 py-2 text-gray-600">{m.metric_type}</td>
+                <td className="px-3 py-2 text-right">
+                  {editing ? (
+                    <input autoFocus className="text-right bg-blue-50 border border-blue-300 rounded px-1 py-0.5 w-24 outline-none" value={editDraft.value} onChange={e => setEditDraft(d => ({ ...d, value: e.target.value }))} />
+                  ) : (
+                    <span className="font-mono font-semibold text-gray-800 cursor-pointer hover:bg-blue-50 rounded px-1" onClick={() => startEdit(m)}>{m.value.toLocaleString("de-DE")}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  {editing ? (
+                    <input className="text-right bg-blue-50 border border-blue-300 rounded px-1 py-0.5 w-16 outline-none" value={editDraft.unit} onChange={e => setEditDraft(d => ({ ...d, unit: e.target.value }))} />
+                  ) : (
+                    <span className="text-gray-500">{m.unit}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right">
+                  {editing ? (
+                    <input className="text-right bg-blue-50 border border-blue-300 rounded px-1 py-0.5 w-16 outline-none" value={editDraft.year} onChange={e => setEditDraft(d => ({ ...d, year: e.target.value }))} />
+                  ) : (
+                    <span className="text-gray-600">{m.year}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 text-right text-gray-500">{m.period}</td>
+                <td className="px-3 py-2 text-center">
+                  {editing ? (
+                    <select className="text-xs bg-blue-50 border border-blue-300 rounded px-1 py-0.5" value={editDraft.confidence} onChange={e => setEditDraft(d => ({ ...d, confidence: e.target.value }))}>
+                      <option value="exact">exact</option>
+                      <option value="estimated">estimated</option>
+                      <option value="calculated">calculated</option>
+                    </select>
+                  ) : (
+                    <span className={`rounded px-1.5 py-0.5 ${m.confidence === "exact" ? "bg-green-50 text-green-700" : m.confidence === "estimated" ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>
+                      {m.confidence}
+                    </span>
+                  )}
+                </td>
+                <td className="px-1">
+                  <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
+                    {editing ? (
+                      <>
+                        <button onClick={() => commitEdit(m.id)} className="p-0.5 rounded text-green-500 hover:text-green-700"><Save size={11} /></button>
+                        <button onClick={() => setEditingId(null)} className="p-0.5 rounded text-gray-400 hover:text-gray-600"><X size={11} /></button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => startEdit(m)} className="p-0.5 rounded text-gray-400 hover:text-blue-500"><Edit3 size={11} /></button>
+                        <button onClick={() => onDelete(m.id)} className="p-0.5 rounded text-gray-300 hover:text-red-400"><Trash2 size={11} /></button>
+                      </>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
@@ -658,6 +771,21 @@ export default function DocumentReviewPage() {
 
   const updateKpisMut = useMutation({
     mutationFn: (kpis: Record<string, unknown>) => updateKpis(fileId, kpis),
+    onSuccess: invalidate,
+  });
+
+  const updateMetricMut = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: { value?: number; unit?: string; year?: number; confidence?: string } }) => updateMetric(id, payload),
+    onSuccess: invalidate,
+  });
+
+  const deleteMetricMut = useMutation({
+    mutationFn: (id: string) => deleteMetric(id),
+    onSuccess: invalidate,
+  });
+
+  const addMetricMut = useMutation({
+    mutationFn: (payload: { metric_type: string; value: number; unit: string; year: number; period?: string; confidence?: string }) => addMetric(fileId, payload),
     onSuccess: invalidate,
   });
 
@@ -802,8 +930,36 @@ export default function DocumentReviewPage() {
       case "parsing": {
         const chars = data.parsed_text?.length ?? 0;
         const words = data.parsed_text ? wordCount(data.parsed_text) : 0;
+        const totalPages = data.pages ?? 0;
+        // Page coverage: which pages have at least one chunk with page_number
+        const coveredPages = new Set(data.chunks.map(c => c.page_number).filter((p): p is number => p != null));
+        const coveragePct = totalPages > 0 ? Math.round((coveredPages.size / totalPages) * 100) : null;
+        const chunksWithPage = data.chunks.filter(c => c.page_number != null).length;
+        const chunkCoveragePct = data.chunks.length > 0 ? Math.round((chunksWithPage / data.chunks.length) * 100) : null;
         return (
           <div className="space-y-3">
+            {/* Quality indicators */}
+            {totalPages > 0 && (
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { label: "Seitenabdeckung", value: coveragePct != null ? `${coveragePct}%` : "–", sub: `${coveredPages.size} / ${totalPages} Seiten`, ok: coveragePct != null && coveragePct >= 80 },
+                  { label: "Chunk-Tracking", value: chunkCoveragePct != null ? `${chunkCoveragePct}%` : "–", sub: `${chunksWithPage} / ${data.chunks.length} Chunks`, ok: chunkCoveragePct != null && chunkCoveragePct >= 70 },
+                  { label: "Wörter/Seite", value: totalPages > 0 && words > 0 ? Math.round(words / totalPages).toLocaleString() : "–", sub: "Ø Dichte", ok: totalPages > 0 && words / totalPages >= 100 },
+                ].map(({ label, value, sub, ok }) => (
+                  <div key={label} className={`rounded-lg border p-3 ${ok ? "border-green-200 bg-green-50" : "border-orange-200 bg-orange-50"}`}>
+                    <div className={`text-lg font-bold ${ok ? "text-green-700" : "text-orange-700"}`}>{value}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{label}</div>
+                    <div className="text-[10px] text-gray-400">{sub}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {coveragePct != null && coveragePct < 80 && (
+              <div className="flex items-start gap-2 text-xs text-orange-700 bg-orange-50 rounded-lg px-3 py-2 border border-orange-200">
+                <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                <span>Nur {coveragePct}% der Seiten haben Chunks mit Seitenreferenz — Navigation via KPI-Seitenangaben kann unvollständig sein. Dokument neu indexieren.</span>
+              </div>
+            )}
             {data.parsed_text ? (
               <>
                 <div className="flex items-center justify-between">
@@ -1110,7 +1266,7 @@ export default function DocumentReviewPage() {
         );
 
       // ── Metriken ─────────────────────────────────────────────────────────────
-      case "metrics":
+      case "metrics": {
         return (
           <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
             <div className="flex items-center gap-4 text-xs text-gray-500">
@@ -1121,9 +1277,15 @@ export default function DocumentReviewPage() {
             {data.metrics.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Kennzahlen ({data.metrics.length})</h4>
-                <MetricsTable metrics={data.metrics} />
+                <MetricsTable
+                  metrics={data.metrics}
+                  onUpdate={(id, payload) => updateMetricMut.mutate({ id, payload })}
+                  onDelete={(id) => deleteMetricMut.mutate(id)}
+                />
               </div>
             )}
+            {/* Add metric form */}
+            <AddMetricForm onAdd={(payload) => addMetricMut.mutate(payload)} saving={addMetricMut.isPending} />
             {data.signals.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Signale ({data.signals.length})</h4>
@@ -1131,13 +1293,14 @@ export default function DocumentReviewPage() {
               </div>
             )}
             {data.metrics.length === 0 && data.signals.length === 0 && (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-8 text-gray-400">
                 <BarChart3 size={32} className="mx-auto mb-2 opacity-40" />
                 <p className="text-sm">Keine Metriken oder Signale extrahiert</p>
               </div>
             )}
           </div>
         );
+      }
     }
   };
 

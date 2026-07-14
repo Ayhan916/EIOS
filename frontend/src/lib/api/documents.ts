@@ -214,6 +214,26 @@ export async function toggleCopilotVisibility(fileId: string): Promise<{ copilot
   return r.data;
 }
 
+export async function updateMetric(
+  metricId: string,
+  payload: { value?: number; unit?: string; year?: number; period?: string; confidence?: string },
+): Promise<{ id: string; updated: boolean }> {
+  const r = await apiClient.patch(`/documents/metrics/${metricId}`, payload);
+  return r.data;
+}
+
+export async function deleteMetric(metricId: string): Promise<void> {
+  await apiClient.delete(`/documents/metrics/${metricId}`);
+}
+
+export async function addMetric(
+  fileId: string,
+  payload: { metric_type: string; value: number; unit: string; year: number; period?: string; confidence?: string },
+): Promise<ReviewMetric> {
+  const r = await apiClient.post(`/documents/files/${fileId}/metrics`, payload);
+  return r.data;
+}
+
 // ── Review API ────────────────────────────────────────────────────────────────
 
 export interface ReviewChunk {

@@ -1093,6 +1093,117 @@ async def toggle_copilot_visibility(
     return {"copilot_hidden": doc.copilot_hidden, "file_id": file_id}
 
 
+# ── Metrics ───────────────────────────────────────────────────────────────────
+
+class MetricUpdate(BaseModel):
+    value: float | None = None
+    unit: str | None = None
+    year: int | None = None
+    period: str | None = None
+    confidence: str | None = None
+
+class MetricCreate(BaseModel):
+    metric_type: str
+    value: float
+    unit: str
+    year: int
+    period: str = "FY"
+    confidence: str = "exact"
+
+
+@router.patch("/metrics/{metric_id}", status_code=status.HTTP_200_OK)
+async def update_metric(
+    metric_id: str,
+    payload: MetricUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Update a specific metric field."""
+    org_id = user.organization_id
+    metric = (await db.execute(
+        select(CompanyMetricModel).where(
+            CompanyMetricModel.id == metric_id,
+            CompanyMetricModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not metric:
+        raise HTTPException(status_code=404, detail="Metric not found")
+
+    if payload.value is not None:
+        metric.value = payload.value
+    if payload.unit is not None:
+        metric.unit = payload.unit
+    if payload.year is not None:
+        metric.year = payload.year
+    if payload.period is not None:
+        metric.period = payload.period
+    if payload.confidence is not None:
+        metric.confidence = payload.confidence
+
+    return {"id": metric_id, "updated": True}
+
+
+@router.delete("/metrics/{metric_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_metric(
+    metric_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Delete a metric."""
+    org_id = user.organization_id
+    metric = (await db.execute(
+        select(CompanyMetricModel).where(
+            CompanyMetricModel.id == metric_id,
+            CompanyMetricModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not metric:
+        raise HTTPException(status_code=404, detail="Metric not found")
+    await db.delete(metric)
+
+
+@router.post("/files/{file_id}/metrics", status_code=status.HTTP_201_CREATED)
+async def add_metric(
+    file_id: str,
+    payload: MetricCreate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Add a new metric to a document."""
+    org_id = user.organization_id
+    doc = (await db.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    metric = CompanyMetricModel(
+        id=str(uuid.uuid4()),
+        organization_id=org_id,
+        company_name=doc.company_name or "unknown",
+        metric_type=payload.metric_type,
+        value=payload.value,
+        unit=payload.unit,
+        year=payload.year,
+        period=payload.period,
+        confidence=payload.confidence,
+        source_doc_id=file_id,
+    )
+    db.add(metric)
+    return ReviewMetricOut(
+        id=metric.id,
+        metric_type=metric.metric_type,
+        value=float(metric.value),
+        unit=metric.unit,
+        year=metric.year,
+        period=metric.period,
+        confidence=metric.confidence,
+    )
+
+
 # ── Helper ────────────────────────────────────────────────────────────────────
 
 async def _get_source_or_404(source_id: str, org_id: str, db: AsyncSession) -> DocumentSourceModel:
