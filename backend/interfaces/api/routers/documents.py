@@ -168,6 +168,8 @@ class ReviewDataOut(BaseModel):
     extracted_commitments: Any | None
     has_pdf: bool
     copilot_hidden: bool
+    classification_confidence: float | None
+    classification_alternatives: Any | None
     created_at: datetime
     updated_at: datetime
     chunks: list[ReviewChunkOut]
@@ -712,6 +714,8 @@ async def get_file_review(
         extracted_commitments=doc.extracted_commitments,
         has_pdf=has_pdf,
         copilot_hidden=bool(doc.copilot_hidden),
+        classification_confidence=doc.classification_confidence,
+        classification_alternatives=doc.classification_alternatives,
         created_at=doc.created_at,
         updated_at=doc.updated_at,
         chunks=[ReviewChunkOut(id=c.id, content=c.content, chunk_level=c.chunk_level, doc_class=c.doc_class, page_number=c.page_number, excluded_from_index=bool(c.excluded_from_index)) for c in chunks],

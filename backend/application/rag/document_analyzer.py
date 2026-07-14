@@ -141,15 +141,15 @@ Antworte NUR mit validem JSON:
   "targets": [],
   "commitments": [],
   "kpis": {{
-    "revenue_eur": null,
-    "ebitda_eur": null,
-    "ebitda_margin_pct": null,
-    "net_income_eur": null,
-    "employees": null,
-    "capex_eur": null,
-    "free_cashflow_eur": null,
-    "debt_ratio_pct": null,
-    "equity_ratio_pct": null
+    "revenue_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "ebitda_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "ebitda_margin_pct": {{"value": null, "unit": "%", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "net_income_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "employees": {{"value": null, "unit": "Personen", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "capex_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "free_cashflow_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "debt_ratio_pct": {{"value": null, "unit": "%", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "equity_ratio_pct": {{"value": null, "unit": "%", "year": null, "scope": null, "confidence": "exact", "source_page": null}}
   }},
   "metrics": [
     {{"metric_type": "revenue", "value": null, "unit": "EUR"}}
@@ -213,17 +213,17 @@ Antworte NUR mit validem JSON:
     {{"article": "CSDDD Art. X|CSRD|freiwillig", "commitment": "Verpflichtung", "status": "geplant|in_umsetzung|abgeschlossen"}}
   ],
   "kpis": {{
-    "co2_scope1_tco2": null,
-    "co2_scope2_tco2": null,
-    "co2_scope3_tco2": null,
-    "energy_gwh": null,
-    "renewable_energy_pct": null,
-    "water_m3": null,
-    "waste_tonnes": null,
-    "women_leadership_pct": null,
-    "employees": null,
-    "supplier_audited_pct": null,
-    "esg_score": null
+    "co2_scope1_tco2": {{"value": null, "unit": "tCO2e", "year": null, "scope": "Scope 1", "confidence": "exact", "source_page": null}},
+    "co2_scope2_tco2": {{"value": null, "unit": "tCO2e", "year": null, "scope": "Scope 2", "confidence": "exact", "source_page": null}},
+    "co2_scope3_tco2": {{"value": null, "unit": "tCO2e", "year": null, "scope": "Scope 3", "confidence": "exact", "source_page": null}},
+    "energy_gwh": {{"value": null, "unit": "GWh", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "renewable_energy_pct": {{"value": null, "unit": "%", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "water_m3": {{"value": null, "unit": "m³", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "waste_tonnes": {{"value": null, "unit": "t", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "women_leadership_pct": {{"value": null, "unit": "%", "year": null, "scope": "Führungsebene", "confidence": "exact", "source_page": null}},
+    "employees": {{"value": null, "unit": "Personen", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "supplier_audited_pct": {{"value": null, "unit": "%", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "esg_score": {{"value": null, "unit": "Punkte", "year": null, "scope": null, "confidence": "estimated", "source_page": null}}
   }},
   "metrics": [
     {{"metric_type": "co2_scope1", "value": null, "unit": "tCO2"}}
@@ -280,10 +280,10 @@ Antworte NUR mit validem JSON:
     {{"article": "Art. X Abs. Y", "commitment": "Konkrete Pflicht", "status": "geplant"}}
   ],
   "kpis": {{
-    "implementation_deadline": null,
-    "affected_company_size_employees": null,
-    "affected_turnover_eur": null,
-    "penalty_max_pct_turnover": null
+    "implementation_deadline": {{"value": null, "unit": "Datum", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "affected_company_size_employees": {{"value": null, "unit": "Personen", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "affected_turnover_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "penalty_max_pct_turnover": {{"value": null, "unit": "%", "year": null, "scope": null, "confidence": "exact", "source_page": null}}
   }},
   "metrics": [],
   "references": [
@@ -345,8 +345,8 @@ Antworte NUR mit validem JSON:
     {{"article": "Freiwillig|Strategisch", "commitment": "Konkretes Versprechen das später überprüft werden kann", "status": "angekündigt"}}
   ],
   "kpis": {{
-    "sentiment_score": null,
-    "concrete_targets_count": null
+    "sentiment_score": {{"value": null, "unit": "Score", "year": null, "scope": null, "confidence": "estimated", "source_page": null}},
+    "concrete_targets_count": {{"value": null, "unit": "Anzahl", "year": null, "scope": null, "confidence": "exact", "source_page": null}}
   }},
   "metrics": [],
   "references": [
@@ -402,9 +402,9 @@ Antworte NUR mit validem JSON:
   "targets": [],
   "commitments": [],
   "kpis": {{
-    "signal_type": null,
-    "affected_companies": null,
-    "estimated_impact_eur": null
+    "signal_type": {{"value": null, "unit": "Typ", "year": null, "scope": null, "confidence": "exact", "source_page": null}},
+    "affected_companies": {{"value": null, "unit": "Anzahl", "year": null, "scope": null, "confidence": "estimated", "source_page": null}},
+    "estimated_impact_eur": {{"value": null, "unit": "EUR Mio.", "year": null, "scope": null, "confidence": "estimated", "source_page": null}}
   }},
   "metrics": [],
   "references": [

@@ -322,26 +322,41 @@ function RetrievalPanel({ fileId }: { fileId: string }) {
   );
 }
 
+// ── KPI schema helpers ────────────────────────────────────────────────────────
+
+type RichKpiEntry = { value: string | number | null; unit?: string | null; year?: number | null; scope?: string | null; confidence?: string | null; source_page?: number | null };
+
+function isRich(v: unknown): v is RichKpiEntry {
+  return typeof v === "object" && v !== null && "value" in v;
+}
+
+function kpiDisplayValue(v: unknown): string {
+  if (v === null || v === undefined) return "–";
+  if (isRich(v)) return v.value != null ? String(v.value) : "–";
+  return String(v);
+}
+
+function kpiStringForSearch(key: string, v: unknown): string {
+  if (isRich(v)) return `${v.value ?? ""} ${v.unit ?? ""} ${key}`;
+  return `${String(v ?? "")} ${key}`;
+}
+
 // ── Editable KPI Table ────────────────────────────────────────────────────────
 
 function EditableKpiTable({ kpis, onSave, saving, onFindInPdf }: {
   kpis: Record<string, unknown>;
   onSave: (kpis: Record<string, unknown>) => void;
   saving: boolean;
-  onFindInPdf?: (key: string, value: string) => void;
+  onFindInPdf?: (key: string, value: string, sourcePage?: number | null) => void;
 }) {
-  const [draft, setDraft] = useState<Record<string, string>>(() =>
-    Object.fromEntries(Object.entries(kpis).map(([k, v]) => [k, String(v ?? "")]))
-  );
+  const [draft, setDraft] = useState<Record<string, unknown>>(() => ({ ...kpis }));
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [editDraft, setEditDraft] = useState("");
   const [addKey, setAddKey] = useState("");
   const [addVal, setAddVal] = useState("");
   const [showAdd, setShowAdd] = useState(false);
 
-  const save = () => {
-    const merged = Object.fromEntries(Object.entries(draft).map(([k, v]) => [k, v]));
-    onSave(merged);
-  };
+  const save = () => onSave(draft);
 
   const del = (key: string) => {
     const next = { ...draft };
@@ -349,11 +364,28 @@ function EditableKpiTable({ kpis, onSave, saving, onFindInPdf }: {
     setDraft(next);
   };
 
+  const startEdit = (key: string) => {
+    setEditingKey(key);
+    setEditDraft(kpiDisplayValue(draft[key]));
+  };
+
+  const commitEdit = (key: string) => {
+    const existing = draft[key];
+    if (isRich(existing)) {
+      setDraft(d => ({ ...d, [key]: { ...existing, value: editDraft } }));
+    } else {
+      setDraft(d => ({ ...d, [key]: editDraft }));
+    }
+    setEditingKey(null);
+  };
+
   const addEntry = () => {
     if (!addKey.trim()) return;
     setDraft(d => ({ ...d, [addKey.trim()]: addVal.trim() }));
     setAddKey(""); setAddVal(""); setShowAdd(false);
   };
+
+  const hasRich = Object.values(draft).some(isRich);
 
   return (
     <div className="space-y-2">
@@ -363,49 +395,76 @@ function EditableKpiTable({ kpis, onSave, saving, onFindInPdf }: {
             <tr>
               <th className="text-left px-3 py-2 text-gray-500 font-medium">KPI</th>
               <th className="text-right px-3 py-2 text-gray-500 font-medium">Wert</th>
+              {hasRich && <th className="text-right px-3 py-2 text-gray-500 font-medium">Einheit</th>}
+              {hasRich && <th className="text-right px-3 py-2 text-gray-500 font-medium">Jahr</th>}
+              {hasRich && <th className="text-center px-3 py-2 text-gray-500 font-medium">Konfidenz</th>}
+              {hasRich && <th className="text-center px-3 py-2 text-gray-500 font-medium">Seite</th>}
               <th className="w-8" />
             </tr>
           </thead>
           <tbody>
-            {Object.entries(draft).map(([k, v], i) => (
-              <tr key={k} className={`group ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
-                <td className="px-3 py-2 text-gray-600">
-                  <div className="flex items-center gap-1.5">
-                    {onFindInPdf && (
-                      <button
-                        onClick={() => onFindInPdf(k, v)}
-                        title="Im PDF finden"
-                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-purple-50 text-gray-400 hover:text-purple-500 shrink-0 transition-opacity"
-                      >
-                        <Search size={10} />
-                      </button>
+            {Object.entries(draft).map(([k, v], i) => {
+              const rich = isRich(v) ? v : null;
+              const displayVal = kpiDisplayValue(v);
+              return (
+                <tr key={k} className={`group ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
+                  <td className="px-3 py-2 text-gray-600">
+                    <div className="flex items-center gap-1.5">
+                      {onFindInPdf && (
+                        <button
+                          onClick={() => onFindInPdf(k, kpiStringForSearch(k, v), rich?.source_page)}
+                          title="Im PDF finden"
+                          className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-purple-50 text-gray-400 hover:text-purple-500 shrink-0 transition-opacity"
+                        >
+                          <Search size={10} />
+                        </button>
+                      )}
+                      <span>{k}</span>
+                      {rich?.scope && <span className="text-gray-400 text-[10px] bg-gray-100 rounded px-1">{rich.scope}</span>}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    {editingKey === k ? (
+                      <input
+                        autoFocus
+                        className="text-right bg-blue-50 border border-blue-300 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-blue-400 w-full"
+                        value={editDraft}
+                        onChange={e => setEditDraft(e.target.value)}
+                        onBlur={() => commitEdit(k)}
+                        onKeyDown={e => { if (e.key === "Enter") commitEdit(k); if (e.key === "Escape") setEditingKey(null); }}
+                      />
+                    ) : (
+                      <span
+                        className="font-mono font-medium text-gray-800 cursor-pointer hover:bg-blue-50 rounded px-1"
+                        onClick={() => startEdit(k)}
+                        title="Klicken zum Bearbeiten"
+                      >{displayVal}</span>
                     )}
-                    <span>{k}</span>
-                  </div>
-                </td>
-                <td className="px-3 py-2 text-right">
-                  {editingKey === k ? (
-                    <input
-                      autoFocus
-                      className="text-right bg-blue-50 border border-blue-300 rounded px-2 py-0.5 outline-none focus:ring-1 focus:ring-blue-400 w-full"
-                      value={v}
-                      onChange={e => setDraft(d => ({ ...d, [k]: e.target.value }))}
-                      onBlur={() => setEditingKey(null)}
-                      onKeyDown={e => { if (e.key === "Enter" || e.key === "Escape") setEditingKey(null); }}
-                    />
-                  ) : (
-                    <span
-                      className="font-mono font-medium text-gray-800 cursor-pointer hover:bg-blue-50 rounded px-1"
-                      onClick={() => setEditingKey(k)}
-                      title="Klicken zum Bearbeiten"
-                    >{v || "–"}</span>
+                  </td>
+                  {hasRich && <td className="px-3 py-2 text-right text-gray-500">{rich?.unit ?? "–"}</td>}
+                  {hasRich && <td className="px-3 py-2 text-right text-gray-600">{rich?.year ?? "–"}</td>}
+                  {hasRich && (
+                    <td className="px-3 py-2 text-center">
+                      {rich?.confidence ? (
+                        <span className={`rounded px-1.5 py-0.5 ${rich.confidence === "exact" ? "bg-green-50 text-green-700" : rich.confidence === "estimated" ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>
+                          {rich.confidence}
+                        </span>
+                      ) : "–"}
+                    </td>
                   )}
-                </td>
-                <td className="px-1">
-                  <button onClick={() => del(k)} className="p-0.5 rounded text-gray-300 hover:text-red-400"><X size={10} /></button>
-                </td>
-              </tr>
-            ))}
+                  {hasRich && (
+                    <td className="px-3 py-2 text-center">
+                      {rich?.source_page ? (
+                        <span className="text-purple-600 bg-purple-50 rounded px-1.5 py-0.5 font-medium">S.{rich.source_page}</span>
+                      ) : "–"}
+                    </td>
+                  )}
+                  <td className="px-1">
+                    <button onClick={() => del(k)} className="p-0.5 rounded text-gray-300 hover:text-red-400"><X size={10} /></button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -633,8 +692,19 @@ export default function DocumentReviewPage() {
     setSearchStatus("searching");
   }, []);
 
-  // KPI → find the chunk where the value appears → navigate PDF
-  const findKpiInPdf = useCallback((key: string, value: string) => {
+  // KPI → direct source_page navigation if available, else chunk search
+  const findKpiInPdf = useCallback((key: string, value: string, sourcePage?: number | null) => {
+    // Fastest path: KPI has a stored source_page from the LLM
+    if (sourcePage) {
+      setTargetPage(undefined);
+      setTimeout(() => setTargetPage(sourcePage), 0);
+      setSearchStatus("found");
+      setSearchFoundPage(sourcePage);
+      const kws = `${value} ${key}`.toLowerCase().replace(/[^a-z0-9äöüß\s]/g, " ").split(/\s+/).filter(w => w.length >= 2).slice(0, 6);
+      setHighlightTerms(kws);
+      return;
+    }
+
     const chunks = chunksRef.current;
 
     const numPart = value.replace(/[^\d.,\s]/g, " ").trim();
@@ -779,7 +849,12 @@ export default function DocumentReviewPage() {
       }
 
       // ── Klassifizierung ───────────────────────────────────────────────────────
-      case "classifying":
+      case "classifying": {
+        const storedConf = data.classification_confidence;
+        const storedAlts = data.classification_alternatives ?? [];
+        const reclassResult = reclassifyMut.data as { changed?: boolean; old_doc_type?: string; new_doc_type?: string; confidence?: number; alternatives?: { doc_type: string; confidence: number }[] } | undefined;
+        const showConf = reclassResult?.confidence ?? storedConf;
+        const showAlts = reclassResult?.alternatives ?? storedAlts;
         return (
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
@@ -789,6 +864,46 @@ export default function DocumentReviewPage() {
               <EditableField label="Sprache" value={data.language ?? ""} readOnly />
               <EditableField label="Titel" value={data.title ?? ""} readOnly />
             </div>
+            {/* Confidence + alternatives */}
+            {(showConf != null || showAlts.length > 0) && (
+              <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
+                {showConf != null && (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs text-gray-500">Klassifizierungs-Konfidenz</span>
+                      <span className={`text-xs font-semibold ${showConf >= 0.8 ? "text-green-700" : showConf >= 0.5 ? "text-yellow-700" : "text-red-700"}`}>{Math.round(showConf * 100)} %</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-1.5">
+                      <div
+                        className={`h-1.5 rounded-full transition-all ${showConf >= 0.8 ? "bg-green-500" : showConf >= 0.5 ? "bg-yellow-500" : "bg-red-500"}`}
+                        style={{ width: `${Math.round(showConf * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {showAlts.length > 0 && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-2">Alternativen</p>
+                    <div className="space-y-1.5">
+                      {showAlts.map((alt: { doc_type: string; confidence: number }) => (
+                        <div key={alt.doc_type} className="flex items-center gap-2">
+                          <span className="text-xs text-gray-600 w-40 shrink-0">{alt.doc_type}</span>
+                          <div className="flex-1 bg-gray-100 rounded-full h-1.5">
+                            <div className="h-1.5 rounded-full bg-gray-400" style={{ width: `${Math.round(alt.confidence * 100)}%` }} />
+                          </div>
+                          <span className="text-xs text-gray-400 w-8 text-right">{Math.round(alt.confidence * 100)}%</span>
+                          <button
+                            onClick={() => classifyMut.mutate({ doc_type: alt.doc_type })}
+                            className="text-xs text-blue-500 hover:text-blue-700 shrink-0"
+                            title="Diese Klassifizierung übernehmen"
+                          >übernehmen</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             <button
               onClick={() => reclassifyMut.mutate()}
               disabled={reclassifyMut.isPending}
@@ -797,15 +912,16 @@ export default function DocumentReviewPage() {
               <RefreshCw size={14} className={reclassifyMut.isPending ? "animate-spin" : ""} />
               {reclassifyMut.isPending ? "Wird klassifiziert…" : "Neu klassifizieren (LLM)"}
             </button>
-            {reclassifyMut.data && (
-              <div className={`text-xs rounded-lg p-3 ${reclassifyMut.data.changed ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}`}>
-                {reclassifyMut.data.changed
-                  ? `Geändert: ${reclassifyMut.data.old_doc_type} → ${reclassifyMut.data.new_doc_type}`
+            {reclassResult && (
+              <div className={`text-xs rounded-lg p-3 ${reclassResult.changed ? "bg-blue-50 text-blue-700" : "bg-gray-50 text-gray-500"}`}>
+                {reclassResult.changed
+                  ? `Geändert: ${reclassResult.old_doc_type} → ${reclassResult.new_doc_type}`
                   : "Keine Änderung — Klassifizierung bestätigt"}
               </div>
             )}
           </div>
         );
+      }
 
       // ── Analyse ───────────────────────────────────────────────────────────────
       case "analyzing":

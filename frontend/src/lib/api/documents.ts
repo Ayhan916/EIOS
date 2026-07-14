@@ -276,6 +276,8 @@ export interface ReviewData {
   extracted_commitments: unknown[] | null;
   has_pdf: boolean;
   copilot_hidden: boolean;
+  classification_confidence: number | null;
+  classification_alternatives: { doc_type: string; confidence: number }[] | null;
   created_at: string;
   updated_at: string;
   chunks: ReviewChunk[];

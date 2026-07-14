@@ -592,6 +592,10 @@ async def reclassify_document(
     doc_file.language = new_language
     if new_title:
         doc_file.title = new_title
+    if "confidence" in groq_result:
+        doc_file.classification_confidence = float(groq_result["confidence"])
+    if "alternatives" in groq_result:
+        doc_file.classification_alternatives = groq_result["alternatives"]
     doc_file.updated_at = datetime.now(UTC)
 
     # Update all rag_documents for this file
@@ -631,6 +635,8 @@ async def reclassify_document(
         "new_company_name": new_company_name,
         "new_report_year": new_report_year,
         "changed": old_doc_type != new_doc_type,
+        "confidence": groq_result.get("confidence"),
+        "alternatives": groq_result.get("alternatives", []),
     }
 
 
