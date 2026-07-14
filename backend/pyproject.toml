@@ -47,6 +47,10 @@ dependencies = [
     "python-pptx>=1.0.2",
     # M28 — Supply Chain Event Bus (Apache Kafka)
     "aiokafka>=0.11.0",
+    # Offline Speech-to-Text (Whisper via CTranslate2)
+    "faster-whisper>=1.0.0",
+    # Document understanding — tables, structure, OCR (replaces PyMuPDF for PDF)
+    "docling>=2.0.0",
 ]
 
 [project.optional-dependencies]

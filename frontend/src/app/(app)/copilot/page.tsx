@@ -6,17 +6,28 @@ import {
   AlertCircle,
   Bot,
   ChevronRight,
+  Filter,
   Loader2,
   MessageCircle,
+  Mic,
+  MicOff,
   Plus,
   Send,
   Sparkles,
+  Trash2,
   TrendingUp,
+  Volume2,
+  VolumeX,
+  X,
   Zap,
 } from "lucide-react";
+import { useVoiceInput } from "@/hooks/useVoiceInput";
+import { useTextToSpeech } from "@/hooks/useTextToSpeech";
 import apiClient from "@/lib/api/client";
+import { getRagFilterOptions, RagFilterOptions } from "@/lib/api/intelligence";
 import { useLanguage } from "@/lib/i18n/context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CopilotMessageRenderer } from "@/components/copilot-chart-renderer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +38,46 @@ interface Citation {
   citation_type: string;
   object_id: string;
   relevance: string;
+  label?: string | null;
+  excerpt?: string | null;
+}
+
+interface SourceModalProps {
+  label: string;
+  excerpts: string[];
+  onClose: () => void;
+}
+
+function SourceModal({ label, excerpts, onClose }: SourceModalProps) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+      <div
+        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b">
+          <div>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide font-medium">Quellennachweis</p>
+            <h3 className="font-semibold text-sm mt-0.5">📄 {label}</h3>
+          </div>
+          <button onClick={onClose} className="rounded-full p-1.5 hover:bg-muted/60 transition-colors">
+            <X className="h-4 w-4 text-muted-foreground" />
+          </button>
+        </div>
+        <div className="overflow-y-auto p-5 space-y-4">
+          <p className="text-xs text-muted-foreground">
+            Diese Textabschnitte wurden vom Copilot abgerufen und für die Antwort verwendet:
+          </p>
+          {excerpts.map((excerpt, i) => (
+            <div key={i} className="rounded-lg border border-blue-100 bg-blue-50/40 px-4 py-3">
+              <p className="text-[10px] text-blue-500 font-medium mb-1.5">Abschnitt {i + 1}</p>
+              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap font-mono">{excerpt}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 interface Conversation {
@@ -47,6 +98,20 @@ interface ChatMessage {
   citations: Citation[];
   model_used: string;
   generated_at: string;
+}
+
+// Strip inline [Type:UUID] citation markers from LLM answer text and clean up leftover punctuation
+function stripCitationTags(text: string): string {
+  let t = text;
+  // Remove all [Type:long-id] tags
+  t = t.replace(/\[[\w]+:[a-zA-Z0-9_-]{8,}\]/g, "");
+  // Clean up "Dokumenten , , und " → "Dokumenten "
+  t = t.replace(/\b(Dokumenten?|Quellen?|Berichten?)\s*(?:,\s*)+(?:und\s+)?/gi, "$1 ");
+  // Clean up leading/trailing commas and "und" after removal: " , , und " → " "
+  t = t.replace(/,\s*,/g, ",").replace(/,\s*(und|oder)\s*,/g, " $1 ").replace(/\s*,\s*(und|oder|sind|haben|wird)\b/gi, " $1");
+  // Clean up double spaces
+  t = t.replace(/\s{2,}/g, " ").trim();
+  return t;
 }
 
 interface AskResponse {
@@ -121,13 +186,54 @@ function CitationBadges({ citations }: { citations: Citation[] }) {
 
 // ── Chat Tab ──────────────────────────────────────────────────────────────────
 
+interface RagFilters {
+  company?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  docClass?: string;
+}
+
+const DOC_CLASS_LABELS: Record<string, string> = {
+  financial: "Finanzbericht",
+  esg: "ESG-Bericht",
+  regulatory: "Regulatorisch",
+  statement: "Erklärung",
+  signal: "Signal",
+};
+
 function ChatTab() {
   const { t } = useLanguage();
   const qc = useQueryClient();
   const [activeConvId, setActiveConvId] = useState<string | null>(null);
   const [input, setInput] = useState("");
-  const [localMessages, setLocalMessages] = useState<{ role: "user" | "assistant"; content: string; confidence?: string }[]>([]);
+  const [localMessages, setLocalMessages] = useState<{ role: "user" | "assistant"; content: string; confidence?: string; citations?: Citation[] }[]>([]);
+  const [sourceModal, setSourceModal] = useState<{ label: string; excerpts: string[] } | null>(null);
+  const [filters, setFilters] = useState<RagFilters>({});
+  const [showFilters, setShowFilters] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("copilot_audio_enabled") === "true";
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
+  const { status: voiceStatus, start: startVoice, stop: stopVoice, cancel: cancelVoice } = useVoiceInput((text) => {
+    setInput((prev) => (prev ? prev + " " + text : text));
+  });
+  const { speak, stop: stopSpeech, status: ttsStatus } = useTextToSpeech();
+
+  const toggleAudio = () => {
+    setAudioEnabled((v) => {
+      const next = !v;
+      localStorage.setItem("copilot_audio_enabled", String(next));
+      if (!next) stopSpeech();
+      return next;
+    });
+  };
+
+  const { data: filterOptions } = useQuery<RagFilterOptions>({
+    queryKey: ["copilot-rag-filter-options"],
+    queryFn: getRagFilterOptions,
+    staleTime: 5 * 60_000,
+  });
 
   const { data: conversations = [], isLoading: convsLoading } = useQuery<Conversation[]>({
     queryKey: ["copilot-conversations"],
@@ -162,6 +268,10 @@ function ChatTab() {
         question,
         conversation_id: activeConvId,
         context_type: "general",
+        rag_company_name: filters.company ?? null,
+        rag_year_from: filters.yearFrom ?? null,
+        rag_year_to: filters.yearTo ?? null,
+        rag_doc_class: filters.docClass ?? null,
       }).then((r) => r.data),
     onMutate: (question) => {
       setLocalMessages((m) => [...m, { role: "user", content: question }]);
@@ -169,11 +279,31 @@ function ChatTab() {
     },
     onSuccess: (data) => {
       if (!activeConvId) setActiveConvId(data.conversation_id);
+      if (audioEnabled) speak(data.answer);
       setLocalMessages((m) => [...m, {
         role: "assistant",
         content: data.answer,
         confidence: data.confidence_level,
+        citations: data.citations,
       }]);
+      qc.invalidateQueries({ queryKey: ["copilot-conversations"] });
+    },
+    onError: () => {
+      setLocalMessages((m) => [...m, {
+        role: "assistant",
+        content: "⚠️ Die Anfrage konnte nicht verarbeitet werden. Bitte versuche es erneut.",
+        confidence: "low",
+      }]);
+    },
+  });
+
+  const deleteConv = useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/copilot/conversations/${id}`),
+    onSuccess: (_, id) => {
+      if (activeConvId === id) {
+        setActiveConvId(null);
+        setLocalMessages([]);
+      }
       qc.invalidateQueries({ queryKey: ["copilot-conversations"] });
     },
   });
@@ -199,14 +329,25 @@ function ChatTab() {
         </Button>
         {convsLoading && <Spinner className="mx-auto mt-4" />}
         {conversations.map((conv) => (
-          <button
+          <div
             key={conv.id}
-            onClick={() => { setActiveConvId(conv.id); setLocalMessages([]); }}
-            className={`text-left rounded-lg border px-3 py-2 text-sm transition-colors ${activeConvId === conv.id ? "bg-primary/10 border-primary/30" : "hover:bg-muted/50"}`}
+            className={`group relative rounded-lg border text-sm transition-colors ${activeConvId === conv.id ? "bg-primary/10 border-primary/30" : "hover:bg-muted/50"}`}
           >
-            <p className="font-medium line-clamp-1">{conv.title}</p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{t("copilot.messages").replace("{n}", String(conv.message_count))}</p>
-          </button>
+            <button
+              onClick={() => { setActiveConvId(conv.id); setLocalMessages([]); }}
+              className="w-full text-left px-3 py-2 pr-8"
+            >
+              <p className="font-medium line-clamp-1">{conv.title}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{t("copilot.messages").replace("{n}", String(conv.message_count))}</p>
+            </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); deleteConv.mutate(conv.id); }}
+              className="absolute right-1.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-all"
+              title="Chat löschen"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ))}
         {conversations.length === 0 && !convsLoading && (
           <p className="text-xs text-muted-foreground px-2">{t("copilot.noConversations")}</p>
@@ -238,7 +379,7 @@ function ChatTab() {
           )}
 
           {displayMessages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} group`}>
               <div className={`max-w-[85%] rounded-xl px-4 py-3 text-sm whitespace-pre-wrap ${
                 msg.role === "user"
                   ? "bg-primary text-primary-foreground"
@@ -250,9 +391,49 @@ function ChatTab() {
                     {"confidence" in msg && msg.confidence && (
                       <Badge className="text-[10px] bg-slate-100 text-slate-600 ml-1">{msg.confidence}</Badge>
                     )}
+                    <button
+                      className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded hover:bg-slate-200"
+                      title="Antwort vorlesen"
+                      onClick={() => speak(msg.content)}
+                    >
+                      {ttsStatus === "loading" || ttsStatus === "playing"
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Volume2 className="h-3 w-3" />
+                      }
+                    </button>
                   </div>
                 )}
-                {msg.content}
+                {msg.role === "assistant"
+                  ? <CopilotMessageRenderer content={stripCitationTags(msg.content)} />
+                  : msg.content}
+                {"citations" in msg && msg.citations && msg.citations.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-200/60">
+                    <p className="text-[10px] text-muted-foreground font-medium mb-1">Quellen:</p>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.from(
+                        // Group by label: label → list of excerpts
+                        msg.citations.reduce((map, c) => {
+                          const key = c.label || c.object_id.slice(0, 8);
+                          if (!map.has(key)) map.set(key, []);
+                          if (c.excerpt) map.get(key)!.push(c.excerpt);
+                          return map;
+                        }, new Map<string, string[]>()).entries()
+                      ).map(([label, excerpts]) => (
+                        <button
+                          key={label}
+                          onClick={() => setSourceModal({ label, excerpts })}
+                          className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 font-normal hover:bg-blue-100 hover:border-blue-300 transition-colors cursor-pointer"
+                          title="Klicken um Quelltexte anzuzeigen"
+                        >
+                          📄 {label}
+                          {excerpts.length > 0 && (
+                            <span className="bg-blue-200 text-blue-800 rounded-full px-1 text-[9px] font-semibold">{excerpts.length}</span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -267,20 +448,170 @@ function ChatTab() {
           <div ref={bottomRef} />
         </div>
 
+        {/* Filter bar */}
+        {showFilters && filterOptions && (
+          <div className="border-t px-3 py-2 bg-muted/20 flex flex-wrap gap-2 items-center">
+            <span className="text-xs text-muted-foreground font-medium">Filter:</span>
+
+            {/* Company */}
+            <select
+              className="text-xs rounded border border-input bg-background px-2 py-1"
+              value={filters.company ?? ""}
+              onChange={(e) => setFilters(f => ({ ...f, company: e.target.value || undefined }))}
+            >
+              <option value="">Alle Unternehmen</option>
+              {filterOptions.companies.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+
+            {/* Doc class */}
+            <select
+              className="text-xs rounded border border-input bg-background px-2 py-1"
+              value={filters.docClass ?? ""}
+              onChange={(e) => setFilters(f => ({ ...f, docClass: e.target.value || undefined }))}
+            >
+              <option value="">Alle Klassen</option>
+              {filterOptions.doc_classes.map(c => (
+                <option key={c} value={c}>{DOC_CLASS_LABELS[c] ?? c}</option>
+              ))}
+            </select>
+
+            {/* Year from */}
+            <select
+              className="text-xs rounded border border-input bg-background px-2 py-1"
+              value={filters.yearFrom ?? ""}
+              onChange={(e) => setFilters(f => ({ ...f, yearFrom: e.target.value ? Number(e.target.value) : undefined }))}
+            >
+              <option value="">Ab Jahr</option>
+              {filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+
+            {/* Year to */}
+            <select
+              className="text-xs rounded border border-input bg-background px-2 py-1"
+              value={filters.yearTo ?? ""}
+              onChange={(e) => setFilters(f => ({ ...f, yearTo: e.target.value ? Number(e.target.value) : undefined }))}
+            >
+              <option value="">Bis Jahr</option>
+              {filterOptions.years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+
+            {/* Reset */}
+            {Object.values(filters).some(Boolean) && (
+              <button
+                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
+                onClick={() => setFilters({})}
+              >
+                <X className="h-3 w-3" /> Zurücksetzen
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Active filter chips */}
+        {!showFilters && Object.values(filters).some(Boolean) && (
+          <div className="border-t px-3 py-1.5 flex flex-wrap gap-1.5 items-center bg-blue-50/50">
+            {filters.company && (
+              <Badge className="text-[10px] bg-blue-100 text-blue-700 gap-1">
+                {filters.company}
+                <button onClick={() => setFilters(f => ({ ...f, company: undefined }))}><X className="h-2.5 w-2.5" /></button>
+              </Badge>
+            )}
+            {filters.docClass && (
+              <Badge className="text-[10px] bg-blue-100 text-blue-700 gap-1">
+                {DOC_CLASS_LABELS[filters.docClass] ?? filters.docClass}
+                <button onClick={() => setFilters(f => ({ ...f, docClass: undefined }))}><X className="h-2.5 w-2.5" /></button>
+              </Badge>
+            )}
+            {(filters.yearFrom || filters.yearTo) && (
+              <Badge className="text-[10px] bg-blue-100 text-blue-700 gap-1">
+                {filters.yearFrom ?? "–"} – {filters.yearTo ?? "–"}
+                <button onClick={() => setFilters(f => ({ ...f, yearFrom: undefined, yearTo: undefined }))}><X className="h-2.5 w-2.5" /></button>
+              </Badge>
+            )}
+          </div>
+        )}
+
         {/* Input */}
         <div className="border-t p-3 flex gap-2">
+          {filterOptions && (filterOptions.companies.length > 0 || filterOptions.doc_classes.length > 0) && (
+            <Button
+              size="sm"
+              variant="outline"
+              className={showFilters ? "text-blue-600 border-blue-300 bg-blue-50" : ""}
+              onClick={() => setShowFilters(v => !v)}
+              title="Dokument-Filter"
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          )}
           <input
             className="flex-1 rounded-lg border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            placeholder={t("copilot.placeholder")}
+            placeholder={voiceStatus === "transcribing" ? "Transkribiere…" : voiceStatus === "recording" ? "Aufnahme läuft — Mikrofon-Button zum Stoppen…" : t("copilot.placeholder")}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
           />
+          <Button
+            size="sm"
+            variant="outline"
+            title={
+              voiceStatus === "recording"
+                ? "Aufnahme stoppen"
+                : voiceStatus === "transcribing"
+                  ? "Transkription abbrechen"
+                  : "Spracheingabe starten (Whisper)"
+            }
+            onClick={
+              voiceStatus === "recording"
+                ? stopVoice
+                : voiceStatus === "transcribing"
+                  ? cancelVoice
+                  : startVoice
+            }
+            className={
+              voiceStatus === "recording"
+                ? "border-red-400 text-red-500 animate-pulse"
+                : voiceStatus === "transcribing"
+                  ? "border-amber-400 text-amber-600"
+                  : ""
+            }
+          >
+            {voiceStatus === "transcribing" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : voiceStatus === "recording" ? (
+              <MicOff className="h-4 w-4" />
+            ) : (
+              <Mic className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            title={audioEnabled ? "Audio-Antworten deaktivieren" : "Audio-Antworten aktivieren (Piper TTS)"}
+            onClick={toggleAudio}
+            className={audioEnabled ? "border-emerald-400 text-emerald-600 bg-emerald-50" : ""}
+          >
+            {ttsStatus === "loading" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : audioEnabled ? (
+              <Volume2 className="h-4 w-4" />
+            ) : (
+              <VolumeX className="h-4 w-4" />
+            )}
+          </Button>
           <Button size="sm" disabled={!input.trim() || ask.isPending} onClick={handleSend}>
             {ask.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
       </div>
+
+      {sourceModal && (
+        <SourceModal
+          label={sourceModal.label}
+          excerpts={sourceModal.excerpts}
+          onClose={() => setSourceModal(null)}
+        />
+      )}
     </div>
   );
 }

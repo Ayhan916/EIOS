@@ -13,11 +13,13 @@ Routes:
 
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import UTC, datetime
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -97,8 +99,33 @@ router = APIRouter(
 )
 
 
-def _citations(raw: list[dict]) -> list[CitationSchema]:
-    return [CitationSchema(**c) for c in raw]
+def _build_doc_meta(retrieval_snapshot: dict) -> tuple[dict[str, str], dict[str, str]]:
+    """Build (label_map, excerpt_map) from the document retriever snapshot."""
+    label_map: dict[str, str] = {}
+    excerpt_map: dict[str, str] = {}
+    doc_data = retrieval_snapshot.get("document_retriever", {}).get("data", [])
+    for chunk in doc_data:
+        uid = chunk.get("id")
+        if not uid:
+            continue
+        company = (chunk.get("company_name") or "").strip()
+        year = chunk.get("report_year")
+        doc_type = chunk.get("doc_type") or ""
+        parts = [p for p in [company, str(year) if year else None] if p]
+        label_map[uid] = " ".join(parts) if parts else doc_type
+        content = chunk.get("content") or ""
+        excerpt_map[uid] = content[:400].strip()
+    return label_map, excerpt_map
+
+
+def _citations(raw: list[dict], label_map: dict[str, str] | None = None, excerpt_map: dict[str, str] | None = None) -> list[CitationSchema]:
+    out = []
+    for c in raw:
+        oid = c.get("object_id", "")
+        label = (label_map or {}).get(oid)
+        excerpt = (excerpt_map or {}).get(oid)
+        out.append(CitationSchema(**c, label=label, excerpt=excerpt))
+    return out
 
 
 @router.post("/ask", response_model=CopilotAnswerResponse, status_code=status.HTTP_200_OK)
@@ -122,6 +149,12 @@ async def ask_copilot(
         conversation_id=body.conversation_id,
         session=session,
         llm=llm,
+        rag_company_name=body.rag_company_name,
+        rag_year_from=body.rag_year_from,
+        rag_year_to=body.rag_year_to,
+        rag_doc_class=body.rag_doc_class,
+        context_type=body.context_type,
+        context_id=body.context_id,
     )
 
     conv_repo = SQLCopilotConversationRepository(session)
@@ -172,13 +205,15 @@ async def ask_copilot(
         for c in (assistant_msg.confidence_factors.get("_contradictions") or [])
     ]
 
+    label_map, excerpt_map = _build_doc_meta(assistant_msg.retrieval_snapshot or {})
+
     return CopilotAnswerResponse(
         conversation_id=conv_id,
         user_message_id=user_msg.id,
         assistant_message_id=assistant_msg.id,
         intent=assistant_msg.intent,
         answer=assistant_msg.content,
-        citations=_citations(assistant_msg.citations),
+        citations=_citations(assistant_msg.citations, label_map, excerpt_map),
         model_used=assistant_msg.model_used,
         generation_ms=assistant_msg.generation_ms,
         retrieved_sources=assistant_msg.retrieved_sources,
@@ -247,6 +282,21 @@ async def create_conversation(
     )
 
 
+@router.delete("/conversations/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_conversation(
+    conversation_id: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> None:
+    """Soft-delete a conversation by archiving it. Tenant-isolated — 404 on org mismatch."""
+    repo = SQLCopilotConversationRepository(session)
+    conv = await repo.get_by_id(conversation_id)
+    if conv is None or conv.organization_id != current_user.organization_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
+    conv.is_archived = True
+    await repo.save(conv)
+
+
 @router.get(
     "/conversations/{conversation_id}/messages", response_model=list[CopilotMessageResponse]
 )
@@ -290,6 +340,17 @@ async def suggested_questions(
     """Return contextual suggested questions for the given page context."""
     questions = get_suggested_questions(context_type=context_type, limit=5)
     return SuggestedQuestionsResponse(context_type=context_type, questions=questions)
+
+
+@router.get("/rag-filter-options")
+async def rag_filter_options(
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Return available filter values for document-scoped Copilot queries."""
+    from application.copilot.retrieval.document_retriever import get_rag_filter_options
+
+    return await get_rag_filter_options(current_user.organization_id, session)
 
 
 @router.get(
@@ -895,3 +956,87 @@ async def conversation_analytics(
         feedback_outdated_count=a.feedback_outdated_count,
         feedback_total=a.feedback_total,
     )
+
+
+# ── Offline Speech-to-Text (Whisper) ──────────────────────────────────────────
+
+class TranscriptionResponse(BaseModel):
+    text: str
+    language: str = "de"
+
+
+@router.post(
+    "/transcribe",
+    response_model=TranscriptionResponse,
+    summary="Transcribe audio with offline Whisper (faster-whisper / CTranslate2)",
+)
+async def transcribe_audio(
+    file: UploadFile = File(...),
+    language: str = Query(default="de", description="BCP-47 language code (de, en, ...)"),
+    _current_user: User = Depends(get_current_user),
+) -> TranscriptionResponse:
+    """
+    Accepts an audio file (webm, wav, mp4, ogg, ...) and returns the transcribed text.
+    The Whisper model runs locally — audio never leaves the EIOS server.
+    """
+    audio_bytes = await file.read()
+    logger.info("transcribe_audio received", bytes=len(audio_bytes), content_type=file.content_type, filename=file.filename)
+
+    if not audio_bytes:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Empty audio file")
+
+    max_bytes = 25 * 1024 * 1024  # 25 MB
+    if len(audio_bytes) > max_bytes:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="Audio file too large (max 25 MB)")
+
+    try:
+        from application.copilot.transcription_service import transcribe
+        import asyncio
+        loop = asyncio.get_event_loop()
+        text = await loop.run_in_executor(None, transcribe, audio_bytes, language)
+        logger.info("transcribe_audio result", text=repr(text), language=language)
+    except Exception as exc:
+        logger.error("Whisper transcription failed", error=str(exc))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Transcription failed") from exc
+
+    return TranscriptionResponse(text=text, language=language)
+
+
+# ── Offline Text-to-Speech (Piper TTS) ───────────────────────────────────────
+
+class SynthesizeRequest(BaseModel):
+    text: str = Field(..., max_length=4000)
+
+
+@router.post(
+    "/synthesize",
+    summary="Convert text to speech with offline Piper TTS (WAV response)",
+    response_class=Response,
+)
+async def synthesize_speech(
+    body: SynthesizeRequest,
+    _current_user: User = Depends(get_current_user),
+) -> Response:
+    """
+    Returns a WAV audio file synthesized from the given text.
+    Piper TTS runs locally — text never leaves the EIOS server.
+    """
+    text = body.text.strip()
+    if not text:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Empty text")
+
+    # Strip markdown before TTS (asterisks, backticks, etc.)
+    import re
+    text = re.sub(r"[*_`#>~]", "", text)
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)  # links → label only
+    text = re.sub(r"\s+", " ", text).strip()
+
+    try:
+        from application.copilot.tts_service import synthesize
+        loop = asyncio.get_event_loop()
+        wav_bytes = await loop.run_in_executor(None, synthesize, text)
+    except Exception as exc:
+        logger.error("Piper TTS synthesis failed", error=str(exc))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Speech synthesis failed") from exc
+
+    return Response(content=wav_bytes, media_type="audio/wav")

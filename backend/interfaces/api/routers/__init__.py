@@ -44,6 +44,8 @@ from .network import router as network_router
 from .news import router as news_router
 from .rag import router as rag_router
 from .documents import router as documents_router
+from .intelligence import router as company_intelligence_router
+from .scenario import router as scenario_router
 from .notifications import router as notifications_router
 from .operating_system import router as operating_system_router
 from .operations import router as operations_router
@@ -78,6 +80,7 @@ from .supplier_assessment import public_router as supplier_assessment_public_rou
 from .supplier_assessment import router as supplier_assessment_router
 from .supplier_extensions import router as supplier_extensions_router
 from .supplier_intelligence import router as supplier_intelligence_router
+from .explainability import router as explainability_router
 from .supplier_portal import router as supplier_portal_router
 from .supplier_portal_internal import router as supplier_portal_internal_router
 from .supplier_twin import router as supplier_twin_router
@@ -121,6 +124,7 @@ __all__ = [
     "notifications_router",
     "suppliers_router",
     "supplier_intelligence_router",
+    "explainability_router",
     "users_router",
     "workflows_router",
     "external_intelligence_router",
@@ -186,4 +190,6 @@ __all__ = [
     "workflow_context_router",
     "rag_router",
     "documents_router",
+    "company_intelligence_router",
+    "scenario_router",
 ]

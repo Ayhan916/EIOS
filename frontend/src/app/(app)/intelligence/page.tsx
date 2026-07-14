@@ -366,6 +366,14 @@ function SurvSignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, 
             </button>
           </>
         )}
+        {/* Szenario-Analyse Link */}
+        <Link
+          href={`/intelligence/scenario?signal=${encodeURIComponent(signal.title)}&company=${encodeURIComponent(supplierName ?? "")}`}
+          className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 hover:bg-amber-100 transition-colors border border-amber-200"
+        >
+          <Zap className="h-3 w-3" /> Szenario projizieren
+        </Link>
+
         {riskCreated ? (
           <span className="flex items-center gap-2 ml-auto">
             <span className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium">
@@ -1012,11 +1020,11 @@ function TwinFeedSection({ orgId }: { orgId: string }) {
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2 mb-1">
                         <TwinSevBadge severity={ev.severity} />
-                        <span className="text-xs text-slate-400 capitalize">{ev.event_category.replace(/_/g, " ")}</span>
+                        <span className="text-xs text-slate-400 capitalize">{ev.event_category?.replace(/_/g, " ")}</span>
                         {ev.twin_dimension_affected && (
                           <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 capitalize">{ev.twin_dimension_affected.replace(/_/g, " ")}</span>
                         )}
-                        <span className="ml-auto text-xs text-slate-400 shrink-0">{new Date(ev.occurred_at).toLocaleDateString()}</span>
+                        <span className="ml-auto text-xs text-slate-400 shrink-0">{ev.occurred_at ? new Date(ev.occurred_at).toLocaleDateString() : "—"}</span>
                       </div>
                       <p className="font-semibold text-slate-800 text-sm">{ev.title}</p>
                       <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{ev.summary}</p>
@@ -1045,12 +1053,12 @@ function TwinFeedSection({ orgId }: { orgId: string }) {
                       )}
                       <div className="flex flex-wrap gap-4 text-xs text-slate-400">
                         {ev.source_name && <span>{t("twin.source")}: {ev.source_name}</span>}
-                        {ev.health_delta !== 0 && (
+                        {ev.health_delta != null && ev.health_delta !== 0 && (
                           <span className={ev.health_delta < 0 ? "text-red-500" : "text-green-600"}>
                             Δ {ev.health_delta > 0 ? "+" : ""}{ev.health_delta.toFixed(1)} {t("twin.healthDelta")}
                           </span>
                         )}
-                        {ev.confidence > 0 && <span>{t("twin.confidence")}: {(ev.confidence * 100).toFixed(0)}%</span>}
+                        {ev.confidence != null && ev.confidence > 0 && <span>{t("twin.confidence")}: {(ev.confidence * 100).toFixed(0)}%</span>}
                       </div>
                     </div>
                   )}
@@ -1247,16 +1255,16 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
                               <TwinSevBadge severity={ev.severity} />
-                              <span className="text-xs text-slate-400 capitalize">{ev.event_category.replace(/_/g, " ")}</span>
+                              <span className="text-xs text-slate-400 capitalize">{ev.event_category?.replace(/_/g, " ")}</span>
                               {ev.twin_dimension_affected && (
                                 <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 capitalize">{ev.twin_dimension_affected.replace(/_/g, " ")}</span>
                               )}
-                              {ev.health_delta !== 0 && (
+                              {ev.health_delta != null && ev.health_delta !== 0 && (
                                 <span className={`text-xs font-medium ${ev.health_delta < 0 ? "text-red-500" : "text-green-600"}`}>
                                   {ev.health_delta > 0 ? "+" : ""}{ev.health_delta.toFixed(1)}
                                 </span>
                               )}
-                              <span className="ml-auto text-xs text-slate-400 shrink-0">{new Date(ev.occurred_at).toLocaleDateString()}</span>
+                              <span className="ml-auto text-xs text-slate-400 shrink-0">{ev.occurred_at ? new Date(ev.occurred_at).toLocaleDateString() : "—"}</span>
                             </div>
                             <p className="font-medium text-slate-800 text-sm">{ev.title}</p>
                             <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{ev.summary}</p>
@@ -1279,7 +1287,7 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
                             )}
                             <div className="flex flex-wrap gap-4 text-xs text-slate-400">
                               {ev.source_name && <span>{t("twin.source")}: {ev.source_name}</span>}
-                              {ev.confidence > 0 && <span>{t("twin.confidence")}: {(ev.confidence * 100).toFixed(0)}%</span>}
+                              {ev.confidence != null && ev.confidence > 0 && <span>{t("twin.confidence")}: {(ev.confidence * 100).toFixed(0)}%</span>}
                             </div>
                           </div>
                         )}

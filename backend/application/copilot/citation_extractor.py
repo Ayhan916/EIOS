@@ -40,9 +40,10 @@ def extract_citations(
                 "relevance": "explicit",
             }
 
-    # Source IDs from retrieval that appear in the content
+    # All retrieved source IDs are implicitly cited — the LLM no longer writes
+    # inline [Type:id] tags, so we register every retrieved object as a source.
     for source_id, ctype in citation_map.items():
-        if source_id and source_id in content and source_id not in found:
+        if source_id and source_id not in found:
             found[source_id] = {
                 "citation_type": ctype,
                 "object_id": source_id,
@@ -53,10 +54,11 @@ def extract_citations(
 
 
 def format_citations_for_prompt(citation_map: dict[str, str]) -> str:
-    """Format available citations for inclusion in the system prompt."""
-    if not citation_map:
-        return ""
-    lines = ["Available source objects you may cite as [Type:id]:"]
-    for obj_id, ctype in list(citation_map.items())[:50]:  # cap at 50
-        lines.append(f"  [{ctype}:{obj_id}]")
-    return "\n".join(lines)
+    """Format available citations for inclusion in the system prompt.
+
+    We no longer ask the LLM to write [Type:id] tags inline — citations are
+    extracted implicitly from source IDs that appear in the assembled context.
+    This function now returns an empty string so no citation instruction is
+    injected into the prompt, keeping the answer text clean.
+    """
+    return ""

@@ -6,10 +6,13 @@ Represents a specific observation produced by an Assessment.
 AI-generated: carries reasoning and uncertainty per architecture/008 (AAM-0001).
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 
 from .base_entity import BaseEntity
 from .enums import ConfidenceLevel, EvidenceStrength, RiskLevel
+from .value_objects import ConfidenceCard
 
 
 @dataclass(slots=True, kw_only=True)
@@ -20,6 +23,8 @@ class Finding(BaseEntity):
     category: str = ""
     severity: RiskLevel = field(default=RiskLevel.MEDIUM)
     confidence: ConfidenceLevel = field(default=ConfidenceLevel.HIGH)
+    # ADR-015: structured confidence — derived from `confidence` when not explicitly set
+    confidence_card: ConfidenceCard | None = field(default=None)
     evidence_ids: list[str] = field(default_factory=list)
     reasoning: str | None = None
     uncertainty: str | None = None

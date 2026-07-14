@@ -26,6 +26,10 @@ class FindingModel(BaseModel):
     # GAP-08: Numeric 1-10 scoring
     severity_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
     probability_score: Mapped[int | None] = mapped_column(SmallInteger, nullable=True)
+    # E3-F1: ADR-003 — "Hypothetical" = no evidence yet, "Evidenced" = ≥1 evidence ref
+    evidence_quality_status: Mapped[str] = mapped_column(
+        String(20), nullable=False, server_default="Hypothetical"
+    )
 
     assessment: Mapped[AssessmentModel] = relationship(back_populates="findings")
     evidence: Mapped[list[EvidenceModel]] = relationship(

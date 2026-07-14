@@ -10,13 +10,15 @@ import json
 from .context_budget import ContextBudget
 from .retrieval.base import RetrievalResult
 
-_MAX_CHARS = 8_000
+_MAX_CHARS = 20_000
 _SECTION_SEPARATOR = "\n---\n"
 NO_CONTEXT_MSG = "No relevant data was retrieved for this question."
 
 
 def _build_section(result: RetrievalResult) -> str:
     header = f"[{result.retriever.upper()}] {result.provenance}"
+    if result.context_text is not None:
+        return f"{header}\n{result.context_text}"
     try:
         serialized = json.dumps(result.data, default=str, ensure_ascii=False, indent=None)
     except (TypeError, ValueError):

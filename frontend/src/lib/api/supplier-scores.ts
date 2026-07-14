@@ -7,55 +7,83 @@ import type {
   SupplierScoreResponse,
   WatchlistEntry,
 } from "@/types/api";
+import apiClient from "./client";
 
 const BASE = "/api/v1/suppliers";
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(body.detail ?? res.statusText);
-  }
-  return res.json() as Promise<T>;
+// ── Risk Score Explanation (E5-F1) ────────────────────────────────────────────
+
+export interface FactorExplanation {
+  factor: string;
+  label: string;
+  count: number;
+  weight: number;
+  contribution: number;
+  pct_of_total: number;
+  impact: "high" | "medium" | "low" | "none";
+}
+
+export interface RiskScoreExplanation {
+  composite_score: number;
+  band: string;
+  formula_version: string;
+  factors: FactorExplanation[];
+  top_drivers: FactorExplanation[];
+  confidence_level: string;
+  confidence_score: number;
+  confidence_basis: string;
+  limitations: string[];
+}
+
+export async function getSupplierRiskScoreExplanation(
+  supplierId: string,
+): Promise<RiskScoreExplanation> {
+  const r = await apiClient.get(`${BASE}/${supplierId}/risk-score/explanation`);
+  return r.data;
 }
 
 export async function getSupplierIntelligence(
   supplierId: string,
 ): Promise<SupplierScoreResponse> {
-  return request(`${BASE}/${supplierId}/intelligence`);
+  const r = await apiClient.get(`${BASE}/${supplierId}/intelligence`);
+  return r.data;
 }
 
 export async function recalculateSupplierScore(
   supplierId: string,
 ): Promise<SupplierScoreResponse> {
-  return request(`${BASE}/${supplierId}/intelligence/recalculate`, {
-    method: "POST",
-  });
+  const r = await apiClient.post(`${BASE}/${supplierId}/intelligence/recalculate`);
+  return r.data;
 }
 
 export async function getSupplierScoreHistory(
   supplierId: string,
   limit = 12,
 ): Promise<SupplierScoreHistoryEntry[]> {
-  return request(`${BASE}/${supplierId}/intelligence/history?limit=${limit}`);
+  const r = await apiClient.get(`${BASE}/${supplierId}/intelligence/history?limit=${limit}`);
+  return r.data;
 }
 
 export async function getSupplierBenchmark(
   supplierId: string,
 ): Promise<SupplierBenchmark> {
-  return request(`${BASE}/${supplierId}/benchmark`);
+  const r = await apiClient.get(`${BASE}/${supplierId}/benchmark`);
+  return r.data;
 }
 
 export async function getSupplierHeatmap(supplierId: string): Promise<RiskHeatmap> {
-  return request(`${BASE}/${supplierId}/heatmap`);
+  const r = await apiClient.get(`${BASE}/${supplierId}/heatmap`);
+  return r.data;
 }
 
 export async function getPortfolioAnalytics(): Promise<PortfolioAnalytics> {
-  return request(`${BASE}/analytics/portfolio`);
+  const r = await apiClient.get(`${BASE}/analytics/portfolio`);
+  return r.data;
 }
 
 export async function getIntelligenceWatchlist(limit = 20): Promise<WatchlistEntry[]> {
-  return request(`${BASE}/analytics/watchlist?limit=${limit}`);
+  const r = await apiClient.get(`${BASE}/analytics/watchlist?limit=${limit}`);
+  return r.data;
 }
 
 export async function getExecutiveRankings(params?: {
@@ -72,9 +100,11 @@ export async function getExecutiveRankings(params?: {
   if (params?.country) qs.set("country", params.country);
   if (params?.supplier_tier) qs.set("supplier_tier", params.supplier_tier);
   const q = qs.toString();
-  return request(`${BASE}/analytics/rankings${q ? `?${q}` : ""}`);
+  const r = await apiClient.get(`${BASE}/analytics/rankings${q ? `?${q}` : ""}`);
+  return r.data;
 }
 
 export async function getOrgRiskHeatmap(): Promise<RiskHeatmap> {
-  return request(`${BASE}/analytics/heatmap`);
+  const r = await apiClient.get(`${BASE}/analytics/heatmap`);
+  return r.data;
 }

@@ -49,6 +49,9 @@ async def download(url: str, max_retries: int = 3) -> DownloadResult:
     }
 
     last_error: str = ""
+    # EUR-Lex and similar portals generate PDFs asynchronously (HTTP 202).
+    # We retry up to 5 times with increasing delays to wait for generation.
+    eur_lex_retries = 5
     for attempt in range(max_retries):
         try:
             async with httpx.AsyncClient(
@@ -56,36 +59,39 @@ async def download(url: str, max_retries: int = 3) -> DownloadResult:
                 timeout=httpx.Timeout(connect=30.0, read=120.0, write=30.0, pool=30.0),
                 headers=headers,
             ) as client:
-                async with client.stream("GET", url) as resp:
+                # EUR-Lex 202 polling loop
+                for poll in range(eur_lex_retries):
+                    resp = await client.get(url)
+                    if resp.status_code == 202:
+                        wait = 3 * (poll + 1)
+                        logger.info("download_agent.async_generation", url=url, poll=poll, wait=wait)
+                        await asyncio.sleep(wait)
+                        continue
                     resp.raise_for_status()
-                    final_url = str(resp.url)
-                    ct = resp.headers.get("content-type", "").lower()
+                    break
+                else:
+                    last_error = "Document generation timed out after polling (HTTP 202)"
+                    logger.warning("download_agent.retry", url=url, attempt=attempt, error=last_error)
+                    await asyncio.sleep(2 ** attempt)
+                    continue
 
-                    # Determine type
-                    if "pdf" in ct or url.lower().endswith(".pdf"):
-                        content_type = "pdf"
-                    elif "html" in ct:
-                        content_type = "html"
-                    else:
-                        content_type = "text"
+                final_url = str(resp.url)
+                ct = resp.headers.get("content-type", "").lower()
 
-                    # Stream with size guard
-                    chunks: list[bytes] = []
-                    size = 0
-                    async for chunk in resp.aiter_bytes(chunk_size=65536):
-                        size += len(chunk)
-                        if size > _MAX_BYTES:
-                            return DownloadResult(ok=False, error=f"File too large (>{_MAX_BYTES // 1024 // 1024} MB)")
-                        chunks.append(chunk)
+                if "pdf" in ct or url.lower().endswith(".pdf"):
+                    content_type = "pdf"
+                elif "html" in ct:
+                    content_type = "html"
+                else:
+                    content_type = "text"
 
-                    content = b"".join(chunks)
-                    logger.info("download_agent.done", url=url, size=size, type=content_type)
-                    return DownloadResult(
-                        ok=True,
-                        content=content,
-                        content_type=content_type,
-                        final_url=final_url,
-                    )
+                content = resp.content
+                size = len(content)
+                if size > _MAX_BYTES:
+                    return DownloadResult(ok=False, error=f"File too large (>{_MAX_BYTES // 1024 // 1024} MB)")
+
+                logger.info("download_agent.done", url=url, size=size, type=content_type)
+                return DownloadResult(ok=True, content=content, content_type=content_type, final_url=final_url)
 
         except Exception as exc:
             last_error = str(exc)

@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     celery_broker_url: str = "redis://localhost:6379/2"
     celery_result_backend: str = "redis://localhost:6379/2"
 
+    # Local file storage — where uploaded PDFs are persisted for re-indexing
+    upload_storage_path: str = "/tmp/eios_uploads"
+
     # S3 object storage for document uploads
     s3_enabled: bool = False
     s3_bucket: str = "eios-documents"
@@ -81,6 +84,9 @@ class Settings(BaseSettings):
     llm_model: str = "claude-sonnet-4-6"
     llm_max_tokens: int = 4096
     anthropic_api_key: str = ""
+    # ADR-007 / ADR-012: dedicated extraction model (Haiku — cheap, fast, good at JSON)
+    # Overridable via EXTRACTION_LLM_MODEL env var for A/B testing
+    extraction_llm_model: str = "claude-haiku-4-5-20251001"
     openai_api_key: str = ""
     groq_api_key: str = ""
     gnews_api_key: str = ""

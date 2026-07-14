@@ -76,6 +76,8 @@ from interfaces.api.routers import (
     news_router,
     rag_router,
     documents_router,
+    company_intelligence_router,
+    scenario_router,
     notifications_router,
     operating_system_router,
     operations_router,
@@ -521,6 +523,8 @@ app.include_router(sector_risk_register_router, prefix=API_V1)
 app.include_router(news_router, prefix=API_V1)
 app.include_router(rag_router, prefix=API_V1)
 app.include_router(documents_router, prefix=API_V1)
+app.include_router(company_intelligence_router, prefix=API_V1)
+app.include_router(scenario_router, prefix=API_V1)
 app.include_router(automations_router, prefix=API_V1)
 app.include_router(pipeline_router, prefix=API_V1)
 app.include_router(grievance_router, prefix=API_V1)

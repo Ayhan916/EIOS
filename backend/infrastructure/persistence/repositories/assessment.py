@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.assessment import Assessment
 from domain.enums import ConfidenceLevel, EntityStatus, ReviewStatus
+from domain.exceptions import ImmutableEntityError
 from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.repositories.base import BaseRepository
 
@@ -10,6 +11,23 @@ from infrastructure.persistence.repositories.base import BaseRepository
 class SQLAssessmentRepository(BaseRepository[Assessment, AssessmentModel]):
     def __init__(self, session: AsyncSession) -> None:
         super().__init__(session, AssessmentModel)
+
+    async def save(self, entity: Assessment) -> Assessment:
+        """Persist an assessment, enforcing ADR-014 immutability after Approval.
+
+        Once review_status reaches APPROVED the only permitted write is
+        transitioning review_status to ARCHIVED (for archival). All other
+        mutations raise ImmutableEntityError, which the API layer converts to 409.
+        """
+        if entity.id:
+            current = await self._session.get(AssessmentModel, entity.id)
+            if current and current.review_status == ReviewStatus.APPROVED.value:
+                new_review_status = (
+                    entity.review_status.value if entity.review_status else None
+                )
+                if new_review_status != ReviewStatus.ARCHIVED.value:
+                    raise ImmutableEntityError("Assessment", entity.id)
+        return await super().save(entity)
 
     def _to_model(self, entity: Assessment) -> AssessmentModel:
         return AssessmentModel(

@@ -20,6 +20,7 @@ from application.scoring.supplier_scorer import (
     calculate_risk_score,
 )
 from domain.assessment import Assessment
+from domain.exceptions import EvidenceMissingError
 from domain.enums import (
     EntityStatus,
     NotificationType,
@@ -1428,6 +1429,7 @@ async def submit_for_review(
     repo: SQLAssessmentRepository = Depends(get_assessment_repo),
     audit_repo: SQLAuditEventRepository = Depends(get_audit_event_repo),
     user_repo: SQLUserRepository = Depends(get_user_repo),
+    finding_repo: SQLFindingRepository = Depends(get_finding_repo),
 ) -> AssessmentResponse:
     assessment = await repo.get_by_id(assessment_id)
     if assessment is None:
@@ -1438,6 +1440,20 @@ async def submit_for_review(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=f"Cannot submit for review from status '{assessment.review_status.value}'",
+        )
+
+    # ADR-003: Evidence First — block review submission if any finding lacks evidence
+    findings = await finding_repo.list_by_assessment(assessment_id)
+    hypothetical_ids = [
+        f.id for f in findings
+        if not getattr(f, "evidence_quality_status", "Hypothetical")
+        or getattr(f, "evidence_quality_status", "Hypothetical") == "Hypothetical"
+    ]
+    if hypothetical_ids:
+        err = EvidenceMissingError(hypothetical_ids)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(err),
         )
 
     assessment.review_status = ReviewStatus.IN_REVIEW

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.confidence_calculator import build_confidence_card_from_level
 from domain.enums import ConfidenceLevel, EntityStatus, RiskLevel
 from domain.risk import Risk
 from infrastructure.persistence.models.risk import RiskModel
@@ -36,6 +37,7 @@ class SQLRiskRepository(BaseRepository[Risk, RiskModel]):
         )
 
     def _to_domain(self, model: RiskModel) -> Risk:
+        level = ConfidenceLevel(model.confidence)
         return Risk(
             id=model.id,
             status=EntityStatus(model.status),
@@ -53,7 +55,8 @@ class SQLRiskRepository(BaseRepository[Risk, RiskModel]):
             sector_id=model.sector_id,
             probability=model.probability,
             impact=model.impact,
-            confidence=ConfidenceLevel(model.confidence),
+            confidence=level,
+            confidence_card=build_confidence_card_from_level(level),
             reasoning=model.reasoning,
             uncertainty=model.uncertainty,
             severity_score=model.severity_score,

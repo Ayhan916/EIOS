@@ -13,6 +13,9 @@ class AuditEvent(BaseEntity):
     Written once; never updated. Status field (from BaseEntity) is always
     ACTIVE for audit events — the status lifecycle does not apply here.
     The entity_type + entity_id pair identifies the object acted upon.
+
+    ADR-006: entry_hash is the SHA-256 of this entry chained to the previous
+    entry's hash. Set by the repository on save — callers leave it as None.
     """
 
     action: str
@@ -23,3 +26,5 @@ class AuditEvent(BaseEntity):
     outcome: str = "success"
     detail: str | None = None
     event_metadata: dict[str, Any] = field(default_factory=dict)
+    previous_hash: str | None = None
+    entry_hash: str | None = None

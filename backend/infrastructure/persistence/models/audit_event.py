@@ -18,3 +18,6 @@ class AuditEventModel(BaseModel):
     outcome: Mapped[str] = mapped_column(String(20), nullable=False, default="success")
     detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     event_metadata: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    # ADR-006: SHA-256 hash chain — both columns set by repository on save
+    previous_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    entry_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)

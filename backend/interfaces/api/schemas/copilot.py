@@ -14,6 +14,8 @@ class CitationSchema(BaseModel):
     citation_type: str
     object_id: str
     relevance: str = "retrieved"
+    label: str | None = None       # e.g. "BMW Group Report 2025"
+    excerpt: str | None = None     # first ~400 chars of the source chunk
 
 
 class AskRequest(BaseModel):
@@ -21,6 +23,11 @@ class AskRequest(BaseModel):
     conversation_id: str | None = None
     context_type: str = "general"
     context_id: str | None = None
+    # RAG document filters — restrict knowledge base to specific documents
+    rag_company_name: str | None = None
+    rag_year_from: int | None = None
+    rag_year_to: int | None = None
+    rag_doc_class: str | None = None
 
 
 class CopilotAnswerResponse(BaseModel):
