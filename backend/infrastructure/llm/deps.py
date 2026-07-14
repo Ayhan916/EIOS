@@ -3,6 +3,10 @@ LLM provider factory and FastAPI dependency.
 
 Provider is selected from config (LLM_PROVIDER env var).
 Adding a new provider requires only: implementing LLMProvider Protocol + adding a branch here.
+
+ADR-012 Multi-Model Routing:
+  _provider           → Sonnet (Copilot, complex reasoning)
+  _extraction_provider → Haiku  (metric/signal extraction, classification)
 """
 
 import structlog
@@ -13,6 +17,7 @@ from shared.config import settings
 logger = structlog.get_logger(__name__)
 
 _provider: LLMProvider | None = None
+_extraction_provider: LLMProvider | None = None
 
 
 def init_llm_provider() -> LLMProvider:
@@ -77,3 +82,46 @@ def get_llm_provider() -> LLMProvider:
             "Call init_llm_provider() at startup, or set ANTHROPIC_API_KEY."
         )
     return _provider
+
+
+def init_extraction_llm_provider() -> LLMProvider:
+    """Initialise the dedicated Haiku extraction provider (ADR-007).
+
+    Always uses AnthropicLLMProvider with the extraction model (Haiku by default).
+    Requires ANTHROPIC_API_KEY. Falls back to the main provider if key is absent.
+    """
+    global _extraction_provider
+    if _extraction_provider is not None:
+        return _extraction_provider
+
+    if not settings.anthropic_api_key:
+        logger.warning(
+            "extraction_provider_fallback",
+            reason="ANTHROPIC_API_KEY not set — extraction will use main LLM provider",
+        )
+        _extraction_provider = init_llm_provider()
+        return _extraction_provider
+
+    from infrastructure.llm.anthropic_provider import AnthropicLLMProvider
+
+    _extraction_provider = AnthropicLLMProvider(
+        api_key=settings.anthropic_api_key,
+        model=settings.extraction_llm_model,
+    )
+    logger.info(
+        "extraction_provider_ready",
+        model=settings.extraction_llm_model,
+    )
+    return _extraction_provider
+
+
+def get_extraction_llm_provider() -> LLMProvider:
+    """Return the extraction LLM provider, lazily initialising if needed (ADR-007).
+
+    Lazy init allows standalone scripts (run_extract_all.py) to call this
+    without going through the FastAPI lifespan.
+    """
+    global _extraction_provider
+    if _extraction_provider is None:
+        return init_extraction_llm_provider()
+    return _extraction_provider

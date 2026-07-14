@@ -85,6 +85,11 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import type { SupplierTier, SupplierStatus, SupplierUpdate } from "@/types/api";
 import { RagAnalyzeWidget } from "@/components/rag/RagAnalyzeWidget";
+import dynamic from "next/dynamic";
+const RiskScoreExplanationCard = dynamic(
+  () => import("@/components/suppliers/risk-score-explanation-card").then((m) => m.RiskScoreExplanationCard),
+  { ssr: false, loading: () => null },
+);
 import { RagSimulateWidget } from "@/components/rag/RagSimulateWidget";
 import { RagHistoryWidget } from "@/components/rag/RagHistoryWidget";
 
@@ -2815,6 +2820,9 @@ export default function SupplierDetailPage() {
             <div className="flex justify-center py-12"><Spinner size="lg" /></div>
           ) : (
             <div className="space-y-6">
+              {/* Risk Score Explanation (E5-F1) */}
+              <RiskScoreExplanationCard supplierId={id} />
+
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 {[
                   { label: t("suppliers.totalAssessments"), value: profile.total_assessments, icon: FileText, sub: t("suppliers.approvedCount").replace("{n}", String(profile.approved_assessments)), color: "text-blue-600", href: `/assessments?supplier_id=${id}` },

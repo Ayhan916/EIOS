@@ -39,12 +39,16 @@ from .freshness_tracker import (
     format_freshness_for_prompt,
     freshness_summary_dict,
 )
+from .context_enricher import enrich_object_context, format_object_context
 from .intent_detector import detect_intent
+from .quality_filter import filter_and_rank
 from .retrieval.base import RetrievalResult
 from .retrieval.compliance_retriever import retrieve_compliance_context
 from .retrieval.disclosure_retriever import retrieve_disclosure_context
+from .retrieval.document_retriever import retrieve_document_context
 from .retrieval.due_diligence_retriever import retrieve_due_diligence_context
 from .retrieval.executive_retriever import retrieve_executive_context
+from .retrieval.metrics_retriever import retrieve_metrics_context
 from .retrieval.supplier_retriever import retrieve_supplier_context
 
 logger = structlog.get_logger(__name__)
@@ -60,11 +64,34 @@ You assist sustainability professionals with questions about ESG risks, supplier
 
 Rules:
 1. Answer ONLY from the CONTEXT DATA provided below. Do not use outside knowledge.
-2. If the data does not contain enough information to answer, say so explicitly.
-3. Cite sources using [Type:id] notation (e.g. [Supplier:s-123], [Finding:f-456]).
-4. Be concise and evidence-backed.
-5. Never speculate about compliance status. Only state what the data shows.
-6. Do not hallucinate supplier names, IDs, or regulation text.
+2. If the data does not contain enough information to answer, say so explicitly. Do NOT fill gaps with plausible-sounding estimates.
+3. NEVER invent specific numbers, percentages, targets, or dates. If an exact figure is not present in the context, say "the exact value is not in the provided documents."
+4. Do NOT include any citation markers, document IDs, or references in your answer text. Answer naturally without any [Type:id] tags.
+5. Be concise and evidence-backed.
+6. Never speculate about compliance status. Only state what the data shows.
+7. Do not hallucinate supplier names, IDs, or regulation text.
+
+CHARTS AND DIAGRAMS:
+When the user asks for a chart, diagram, graph, or visual representation, embed it directly in your answer using one of these formats:
+
+For data charts (bar, line, pie) use a ```chart code block with JSON:
+```chart
+{{"type": "bar", "title": "Chart title", "unit": "%", "data": [{{"label": "2020", "Wert": 10}}, {{"label": "2021", "Wert": 15}}], "keys": ["Wert"]}}
+```
+
+For flow/process/structure diagrams use a ```mermaid code block.
+CRITICAL: Every node and every connection MUST be on its own separate line. Never put two nodes or arrows on the same line.
+Correct example:
+```mermaid
+graph TD
+    A[Start] --> B[Step 1]
+    B --> C[Step 2]
+    C --> D[End]
+```
+Wrong (never do this): graph TD A[Start] --> B[Step] B --> C[End]
+
+Chart types: "bar" (Balken), "line" (Linie), "pie" (Kreis).
+Only generate charts when data is available in the context. Never invent chart data.
 
 {citation_hint}
 {freshness_note}
@@ -79,8 +106,42 @@ async def _route_retrieval(
     intent: CopilotIntentType,
     org_id: str,
     session: AsyncSession,
+    question: str = "",
+    rag_company_name: str | None = None,
+    rag_year_from: int | None = None,
+    rag_year_to: int | None = None,
+    rag_doc_class: str | None = None,
 ) -> list[RetrievalResult]:
     results: list[RetrievalResult] = []
+
+    # Document knowledge base first — highest priority in context budget
+    has_filters = any([rag_company_name, rag_year_from, rag_year_to, rag_doc_class])
+    if question:
+        doc_result = await retrieve_document_context(
+            question=question,
+            org_id=org_id,
+            session=session,
+            company_name=rag_company_name,
+            year_from=rag_year_from,
+            year_to=rag_year_to,
+            doc_class=rag_doc_class,
+            top_k=12 if has_filters else 10,
+        )
+        if doc_result.data:
+            results.append(doc_result)
+
+    # Structured KPI data — always included when company filter is active,
+    # so quantitative questions (revenue, CO2, employees…) are grounded in SQL facts
+    if rag_company_name or rag_year_from or rag_year_to:
+        metrics_result = await retrieve_metrics_context(
+            org_id=org_id,
+            session=session,
+            company_name=rag_company_name,
+            year_from=rag_year_from,
+            year_to=rag_year_to,
+        )
+        if metrics_result.data:
+            results.append(metrics_result)
 
     if intent in (CopilotIntentType.RISK, CopilotIntentType.ACTION):
         results.append(await retrieve_supplier_context(org_id, session))
@@ -115,6 +176,12 @@ async def ask(
     session: AsyncSession,
     llm: LLMProvider,
     max_tokens: int = 1024,
+    rag_company_name: str | None = None,
+    rag_year_from: int | None = None,
+    rag_year_to: int | None = None,
+    rag_doc_class: str | None = None,
+    context_type: str = "general",
+    context_id: str | None = None,
 ) -> tuple[CopilotMessage, CopilotMessage]:
     """Process a copilot question and return (user_message, assistant_message).
 
@@ -129,15 +196,25 @@ async def ask(
     intent = detect_intent(question)
 
     # 2. Retrieve context (with freshness metadata)
-    retrieved = await _route_retrieval(intent, org_id, session)
+    retrieved = await _route_retrieval(
+        intent, org_id, session,
+        question=question,
+        rag_company_name=rag_company_name,
+        rag_year_from=rag_year_from,
+        rag_year_to=rag_year_to,
+        rag_doc_class=rag_doc_class,
+    )
 
-    # 3. Freshness analysis
+    # 3. Quality filter — remove duplicates, short chunks, cap per-document diversity
+    retrieved = filter_and_rank(retrieved)
+
+    # 4. Freshness analysis
     freshness: FreshnessReport = analyze_freshness(retrieved)
 
-    # 4. Pre-LLM contradiction detection
+    # 5. Pre-LLM contradiction detection
     contradictions: list[ContradictionRecord] = detect_contradictions(retrieved)
 
-    # 5. Budget-aware context assembly
+    # 6. Budget-aware context assembly
     context_str, budget = assemble_context_with_budget(retrieved)
     citation_map = build_citation_map(retrieved)
 
@@ -224,12 +301,19 @@ async def ask(
     contradiction_note = format_contradictions_for_prompt(contradictions)
     budget_note = format_budget_note(budget)
 
+    # Inject specific object context when Copilot is embedded in a detail page
+    object_context_note = ""
+    if context_id and context_type and context_type != "general":
+        obj = await enrich_object_context(context_type, context_id, org_id, session)
+        if obj:
+            object_context_note = "\n" + format_object_context(obj) + "\n"
+
     system = _SYSTEM_PROMPT.format(
         citation_hint=citation_hint,
         freshness_note=f"\n{freshness_note}\n" if freshness_note else "",
         contradiction_note=f"\n{contradiction_note}\n" if contradiction_note else "",
         budget_note=f"\n{budget_note}\n" if budget_note else "",
-        context=context_str,
+        context=object_context_note + context_str,
     )
 
     # 9. LLM call

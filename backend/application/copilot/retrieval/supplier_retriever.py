@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.finding import FindingModel
 from infrastructure.persistence.models.supplier import SupplierModel
 from infrastructure.persistence.models.supplier_score import SupplierScoreModel
@@ -44,25 +45,27 @@ async def retrieve_supplier_context(
     suppliers = (await session.execute(suppliers_stmt)).scalars().all()
     supplier_map = {s.id: s for s in suppliers}
 
-    # Critical/high findings for these suppliers
+    # Critical/high findings for these suppliers (join through AssessmentModel)
     findings_stmt = (
-        select(FindingModel)
+        select(FindingModel, AssessmentModel.supplier_id.label("assessment_supplier_id"))
+        .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
         .where(
-            FindingModel.organization_id == org_id,
-            FindingModel.supplier_id.in_(supplier_ids),
+            AssessmentModel.organization_id == org_id,
+            AssessmentModel.supplier_id.in_(supplier_ids),
             FindingModel.severity.in_(list(_CRITICAL_SEVERITY)),
         )
         .limit(limit * 3)
     )
-    findings = (await session.execute(findings_stmt)).scalars().all()
+    finding_rows = (await session.execute(findings_stmt)).all()
+    # finding_rows is a list of (FindingModel, supplier_id) tuples
 
     data = []
     for sc in scores:
         sup = supplier_map.get(sc.supplier_id)
         sup_findings = [
             {"id": f.id, "title": f.title, "severity": f.severity, "category": f.category}
-            for f in findings
-            if f.supplier_id == sc.supplier_id
+            for f, asmt_sup_id in finding_rows
+            if asmt_sup_id == sc.supplier_id
         ]
         data.append(
             {

@@ -1,12 +1,15 @@
 """Document Parser Agent — PDF/HTML → structured text chunks.
 
 Supports:
-  - PDF via PyMuPDF (fitz) — section-aware chunking
+  - PDF via Docling (primary) — tables as Markdown, section-aware, OCR
+  - PDF via PyMuPDF (fallback) — fast, no table support
   - HTML via BeautifulSoup — main content extraction
   - Plain text fallback
 
-Produces chunks of ~800 tokens with 100-token overlap, preserving
-section boundaries where possible.
+Docling produces structured Markdown where tables are preserved as
+Markdown tables, sections are headed with ##, and images appear as
+<!-- image --> placeholders. Semantic chunking splits on section
+boundaries rather than word count alone.
 """
 
 from __future__ import annotations
@@ -23,6 +26,19 @@ logger = structlog.get_logger(__name__)
 _CHUNK_SIZE = 800       # target words per chunk
 _CHUNK_OVERLAP = 80     # overlap words
 
+# ── Docling singleton ─────────────────────────────────────────────────────────
+_docling_converter = None
+
+
+def _get_docling_converter():
+    global _docling_converter
+    if _docling_converter is None:
+        from docling.document_converter import DocumentConverter
+        logger.info("doc_parser.docling_init")
+        _docling_converter = DocumentConverter()
+        logger.info("doc_parser.docling_ready")
+    return _docling_converter
+
 
 @dataclass
 class ParsedDocument:
@@ -32,6 +48,7 @@ class ParsedDocument:
     file_hash: str
     chunks: list[str] = field(default_factory=list)
     sections: list[str] = field(default_factory=list)  # section headings found
+    chunk_pages: list[int] = field(default_factory=list)  # page_number per chunk (0 = unknown)
 
 
 @dataclass
@@ -42,7 +59,72 @@ class ParseResult:
 
 
 def parse_pdf(content: bytes) -> ParseResult:
-    """Parse PDF bytes into structured chunks."""
+    """Parse PDF bytes — tries Docling first, falls back to PyMuPDF."""
+    result = parse_pdf_docling(content)
+    if result.ok:
+        return result
+    logger.warning("doc_parser.docling_failed_fallback", error=result.error)
+    return _parse_pdf_pymupdf(content)
+
+
+def parse_pdf_docling(content: bytes) -> ParseResult:
+    """Parse PDF using Docling — preserves tables, sections, structure."""
+    try:
+        import tempfile, os
+        from docling.datamodel.base_models import DocumentStream
+
+        file_hash = hashlib.sha256(content).hexdigest()[:16]
+        converter = _get_docling_converter()
+
+        # Feed bytes via DocumentStream (no temp file needed)
+        buf = io.BytesIO(content)
+        source = DocumentStream(name="document.pdf", stream=buf)
+        result = converter.convert(source)
+        doc = result.document
+
+        # Export to Markdown — tables become | col | col | rows
+        markdown = doc.export_to_markdown()
+        pages = len(list(doc.pages)) if doc.pages else 1
+
+        # Extract sections from Markdown headings
+        sections = re.findall(r"^#{1,3}\s+(.+)$", markdown, re.MULTILINE)
+
+        # Detect language
+        language = _detect_language(markdown[:3000])
+
+        # Extract title: first H1 or H2
+        title_match = re.search(r"^#{1,2}\s+(.+)$", markdown, re.MULTILINE)
+        title = title_match.group(1).strip() if title_match else None
+
+        # Page-aware chunking: track which PDF page each chunk originates from
+        chunks, chunk_pages = _chunk_markdown_page_aware(doc, markdown, pages)
+
+        logger.info(
+            "doc_parser.docling_done",
+            pages=pages,
+            chunks=len(chunks),
+            sections=len(sections),
+            hash=file_hash,
+        )
+        return ParseResult(
+            ok=True,
+            document=ParsedDocument(
+                title=title,
+                language=language,
+                pages=pages,
+                file_hash=file_hash,
+                chunks=chunks,
+                chunk_pages=chunk_pages,
+                sections=sections[:50],
+            ),
+        )
+    except Exception as exc:
+        logger.error("doc_parser.docling_error", error=str(exc))
+        return ParseResult(ok=False, error=str(exc))
+
+
+def _parse_pdf_pymupdf(content: bytes) -> ParseResult:
+    """PyMuPDF fallback — fast, no table support."""
     try:
         import fitz  # PyMuPDF
     except ImportError:
@@ -170,6 +252,96 @@ def parse_text(content: str) -> ParseResult:
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
+def _chunk_markdown(markdown: str) -> list[str]:
+    """Semantic chunking for Docling Markdown output.
+
+    Strategy:
+    - Split on H1/H2/H3 headings → one section per candidate chunk
+    - Tables are never split (kept as a whole unit)
+    - Sections longer than _CHUNK_SIZE words are further split by paragraph
+    - Adjacent small sections are merged until close to _CHUNK_SIZE
+    """
+    # Split into blocks: headings start new sections, tables are atomic
+    lines = markdown.split("\n")
+    sections: list[str] = []
+    current: list[str] = []
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+
+        # New section heading → flush current
+        if re.match(r"^#{1,3}\s+", line):
+            if current:
+                sections.append("\n".join(current).strip())
+            current = [line]
+
+        # Table start → collect entire table as one atomic block
+        elif line.startswith("|"):
+            table_lines = []
+            while i < len(lines) and (lines[i].startswith("|") or lines[i].strip() == ""):
+                if lines[i].startswith("|"):
+                    table_lines.append(lines[i])
+                i += 1
+            table_block = "\n".join(table_lines)
+            # If table fits in current chunk, append; else flush first
+            combined = "\n".join(current) + "\n" + table_block
+            if len(combined.split()) <= _CHUNK_SIZE:
+                current.append(table_block)
+            else:
+                if current:
+                    sections.append("\n".join(current).strip())
+                current = [table_block]
+            continue
+        else:
+            current.append(line)
+        i += 1
+
+    if current:
+        sections.append("\n".join(current).strip())
+
+    # Remove empty sections and image-only sections
+    sections = [s for s in sections if len(s.split()) > 10 and not re.fullmatch(r"(\s*<!--\s*image\s*-->\s*)+", s)]
+
+    # Merge small adjacent sections, split oversized ones
+    chunks: list[str] = []
+    buffer = ""
+
+    for section in sections:
+        word_count = len(section.split())
+
+        # Oversized section → split by paragraph
+        if word_count > _CHUNK_SIZE:
+            if buffer:
+                chunks.append(buffer.strip())
+                buffer = ""
+            paragraphs = re.split(r"\n{2,}", section)
+            para_buf = ""
+            for para in paragraphs:
+                if len((para_buf + " " + para).split()) <= _CHUNK_SIZE:
+                    para_buf = (para_buf + "\n\n" + para).strip()
+                else:
+                    if para_buf:
+                        chunks.append(para_buf.strip())
+                    para_buf = para
+            if para_buf:
+                chunks.append(para_buf.strip())
+            continue
+
+        # Fits in buffer → merge
+        if len((buffer + "\n\n" + section).split()) <= _CHUNK_SIZE:
+            buffer = (buffer + "\n\n" + section).strip()
+        else:
+            if buffer:
+                chunks.append(buffer.strip())
+            buffer = section
+
+    if buffer:
+        chunks.append(buffer.strip())
+
+    return [c for c in chunks if len(c.split()) > 10]
+
+
 def _chunk_text(text: str) -> list[str]:
     """Split text into overlapping word-based chunks."""
     words = text.split()
@@ -206,3 +378,76 @@ def _extract_title(first_parts: list[str]) -> str | None:
         if 10 < len(part) < 200 and not part.startswith(("www.", "http")):
             return part
     return None
+
+
+def _chunk_markdown_page_aware(doc: object, markdown: str, total_pages: int) -> tuple[list[str], list[int]]:
+    """Chunk Markdown and assign each chunk a PDF page number.
+
+    Strategy:
+    1. Build a page-boundary map: character offsets in the full markdown where
+       each page starts, derived from Docling's element provenance.
+    2. Chunk the markdown as before.
+    3. For each chunk, look up which page its content starts on.
+    """
+    # Build page-start offsets from Docling element provenance
+    # Each element has prov[0].page_no and its text appears somewhere in markdown
+    page_offsets: list[tuple[int, int]] = []  # (char_offset, page_no)
+    try:
+        for item, _level in doc.iterate_items():  # type: ignore[attr-defined]
+            provs = getattr(item, "prov", None)
+            if not provs:
+                continue
+            page_no = getattr(provs[0], "page_no", None)
+            if page_no is None:
+                continue
+            # Get text of this element to locate it in the markdown
+            item_text = ""
+            if hasattr(item, "text"):
+                item_text = item.text or ""
+            elif hasattr(item, "export_to_markdown"):
+                try:
+                    item_text = item.export_to_markdown()
+                except Exception:
+                    pass
+            if len(item_text) >= 10:
+                pos = markdown.find(item_text[:40])
+                if pos >= 0:
+                    page_offsets.append((pos, page_no))
+    except Exception:
+        pass
+
+    page_offsets.sort(key=lambda x: x[0])
+
+    def page_at_offset(char_pos: int) -> int:
+        """Return the PDF page number for a given character offset."""
+        if not page_offsets:
+            return 1
+        result = page_offsets[0][1]
+        for offset, pno in page_offsets:
+            if offset <= char_pos:
+                result = pno
+            else:
+                break
+        return result
+
+    # Chunk the flat markdown (existing logic)
+    chunks = _chunk_markdown(markdown)
+
+    # Map each chunk to its dominant page (midpoint of the chunk, not its start)
+    chunk_pages: list[int] = []
+    search_from = 0
+    for chunk in chunks:
+        # Find where this chunk appears in the full markdown
+        pos = markdown.find(chunk[:60], search_from)
+        if pos < 0:
+            pos = markdown.find(chunk[:30])
+        if pos >= 0:
+            # Use the midpoint so that a chunk spanning pages lands on the correct one
+            mid = pos + len(chunk) // 2
+            page_no = page_at_offset(mid)
+            search_from = pos + len(chunk)
+        else:
+            page_no = chunk_pages[-1] if chunk_pages else 1
+        chunk_pages.append(page_no)
+
+    return chunks, chunk_pages

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 
+from domain.exceptions import EvidenceRequiredError
 from domain.finding import Finding
 from domain.user import User
 from infrastructure.persistence.repositories import (
@@ -71,6 +72,15 @@ async def create_finding(
     current_user: User = Depends(get_current_user),
     repo: SQLFindingRepository = Depends(get_finding_repo),
 ) -> FindingResponse:
+    # ADR-003: Evidence First — reject findings without at least one evidence reference
+    if not body.evidence_ids:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=(
+                "A Finding must reference at least one piece of evidence. "
+                "Provide 'evidence_ids' in the request body."
+            ),
+        )
     finding = Finding(
         title=body.title,
         description=body.description,
@@ -82,6 +92,7 @@ async def create_finding(
         uncertainty=body.uncertainty,
         severity_score=body.severity_score,
         probability_score=body.probability_score,
+        evidence_ids=body.evidence_ids,
         created_by=current_user.id,
     )
     saved = await repo.save(finding)

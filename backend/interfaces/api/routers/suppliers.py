@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import asyncio
 import re
+import uuid
 from datetime import UTC, datetime
 
 import httpx
@@ -1581,3 +1582,101 @@ async def get_supplier_benchmark(
         peers_evaluated=peers_evaluated,
         industry=supplier.industry or "",
     )
+
+
+# ── Document Upload Shortcut ───────────────────────────────────────────────────
+
+@router.post(
+    "/{supplier_id}/upload",
+    status_code=status.HTTP_201_CREATED,
+    summary="Upload a document directly to a supplier (one-step shortcut)",
+)
+async def upload_supplier_document(
+    supplier_id: str,
+    background_tasks: BackgroundTasks,
+    file: UploadFile = File(...),
+    doc_type: str = Query(..., description="annual_report | sustainability_report | audit_report | csrd_report | csddd_disclosure"),
+    report_year: int | None = Query(default=None),
+    title: str | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """One-step document upload for a supplier.
+
+    Automatically creates a DocumentSource with the supplier's name and
+    supplier_id so that extracted metrics and signals are always linked.
+    Equivalent to: POST /documents/sources (with supplier_id) + POST /upload.
+    """
+    from infrastructure.persistence.models.document_pipeline import DocumentSourceModel  # noqa: PLC0415
+    from application.rag.document_ingestion import ingest_uploaded_file_fast, process_document_background  # noqa: PLC0415
+
+    org_id = current_user.organization_id
+
+    supplier = (await db.execute(
+        select(SupplierModel).where(
+            SupplierModel.id == supplier_id,
+            SupplierModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not supplier:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Supplier not found")
+
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+
+    content = await file.read()
+    if len(content) == 0:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(content) > 100 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large (max 100 MB)")
+
+    fn_lower = (file.filename or "").lower()
+    content_type = "pdf" if fn_lower.endswith(".pdf") else "html"
+
+    # Create an ephemeral upload-only source (is_active=False → not crawled)
+    now = datetime.now(UTC)
+    source = DocumentSourceModel(
+        id=str(uuid.uuid4()),
+        organization_id=org_id,
+        supplier_id=supplier_id,
+        company_name=supplier.name,
+        doc_type=doc_type,
+        source_url=f"upload://{file.filename}",
+        schedule="manual",
+        is_active=False,
+        created_at=now,
+        updated_at=now,
+    )
+    db.add(source)
+    await db.flush()
+
+    stats = await ingest_uploaded_file_fast(
+        source=source,
+        content=content,
+        content_type=content_type,
+        filename=file.filename,
+        session=db,
+        report_year=report_year,
+        title_override=title,
+    )
+
+    bg_args = stats.pop("background_args", None)
+    if bg_args:
+        await db.commit()
+        background_tasks.add_task(process_document_background, **bg_args)
+
+    logger.info(
+        "supplier.document_uploaded",
+        supplier_id=supplier_id,
+        supplier_name=supplier.name,
+        doc_type=doc_type,
+        filename=file.filename,
+    )
+    return {
+        "supplier_id": supplier_id,
+        "supplier_name": supplier.name,
+        "source_id": source.id,
+        "filename": file.filename,
+        "doc_type": doc_type,
+        "stats": stats,
+    }

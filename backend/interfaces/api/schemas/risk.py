@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 from domain.enums import ConfidenceLevel, RiskLevel
 
 from .base import EntityResponse
+from .finding import ConfidenceCardOut
 
 
 class RiskCreate(BaseModel):
@@ -39,6 +40,8 @@ class RiskResponse(EntityResponse):
     probability: float | None = None
     impact: float | None = None
     confidence: str
+    # ADR-015 E4-F1: structured confidence card (includes limitations as UI warnings)
+    confidence_card: ConfidenceCardOut | None = None
     reasoning: str | None = None
     uncertainty: str | None = None
     status: str = "Active"

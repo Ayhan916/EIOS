@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from infrastructure.persistence.models.assessment import AssessmentModel
 from infrastructure.persistence.models.due_diligence import DueDiligenceReportModel
 from infrastructure.persistence.models.recommendation import RecommendationModel
 
@@ -31,12 +32,13 @@ async def retrieve_due_diligence_context(
     )
     reports = (await session.execute(reports_stmt)).scalars().all()
 
-    # Overdue open/in_progress recommendations
+    # Overdue open/in_progress recommendations (join through AssessmentModel for org filter)
     today = date.today()
     overdue_stmt = (
         select(RecommendationModel)
+        .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
         .where(
-            RecommendationModel.organization_id == org_id,
+            AssessmentModel.organization_id == org_id,
             RecommendationModel.action_status.in_(list(_OVERDUE_STATUSES)),
             RecommendationModel.due_date < today,
         )

@@ -72,7 +72,7 @@ async def retrieve(
     result = await session.execute(sql, params)
     rows = result.mappings().all()
 
-    return [
+    hits = [
         {
             "id": r["id"],
             "supplier_id": r["supplier_id"],
@@ -87,3 +87,64 @@ async def retrieve(
         }
         for r in rows
     ]
+
+    # ADR-009: for child chunks, load and attach parent context
+    return await _attach_parent_context(hits, session)
+
+
+async def _attach_parent_context(hits: list[dict], session: AsyncSession) -> list[dict]:
+    """For child-level chunks, replace content with parent context + child excerpt.
+
+    Child chunks produced by parent-child chunking carry a parent_chunk_id.
+    Sending the full parent to the LLM ensures table values and labels
+    are never split across chunk boundaries.
+    """
+    child_ids = [h["id"] for h in hits]
+    if not child_ids:
+        return hits
+
+    # Fetch chunk_level and parent_chunk_id for all hits in one query
+    meta_sql = text("""
+        SELECT id, chunk_level, parent_chunk_id
+        FROM rag_documents
+        WHERE id = ANY(:ids)
+    """)
+    meta_rows = {
+        r["id"]: r
+        for r in (await session.execute(meta_sql, {"ids": child_ids})).mappings().all()
+    }
+
+    parent_ids = [
+        r["parent_chunk_id"]
+        for r in meta_rows.values()
+        if r.get("chunk_level") == "child" and r.get("parent_chunk_id")
+    ]
+
+    if not parent_ids:
+        return hits
+
+    # Load parent content in one query
+    parent_sql = text("""
+        SELECT id, content FROM rag_documents WHERE id = ANY(:ids)
+    """)
+    parent_map = {
+        r["id"]: r["content"]
+        for r in (await session.execute(parent_sql, {"ids": parent_ids})).mappings().all()
+    }
+
+    enriched = []
+    for hit in hits:
+        meta = meta_rows.get(hit["id"], {})
+        if meta.get("chunk_level") == "child" and meta.get("parent_chunk_id"):
+            parent_content = parent_map.get(meta["parent_chunk_id"])
+            if parent_content:
+                hit = {
+                    **hit,
+                    "parent_content": parent_content,
+                    # Replace content sent to LLM with the full parent window
+                    "content": parent_content,
+                    "child_excerpt": hit["content"],
+                }
+        enriched.append(hit)
+
+    return enriched

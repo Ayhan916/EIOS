@@ -37,24 +37,39 @@ async def retrieve_executive_context(
     ss_rows = (await session.execute(ss_stmt)).all()
     risk_dist = {r.risk_band: r.count for r in ss_rows}
 
-    # Critical/high finding count
-    finding_stmt = select(func.count()).where(
-        FindingModel.organization_id == org_id,
-        FindingModel.severity.in_(list(_CRITICAL_SEVERITY)),
+    # Critical/high finding count (findings belong to assessments, join for org filter)
+    finding_stmt = (
+        select(func.count())
+        .select_from(FindingModel)
+        .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            FindingModel.severity.in_(list(_CRITICAL_SEVERITY)),
+        )
     )
     critical_findings = (await session.execute(finding_stmt)).scalar_one_or_none() or 0
 
-    # Open risk count
-    risk_stmt = select(func.count()).where(
-        RiskModel.organization_id == org_id,
-        RiskModel.risk_level.in_(list(_CRITICAL_SEVERITY)),
+    # Open risk count (risks join through assessments)
+    risk_stmt = (
+        select(func.count())
+        .select_from(RiskModel)
+        .join(AssessmentModel, RiskModel.assessment_id == AssessmentModel.id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            RiskModel.risk_level.in_(list(_CRITICAL_SEVERITY)),
+        )
     )
     critical_risks = (await session.execute(risk_stmt)).scalar_one_or_none() or 0
 
-    # Open recommendations
-    open_rec_stmt = select(func.count()).where(
-        RecommendationModel.organization_id == org_id,
-        RecommendationModel.action_status.in_(list(_OPEN_STATUSES)),
+    # Open recommendations (join through assessments)
+    open_rec_stmt = (
+        select(func.count())
+        .select_from(RecommendationModel)
+        .join(AssessmentModel, RecommendationModel.assessment_id == AssessmentModel.id)
+        .where(
+            AssessmentModel.organization_id == org_id,
+            RecommendationModel.action_status.in_(list(_OPEN_STATUSES)),
+        )
     )
     open_recs = (await session.execute(open_rec_stmt)).scalar_one_or_none() or 0
 
@@ -70,8 +85,9 @@ async def retrieve_executive_context(
     # Top 5 critical findings for context
     top_findings_stmt = (
         select(FindingModel)
+        .join(AssessmentModel, FindingModel.assessment_id == AssessmentModel.id)
         .where(
-            FindingModel.organization_id == org_id,
+            AssessmentModel.organization_id == org_id,
             FindingModel.severity == "Critical",
         )
         .order_by(FindingModel.created_at.desc(), FindingModel.id.asc())

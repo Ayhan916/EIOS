@@ -14,6 +14,8 @@ class RetrievalResult:
     provenance: human-readable description of what was retrieved
     retriever: adapter name for audit trail
     freshness_metadata: per-object age data for the Data Freshness Layer (M33.2)
+    context_text: optional pre-formatted plain text — used instead of JSON
+                  serialisation of data when set (e.g. structured KPI tables)
     """
 
     retriever: str
@@ -22,3 +24,4 @@ class RetrievalResult:
     source_ids: list[str] = field(default_factory=list)
     citation_type: str = ""
     freshness_metadata: list[dict] = field(default_factory=list)
+    context_text: str | None = None

@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from application.confidence_calculator import build_confidence_card_from_level
 from domain.enums import ConfidenceLevel, EntityStatus, EvidenceStrength, RiskLevel
 from domain.finding import Finding
 from infrastructure.persistence.models.finding import FindingModel
@@ -35,6 +36,7 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
         )
 
     def _to_domain(self, model: FindingModel) -> Finding:
+        level = ConfidenceLevel(model.confidence)
         return Finding(
             id=model.id,
             status=EntityStatus(model.status),
@@ -49,7 +51,8 @@ class SQLFindingRepository(BaseRepository[Finding, FindingModel]):
             assessment_id=model.assessment_id,
             category=model.category,
             severity=RiskLevel(model.severity),
-            confidence=ConfidenceLevel(model.confidence),
+            confidence=level,
+            confidence_card=build_confidence_card_from_level(level),
             reasoning=model.reasoning,
             uncertainty=model.uncertainty,
             evidence_strength=EvidenceStrength(model.evidence_strength)

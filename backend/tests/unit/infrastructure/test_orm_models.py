@@ -308,6 +308,16 @@ from infrastructure.persistence.models.surveillance import (  # noqa: F401
 )
 from infrastructure.persistence.models.threshold_monitor import CompanyProfileModel  # noqa: F401
 
+# RAG + Intelligence pipeline models (E2-F3, E3-F3, E5-F3) — imported explicitly
+# so that test_total_table_count is deterministic regardless of test execution order.
+from infrastructure.persistence.models.rag_documents import RagDocumentModel  # noqa: F401
+from infrastructure.persistence.models.document_pipeline import DocumentFileModel, DocumentSourceModel  # noqa: F401
+from infrastructure.persistence.models.company_intelligence import CompanyMetricModel, CompanySignalModel  # noqa: F401
+from infrastructure.persistence.models.supply_chain_edge import SupplyChainEdgeModel  # noqa: F401
+from infrastructure.persistence.models.prompt_version import PromptVersionModel  # noqa: F401
+from infrastructure.persistence.models.historical_knowledge import HistoricalKnowledgeModel  # noqa: F401
+from infrastructure.persistence.models.entity_alias import EntityAliasModel  # noqa: F401
+
 EXPECTED_ENTITY_TABLES = {
     "organizations",
     "users",
@@ -626,6 +636,16 @@ EXPECTED_ENTITY_TABLES = {
     "sme_profiles",
     "sme_support_programs",
     "sme_support_measures",
+    # RAG + Intelligence pipeline tables (E2-F3, E3-F3, E5-F3)
+    "historical_knowledge",
+    "rag_documents",
+    "document_files",
+    "document_sources",
+    "company_metrics",
+    "company_signals",
+    "supply_chain_edges",
+    "prompt_versions",
+    "entity_aliases",
 }
 
 EXPECTED_ASSOCIATION_TABLES = {
@@ -665,8 +685,8 @@ class TestTableRegistration:
 
     def test_total_table_count(self) -> None:
         assert (
-            len(Base.metadata.tables) == 304
-        )  # 231 baseline +30 supply-chain/material/product +11 CSDDD Phase4 +32 CSDDD due-diligence domain
+            len(Base.metadata.tables) == 313
+        )  # 231 baseline +30 supply-chain/material/product +11 CSDDD Phase4 +32 CSDDD due-diligence domain +9 RAG/Intelligence/EntityLinker pipeline
 
     def test_no_unexpected_tables(self) -> None:
         registered = set(Base.metadata.tables.keys())
