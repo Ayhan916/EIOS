@@ -8,6 +8,7 @@ import {
   AlertCircle,
   ArrowLeft,
   BarChart3,
+  Check,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -961,6 +962,7 @@ export default function DocumentReviewPage() {
   const [pendingPipeline, setPendingPipeline] = useState<Partial<PipelineSettings>>({});
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [approveNotes, setApproveNotes] = useState("");
+  const [checklist, setChecklist] = useState<Record<string, boolean>>({});
   const [showRunModal, setShowRunModal] = useState(false);
   const [runConfig, setRunConfig] = useState<Partial<PipelineSettings>>({});
   const [stepModalStep, setStepModalStep] = useState<StepKey | null>(null);
@@ -2280,7 +2282,17 @@ export default function DocumentReviewPage() {
           </div>
         ) : (
           <button
-            onClick={() => setShowApproveModal(true)}
+            onClick={() => {
+              setChecklist({
+                classification: Boolean(data.doc_type && data.company_name && data.report_year),
+                metrics: data.metrics.length > 0,
+                confidence: lowConfidenceMetrics.length === 0,
+                chunks: (data.chunks_count ?? data.chunks.length) > 0,
+                pdf: false,
+              });
+              setApproveNotes("");
+              setShowApproveModal(true);
+            }}
             disabled={approveMut.isPending}
             className="h-8 shrink-0 flex items-center gap-1.5 text-sm px-4 rounded-lg font-semibold bg-green-600 text-white hover:bg-green-700 shadow-sm transition-colors"
           >
@@ -2941,71 +2953,184 @@ export default function DocumentReviewPage() {
         </div>
       )}
 
-      {/* Freigabe-Notizen Modal */}
-      {showApproveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowApproveModal(false)} />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                  <CheckCircle2 size={15} className="text-green-600" />
+      {/* Review-Checkliste Modal */}
+      {showApproveModal && (() => {
+        const CHECKS = [
+          {
+            id: "classification",
+            label: "Klassifizierung geprüft",
+            desc: [data.doc_type, data.company_name, data.report_year].filter(Boolean).join(" · ") || "Fehlende Metadaten",
+            required: true,
+            warn: !data.doc_type || !data.company_name || !data.report_year,
+          },
+          {
+            id: "metrics",
+            label: "Metriken vollständig und plausibel",
+            desc: data.metrics.length > 0 ? `${data.metrics.length} Kennzahlen extrahiert` : "Keine Metriken vorhanden — Extraktion prüfen",
+            required: true,
+            warn: data.metrics.length === 0,
+          },
+          {
+            id: "confidence",
+            label: "Keine unsicheren Metriken",
+            desc: lowConfidenceMetrics.length > 0
+              ? `${lowConfidenceMetrics.length} Metrik${lowConfidenceMetrics.length !== 1 ? "en" : ""} unter 60 % Konfidenz: ${lowConfidenceMetrics.map(m => m.metric_type).join(", ")}`
+              : "Alle Metriken über 60 % Konfidenz",
+            required: false,
+            warn: lowConfidenceMetrics.length > 0,
+          },
+          {
+            id: "chunks",
+            label: "Chunks vollständig indexiert",
+            desc: `${data.chunks_count ?? data.chunks.length} Chunks im Copilot-Index${(data.chunks_count ?? 0) === 0 ? " — Dokument neu verarbeiten" : ""}`,
+            required: true,
+            warn: (data.chunks_count ?? 0) === 0,
+          },
+          {
+            id: "pdf",
+            label: "PDF manuell gesichtet",
+            desc: "Dokument visuell auf Vollständigkeit und Lesbarkeit geprüft",
+            required: false,
+            warn: false,
+          },
+        ];
+        const allRequiredChecked = CHECKS.filter(c => c.required).every(c => Boolean(checklist[c.id]));
+        const checkedCount = CHECKS.filter(c => Boolean(checklist[c.id])).length;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowApproveModal(false)} />
+            <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+
+              {/* Header */}
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={17} className="text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">Review-Checkliste</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {data.company_name ?? data.doc_type}{data.report_year ? ` · ${data.report_year}` : ""}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">Dokument freigeben</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{data.company_name ?? data.doc_type}{data.report_year ? ` · ${data.report_year}` : ""}</p>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium text-gray-400">
+                    <span className={`font-bold ${checkedCount === CHECKS.length ? "text-green-600" : "text-gray-700"}`}>{checkedCount}</span>
+                    /{CHECKS.length}
+                  </span>
+                  <button onClick={() => setShowApproveModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                    <X size={15} />
+                  </button>
                 </div>
               </div>
-              <button onClick={() => setShowApproveModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
-                <X size={15} className="text-gray-400" />
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-3">
-              <div>
-                <label className="text-xs font-medium text-gray-600">
-                  Notiz zur Freigabe <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <textarea
-                  autoFocus
-                  rows={3}
-                  placeholder="z.B. Metriken manuell geprüft, Scope-1-Wert korrigiert…"
-                  value={approveNotes}
-                  onChange={e => setApproveNotes(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === "Enter" && e.metaKey) {
+
+              {/* Checklist */}
+              <div className="overflow-y-auto flex-1 px-5 py-4 space-y-2">
+                {CHECKS.map(check => {
+                  const isChecked = Boolean(checklist[check.id]);
+                  const showWarn = !isChecked && check.warn;
+                  return (
+                    <label
+                      key={check.id}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all select-none ${
+                        isChecked
+                          ? "bg-green-50 border-green-200"
+                          : showWarn
+                          ? "bg-orange-50 border-orange-200"
+                          : "bg-gray-50 border-gray-200 hover:border-gray-300 hover:bg-white"
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        className="sr-only"
+                        checked={isChecked}
+                        onChange={e => setChecklist(p => ({ ...p, [check.id]: e.target.checked }))}
+                      />
+                      {/* Custom checkbox */}
+                      <div className={`mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                        isChecked
+                          ? "bg-green-500 border-green-500"
+                          : showWarn
+                          ? "border-orange-400 bg-white"
+                          : "border-gray-300 bg-white"
+                      }`}>
+                        {isChecked && <Check size={11} className="text-white" strokeWidth={3} />}
+                        {showWarn && <AlertTriangle size={9} className="text-orange-400" />}
+                      </div>
+
+                      {/* Label + desc */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className={`text-sm font-medium ${
+                            isChecked ? "text-green-800" : showWarn ? "text-orange-800" : "text-gray-700"
+                          }`}>
+                            {check.label}
+                          </span>
+                          {check.required
+                            ? <span className="text-[10px] font-semibold text-gray-400 bg-gray-100 rounded px-1.5 py-0.5 shrink-0">Pflicht</span>
+                            : <span className="text-[10px] text-gray-300 bg-gray-50 rounded px-1.5 py-0.5 shrink-0">Optional</span>
+                          }
+                        </div>
+                        <p className={`text-xs mt-0.5 leading-relaxed ${
+                          isChecked ? "text-green-600" : showWarn ? "text-orange-600" : "text-gray-400"
+                        }`}>
+                          {check.desc}
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })}
+
+                {/* Notes */}
+                <div className="pt-2">
+                  <label className="text-xs font-medium text-gray-500">
+                    Notiz zur Freigabe <span className="text-gray-300 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    rows={2}
+                    placeholder="z.B. Scope-1-Wert manuell korrigiert, Tabelle S.12 verifiziert…"
+                    value={approveNotes}
+                    onChange={e => setApproveNotes(e.target.value)}
+                    className="mt-1.5 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 resize-none bg-white"
+                  />
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="shrink-0 px-5 py-4 border-t border-gray-100 bg-gray-50">
+                {!allRequiredChecked && (
+                  <p className="text-xs text-orange-600 mb-3 flex items-center gap-1.5">
+                    <AlertTriangle size={12} />
+                    Alle Pflicht-Punkte abhaken um fortzufahren
+                  </p>
+                )}
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setShowApproveModal(false)}
+                    className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-white transition-colors font-medium"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={() => {
                       approveMut.mutate(approveNotes.trim() || undefined);
                       setShowApproveModal(false);
                       setApproveNotes("");
-                    }
-                  }}
-                  className="mt-1.5 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 resize-none"
-                />
-                <p className="text-xs text-gray-400 mt-1">Wird im Audit Log gespeichert · ⌘+Enter zum Bestätigen</p>
-              </div>
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => { setShowApproveModal(false); setApproveNotes(""); }}
-                  className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Abbrechen
-                </button>
-                <button
-                  onClick={() => {
-                    approveMut.mutate(approveNotes.trim() || undefined);
-                    setShowApproveModal(false);
-                    setApproveNotes("");
-                  }}
-                  disabled={approveMut.isPending}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-                >
-                  <CheckCircle2 size={13} />
-                  Freigeben
-                </button>
+                    }}
+                    disabled={!allRequiredChecked || approveMut.isPending}
+                    className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-semibold bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    <CheckCircle2 size={14} />
+                    {approveMut.isPending ? "Wird freigegeben…" : "Freigeben"}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

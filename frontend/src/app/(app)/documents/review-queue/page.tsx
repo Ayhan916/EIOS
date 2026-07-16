@@ -69,6 +69,8 @@ export default function ReviewQueuePage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "needs_review" | "approved" | "copilot_off">("needs_review");
+  const [yearFilter, setYearFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [sortAsc, setSortAsc] = useState(true);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkPending, setBulkPending] = useState(false);
@@ -95,6 +97,16 @@ export default function ReviewQueuePage() {
 
   const all = files ?? [];
 
+  const availableYears = useMemo(() =>
+    [...new Set(all.map(f => f.report_year).filter((y): y is number => y != null))].sort((a, b) => b - a),
+    [all]
+  );
+
+  const availableTypes = useMemo(() =>
+    [...new Set(all.map(f => f.doc_type).filter(Boolean))].sort(),
+    [all]
+  );
+
   const filtered = useMemo(() => all
     .filter(f => {
       if (filter === "needs_review") return f.review_status !== "approved" && f.status === "done";
@@ -102,6 +114,8 @@ export default function ReviewQueuePage() {
       if (filter === "copilot_off") return Boolean(f.copilot_hidden);
       return true;
     })
+    .filter(f => yearFilter === "all" || f.report_year === parseInt(yearFilter))
+    .filter(f => typeFilter === "all" || f.doc_type === typeFilter)
     .filter(f => {
       if (!search) return true;
       const q = search.toLowerCase();
@@ -111,7 +125,7 @@ export default function ReviewQueuePage() {
     })
     .map(f => ({ ...f, _q: computeListQuality(f) }))
     .sort((a, b) => sortAsc ? a._q - b._q : b._q - a._q),
-    [all, filter, search, sortAsc]
+    [all, filter, yearFilter, typeFilter, search, sortAsc]
   );
 
   const needsReview = all.filter(f => f.review_status !== "approved" && f.status === "done").length;
@@ -262,8 +276,9 @@ export default function ReviewQueuePage() {
       )}
 
       {/* Filters + search */}
-      <div className="px-6 pb-3 flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1">
+      <div className="px-6 pb-3 flex items-center gap-2 flex-wrap">
+        {/* Status tabs */}
+        <div className="flex items-center gap-1 bg-white rounded-lg border border-gray-200 p-1 shrink-0">
           {(["all", "needs_review", "approved", "copilot_off"] as const).map(f => (
             <button
               key={f}
@@ -274,21 +289,63 @@ export default function ReviewQueuePage() {
             </button>
           ))}
         </div>
+
+        {/* Year dropdown */}
+        {availableYears.length > 0 && (
+          <select
+            value={yearFilter}
+            onChange={e => setYearFilter(e.target.value)}
+            className={`text-xs border rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-blue-200 bg-white cursor-pointer transition-colors ${yearFilter !== "all" ? "border-blue-400 text-blue-700 bg-blue-50" : "border-gray-200 text-gray-500"}`}
+          >
+            <option value="all">Alle Jahre</option>
+            {availableYears.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Doc-type dropdown */}
+        {availableTypes.length > 0 && (
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value)}
+            className={`text-xs border rounded-lg px-2.5 py-1.5 outline-none focus:ring-2 focus:ring-blue-200 bg-white cursor-pointer transition-colors ${typeFilter !== "all" ? "border-blue-400 text-blue-700 bg-blue-50" : "border-gray-200 text-gray-500"}`}
+          >
+            <option value="all">Alle Typen</option>
+            {availableTypes.map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Text search */}
         <div className="relative">
           <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="pl-7 pr-3 py-1.5 text-xs border border-gray-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-200 bg-white"
-            placeholder="Unternehmen, Titel, Typ…"
+            placeholder="Unternehmen, Titel…"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
+
+        {/* Sort */}
         <button
           onClick={() => setSortAsc(a => !a)}
-          className="text-xs border border-gray-200 bg-white rounded-lg px-3 py-1.5 hover:bg-gray-50 text-gray-500 flex items-center gap-1"
+          className="text-xs border border-gray-200 bg-white rounded-lg px-3 py-1.5 hover:bg-gray-50 text-gray-500 flex items-center gap-1 shrink-0"
         >
-          Q-Score {sortAsc ? "↑ aufsteigend" : "↓ absteigend"}
+          Q-Score {sortAsc ? "↑" : "↓"}
         </button>
+
+        {/* Reset active filters */}
+        {(yearFilter !== "all" || typeFilter !== "all" || search) && (
+          <button
+            onClick={() => { setYearFilter("all"); setTypeFilter("all"); setSearch(""); }}
+            className="text-xs text-blue-500 hover:text-blue-700 transition-colors shrink-0"
+          >
+            Filter zurücksetzen
+          </button>
+        )}
       </div>
 
       {/* List */}
