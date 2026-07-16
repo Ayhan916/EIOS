@@ -68,10 +68,12 @@ import {
   updateMetric,
   deleteMetric,
   addMetric,
+  listFiles,
   ReviewData,
   ReviewChunk,
   ReviewMetric,
   ReviewSignal,
+  type DocumentFile,
   type ChunkComment,
   listChunkComments,
   createChunkComment,
@@ -957,6 +959,8 @@ export default function DocumentReviewPage() {
   const [settingsTab, setSettingsTab] = useState<"models" | "pipeline">("models");
   const [pendingModels, setPendingModels] = useState<Partial<LlmModelSettings>>({});
   const [pendingPipeline, setPendingPipeline] = useState<Partial<PipelineSettings>>({});
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [approveNotes, setApproveNotes] = useState("");
   const [showRunModal, setShowRunModal] = useState(false);
   const [runConfig, setRunConfig] = useState<Partial<PipelineSettings>>({});
   const [stepModalStep, setStepModalStep] = useState<StepKey | null>(null);
@@ -1089,6 +1093,37 @@ export default function DocumentReviewPage() {
     mutationFn: (s: Partial<PipelineSettings>) => updatePipelineSettings(s),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["pipeline-settings"] }); setShowModelSettings(false); },
   });
+
+  const { data: allFiles } = useQuery<DocumentFile[]>({
+    queryKey: ["doc-files-all"],
+    queryFn: () => listFiles(),
+    staleTime: 30_000,
+  });
+
+  const { prevFileId, nextFileId, queuePos, queueTotal } = useMemo(() => {
+    if (!allFiles) return { prevFileId: null, nextFileId: null, queuePos: null, queueTotal: null };
+    const listQ = (f: DocumentFile) => {
+      let s = 0;
+      if (f.status === "done") s += 20;
+      if (f.company_name) s += 15;
+      if (f.report_year) s += 15;
+      if (f.doc_type && f.doc_type !== "other") s += 10;
+      if (f.summary) s += 10;
+      if ((f.chunks_count ?? 0) > 0) s += 15;
+      if ((f.chunks_count ?? 0) > 10) s += 5;
+      return s;
+    };
+    const queue = allFiles
+      .filter(f => f.status === "done")
+      .sort((a, b) => listQ(a) - listQ(b));
+    const idx = queue.findIndex(f => f.id === fileId);
+    return {
+      prevFileId: idx > 0 ? queue[idx - 1].id : null,
+      nextFileId: idx >= 0 && idx < queue.length - 1 ? queue[idx + 1].id : null,
+      queuePos: idx >= 0 ? idx + 1 : null,
+      queueTotal: queue.length,
+    };
+  }, [allFiles, fileId]);
 
   const excludeChunkMut = useMutation({
     mutationFn: (chunkId: string) => excludeChunk(chunkId),
@@ -2123,75 +2158,121 @@ export default function DocumentReviewPage() {
   return (
     <div className="flex flex-col h-screen bg-gray-50 overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-3 shrink-0">
-        <button onClick={() => router.push("/documents")} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500">
-          <ArrowLeft size={18} />
+      <header className="bg-white border-b border-gray-200 px-4 h-14 flex items-center gap-2 shrink-0">
+
+        {/* ── Left: back + queue navigator ─────────────────────────────── */}
+        <button
+          onClick={() => router.push("/documents")}
+          title="Zurück zur Dokumentenliste"
+          className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-700 transition-colors shrink-0"
+        >
+          <ArrowLeft size={17} />
         </button>
+
+        {(prevFileId || nextFileId) && (
+          <div className="flex items-center shrink-0 rounded-lg border border-gray-200 bg-gray-50 overflow-hidden">
+            <button
+              onClick={() => prevFileId && router.push(`/documents/review/${prevFileId}`)}
+              disabled={!prevFileId}
+              title="Vorheriges Dokument"
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-white hover:text-gray-700 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronDown size={13} className="rotate-90" />
+            </button>
+            {queuePos !== null && (
+              <span className="text-[11px] font-medium text-gray-400 tabular-nums px-2 border-x border-gray-200 h-8 flex items-center select-none">
+                {queuePos}<span className="text-gray-300 mx-0.5">/</span>{queueTotal}
+              </span>
+            )}
+            <button
+              onClick={() => nextFileId && router.push(`/documents/review/${nextFileId}`)}
+              disabled={!nextFileId}
+              title="Nächstes Dokument"
+              className="w-8 h-8 flex items-center justify-center text-gray-400 hover:bg-white hover:text-gray-700 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            >
+              <ChevronRight size={13} />
+            </button>
+          </div>
+        )}
+
+        <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+
+        {/* ── Center: title + badges ────────────────────────────────────── */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-sm font-semibold text-gray-900 truncate">{data.title ?? data.doc_type}</h1>
-          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(liveStatus ?? data.status)}`}>
+          <h1 className="text-sm font-semibold text-gray-900 truncate leading-tight">{data.title ?? data.doc_type}</h1>
+          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-medium ${statusColor(liveStatus ?? data.status)}`}>
               {liveStatus ?? data.status}
               {liveStatus && !["done","completed","failed","error"].includes(liveStatus) && (
                 <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
               )}
             </span>
             {liveStatus && !["done","completed","failed","error"].includes(liveStatus) && liveChunks !== null && liveChunks > 0 && (
-              <span className="text-xs text-blue-600 font-medium">{liveChunks} Chunks indexiert</span>
+              <span className="text-[11px] text-blue-600 font-medium">{liveChunks} Chunks</span>
             )}
-            <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${reviewBadge(data.review_status)}`}>{data.review_status}</span>
+            <span className={`text-[11px] px-1.5 py-0.5 rounded-full border font-medium ${reviewBadge(data.review_status)}`}>{data.review_status}</span>
             <QualityBadge score={qualityScore} />
             {avgConfidencePct !== null && <ConfidenceBadge pct={avgConfidencePct} />}
-            {data.company_name && <span className="text-xs text-gray-400">{data.company_name}</span>}
-            {data.report_year && <span className="text-xs text-gray-400">· {data.report_year}</span>}
-            {data.pages && <span className="text-xs text-gray-400">· {data.pages} Seiten</span>}
+            {data.company_name && <span className="text-[11px] text-gray-400">{data.company_name}</span>}
+            {data.report_year && <span className="text-[11px] text-gray-300">·</span>}
+            {data.report_year && <span className="text-[11px] text-gray-400">{data.report_year}</span>}
+            {data.pages && <><span className="text-[11px] text-gray-300">·</span><span className="text-[11px] text-gray-400">{data.pages} S.</span></>}
           </div>
         </div>
-        <Link
-          href={`/documents/compare?a=${fileId}`}
-          title="Dieses Dokument mit einem anderen vergleichen"
-          className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-        >
-          <GitCompareArrows size={15} />
-          Vergleichen
-        </Link>
-        <ExportButton fileId={fileId} />
-        <button
-          onClick={() => { setShowModelSettings(true); setPendingModels(llmSettings ?? {}); }}
-          title="KI-Modell Einstellungen"
-          className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
-        >
-          <Settings size={15} />
-          KI-Modelle
-        </button>
-        <button
-          onClick={() => { setRunConfig({ ...(pipelineSettings ?? PIPELINE_DEFAULTS) }); setShowRunModal(true); }}
-          disabled={processMut.isPending || (liveStatus != null && !["done","completed","failed","error"].includes(liveStatus))}
-          className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-40"
-        >
-          {processMut.isPending ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
-          Neu verarbeiten
-        </button>
-        <button
-          onClick={() => copilotVisibilityMut.mutate()}
-          disabled={copilotVisibilityMut.isPending}
-          title={data.copilot_hidden ? "Dokument für Copilot sichtbar machen" : "Dokument aus Copilot ausblenden"}
-          className={`flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border font-medium transition-colors ${data.copilot_hidden ? "border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100" : "border-gray-200 text-gray-500 hover:bg-gray-50"}`}
-        >
-          {data.copilot_hidden ? <EyeOff size={15} /> : <Eye size={15} />}
-          {data.copilot_hidden ? "Copilot: aus" : "Copilot: an"}
-        </button>
+
+        {/* ── Right: secondary tools ────────────────────────────────────── */}
+        <div className="flex items-center gap-1 shrink-0">
+          <Link
+            href={`/documents/compare?a=${fileId}`}
+            title="Dokument vergleichen"
+            className="h-8 flex items-center gap-1.5 text-xs px-2.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+          >
+            <GitCompareArrows size={13} />
+            <span className="hidden xl:inline">Vergleichen</span>
+          </Link>
+          <ExportButton fileId={fileId} />
+          <button
+            onClick={() => { setShowModelSettings(true); setPendingModels(llmSettings ?? {}); }}
+            title="KI-Modell Einstellungen"
+            className="h-8 flex items-center gap-1.5 text-xs px-2.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+          >
+            <Settings size={13} />
+            <span className="hidden xl:inline">KI-Modelle</span>
+          </button>
+          <button
+            onClick={() => { setRunConfig({ ...(pipelineSettings ?? PIPELINE_DEFAULTS) }); setShowRunModal(true); }}
+            disabled={processMut.isPending || (liveStatus != null && !["done","completed","failed","error"].includes(liveStatus))}
+            title="Pipeline neu starten"
+            className="h-8 flex items-center gap-1.5 text-xs px-2.5 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors disabled:opacity-40"
+          >
+            {processMut.isPending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+            <span className="hidden xl:inline">Verarbeiten</span>
+          </button>
+          <button
+            onClick={() => copilotVisibilityMut.mutate()}
+            disabled={copilotVisibilityMut.isPending}
+            title={data.copilot_hidden ? "Für Copilot sichtbar machen" : "Aus Copilot ausblenden"}
+            className={`h-8 flex items-center gap-1.5 text-xs px-2.5 rounded-lg border transition-colors ${data.copilot_hidden ? "border-orange-200 bg-orange-50 text-orange-600 hover:bg-orange-100" : "border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700"}`}
+          >
+            {data.copilot_hidden ? <EyeOff size={13} /> : <Eye size={13} />}
+            <span className="hidden xl:inline">{data.copilot_hidden ? "Copilot: aus" : "Copilot: an"}</span>
+          </button>
+        </div>
+
+        <div className="w-px h-5 bg-gray-200 mx-1 shrink-0" />
+
+        {/* ── Right: primary review action ─────────────────────────────── */}
         {data.review_status === "approved" ? (
-          <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-sm rounded-lg px-4 py-2 font-medium bg-green-100 text-green-700">
-              <CheckCircle2 size={15} />
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="h-8 flex items-center gap-1.5 text-xs px-3 rounded-lg font-semibold bg-green-50 text-green-700 border border-green-200">
+              <CheckCircle2 size={13} />
               Freigegeben
             </span>
             <button
               onClick={() => unapproveMut.mutate()}
               disabled={unapproveMut.isPending}
-              className="flex items-center gap-1.5 text-xs rounded-lg px-3 py-2 border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
               title="Freigabe widerrufen"
+              className="h-8 flex items-center gap-1.5 text-xs px-2.5 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 transition-colors"
             >
               <XCircle size={13} />
               Widerrufen
@@ -2199,11 +2280,11 @@ export default function DocumentReviewPage() {
           </div>
         ) : (
           <button
-            onClick={() => approveMut.mutate(undefined)}
+            onClick={() => setShowApproveModal(true)}
             disabled={approveMut.isPending}
-            className="flex items-center gap-1.5 text-sm rounded-lg px-4 py-2 font-medium bg-green-600 text-white hover:bg-green-700 transition-colors"
+            className="h-8 shrink-0 flex items-center gap-1.5 text-sm px-4 rounded-lg font-semibold bg-green-600 text-white hover:bg-green-700 shadow-sm transition-colors"
           >
-            <CheckCircle2 size={15} />
+            <CheckCircle2 size={14} />
             Freigeben
           </button>
         )}
@@ -2853,6 +2934,72 @@ export default function DocumentReviewPage() {
                   className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors font-medium flex items-center gap-2">
                   {processMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
                   Verarbeitung starten
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Freigabe-Notizen Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowApproveModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                  <CheckCircle2 size={15} className="text-green-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Dokument freigeben</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{data.company_name ?? data.doc_type}{data.report_year ? ` · ${data.report_year}` : ""}</p>
+                </div>
+              </div>
+              <button onClick={() => setShowApproveModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X size={15} className="text-gray-400" />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <div>
+                <label className="text-xs font-medium text-gray-600">
+                  Notiz zur Freigabe <span className="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  autoFocus
+                  rows={3}
+                  placeholder="z.B. Metriken manuell geprüft, Scope-1-Wert korrigiert…"
+                  value={approveNotes}
+                  onChange={e => setApproveNotes(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && e.metaKey) {
+                      approveMut.mutate(approveNotes.trim() || undefined);
+                      setShowApproveModal(false);
+                      setApproveNotes("");
+                    }
+                  }}
+                  className="mt-1.5 w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300 resize-none"
+                />
+                <p className="text-xs text-gray-400 mt-1">Wird im Audit Log gespeichert · ⌘+Enter zum Bestätigen</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={() => { setShowApproveModal(false); setApproveNotes(""); }}
+                  className="flex-1 px-4 py-2 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => {
+                    approveMut.mutate(approveNotes.trim() || undefined);
+                    setShowApproveModal(false);
+                    setApproveNotes("");
+                  }}
+                  disabled={approveMut.isPending}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  <CheckCircle2 size={13} />
+                  Freigeben
                 </button>
               </div>
             </div>

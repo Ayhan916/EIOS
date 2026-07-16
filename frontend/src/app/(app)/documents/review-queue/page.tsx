@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   BarChart3,
   CheckCircle2,
+  Copy,
   Eye,
   EyeOff,
   FileText,
@@ -322,6 +323,15 @@ export default function ReviewQueuePage() {
         {filtered.map(f => {
           const isSelected = selected.has(f.id);
           const isApproved = f.review_status === "approved";
+          const isDuplicate = Boolean(
+            f.company_name && f.report_year &&
+            all.some(other =>
+              other.id !== f.id &&
+              other.review_status === "approved" &&
+              other.company_name === f.company_name &&
+              other.report_year === f.report_year
+            )
+          );
           return (
             <div
               key={f.id}
@@ -344,6 +354,15 @@ export default function ReviewQueuePage() {
                   <span className="text-sm font-medium text-gray-800 truncate">{f.title ?? f.doc_type}</span>
                   {f.company_name && <span className="text-xs text-gray-400 shrink-0">{f.company_name}</span>}
                   {f.report_year && <span className="text-xs text-gray-400 shrink-0">{f.report_year}</span>}
+                  {isDuplicate && (
+                    <span
+                      className="inline-flex items-center gap-1 text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full px-2 py-0.5 shrink-0"
+                      title={`Ein bereits freigegebenes Dokument mit ${f.company_name} ${f.report_year} existiert bereits`}
+                    >
+                      <Copy size={10} />
+                      Duplikat
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className="text-xs text-gray-400 bg-gray-50 rounded px-1.5 py-0.5">{f.doc_type}</span>
