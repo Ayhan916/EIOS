@@ -50,6 +50,7 @@ import {
   type DocumentFile,
   type DocumentSourceCreate,
 } from "@/lib/api/documents";
+import { getDocQuality, METRIC_LABELS, type DocQuality } from "@/lib/api/intelligence";
 import { listSuppliers } from "@/lib/api/suppliers";
 import type { SupplierResponse } from "@/types/api";
 
@@ -137,6 +138,74 @@ function StatusBadge({ status, updatedAt }: { status: string; updatedAt?: string
   );
 }
 
+// ── Data Quality Badge ────────────────────────────────────────────────────────
+
+function DocQualityBadge({ quality, expanded = false }: { quality: DocQuality | undefined; expanded?: boolean }) {
+  if (!quality) return <span className="text-xs text-slate-300">—</span>;
+
+  const score = quality.quality_score;
+  const cls =
+    score >= 70 ? "bg-emerald-50 text-emerald-700 border-emerald-200" :
+    score >= 40 ? "bg-amber-50 text-amber-700 border-amber-200" :
+                  "bg-red-50 text-red-600 border-red-200";
+
+  const yearRange = quality.years.length > 0
+    ? `${quality.years[0]}–${quality.years[quality.years.length - 1]}`
+    : null;
+
+  const missingLabels = quality.missing_core
+    .map((t) => METRIC_LABELS[t] ?? t.replace(/_/g, " "));
+
+  const foundLabels = quality.metric_types
+    .map((t) => METRIC_LABELS[t] ?? t.replace(/_/g, " "));
+
+  const tooltipText = [
+    `${quality.metric_count} Metriken extrahiert`,
+    quality.total_core > 0 ? `Kern: ${quality.found_core}/${quality.total_core}` : null,
+    missingLabels.length > 0 ? `Fehlt: ${missingLabels.join(", ")}` : "Alle Kern-Metriken vorhanden",
+    yearRange ? `Zeitraum: ${yearRange}` : null,
+    `Vorhanden: ${foundLabels.join(", ")}`,
+  ].filter(Boolean).join(" · ");
+
+  if (expanded) {
+    return (
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium ${cls}`}>
+            <BarChart3 className="w-3 h-3 shrink-0" />
+            {quality.metric_count} Metriken · {score.toFixed(0)}%
+            {quality.total_core > 0 && (
+              <span className="opacity-70 font-normal"> ({quality.found_core}/{quality.total_core} Kern)</span>
+            )}
+          </span>
+          {yearRange && (
+            <span className="text-xs text-slate-400">{yearRange}</span>
+          )}
+        </div>
+        {missingLabels.length > 0 && (
+          <p className="text-xs text-amber-600 flex items-start gap-1">
+            <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5" />
+            <span>Fehlt: {missingLabels.join(", ")}</span>
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <span
+      title={tooltipText}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs border font-medium cursor-default ${cls}`}
+    >
+      <BarChart3 className="w-3 h-3 shrink-0" />
+      {quality.metric_count} Metriken · {score.toFixed(0)}%
+      {quality.total_core > 0 && (
+        <span className="opacity-60 font-normal"> ({quality.found_core}/{quality.total_core})</span>
+      )}
+    </span>
+  );
+}
+
 // ── Supplier Documents Modal ──────────────────────────────────────────────────
 
 interface SupplierDocsModalProps {
@@ -150,10 +219,11 @@ interface SupplierDocsModalProps {
   onUpload: (sup: SupplierResponse, docType?: string, year?: number, title?: string, file?: File, signal?: AbortSignal) => Promise<void>;
   uploadProgress: Record<string, number>;
   sources: DocumentSource[];
+  docQualityMap: Record<string, DocQuality>;
 }
 
 function SupplierDocsModal({
-  supplier, files, onClose, onDelete, onView, onProcess, processingId, onUpload, uploadProgress, sources,
+  supplier, files, onClose, onDelete, onView, onProcess, processingId, onUpload, uploadProgress, sources, docQualityMap,
 }: SupplierDocsModalProps) {
   const supFiles = files
     .filter((f) => f.supplier_id === supplier.id)
@@ -246,7 +316,7 @@ function SupplierDocsModal({
         className="hidden"
         onChange={handleFilesSelected}
       />
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-5xl mx-4 flex flex-col max-h-[85vh]">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 w-full max-w-7xl mx-4 flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700 shrink-0">
           <div className="flex items-center gap-3">
@@ -333,6 +403,7 @@ function SupplierDocsModal({
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Typ</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Jahr</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Seiten</th>
+                  <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Datenqualität</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wide">Status</th>
                   <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wide">Aktionen</th>
                 </tr>
@@ -347,6 +418,7 @@ function SupplierDocsModal({
                     <td className="px-4 py-3 text-xs text-slate-500">{f.doc_type.replace(/_/g, " ")}</td>
                     <td className="px-4 py-3 text-slate-500">{f.report_year ?? "—"}</td>
                     <td className="px-4 py-3 text-slate-500">{f.pages ?? "—"}</td>
+                    <td className="px-4 py-3"><DocQualityBadge quality={docQualityMap[f.id]} /></td>
                     <td className="px-4 py-3"><StatusBadge status={f.status} updatedAt={f.updated_at} /></td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
@@ -714,6 +786,15 @@ export default function DocumentLibraryPage() {
     queryFn: () => listFiles(),
     refetchInterval: 5_000,
   });
+
+  const { data: docQualityList = [] } = useQuery({
+    queryKey: ["doc-quality"],
+    queryFn: getDocQuality,
+    staleTime: 60_000,
+  });
+  const docQualityMap: Record<string, DocQuality> = Object.fromEntries(
+    docQualityList.map((q) => [q.doc_file_id, q])
+  );
 
   const { data: suppliersPage, isError: suppliersError, error: suppliersErrDetail } = useQuery({
     queryKey: ["suppliers-dropdown"],
@@ -1324,6 +1405,11 @@ export default function DocumentLibraryPage() {
                         <span className="text-emerald-600 font-medium">ESG {f.esg_score.toFixed(1)}</span>
                       )}
                     </div>
+                    {docQualityMap[f.id] && (
+                      <div className="mt-2">
+                        <DocQualityBadge quality={docQualityMap[f.id]} expanded />
+                      </div>
+                    )}
                     {f.summary && (
                       <p className="mt-2 text-xs text-slate-500 line-clamp-2 leading-relaxed">{f.summary}</p>
                     )}
@@ -1359,6 +1445,7 @@ export default function DocumentLibraryPage() {
           processingId={processingFileId}
           onUpload={(sup, docType, year, title, file) => handleSupplierUpload(sup, docType, year, title, file)}
           uploadProgress={uploadProgress}
+          docQualityMap={docQualityMap}
         />
       )}
 

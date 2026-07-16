@@ -10,13 +10,13 @@ import {
 } from "recharts";
 import {
   ArrowLeft, RefreshCw, Loader2, TrendingUp, TrendingDown,
-  Minus, AlertTriangle, BarChart3, Leaf, Zap,
+  Minus, AlertTriangle, BarChart3, Leaf, Zap, Activity,
 } from "lucide-react";
 import {
-  listMetrics, listSignals, extractAllIntelligence,
+  listMetrics, listSignals, listTrends, extractAllIntelligence, verifyMetrics, detectContradictions,
   METRIC_LABELS, UNIT_LABELS, FINANCIAL_METRICS, ESG_METRICS,
   DIMENSION_LABELS, SEVERITY_ORDER, formatValue,
-  type CompanyMetric, type CompanySignal,
+  type CompanyMetric, type CompanySignal, type TrendAlert,
 } from "@/lib/api/intelligence";
 
 // ── Colour palette ────────────────────────────────────────────────────────────
@@ -95,7 +95,7 @@ function MetricSelector({
 
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
-type Tab = "financial" | "esg" | "signals";
+type Tab = "financial" | "esg" | "signals" | "trends";
 
 export default function DocumentMetricsPage() {
   const qc = useQueryClient();
@@ -103,6 +103,7 @@ export default function DocumentMetricsPage() {
   const [selectedFinancial, setSelectedFinancial] = useState<string[]>(["revenue", "ebitda", "net_income"]);
   const [selectedEsg, setSelectedEsg] = useState<string[]>(["co2_scope1", "co2_scope2", "co2_scope3"]);
   const [signalDimension, setSignalDimension] = useState<string>("all");
+  const [yoySortAsc, setYoySortAsc] = useState(false);
 
   const { data: metrics = [], isLoading: loadingMetrics } = useQuery({
     queryKey: ["company-metrics"],
@@ -114,12 +115,37 @@ export default function DocumentMetricsPage() {
     queryFn: () => listSignals(),
   });
 
+  const { data: trends = [], isLoading: loadingTrends } = useQuery({
+    queryKey: ["company-trends"],
+    queryFn: () => listTrends(),
+  });
+
   const extractMut = useMutation({
     mutationFn: extractAllIntelligence,
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["company-metrics"] });
       qc.invalidateQueries({ queryKey: ["company-signals"] });
       alert(`Extraktion abgeschlossen:\n✅ ${data.total_metrics} Metriken\n✅ ${data.total_signals} Signale`);
+    },
+    onError: (err: Error) => alert(`Fehler: ${err.message}`),
+  });
+
+  const verifyMut = useMutation({
+    mutationFn: verifyMetrics,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["company-metrics"] });
+      qc.invalidateQueries({ queryKey: ["company-trends"] });
+      alert(`Verifizierung abgeschlossen:\n✅ ${data.verified} bestätigt\n⚠️ ${data.discrepant} Ausreißer erkannt\n— ${data.not_found} nicht gefunden`);
+    },
+    onError: (err: Error) => alert(`Fehler: ${err.message}`),
+  });
+
+  const contradictionMut = useMutation({
+    mutationFn: detectContradictions,
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ["company-signals"] });
+      const n = data.contradictions ?? data.total_contradictions ?? 0;
+      alert(`Widerspruchsanalyse abgeschlossen:\n⚠️ ${n} Widersprüche erkannt`);
     },
     onError: (err: Error) => alert(`Fehler: ${err.message}`),
   });
@@ -148,14 +174,31 @@ export default function DocumentMetricsPage() {
     [metrics, selectedEsg]
   );
 
+  const yoySignals = useMemo(
+    () => [...signals.filter(s => s.signal_type === "yoy_comparison")]
+      .sort((a, b) => yoySortAsc ? (a.year ?? 0) - (b.year ?? 0) : (b.year ?? 0) - (a.year ?? 0)),
+    [signals, yoySortAsc]
+  );
+
+  const contradictionSignals = useMemo(
+    () => [...signals.filter(s => s.signal_type === "contradiction")]
+      .sort((a, b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)),
+    [signals]
+  );
+
+  const otherSignals = useMemo(
+    () => signals.filter(s => s.signal_type !== "yoy_comparison" && s.signal_type !== "contradiction"),
+    [signals]
+  );
+
   const filteredSignals = useMemo(() => {
-    const base = signalDimension === "all" ? signals : signals.filter(s => s.dimension === signalDimension);
+    const base = signalDimension === "all" ? otherSignals : otherSignals.filter(s => s.dimension === signalDimension);
     return [...base].sort((a, b) =>
       (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9)
     );
-  }, [signals, signalDimension]);
+  }, [otherSignals, signalDimension]);
 
-  const signalDimensions = useMemo(() => [...new Set(signals.map(s => s.dimension))], [signals]);
+  const signalDimensions = useMemo(() => [...new Set(otherSignals.map(s => s.dimension))], [otherSignals]);
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
 
@@ -166,8 +209,9 @@ export default function DocumentMetricsPage() {
     { label: "Jahre", value: years.length ? `${years[0]}–${years[years.length - 1]}` : "—", icon: Leaf, color: "text-violet-600 bg-violet-50" },
   ];
 
+  const negTrends = useMemo(() => trends.filter(t => t.sentiment === "negative"), [trends]);
   const isEmpty = metrics.length === 0 && signals.length === 0;
-  const isLoading = loadingMetrics || loadingSignals;
+  const isLoading = loadingMetrics || loadingSignals || loadingTrends;
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -182,17 +226,41 @@ export default function DocumentMetricsPage() {
             <p className="text-sm text-slate-500 mt-0.5">Strukturierte Kennzahlen und Signale aus Dokumenten</p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            if (confirm("Alle indexierten Dokumente neu analysieren und Metriken/Signale extrahieren? Das kann einige Minuten dauern."))
-              extractMut.mutate();
-          }}
-          disabled={extractMut.isPending}
-          className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-violet-300 dark:border-violet-600 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 font-medium disabled:opacity-50"
-        >
-          {extractMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          {extractMut.isPending ? "Extrahiere…" : "Neu extrahieren"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              if (confirm("Commitments und Ziele gegen tatsächliche Kennzahlen prüfen? Dauert 1–2 Minuten."))
+                contradictionMut.mutate({});
+            }}
+            disabled={contradictionMut.isPending || extractMut.isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-orange-300 dark:border-orange-600 text-orange-700 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 font-medium disabled:opacity-50"
+          >
+            {contradictionMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <AlertTriangle className="w-4 h-4" />}
+            {contradictionMut.isPending ? "Analysiere…" : "Widersprüche erkennen"}
+          </button>
+          <button
+            onClick={() => {
+              if (confirm("Extrahierte Metriken gegen Online-Quellen (Yahoo Finance + Web) prüfen? Dauert 1–3 Minuten."))
+                verifyMut.mutate({});
+            }}
+            disabled={verifyMut.isPending || extractMut.isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-emerald-300 dark:border-emerald-600 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 font-medium disabled:opacity-50"
+          >
+            {verifyMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Activity className="w-4 h-4" />}
+            {verifyMut.isPending ? "Verifiziere…" : "Online verifizieren"}
+          </button>
+          <button
+            onClick={() => {
+              if (confirm("Alle indexierten Dokumente neu analysieren und Metriken/Signale extrahieren? Das kann einige Minuten dauern."))
+                extractMut.mutate();
+            }}
+            disabled={extractMut.isPending || verifyMut.isPending}
+            className="flex items-center gap-2 px-4 py-2 text-sm rounded-lg border border-violet-300 dark:border-violet-600 text-violet-700 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-900/20 font-medium disabled:opacity-50"
+          >
+            {extractMut.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            {extractMut.isPending ? "Extrahiere…" : "Neu extrahieren"}
+          </button>
+        </div>
       </div>
 
       {/* KPIs */}
@@ -236,6 +304,7 @@ export default function DocumentMetricsPage() {
                 ["financial", "Finanzkennzahlen", BarChart3],
                 ["esg",       "ESG & Nachhaltigkeit", Leaf],
                 ["signals",   `Signale (${signals.length})`, Zap],
+                ["trends",    `Trend-Alerts (${trends.length})`, Activity],
               ] as [Tab, string, React.ElementType][]).map(([id, label, Icon]) => (
                 <button
                   key={id}
@@ -351,6 +420,52 @@ export default function DocumentMetricsPage() {
             </div>
           )}
 
+          {/* Trends Tab */}
+          {tab === "trends" && (
+            <div className="space-y-4">
+              {trends.length === 0 ? (
+                <div className="bg-white dark:bg-slate-900 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 p-10 text-center">
+                  <Activity className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                  <p className="text-sm text-slate-500">Noch keine Trends erkennbar.<br />Mindestens 2 Datenpunkte pro Metrik nötig.</p>
+                </div>
+              ) : (
+                <>
+                  {negTrends.length > 0 && (
+                    <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-800 rounded-xl p-4 flex items-start gap-3">
+                      <AlertTriangle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                      <p className="text-sm text-red-700 dark:text-red-400">
+                        <span className="font-semibold">{negTrends.length} besorgniserregende Trends</span> erkannt —
+                        Metriken die sich in die falsche Richtung entwickeln.
+                      </p>
+                    </div>
+                  )}
+                  {/* Legende */}
+                  <div className="flex items-center gap-4 px-1 text-xs text-slate-500">
+                    <span className="font-medium text-slate-400">Farbe:</span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm border border-red-300 bg-red-50 inline-block" />
+                      Negativ — Metrik entwickelt sich in die falsche Richtung
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm border border-emerald-300 bg-emerald-50 inline-block" />
+                      Positiv — Metrik entwickelt sich gut
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded-sm border border-slate-200 bg-white inline-block" />
+                      Neutral — Richtung nicht eindeutig bewertbar
+                    </span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {trends.map((alert, i) => (
+                      <TrendAlertCard key={i} alert={alert} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* Signals Tab */}
           {tab === "signals" && (
             <div className="space-y-4">
@@ -358,6 +473,88 @@ export default function DocumentMetricsPage() {
                 <EmptyTab label="Signale" />
               ) : (
                 <>
+                  {/* Jahresvergleich */}
+                  {yoySignals.length > 0 && (
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-sky-200 dark:border-sky-800 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <BarChart3 className="w-4 h-4 text-sky-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                          Jahresvergleich
+                        </h3>
+                        <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                          automatisch beim Dokument-Upload
+                        </span>
+                        <button
+                          onClick={() => setYoySortAsc(v => !v)}
+                          className="ml-auto flex items-center gap-1 text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 border border-slate-200 dark:border-slate-700 rounded px-2 py-0.5"
+                        >
+                          {yoySortAsc ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                          {yoySortAsc ? "Älteste zuerst" : "Neueste zuerst"}
+                        </button>
+                      </div>
+                      <div className="space-y-1">
+                        {yoySignals.map(s => {
+                          const color =
+                            s.direction === "positive" ? "text-emerald-600 dark:text-emerald-400" :
+                            s.direction === "negative" ? "text-red-600 dark:text-red-400" :
+                            "text-slate-500";
+                          const Icon =
+                            s.direction === "positive" ? TrendingUp :
+                            s.direction === "negative" ? TrendingDown : Minus;
+                          return (
+                            <div key={s.id} className="flex items-center gap-2 py-1.5 border-b border-slate-100 dark:border-slate-800 last:border-0">
+                              <Icon className={`w-3.5 h-3.5 shrink-0 ${color}`} />
+                              <span className={`text-sm ${color} font-medium min-w-0`}>{s.description}</span>
+                              <span className="ml-auto text-xs text-slate-400 shrink-0">{s.year}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Widersprüche */}
+                  {contradictionSignals.length > 0 && (
+                    <div className="bg-white dark:bg-slate-900 rounded-xl border border-orange-200 dark:border-orange-800 p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <AlertTriangle className="w-4 h-4 text-orange-500" />
+                        <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                          Widersprüche erkannt
+                        </h3>
+                        <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                          {contradictionSignals.length} Commitment{contradictionSignals.length !== 1 ? "s" : ""} nicht eingehalten
+                        </span>
+                      </div>
+                      <div className="space-y-2">
+                        {contradictionSignals.map(s => {
+                          const badgeCls =
+                            s.severity === "high"   ? "bg-red-100 text-red-700 border-red-200" :
+                            s.severity === "medium" ? "bg-orange-100 text-orange-700 border-orange-200" :
+                                                      "bg-amber-100 text-amber-700 border-amber-200";
+                          const severityLabel =
+                            s.severity === "high" ? "Hoch" : s.severity === "medium" ? "Mittel" : "Niedrig";
+                          const parts = s.description.split(" | ");
+                          return (
+                            <div key={s.id} className="border border-orange-100 dark:border-orange-900 rounded-lg p-3 space-y-1">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`inline-flex text-xs px-1.5 py-0.5 rounded-full border font-medium ${badgeCls}`}>
+                                  {severityLabel}
+                                </span>
+                                {s.year && <span className="text-xs text-slate-400">{s.year}</span>}
+                                <span className="text-xs text-slate-500">{s.company_name}</span>
+                              </div>
+                              {parts.map((p, i) => (
+                                <p key={i} className={`text-xs leading-relaxed ${i === 2 ? "text-orange-700 dark:text-orange-400 font-medium" : "text-slate-600 dark:text-slate-400"}`}>
+                                  {p}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Dimension filter */}
                   <div className="flex flex-wrap gap-2">
                     {["all", ...signalDimensions].map((dim) => (
@@ -418,6 +615,109 @@ export default function DocumentMetricsPage() {
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
+
+function TrendAlertCard({ alert }: { alert: TrendAlert }) {
+  const isNeg = alert.sentiment === "negative";
+  const isPos = alert.sentiment === "positive";
+
+  const border = isNeg
+    ? "border-red-200 dark:border-red-800"
+    : isPos
+    ? "border-emerald-200 dark:border-emerald-800"
+    : "border-slate-200 dark:border-slate-700";
+
+  const badge =
+    alert.severity === "critical" ? "bg-red-100 text-red-700 border-red-200" :
+    alert.severity === "high"     ? "bg-orange-100 text-orange-700 border-orange-200" :
+    alert.severity === "medium"   ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                    "bg-slate-100 text-slate-600 border-slate-200";
+
+  const severityLabel =
+    alert.severity === "critical" ? "Kritisch" :
+    alert.severity === "high"     ? "Hoch" :
+    alert.severity === "medium"   ? "Mittel" : "Niedrig";
+
+  const Icon = alert.direction === "up" ? TrendingUp : TrendingDown;
+  const iconColor = isNeg ? "text-red-500" : isPos ? "text-emerald-500" : "text-slate-400";
+  const sign = alert.direction === "up" ? "+" : "-";
+
+  const unit = UNIT_LABELS[alert.unit] ?? alert.unit;
+
+  return (
+    <div className={`bg-white dark:bg-slate-900 rounded-xl border ${border} p-4`}>
+      <div className="flex items-start gap-3">
+        <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${iconColor}`} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-1.5">
+            <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {METRIC_LABELS[alert.metric_type] ?? alert.metric_type}
+            </span>
+            <span className="text-xs text-slate-500">{alert.company_name}</span>
+            <span className={`inline-flex text-xs px-1.5 py-0.5 rounded-full border font-medium ${badge}`}>
+              {severityLabel}
+            </span>
+            <span className="text-xs text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+              {alert.alert_type === "consecutive" ? "Konsekutiv" : "Sprung"}
+            </span>
+          </div>
+
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{alert.description}</p>
+
+          {/* Quellenangabe */}
+          {alert.reference_source && (
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="text-xs text-slate-400">Quelle:</span>
+              {alert.reference_url ? (
+                <a
+                  href={alert.reference_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  {alert.reference_source}
+                </a>
+              ) : (
+                <span className="text-xs text-slate-500">{alert.reference_source}</span>
+              )}
+              {alert.verification_note && (
+                <span className="text-xs text-slate-400 italic">— {alert.verification_note}</span>
+              )}
+            </div>
+          )}
+
+          {/* Jahr-zu-Jahr Verlauf */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {alert.changes.map((c, idx) => {
+              const pos = c.pct_change > 0;
+              const color = isNeg
+                ? (pos ? "text-red-600" : "text-emerald-600")
+                : isPos
+                ? (pos ? "text-emerald-600" : "text-red-600")
+                : "text-slate-500";
+              return (
+                <span key={idx} className="flex items-center gap-1 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded px-2 py-0.5">
+                  <span className="text-slate-400">{c.year_from}→{c.year_to}</span>
+                  <span className={`font-medium ${color}`}>
+                    {c.pct_change > 0 ? "+" : ""}{c.pct_change.toFixed(1)}%
+                  </span>
+                  <span className="text-slate-400">
+                    ({c.value_to.toLocaleString("de-DE", { maximumFractionDigits: 1 })} {unit})
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+        <div className={`text-right shrink-0 ${iconColor}`}>
+          <div className="text-lg font-bold">
+            {sign}{alert.avg_pct_change.toFixed(1)}%
+          </div>
+          <div className="text-xs text-slate-400">Ø/Jahr</div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function EmptyTab({ label }: { label: string }) {
   return (

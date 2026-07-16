@@ -93,7 +93,7 @@ class AnalyzeRequest(BaseModel):
     query: str
     supplier_id: str | None = None
     supplier_name: str | None = None
-    top_k: int = 6
+    top_k: int | None = None
 
 
 class AnalyzeSource(BaseModel):
@@ -247,13 +247,16 @@ async def analyze_with_rag(
 
     Sucht semantisch relevante Dokumente und generiert eine deutsche Antwort via LLM.
     """
+    from infrastructure.llm.deps import get_org_pipeline_settings
+    pipe = await get_org_pipeline_settings(current_user.organization_id, session)
+    effective_top_k = body.top_k if body.top_k is not None else pipe["top_k"]
     result = await analyze(
         query=body.query,
         organization_id=current_user.organization_id,
         session=session,
         supplier_id=body.supplier_id,
         supplier_name=body.supplier_name,
-        top_k=body.top_k,
+        top_k=effective_top_k,
     )
     return AnalyzeResponse(
         answer=result["answer"],

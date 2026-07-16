@@ -21,7 +21,7 @@ from typing import Any
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, File, HTTPException, UploadFile, status
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -38,6 +38,9 @@ from application.rag.document_ingestion import (
     reclassify_document,
     reclassify_all_documents,
     reanalyze_document,
+    reparse_document,
+    rechunk_document,
+    reextract_metrics,
 )
 from application.rag.document_classifier import classify_document
 from application.rag.embedder import embed_query
@@ -45,6 +48,7 @@ from infrastructure.persistence.models.rag_documents import RagDocumentModel
 from infrastructure.persistence.models.company_intelligence import CompanyMetricModel, CompanySignalModel
 from domain.user import User
 from interfaces.api.deps import get_current_user, get_db
+from shared.security import decode_token
 from infrastructure.llm.deps import get_llm_provider
 from application.ports.llm import Message
 
@@ -133,6 +137,9 @@ class ReviewMetricOut(BaseModel):
     year: int
     period: str
     confidence: str
+    confidence_pct: int | None = None
+    page_number: int | None = None
+    scope: str | None = None
 
 class ReviewSignalOut(BaseModel):
     id: str
@@ -175,6 +182,7 @@ class ReviewDataOut(BaseModel):
     copilot_hidden: bool
     classification_confidence: float | None
     classification_alternatives: Any | None
+    classification_evidence: list[str] | None
     created_at: datetime
     updated_at: datetime
     chunks: list[ReviewChunkOut]
@@ -198,8 +206,8 @@ class ChunkContentUpdate(BaseModel):
 
 class TestRetrievalRequest(BaseModel):
     query: str
-    top_k: int = 5
-    min_sim: float = 0.25
+    top_k: int | None = None
+    min_sim: float | None = None
 
 
 # ── Sources ───────────────────────────────────────────────────────────────────
@@ -409,28 +417,117 @@ async def reclassify_all_files(
 @router.post("/files/{file_id}/reclassify", status_code=status.HTTP_200_OK)
 async def reclassify_one_file(
     file_id: str,
+    model: str | None = None,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Re-run Groq classifier on a single document using stored chunk text."""
+    """Re-run Groq classifier. Pass model=groq:llama-3.1-8b-instant to override."""
     org_id = user.organization_id
-    result = await reclassify_document(file_id, org_id, db)
+    result = await reclassify_document(file_id, org_id, db, model=model)
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": org_id, "uid": user.id,
+         "action": "reclassify", "field": "doc_type",
+         "old": result.get("old_doc_type"), "new": result.get("new_doc_type")},
+    )
     return result
 
+
+class ReanalyzeRequest(BaseModel):
+    extra_context: str | None = None
 
 @router.post("/files/{file_id}/reanalyze", status_code=status.HTTP_200_OK)
 async def reanalyze_one_file(
     file_id: str,
+    model: str | None = None,
+    payload: ReanalyzeRequest = ReanalyzeRequest(),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    """Re-run LLM analysis (KPI/risk/summary extraction) using stored chunks."""
+    """Re-run LLM analysis. Pass model to override, extra_context to add reviewer hint."""
     org_id = user.organization_id
-    result = await reanalyze_document(file_id, org_id, db)
+    result = await reanalyze_document(file_id, org_id, db, model=model, extra_context=payload.extra_context)
     if "error" in result:
         raise HTTPException(status_code=404, detail=result["error"])
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": org_id, "uid": user.id,
+         "action": "reanalyze", "field": "summary",
+         "old": None, "new": f"model={model or 'default'} kpis={result.get('kpi_count', 0)}" + (f" hint={payload.extra_context[:40]}" if payload.extra_context else "")},
+    )
+    return result
+
+
+@router.post("/files/{file_id}/reparse", status_code=status.HTTP_200_OK)
+async def reparse_one_file(
+    file_id: str,
+    parse_engine: str = "docling",
+    ocr_enabled: bool = True,
+    extract_tables: bool = True,
+    describe_pictures: bool = False,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Re-parse PDF with selected engine and options."""
+    result = await reparse_document(
+        file_id, user.organization_id, db,
+        parse_engine=parse_engine,
+        ocr_enabled=ocr_enabled,
+        extract_tables=extract_tables,
+        describe_pictures=describe_pictures,
+    )
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": user.organization_id, "uid": user.id,
+         "action": "reparse", "field": "parsed_text",
+         "old": None, "new": f"engine={parse_engine} ocr={ocr_enabled} tables={extract_tables} pictures={describe_pictures} pages={result.get('pages')} chars={result.get('chars')}"},
+    )
+    return result
+
+
+@router.post("/files/{file_id}/rechunk", status_code=status.HTTP_200_OK)
+async def rechunk_one_file(
+    file_id: str,
+    chunk_size: int = 800,
+    chunk_overlap: int = 80,
+    chunk_strategy: str = "sliding_window",
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Delete and re-create all chunks / embeddings for a document."""
+    result = await rechunk_document(file_id, user.organization_id, db, chunk_size=chunk_size, chunk_overlap=chunk_overlap, chunk_strategy=chunk_strategy)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": user.organization_id, "uid": user.id,
+         "action": "rechunk", "field": "chunks",
+         "old": None, "new": f"strategy={chunk_strategy} size={chunk_size} overlap={chunk_overlap} chunks={result.get('chunks_added')}"},
+    )
+    return result
+
+
+@router.post("/files/{file_id}/reextract-metrics", status_code=status.HTTP_200_OK)
+async def reextract_metrics_one_file(
+    file_id: str,
+    model: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Re-run metric/signal extraction. Pass model to override org default."""
+    result = await reextract_metrics(file_id, user.organization_id, db, model=model)
+    if "error" in result:
+        raise HTTPException(status_code=404, detail=result["error"])
+    await db.execute(
+        text("INSERT INTO document_review_log (id, doc_file_id, organization_id, user_id, action, field, old_value, new_value) VALUES (:id, :fid, :org, :uid, :action, :field, :old, :new)"),
+        {"id": str(uuid.uuid4()), "fid": file_id, "org": user.organization_id, "uid": user.id,
+         "action": "reextract_metrics", "field": "metrics",
+         "old": None, "new": f"model={model or 'default'} metrics={result.get('metrics', 0)} signals={result.get('signals', 0)}"},
+    )
     return result
 
 
@@ -652,6 +749,85 @@ async def serve_file(
     return FileResponse(file_path, media_type=media_type, filename=os.path.basename(file_path))
 
 
+@router.get("/files/{file_id}/status-stream")
+async def status_stream(
+    file_id: str,
+    token: str | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """SSE stream that emits the document status every second until done/failed.
+
+    EventSource cannot send custom headers, so the JWT is passed as `?token=<jwt>`.
+    """
+    import json
+    from infrastructure.persistence.models.user import UserModel
+
+    if not token:
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'error': 'unauthorized'})}\n\n"]),
+            media_type="text/event-stream",
+        )
+    try:
+        payload = decode_token(token)
+        user_id = payload.get("sub") or ""
+        user_row = (await db.execute(
+            select(UserModel.organization_id).where(UserModel.id == user_id)
+        )).first()
+        org_id = user_row[0] if user_row else ""
+        if not org_id:
+            raise ValueError("no org")
+    except Exception:
+        return StreamingResponse(
+            iter([f"data: {json.dumps({'error': 'unauthorized'})}\n\n"]),
+            media_type="text/event-stream",
+        )
+
+    async def generate():
+        terminal = {"done", "failed", "error", "completed"}
+        consecutive_errors = 0
+        while True:
+            try:
+                from sqlalchemy import select as _select
+                stmt = _select(
+                    DocumentFileModel.status,
+                    DocumentFileModel.chunks_count,
+                    DocumentFileModel.error_msg,
+                    DocumentFileModel.updated_at,
+                ).where(
+                    DocumentFileModel.id == file_id,
+                    DocumentFileModel.organization_id == org_id,
+                )
+                row = (await db.execute(stmt)).first()
+                if row is None:
+                    yield f"data: {json.dumps({'error': 'not_found'})}\n\n"
+                    return
+                payload = {
+                    "status": row[0],
+                    "chunks_count": row[1] or 0,
+                    "error_msg": row[2],
+                    "updated_at": row[3].isoformat() if row[3] else None,
+                }
+                yield f"data: {json.dumps(payload)}\n\n"
+                if row[0] in terminal:
+                    return
+                consecutive_errors = 0
+            except Exception as exc:
+                consecutive_errors += 1
+                yield f"data: {json.dumps({'error': str(exc)})}\n\n"
+                if consecutive_errors >= 3:
+                    return
+            await asyncio.sleep(1)
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.get("/files/{file_id}/review", response_model=ReviewDataOut)
 async def get_file_review(
     file_id: str,
@@ -722,13 +898,52 @@ async def get_file_review(
         copilot_hidden=bool(doc.copilot_hidden),
         classification_confidence=doc.classification_confidence,
         classification_alternatives=doc.classification_alternatives,
+        classification_evidence=doc.classification_evidence or [],
         created_at=doc.created_at,
         updated_at=doc.updated_at,
         chunks=[ReviewChunkOut(id=c.id, content=c.content, chunk_level=c.chunk_level, doc_class=c.doc_class, page_number=c.page_number, excluded_from_index=bool(c.excluded_from_index)) for c in chunks],
-        metrics=[ReviewMetricOut(id=m.id, metric_type=m.metric_type, value=float(m.value), unit=m.unit, year=m.year, period=m.period, confidence=m.confidence) for m in metrics],
+        metrics=[ReviewMetricOut(id=m.id, metric_type=m.metric_type, value=float(m.value), unit=m.unit, year=m.year, period=m.period, confidence=m.confidence, confidence_pct=m.confidence_pct, page_number=m.page_number, scope=m.scope) for m in metrics],
         signals=[ReviewSignalOut(id=s.id, signal_type=s.signal_type, dimension=s.dimension, direction=s.direction, severity=s.severity, description=s.description, year=s.year) for s in signals],
         audit_log=[ReviewAuditEntry(id=str(r["id"]), user_id=r["user_id"], action=r["action"], field=r["field"], old_value=r["old_value"], new_value=r["new_value"], created_at=r["created_at"]) for r in log_rows],
     )
+
+
+@router.get("/suppliers/{supplier_id}/audit-log", status_code=status.HTTP_200_OK)
+async def get_supplier_audit_log(
+    supplier_id: str,
+    limit: int = 200,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Return all document_review_log entries across all documents of a supplier."""
+    org_id = user.organization_id
+    rows = (await db.execute(text("""
+        SELECT l.id, l.doc_file_id, l.user_id, l.action, l.field, l.old_value, l.new_value, l.created_at,
+               f.title, f.doc_type, f.report_year
+        FROM document_review_log l
+        JOIN document_files f ON f.id = l.doc_file_id
+        WHERE f.supplier_id   = :sid
+          AND f.organization_id = :org
+        ORDER BY l.created_at DESC
+        LIMIT :lim
+    """), {"sid": supplier_id, "org": org_id, "lim": limit})).fetchall()
+
+    return [
+        {
+            "id": str(r["id"]),
+            "doc_file_id": r["doc_file_id"],
+            "doc_title": r["title"] or r["doc_type"],
+            "doc_type": r["doc_type"],
+            "report_year": r["report_year"],
+            "user_id": r["user_id"],
+            "action": r["action"],
+            "field": r["field"],
+            "old_value": r["old_value"],
+            "new_value": r["new_value"],
+            "created_at": r["created_at"],
+        }
+        for r in rows
+    ]
 
 
 @router.patch("/files/{file_id}/classification", status_code=status.HTTP_200_OK)
@@ -922,6 +1137,11 @@ async def test_retrieval(
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    from infrastructure.llm.deps import get_org_pipeline_settings
+    pipe = await get_org_pipeline_settings(org_id, db)
+    effective_top_k = payload.top_k if payload.top_k is not None else pipe["top_k"]
+    effective_min_sim = payload.min_sim if payload.min_sim is not None else pipe["similarity_threshold"]
+
     import asyncio as _aio
     import concurrent.futures as _cf
     loop = _aio.get_event_loop()
@@ -941,7 +1161,7 @@ async def test_retrieval(
             ORDER BY embedding <=> CAST('{vec_str}' AS vector)
             LIMIT :top_k
         """),
-        {"fid": file_id, "org": org_id, "min_sim": payload.min_sim, "top_k": payload.top_k},
+        {"fid": file_id, "org": org_id, "min_sim": effective_min_sim, "top_k": effective_top_k},
     )).mappings().all()
 
     return {
@@ -1133,6 +1353,8 @@ class MetricUpdate(BaseModel):
     year: int | None = None
     period: str | None = None
     confidence: str | None = None
+    page_number: int | None = None
+    scope: str | None = None
 
 class MetricCreate(BaseModel):
     metric_type: str
@@ -1171,6 +1393,10 @@ async def update_metric(
         metric.period = payload.period
     if payload.confidence is not None:
         metric.confidence = payload.confidence
+    if payload.page_number is not None:
+        metric.page_number = payload.page_number
+    if payload.scope is not None:
+        metric.scope = payload.scope
 
     return {"id": metric_id, "updated": True}
 
@@ -1233,7 +1459,28 @@ async def add_metric(
         year=metric.year,
         period=metric.period,
         confidence=metric.confidence,
+        page_number=metric.page_number,
+        scope=metric.scope,
     )
+
+
+@router.get("/files/{file_id}/parse-layout", status_code=status.HTTP_200_OK)
+async def get_parse_layout(
+    file_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Return per-page bounding box layout data extracted during Docling parsing."""
+    org_id = user.organization_id
+    doc = (await db.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"file_id": file_id, "pages": doc.pages, "layout": doc.parse_layout or {}}
 
 
 class SandboxRequest(BaseModel):
@@ -1286,6 +1533,38 @@ async def copilot_sandbox(
         for r in rows
     ]
 
+    # P2-C: cross-corpus similar chunks from OTHER documents
+    corpus_rows = (await db.execute(text("""
+        SELECT rd.id, rd.content, rd.page_number,
+               1 - (rd.embedding <=> CAST(:qv AS vector)) AS similarity,
+               df.id AS doc_id, df.company_name, df.title, df.report_year, df.doc_type
+        FROM rag_documents rd
+        JOIN document_files df ON df.id = rd.document_file_id
+        WHERE rd.organization_id = :org
+          AND rd.document_file_id != :fid
+          AND rd.embedding IS NOT NULL
+          AND rd.excluded_from_index IS NOT TRUE
+          AND (df.copilot_hidden IS NULL OR df.copilot_hidden IS FALSE)
+          AND 1 - (rd.embedding <=> CAST(:qv AS vector)) >= 0.75
+        ORDER BY rd.embedding <=> CAST(:qv AS vector)
+        LIMIT 5
+    """), {"qv": str(query_vec), "fid": file_id, "org": org_id})).fetchall()
+
+    corpus_similar = [
+        {
+            "chunk_id": str(r.id),
+            "content": r.content[:300],
+            "page_number": r.page_number,
+            "similarity": round(float(r.similarity), 4),
+            "doc_id": str(r.doc_id),
+            "company_name": r.company_name,
+            "title": r.title,
+            "report_year": r.report_year,
+            "doc_type": r.doc_type,
+        }
+        for r in corpus_rows
+    ]
+
     answer = None
     if chunks:
         context = "\n\n---\n\n".join(
@@ -1296,16 +1575,18 @@ async def copilot_sandbox(
         resp = await llm.complete(
             messages=[Message(role="user", content=payload.query)],
             system=(
-                "Du bist ein Dokumenten-Assistent. Beantworte die Frage ausschließlich auf Basis der folgenden Dokumentausschnitte. "
-                "Antworte präzise und zitiere die Chunk-Nummer wenn möglich. "
-                "Wenn die Information nicht in den Ausschnitten enthalten ist, sage das klar.\n\n"
-                f"DOKUMENTAUSSCHNITTE:\n{context}"
+                "You are a document assistant. Answer the question strictly based on the document excerpts below. "
+                "Respond in the same language as the question. "
+                "Cite the chunk number (e.g. [Chunk 2]) when referencing specific content. "
+                "If the relevant information appears in any excerpt — even partially — quote it and explain. "
+                "Only say the information is missing if it is genuinely absent from ALL excerpts.\n\n"
+                f"DOCUMENT EXCERPTS:\n{context}"
             ),
             max_tokens=600,
         )
         answer = resp.content
 
-    return {"query": payload.query, "answer": answer, "chunks": chunks}
+    return {"query": payload.query, "answer": answer, "chunks": chunks, "corpus_similar": corpus_similar}
 
 
 # ── Helper ────────────────────────────────────────────────────────────────────
@@ -1319,3 +1600,52 @@ async def _get_source_or_404(source_id: str, org_id: str, db: AsyncSession) -> D
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
     return source
+
+
+# ── Chunk Comments (P2-D) ─────────────────────────────────────────────────────
+
+class ChunkCommentCreate(BaseModel):
+    comment: str
+
+@router.get("/chunks/{chunk_id}/comments", status_code=status.HTTP_200_OK)
+async def list_chunk_comments(
+    chunk_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    rows = (await db.execute(
+        text("SELECT id, user_id, comment, created_at FROM chunk_comments WHERE chunk_id = :cid AND organization_id = :org ORDER BY created_at"),
+        {"cid": chunk_id, "org": user.organization_id},
+    )).mappings().all()
+    return [{"id": str(r["id"]), "user_id": r["user_id"], "comment": r["comment"], "created_at": r["created_at"]} for r in rows]
+
+
+@router.post("/chunks/{chunk_id}/comments", status_code=status.HTTP_201_CREATED)
+async def create_chunk_comment(
+    chunk_id: str,
+    payload: ChunkCommentCreate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    comment_id = str(uuid.uuid4())
+    await db.execute(
+        text("INSERT INTO chunk_comments (id, chunk_id, organization_id, user_id, comment) VALUES (:id, :cid, :org, :uid, :comment)"),
+        {"id": comment_id, "cid": chunk_id, "org": user.organization_id, "uid": user.id, "comment": payload.comment.strip()},
+    )
+    await db.commit()
+    return {"id": comment_id, "chunk_id": chunk_id, "comment": payload.comment.strip()}
+
+
+@router.delete("/chunks/{chunk_id}/comments/{comment_id}", status_code=status.HTTP_200_OK)
+async def delete_chunk_comment(
+    chunk_id: str,
+    comment_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    await db.execute(
+        text("DELETE FROM chunk_comments WHERE id = :id AND chunk_id = :cid AND organization_id = :org"),
+        {"id": comment_id, "cid": chunk_id, "org": user.organization_id},
+    )
+    await db.commit()
+    return {"deleted": comment_id}

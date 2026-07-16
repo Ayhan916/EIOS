@@ -139,21 +139,24 @@ Analyze the document and return ONLY valid JSON with these fields:
   "title": "<official document title or null>",
   "language": "<'de' | 'en' | 'fr' | 'es' | 'it'>",
   "confidence": <0.0-1.0>,
-  "alternatives": [{"doc_type": "<type>", "confidence": <0.0-1.0>}]
+  "alternatives": [{"doc_type": "<type>", "confidence": <0.0-1.0>}],
+  "evidence_passages": ["<exact short phrase from document that led to this classification>", ...]
 }
 
 Rules:
 - company_name: extract the ISSUING company (not mentioned companies). For regulatory docs (EU directives etc.) use null.
 - report_year: the year the document COVERS, not the publication year.
 - alternatives: list the top 2 alternative doc_type candidates with their confidence scores (omit if none).
+- evidence_passages: list 2-4 SHORT verbatim phrases (max 10 words each) from the document text that are the strongest signals for the chosen doc_type. These will be highlighted in the PDF.
 - Be precise. Return null for unknown fields."""
 
 
-async def classify_with_groq(text_excerpt: str, filename: str) -> dict:
+async def classify_with_groq(text_excerpt: str, filename: str, llm=None) -> dict:
     try:
-        from infrastructure.llm.deps import get_llm_provider
         from application.ports.llm import Message
-        llm = get_llm_provider()
+        if llm is None:
+            from infrastructure.llm.deps import get_llm_provider
+            llm = get_llm_provider()
     except Exception:
         return {}
 
@@ -165,7 +168,7 @@ async def classify_with_groq(text_excerpt: str, filename: str) -> dict:
             response = await llm.complete(
                 messages=[Message(role="user", content=prompt)],
                 system=_SYSTEM_PROMPT,
-                max_tokens=300,
+                max_tokens=600,
                 temperature=0.0,
             )
             raw = response.content.strip()

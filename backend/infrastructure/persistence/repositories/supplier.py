@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from domain.enums import EntityStatus, SupplierStatus, SupplierTier
 from domain.supplier import Supplier
+from infrastructure.persistence.models.entity_alias import EntityAliasModel
 from infrastructure.persistence.models.supplier import SupplierModel
 from infrastructure.persistence.repositories.base import BaseRepository
 
@@ -123,8 +124,13 @@ class SQLSupplierRepository(BaseRepository[Supplier, SupplierModel]):
         if chain_direction:
             stmt = stmt.where(SupplierModel.chain_direction == chain_direction)
         if search:
+            alias_subq = exists().where(
+                EntityAliasModel.supplier_id == SupplierModel.id,
+                EntityAliasModel.alias.ilike(f"%{search}%"),
+            )
             stmt = stmt.where(
                 SupplierModel.name.ilike(f"%{search}%")
                 | SupplierModel.legal_name.ilike(f"%{search}%")
+                | alias_subq
             )
         return await self._execute_paged(stmt, page, page_size)

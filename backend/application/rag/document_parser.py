@@ -49,6 +49,7 @@ class ParsedDocument:
     chunks: list[str] = field(default_factory=list)
     sections: list[str] = field(default_factory=list)  # section headings found
     chunk_pages: list[int] = field(default_factory=list)  # page_number per chunk (0 = unknown)
+    parse_layout: dict = field(default_factory=dict)  # {page_no: [{type, bbox}]}
 
 
 @dataclass
@@ -58,23 +59,67 @@ class ParseResult:
     error: str | None = None
 
 
-def parse_pdf(content: bytes) -> ParseResult:
-    """Parse PDF bytes — tries Docling first, falls back to PyMuPDF."""
-    result = parse_pdf_docling(content)
+def parse_pdf(
+    content: bytes,
+    parse_engine: str = "docling",
+    ocr_enabled: bool = True,
+    extract_tables: bool = True,
+    describe_pictures: bool = False,
+) -> ParseResult:
+    """Parse PDF bytes — routes to selected engine, falls back to PyMuPDF on failure."""
+    if parse_engine == "pymupdf":
+        return _parse_pdf_pymupdf(content)
+    if parse_engine == "pdfplumber":
+        result = _parse_pdf_pdfplumber(content)
+        if result.ok:
+            return result
+        logger.warning("doc_parser.pdfplumber_failed_fallback", error=result.error)
+        return _parse_pdf_pymupdf(content)
+    # default: docling
+    result = parse_pdf_docling(content, ocr_enabled=ocr_enabled, extract_tables=extract_tables, describe_pictures=describe_pictures)
     if result.ok:
         return result
     logger.warning("doc_parser.docling_failed_fallback", error=result.error)
     return _parse_pdf_pymupdf(content)
 
 
-def parse_pdf_docling(content: bytes) -> ParseResult:
-    """Parse PDF using Docling — preserves tables, sections, structure."""
+def parse_pdf_docling(
+    content: bytes,
+    ocr_enabled: bool = True,
+    extract_tables: bool = True,
+    describe_pictures: bool = False,
+) -> ParseResult:
+    """Parse PDF using Docling — preserves tables, sections, structure.
+
+    describe_pictures: run SmolVLM-256M on each figure and inline the description
+    as text — allows Copilot to answer questions about charts and diagrams.
+    First call downloads ~500 MB from HuggingFace (cached afterwards).
+    """
     try:
-        import tempfile, os
         from docling.datamodel.base_models import DocumentStream
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
 
         file_hash = hashlib.sha256(content).hexdigest()[:16]
-        converter = _get_docling_converter()
+
+        # Use singleton only when all options are defaults
+        if ocr_enabled and extract_tables and not describe_pictures:
+            converter = _get_docling_converter()
+        else:
+            opts = PdfPipelineOptions()
+            opts.do_ocr = ocr_enabled
+            opts.do_table_structure = extract_tables
+            if describe_pictures:
+                from docling.datamodel.pipeline_options import PictureDescriptionVlmOptions
+                opts.generate_picture_images = True
+                opts.do_picture_description = True
+                opts.picture_description_options = PictureDescriptionVlmOptions(
+                    repo_id="HuggingFaceTB/SmolVLM-256M-Instruct",
+                )
+                logger.info("doc_parser.picture_description_enabled", model="SmolVLM-256M-Instruct")
+            converter = DocumentConverter(
+                format_options={"pdf": PdfFormatOption(pipeline_options=opts)}
+            )
 
         # Feed bytes via DocumentStream (no temp file needed)
         buf = io.BytesIO(content)
@@ -99,6 +144,9 @@ def parse_pdf_docling(content: bytes) -> ParseResult:
         # Page-aware chunking: track which PDF page each chunk originates from
         chunks, chunk_pages = _chunk_markdown_page_aware(doc, markdown, pages)
 
+        # Extract layout bounding boxes per page
+        parse_layout = _extract_layout(doc)
+
         logger.info(
             "doc_parser.docling_done",
             pages=pages,
@@ -116,6 +164,7 @@ def parse_pdf_docling(content: bytes) -> ParseResult:
                 chunks=chunks,
                 chunk_pages=chunk_pages,
                 sections=sections[:50],
+                parse_layout=parse_layout,
             ),
         )
     except Exception as exc:
@@ -182,6 +231,65 @@ def _parse_pdf_pymupdf(content: bytes) -> ParseResult:
         )
     except Exception as exc:
         logger.error("doc_parser.pdf_error", error=str(exc))
+        return ParseResult(ok=False, error=str(exc))
+
+
+def _parse_pdf_pdfplumber(content: bytes) -> ParseResult:
+    """pdfplumber parser — best for table-heavy PDFs."""
+    try:
+        import pdfplumber
+    except ImportError:
+        return ParseResult(ok=False, error="pdfplumber not installed — run: pip install pdfplumber")
+
+    try:
+        file_hash = hashlib.sha256(content).hexdigest()[:16]
+        full_text_parts: list[str] = []
+        sections: list[str] = []
+        pages = 0
+
+        with pdfplumber.open(io.BytesIO(content)) as pdf:
+            pages = len(pdf.pages)
+            for page in pdf.pages:
+                text = page.extract_text(x_tolerance=2, y_tolerance=2) or ""
+                # Extract tables as Markdown-style text
+                for table in page.extract_tables():
+                    if not table:
+                        continue
+                    rows = []
+                    for i, row in enumerate(table):
+                        cells = [str(c or "").strip() for c in row]
+                        rows.append("| " + " | ".join(cells) + " |")
+                        if i == 0:
+                            rows.append("|" + "|".join(["---"] * len(cells)) + "|")
+                    full_text_parts.append("\n".join(rows))
+                if text:
+                    for line in text.split("\n"):
+                        line = line.strip()
+                        if not line:
+                            continue
+                        if len(line) < 100 and line[0].isupper():
+                            sections.append(line)
+                    full_text_parts.append(text)
+
+        full_text = "\n\n".join(full_text_parts)
+        language = _detect_language(full_text[:2000])
+        title = _extract_title(full_text_parts[:5])
+        chunks = _chunk_text(full_text)
+
+        logger.info("doc_parser.pdfplumber_done", pages=pages, chunks=len(chunks), hash=file_hash)
+        return ParseResult(
+            ok=True,
+            document=ParsedDocument(
+                title=title,
+                language=language,
+                pages=pages,
+                file_hash=file_hash,
+                chunks=chunks,
+                sections=sections[:50],
+            ),
+        )
+    except Exception as exc:
+        logger.error("doc_parser.pdfplumber_error", error=str(exc))
         return ParseResult(ok=False, error=str(exc))
 
 
@@ -451,3 +559,59 @@ def _chunk_markdown_page_aware(doc: object, markdown: str, total_pages: int) -> 
         chunk_pages.append(page_no)
 
     return chunks, chunk_pages
+
+
+def _extract_layout(doc: object) -> dict:
+    """Extract per-page bounding boxes from Docling document.
+
+    Returns: {page_no: [{type, l, t, r, b, page_h}]}
+    Types: "text" | "table" | "figure" | "unknown"
+    Coords: Docling points (origin = bottom-left of page).
+    """
+    layout: dict[str, list] = {}
+    try:
+        for item, _level in doc.iterate_items():  # type: ignore[attr-defined]
+            provs = getattr(item, "prov", None)
+            if not provs:
+                continue
+            prov = provs[0]
+            page_no = getattr(prov, "page_no", None)
+            bbox = getattr(prov, "bbox", None)
+            if page_no is None or bbox is None:
+                continue
+
+            class_name = type(item).__name__
+            if "Table" in class_name:
+                el_type = "table"
+            elif "Figure" in class_name or "Picture" in class_name:
+                el_type = "figure"
+            elif "Text" in class_name or "Section" in class_name or "Title" in class_name or "Paragraph" in class_name:
+                el_type = "text"
+            else:
+                el_type = "unknown"
+
+            # Get page height for coordinate conversion (PDF origin = bottom-left)
+            page_h = None
+            try:
+                pages = getattr(doc, "pages", {})
+                page_obj = pages.get(page_no) if isinstance(pages, dict) else None
+                if page_obj:
+                    size = getattr(page_obj, "size", None)
+                    page_h = getattr(size, "height", None)
+            except Exception:
+                pass
+
+            key = str(page_no)
+            if key not in layout:
+                layout[key] = []
+            layout[key].append({
+                "type": el_type,
+                "l": round(float(bbox.l), 2),
+                "t": round(float(bbox.t), 2),
+                "r": round(float(bbox.r), 2),
+                "b": round(float(bbox.b), 2),
+                "page_h": round(float(page_h), 2) if page_h else None,
+            })
+    except Exception as exc:
+        logger.warning("doc_parser.layout_extract_failed", error=str(exc))
+    return layout

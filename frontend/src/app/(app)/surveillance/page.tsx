@@ -125,6 +125,7 @@ function SignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, stri
   const qc = useQueryClient();
   const [riskCreated, setRiskCreated] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>(signal.signal_status);
+  const [expanded, setExpanded] = useState(false);
 
   const createRisk = useMutation({
     mutationFn: async () => {
@@ -164,20 +165,37 @@ function SignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, stri
 
   const isDone = localStatus === "ACKNOWLEDGED" || localStatus === "DISMISSED";
   const supplierName = signal.supplier_id ? (nameMap.get(signal.supplier_id) ?? signal.supplier_id.slice(0, 10) + "…") : null;
+  const expl = signal.explainability_json ?? {};
 
   return (
     <div className="py-3 border-b last:border-0 space-y-1.5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{signal.title}</p>
+        <button className="flex-1 min-w-0 text-left" onClick={() => setExpanded(v => !v)}>
+          <p className={`text-sm font-medium ${expanded ? "" : "truncate"}`}>{signal.title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {signal.signal_type}
             {supplierName ? ` · ${supplierName}` : ""}
             {" · "}{formatDateTime(signal.detected_at)}
+            <span className="ml-1 text-blue-500">{expanded ? "▲" : "▼"}</span>
           </p>
-        </div>
+        </button>
         <SeverityBadge severity={signal.severity} />
       </div>
+
+      {expanded && (
+        <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3 space-y-2 text-xs">
+          {signal.description && (
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{signal.description}</p>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground pt-1 border-t border-border">
+            {expl.dimension && <span><span className="font-medium">Dimension:</span> {expl.dimension}</span>}
+            {expl.direction && <span><span className="font-medium">Richtung:</span> {expl.direction}</span>}
+            {expl.year && <span><span className="font-medium">Jahr:</span> {expl.year}</span>}
+            {signal.confidence != null && <span><span className="font-medium">Konfidenz:</span> {Math.round(signal.confidence * 100)}%</span>}
+            {expl.company_name && <span><span className="font-medium">Unternehmen:</span> {expl.company_name}</span>}
+          </div>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-1.5">
         {isDone ? (

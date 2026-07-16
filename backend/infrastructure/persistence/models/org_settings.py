@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlalchemy as sa
 from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -37,3 +38,6 @@ class OrganizationSettingsModel(Base):
     sharepoint_client_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     sharepoint_site_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
     sharepoint_refresh_token_ref: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # LLM model settings per job (ADR-012 extension)
+    llm_model_settings: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)
+    pipeline_settings: Mapped[dict | None] = mapped_column(sa.JSON, nullable=True)

@@ -32,10 +32,11 @@ _MAX_CALLS = 20            # process first 20 parent chunks per document
 
 # ── LLM Helper ────────────────────────────────────────────────────────────────
 
-async def _call_llm(system: str, prompt: str) -> str:
-    from infrastructure.llm.deps import get_extraction_llm_provider
+async def _call_llm(system: str, prompt: str, llm=None) -> str:
     from application.ports.llm import Message
-    llm = get_extraction_llm_provider()
+    if llm is None:
+        from infrastructure.llm.deps import get_extraction_llm_provider
+        llm = get_extraction_llm_provider()
     for attempt in range(4):
         try:
             response = await llm.complete(
@@ -80,7 +81,10 @@ Return ONLY valid JSON:
       "unit": "EUR_M",
       "year": 2024,
       "period": "FY",
-      "confidence": "exact"
+      "confidence": "exact",
+      "confidence_pct": 97,
+      "page_number": 47,
+      "scope": "consolidated"
     }
   ],
   "signals": [
@@ -98,7 +102,10 @@ Return ONLY valid JSON:
 metric_type values: revenue, ebitda, ebitda_margin, net_income, employees, capex, free_cashflow, debt_ratio, roce, eps
 unit values: EUR_M (millions), EUR_B (billions), PCT (percent), COUNT (headcount), EUR (absolute)
 confidence: exact (stated explicitly), estimated (derived/calculated)
+confidence_pct: integer 0-100 reflecting your certainty (e.g. 97 if value is explicitly stated, 70 if estimated)
 period: FY, Q1, Q2, Q3, Q4, H1, H2
+page_number: the PDF page number where this value appears (integer, omit if unknown)
+scope: "consolidated" (group total), "segment:Automotive", "segment:Financial Services", etc. (omit if unclear)
 signal_type: guidance_issued, profit_warning, dividend_change, restructuring, acquisition, rating_change
 direction: positive, negative, neutral
 severity: critical, high, medium, low
@@ -107,10 +114,10 @@ Extract ALL years present in the document (multi-year data common in annual repo
 Return [] for metrics/signals if nothing found. Never invent data."""
 
 
-async def _extract_financial(chunks: list[str], company: str, year: int | None, system: str | None = None) -> dict:
+async def _extract_financial(chunks: list[str], company: str, year: int | None, system: str | None = None, llm=None) -> dict:
     context = "\n\n---\n\n".join(chunks[:_CHUNKS_PER_CALL])[:_CHARS_PER_CALL]
     prompt = f"Company: {company}\nReport year: {year or 'unknown'}\n\nDocument text:\n{context}"
-    raw = await _call_llm(system or _FINANCIAL_SYSTEM, prompt)
+    raw = await _call_llm(system or _FINANCIAL_SYSTEM, prompt, llm=llm)
     return _parse_json(raw)
 
 
@@ -127,7 +134,10 @@ Return ONLY valid JSON:
       "unit": "tCO2",
       "year": 2024,
       "period": "FY",
-      "confidence": "exact"
+      "confidence": "exact",
+      "confidence_pct": 95,
+      "page_number": 52,
+      "scope": "consolidated"
     }
   ],
   "signals": [
@@ -148,16 +158,18 @@ metric_type values:
   women_leadership_pct (%), supplier_audited_pct (%), employees_total (COUNT)
   esg_score (0-100 scale), lost_time_injury_rate (per 1M hours)
 
+page_number: the PDF page number where this value appears (integer, omit if unknown)
+scope: "consolidated", "segment:Automotive", "own operations", etc. (omit if unclear)
 signal_type: esg_target_set, esg_target_reached, esg_target_missed, certification_received,
              supply_chain_audit, human_rights_issue, environmental_incident, climate_commitment
 
 Extract ALL years present. Return [] if nothing found. Never invent data."""
 
 
-async def _extract_esg(chunks: list[str], company: str, year: int | None, system: str | None = None) -> dict:
+async def _extract_esg(chunks: list[str], company: str, year: int | None, system: str | None = None, llm=None) -> dict:
     context = "\n\n---\n\n".join(chunks[:_CHUNKS_PER_CALL])[:_CHARS_PER_CALL]
     prompt = f"Company: {company}\nReport year: {year or 'unknown'}\n\nDocument text:\n{context}"
-    raw = await _call_llm(system or _ESG_SYSTEM, prompt)
+    raw = await _call_llm(system or _ESG_SYSTEM, prompt, llm=llm)
     return _parse_json(raw)
 
 
@@ -190,10 +202,10 @@ Focus on concrete commitments, forward-looking statements, and strategic decisio
 Return [] for metrics (statements rarely contain verified metrics). Never invent data."""
 
 
-async def _extract_statement(chunks: list[str], company: str, year: int | None, system: str | None = None) -> dict:
+async def _extract_statement(chunks: list[str], company: str, year: int | None, system: str | None = None, llm=None) -> dict:
     context = "\n\n---\n\n".join(chunks[:_CHUNKS_PER_CALL])[:_CHARS_PER_CALL]
     prompt = f"Company: {company}\nYear: {year or 'unknown'}\n\nDocument text:\n{context}"
-    raw = await _call_llm(system or _STATEMENT_SYSTEM, prompt)
+    raw = await _call_llm(system or _STATEMENT_SYSTEM, prompt, llm=llm)
     return _parse_json(raw)
 
 
@@ -226,10 +238,10 @@ severity: critical, high, medium, low
 Return [] for metrics. Never invent data."""
 
 
-async def _extract_signal(chunks: list[str], company: str, year: int | None, system: str | None = None) -> dict:
+async def _extract_signal(chunks: list[str], company: str, year: int | None, system: str | None = None, llm=None) -> dict:
     context = "\n\n---\n\n".join(chunks[:_CHUNKS_PER_CALL])[:_CHARS_PER_CALL]
     prompt = f"Company: {company}\nYear: {year or 'unknown'}\n\nDocument text:\n{context}"
-    raw = await _call_llm(system or _SIGNAL_SYSTEM, prompt)
+    raw = await _call_llm(system or _SIGNAL_SYSTEM, prompt, llm=llm)
     return _parse_json(raw)
 
 
@@ -241,23 +253,42 @@ async def _run_batched(
     company: str,
     year: int | None,
     system: str | None = None,
+    llm=None,
 ) -> dict:
     """Run extract_fn over all chunks in sliding batches, deduplicate results.
 
-    Processes up to _MAX_CALLS × _CHUNKS_PER_CALL chunks per document so that
-    financial tables spread across later pages of an annual report are not missed.
+    Prioritizes chunks containing numbers and financial keywords so that
+    financial tables deep in large annual reports are not missed.
     Metrics are deduplicated by (metric_type, year, period); signals are kept all.
     """
+    import re as _re
+
+    _NUMBER_RE = _re.compile(r"\b\d[\d,.\s]*(?:billion|million|Mrd|Mio|%|EUR|tCO2|GWh|MWh)\b", _re.IGNORECASE)
+    _FIN_KEYWORDS = re.compile(
+        r"\b(revenue|umsatz|ebitda|net income|jahresüberschuss|employees|mitarbeiter|"
+        r"co2|scope\s*[123]|emission|erneuerbar|renewable|capex|cashflow|dividend|"
+        r"esg|sustainability|nachhaltig|energie|energy|wasser|water|unfallrate)\b",
+        re.IGNORECASE,
+    )
+
+    def _chunk_score(c: str) -> int:
+        return len(_NUMBER_RE.findall(c)) * 2 + len(_FIN_KEYWORDS.findall(c))
+
+    # Score all chunks, take top _MAX_CALLS by relevance (preserve order within top set)
+    scored = sorted(enumerate(chunks), key=lambda t: -_chunk_score(t[1]))
+    top_indices = sorted(i for i, _ in scored[:_MAX_CALLS])
+    selected = [chunks[i] for i in top_indices]
+
     seen_metric_keys: set[tuple] = set()
     all_metrics: list[dict] = []
     all_signals: list[dict] = []
 
     calls = 0
-    for start in range(0, len(chunks), _CHUNKS_PER_CALL):
+    for start in range(0, len(selected), _CHUNKS_PER_CALL):
         if calls >= _MAX_CALLS:
             break
-        batch = chunks[start : start + _CHUNKS_PER_CALL]
-        result = await extract_fn(batch, company, year, system)
+        batch = selected[start : start + _CHUNKS_PER_CALL]
+        result = await extract_fn(batch, company, year, system, llm=llm)
         calls += 1
 
         for m in result.get("metrics") or []:
@@ -315,6 +346,7 @@ async def extract_and_store_intelligence(
     report_year: int | None,
     chunks: list[str],
     session: AsyncSession,
+    llm_provider=None,
 ) -> dict:
     """Extract metrics + signals from document chunks and persist them."""
     if not company_name or not chunks:
@@ -355,7 +387,7 @@ async def extract_and_store_intelligence(
 
     # Dispatch to class-specific extractor (always batched — covers full document)
     resolved_system = _PROMPT_FALLBACKS.get(prompt_name)
-    result = await _run_batched(extract_fn, chunks, company, report_year, system=resolved_system)
+    result = await _run_batched(extract_fn, chunks, company, report_year, system=resolved_system, llm=llm_provider)
 
     raw_metrics: list[dict] = result.get("metrics") if isinstance(result, dict) else []
     raw_signals: list[dict] = result.get("signals") if isinstance(result, dict) else []
@@ -377,9 +409,16 @@ async def extract_and_store_intelligence(
             year = int(m.get("year") or report_year or 0)
             period = str(m.get("period", "FY"))[:8]
             confidence = str(m.get("confidence", "exact"))[:16]
+            confidence_pct_raw = m.get("confidence_pct")
+            confidence_pct = max(0, min(100, int(confidence_pct_raw))) if confidence_pct_raw is not None else None
 
             if not metric_type or not unit or year < 1990:
                 continue
+
+            page_number = m.get("page_number")
+            page_number = int(page_number) if page_number else None
+            scope_raw = m.get("scope")
+            scope = str(scope_raw)[:64] if scope_raw else None
 
             # Check for existing record (upsert)
             existing = (await session.execute(
@@ -396,7 +435,12 @@ async def extract_and_store_intelligence(
                 existing.value = value
                 existing.unit = unit
                 existing.confidence = confidence
+                existing.confidence_pct = confidence_pct
                 existing.source_doc_id = doc_file_id
+                if page_number is not None:
+                    existing.page_number = page_number
+                if scope is not None:
+                    existing.scope = scope
             else:
                 session.add(CompanyMetricModel(
                     id=str(uuid.uuid4()),
@@ -410,6 +454,9 @@ async def extract_and_store_intelligence(
                     period=period,
                     source_doc_id=doc_file_id,
                     confidence=confidence,
+                    confidence_pct=confidence_pct,
+                    page_number=page_number,
+                    scope=scope,
                     created_at=now,
                 ))
             metrics_saved += 1

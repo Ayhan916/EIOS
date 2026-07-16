@@ -351,8 +351,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     _sc_consumer = get_kafka_consumer()
     _sc_handlers = SupplyChainHandlers(AsyncSessionFactory)
     _sc_handlers.register_all(_sc_consumer)
-    await _sc_consumer.start()
-    logger.info("supply_chain_consumer_started")
+    try:
+        await asyncio.wait_for(_sc_consumer.start(), timeout=5.0)
+        logger.info("supply_chain_consumer_started")
+    except Exception as _kafka_exc:
+        logger.warning("supply_chain_consumer_start_failed", error=str(_kafka_exc), fallback="events will be logged only")
 
     async def _outbox_loop() -> None:
         from application.supply_chain.outbox import OutboxPublisher  # noqa: PLC0415

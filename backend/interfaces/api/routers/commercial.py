@@ -576,3 +576,107 @@ async def update_org_settings(
                 setattr(settings_row, key, value)
 
     return {"updated": True, "organization_id": current_user.organization_id}
+
+
+# ── LLM Model Settings ────────────────────────────────────────────────────────
+
+ALLOWED_MODELS = {
+    "anthropic:claude-sonnet-4-6",
+    "anthropic:claude-haiku-4-5-20251001",
+    "groq:llama-3.3-70b-versatile",
+    "groq:llama-3.1-8b-instant",
+}
+
+ALLOWED_JOBS = {"extraction", "classification", "analysis", "copilot", "cross_source", "twin"}
+
+
+@router.get("/organizations/me/llm-models")
+async def get_llm_model_settings(
+    current_user: Annotated[UserResponse, Depends(get_current_user)],
+):
+    from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+    from infrastructure.llm.deps import JOB_DEFAULTS
+
+    async with AsyncSessionFactory() as session:
+        row = await session.get(OrganizationSettingsModel, current_user.organization_id)
+
+    stored = (row.llm_model_settings or {}) if row else {}
+    return {job: stored.get(job, JOB_DEFAULTS.get(job)) for job in ALLOWED_JOBS}
+
+
+@router.put("/organizations/me/llm-models")
+async def update_llm_model_settings(
+    body: dict,
+    current_user: Annotated[UserResponse, Depends(get_current_user)],
+):
+    from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
+    for job, model in body.items():
+        if job not in ALLOWED_JOBS:
+            raise HTTPException(status_code=400, detail=f"Unknown job: {job}")
+        if model not in ALLOWED_MODELS:
+            raise HTTPException(status_code=400, detail=f"Unknown model: {model}")
+
+    async with AsyncSessionFactory() as session, session.begin():
+        row = await session.get(OrganizationSettingsModel, current_user.organization_id)
+        if not row:
+            row = OrganizationSettingsModel(organization_id=current_user.organization_id)
+            session.add(row)
+        current = dict(row.llm_model_settings or {})
+        current.update(body)
+        row.llm_model_settings = current
+
+    return {"updated": True, "settings": current}
+
+
+# ── Pipeline Quality Settings ─────────────────────────────────────────────────
+
+PIPELINE_DEFAULTS = {
+    "parse_engine":           "docling",
+    "ocr_enabled":            False,
+    "extract_tables":         "markdown",
+    "chunk_size":             800,
+    "chunk_overlap":          80,
+    "chunk_strategy":         "sliding_window",
+    "retrieval_mode":         "dense",
+    "similarity_threshold":   0.25,
+    "top_k":                  8,
+}
+
+PIPELINE_ALLOWED_KEYS = set(PIPELINE_DEFAULTS.keys())
+
+
+@router.get("/organizations/me/pipeline-settings")
+async def get_pipeline_settings(
+    current_user: Annotated[UserResponse, Depends(get_current_user)],
+):
+    from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
+    async with AsyncSessionFactory() as session:
+        row = await session.get(OrganizationSettingsModel, current_user.organization_id)
+
+    stored = (row.pipeline_settings or {}) if row else {}
+    return {k: stored.get(k, v) for k, v in PIPELINE_DEFAULTS.items()}
+
+
+@router.put("/organizations/me/pipeline-settings")
+async def update_pipeline_settings(
+    body: dict,
+    current_user: Annotated[UserResponse, Depends(get_current_user)],
+):
+    from infrastructure.persistence.models.org_settings import OrganizationSettingsModel
+
+    unknown = set(body.keys()) - PIPELINE_ALLOWED_KEYS
+    if unknown:
+        raise HTTPException(status_code=400, detail=f"Unknown keys: {unknown}")
+
+    async with AsyncSessionFactory() as session, session.begin():
+        row = await session.get(OrganizationSettingsModel, current_user.organization_id)
+        if not row:
+            row = OrganizationSettingsModel(organization_id=current_user.organization_id)
+            session.add(row)
+        current = dict(row.pipeline_settings or PIPELINE_DEFAULTS)
+        current.update(body)
+        row.pipeline_settings = current
+
+    return {"updated": True, "settings": current}

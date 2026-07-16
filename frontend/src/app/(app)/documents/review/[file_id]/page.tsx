@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo, startTransition } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Group as PanelGroup, Panel, Separator as PanelResizeHandle } from "react-resizable-panels";
@@ -16,6 +16,7 @@ import {
   Edit3,
   FileText,
   Layers,
+  Loader2,
   RefreshCw,
   Save,
   Search,
@@ -28,9 +29,17 @@ import {
   EyeOff,
   BookOpen,
   XCircle,
+  Settings,
+  History,
+  MessageSquare,
+  Send,
+  GitCompareArrows,
 } from "lucide-react";
+import Link from "next/link";
 
-import DynamicPdfViewer from "@/components/document-review/DynamicPdfViewer";
+import DynamicPdfViewer, { type ChunkBand } from "@/components/document-review/DynamicPdfViewer";
+import { getLlmModelSettings, updateLlmModelSettings, MODEL_OPTIONS, PIPELINE_JOB_LABELS, type LlmModelSettings } from "@/lib/api/llm-settings";
+import { getPipelineSettings, updatePipelineSettings, PIPELINE_DEFAULTS, PARSE_ENGINE_OPTIONS, CHUNK_STRATEGY_OPTIONS, CHUNK_SIZE_OPTIONS, CHUNK_OVERLAP_OPTIONS, SIMILARITY_OPTIONS, TOP_K_OPTIONS, type PipelineSettings } from "@/lib/api/pipeline-settings";
 import {
   getFileReview,
   updateClassification,
@@ -38,7 +47,10 @@ import {
   approveDocument,
   unapproveDocument,
   runCopilotSandbox,
+  getParseLayout,
   type SandboxResult,
+  type CorpusSimilarChunk,
+  type LayoutElement,
   deleteChunk,
   updateChunk,
   splitChunk,
@@ -46,6 +58,10 @@ import {
   testRetrieval,
   reclassifyFile,
   reanalyzeFile,
+  processFile,
+  reparseFile,
+  rechunkFile,
+  reextractMetrics,
   excludeChunk,
   toggleCopilotVisibility,
   updateMetric,
@@ -55,6 +71,10 @@ import {
   ReviewChunk,
   ReviewMetric,
   ReviewSignal,
+  type ChunkComment,
+  listChunkComments,
+  createChunkComment,
+  deleteChunkComment,
 } from "@/lib/api/documents";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -68,6 +88,7 @@ const PIPELINE_STEPS = [
   { key: "indexing",   icon: Search,     label: "Indexierung",    desc: "pgvector · Cosine · GIN" },
   { key: "metrics",    icon: BarChart3,  label: "Metriken",       desc: "ESG · Finanz · Signale" },
   { key: "sandbox",    icon: BookOpen,   label: "Copilot-Test",   desc: "Testfragen direkt ans Dokument stellen" },
+  { key: "audit",      icon: History,    label: "Audit Log",      desc: "Revisionssichere Änderungshistorie" },
 ] as const;
 type StepKey = (typeof PIPELINE_STEPS)[number]["key"];
 
@@ -78,22 +99,45 @@ const CHUNK_COLORS = [
 
 // ── Quality Score ─────────────────────────────────────────────────────────────
 
+interface QualityBreakdown {
+  total: number;
+  parseCompleteness: number;
+  classificationConfidence: number;
+  chunkDistribution: number;
+  kpiYield: number;
+}
+
+function computeQualityBreakdown(data: ReviewData): QualityBreakdown {
+  const pages = data.pages ?? 1;
+  const chars = data.parsed_text?.length ?? 0;
+  // Component 1: Parse completeness — chars/page > 500 = full 25 pts
+  const charsPerPage = pages > 0 ? chars / pages : 0;
+  const parseCompleteness = Math.round(Math.min(1, charsPerPage / 500) * 25);
+
+  // Component 2: Classification confidence — direct × 25
+  const conf = data.classification_confidence ?? 0;
+  const classificationConfidence = Math.round(conf * 25);
+
+  // Component 3: Chunk distribution — % of active chunks with 200-1000 words
+  const activeChunks = data.chunks.filter(c => !c.excluded_from_index);
+  const goodChunks = activeChunks.filter(c => {
+    const w = c.content.split(/\s+/).length;
+    return w >= 200 && w <= 1000;
+  });
+  const chunkDistribution = activeChunks.length > 0
+    ? Math.round((goodChunks.length / activeChunks.length) * 25)
+    : 0;
+
+  // Component 4: KPI yield — min(count/10, 1) × 25
+  const kpiCount = data.metrics.length + (data.extracted_kpis ? Object.keys(data.extracted_kpis).length : 0);
+  const kpiYield = Math.round(Math.min(kpiCount / 10, 1) * 25);
+
+  const total = parseCompleteness + classificationConfidence + chunkDistribution + kpiYield;
+  return { total, parseCompleteness, classificationConfidence, chunkDistribution, kpiYield };
+}
+
 function computeQualityScore(data: ReviewData): number {
-  let score = 0;
-  if (data.parsed_text && data.parsed_text.length > 500) score += 20;
-  else if (data.parsed_text) score += 10;
-  if (data.doc_type) score += 10;
-  if (data.company_name) score += 10;
-  if (data.report_year) score += 10;
-  const chunks = data.chunks.length;
-  if (chunks > 0) score += 15;
-  if (chunks > 10) score += 5;
-  const kpis = data.extracted_kpis ? Object.keys(data.extracted_kpis).length : 0;
-  if (kpis > 0) score += 10;
-  if (kpis > 5) score += 5;
-  if (data.metrics.length > 0) score += 10;
-  if (data.signals.length > 0) score += 5;
-  return Math.min(100, score);
+  return computeQualityBreakdown(data).total;
 }
 
 function QualityBadge({ score }: { score: number }) {
@@ -103,7 +147,7 @@ function QualityBadge({ score }: { score: number }) {
     : "bg-red-100 text-red-800 border-red-200";
   return (
     <span className={`text-xs px-2 py-0.5 rounded-full border font-semibold ${cls}`}>
-      Q {score}
+      Q {score}/100
     </span>
   );
 }
@@ -115,6 +159,20 @@ function statusColor(s: string) {
   if (["parsing", "analyzing", "indexing", "processing"].includes(s)) return "text-blue-600 bg-blue-50 animate-pulse";
   if (["failed", "error"].includes(s)) return "text-red-600 bg-red-50";
   return "text-gray-500 bg-gray-50";
+}
+
+function ConfidenceBadge({ pct }: { pct: number }) {
+  const cls = pct >= 90 ? "bg-green-100 text-green-800 border-green-200"
+    : pct >= 75 ? "bg-blue-100 text-blue-800 border-blue-200"
+    : pct >= 60 ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+    : "bg-red-100 text-red-800 border-red-200";
+  const dot = pct >= 90 ? "bg-green-500" : pct >= 75 ? "bg-blue-500" : pct >= 60 ? "bg-yellow-400" : "bg-red-500";
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full border font-semibold ${cls}`} title="Durchschnittliche Extraktions-Konfidenz aller Metriken">
+      <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+      {pct}% Konfidenz
+    </span>
+  );
 }
 
 function reviewBadge(s: string) {
@@ -160,16 +218,67 @@ function EditableField({ label, value, onSave, readOnly }: { label: string; valu
   );
 }
 
+// ── ChunkCommentPanel ─────────────────────────────────────────────────────────
+
+function ChunkCommentPanel({ chunkId }: { chunkId: string }) {
+  const qc = useQueryClient();
+  const [draft, setDraft] = useState("");
+  const { data: comments = [], isLoading } = useQuery<ChunkComment[]>({
+    queryKey: ["chunk-comments", chunkId],
+    queryFn: () => listChunkComments(chunkId),
+  });
+  const addMut = useMutation({
+    mutationFn: (comment: string) => createChunkComment(chunkId, comment),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["chunk-comments", chunkId] }); setDraft(""); },
+  });
+  const delMut = useMutation({
+    mutationFn: (commentId: string) => deleteChunkComment(chunkId, commentId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["chunk-comments", chunkId] }),
+  });
+
+  return (
+    <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+      {isLoading && <p className="text-xs text-gray-400">Lädt…</p>}
+      {comments.map(c => (
+        <div key={c.id} className="flex items-start gap-2 py-1 text-xs">
+          <MessageSquare size={11} className="shrink-0 mt-0.5 text-yellow-600" />
+          <span className="flex-1 text-gray-700">{c.comment}</span>
+          <button onClick={() => delMut.mutate(c.id)} className="text-gray-300 hover:text-red-400 ml-1" title="Löschen">
+            <X size={11} />
+          </button>
+        </div>
+      ))}
+      <div className="flex items-center gap-1.5 mt-1.5">
+        <input
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter" && draft.trim()) addMut.mutate(draft.trim()); }}
+          placeholder="Notiz hinzufügen…"
+          className="flex-1 text-xs border border-yellow-300 rounded px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-yellow-400"
+        />
+        <button
+          onClick={() => draft.trim() && addMut.mutate(draft.trim())}
+          disabled={!draft.trim() || addMut.isPending}
+          className="p-1 rounded text-yellow-600 hover:bg-yellow-100 disabled:opacity-40"
+        >
+          <Send size={12} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── ChunkCard ─────────────────────────────────────────────────────────────────
 
-function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit, onMergeWith, onExclude, isLast }: {
-  chunk: ReviewChunk; index: number; color: string; isLast: boolean;
+function ChunkCard({ chunk, index, color, highlighted, onDelete, onEdit, onFindInPdf, onSplit, onMergeWith, onExclude, isLast }: {
+  chunk: ReviewChunk; index: number; color: string; isLast: boolean; highlighted?: boolean;
   onDelete: () => void; onEdit: (c: string) => void; onFindInPdf: () => void;
   onSplit: (splitAt: number) => void; onMergeWith: () => void; onExclude: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
   const [splitting, setSplitting] = useState(false);
+  const [showComments, setShowComments] = useState(false);
   const [draft, setDraft] = useState(chunk.content);
   const [splitPos, setSplitPos] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -187,7 +296,10 @@ function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit
   const isExcluded = Boolean(chunk.excluded_from_index);
 
   return (
-    <div className={`border rounded-lg bg-white shadow-sm transition-opacity ${isExcluded ? "opacity-50 border-dashed border-gray-300" : oversized ? "border-orange-300" : "border-gray-200"}`}>
+    <div
+      id={`chunk-${chunk.id}`}
+      className={`border rounded-lg bg-white shadow-sm transition-all ${isExcluded ? "opacity-50 border-dashed border-gray-300" : oversized ? "border-orange-300" : highlighted ? "border-blue-400 ring-2 ring-blue-200" : "border-gray-200"}`}
+    >
       <div className="flex items-start gap-2 p-3 cursor-pointer hover:bg-gray-50" onClick={() => setExpanded(e => !e)}>
         <div className="w-2.5 h-2.5 rounded-full mt-1 shrink-0" style={{ background: color }} />
         {expanded ? <ChevronDown size={14} className="mt-0.5 shrink-0 text-gray-400" /> : <ChevronRight size={14} className="mt-0.5 shrink-0 text-gray-400" />}
@@ -222,6 +334,13 @@ function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit
             className={`p-1 rounded ${isExcluded ? "text-gray-500 hover:text-gray-700 hover:bg-gray-100" : "text-gray-400 hover:text-orange-500 hover:bg-orange-50"}`}
           >
             {isExcluded ? <Eye size={12} /> : <EyeOff size={12} />}
+          </button>
+          <button
+            onClick={() => setShowComments(v => !v)}
+            title="Kommentare"
+            className={`p-1 rounded ${showComments ? "text-yellow-600 bg-yellow-50" : "text-gray-400 hover:text-yellow-600 hover:bg-yellow-50"}`}
+          >
+            <MessageSquare size={12} />
           </button>
           <button onClick={onDelete} title="Löschen" className="p-1 rounded hover:bg-red-50 text-gray-400 hover:text-red-500"><Trash2 size={12} /></button>
         </div>
@@ -265,6 +384,11 @@ function ChunkCard({ chunk, index, color, onDelete, onEdit, onFindInPdf, onSplit
             <button onClick={() => { onSplit(splitPos); setSplitting(false); }} className="flex items-center gap-1 text-xs bg-yellow-500 text-white rounded px-3 py-1 hover:bg-yellow-600"><Save size={11} /> Teilen</button>
             <button onClick={() => setSplitting(false)} className="text-xs text-gray-500 hover:text-gray-700">Abbrechen</button>
           </div>
+        </div>
+      )}
+      {showComments && (
+        <div className="px-3 pb-3">
+          <ChunkCommentPanel chunkId={chunk.id} />
         </div>
       )}
     </div>
@@ -564,13 +688,20 @@ function AddMetricForm({ onAdd, saving }: { onAdd: (p: { metric_type: string; va
 
 // ── MetricsTable (editable) ───────────────────────────────────────────────────
 
-function MetricsTable({ metrics, onUpdate, onDelete }: {
+function MetricsTable({ metrics, onUpdate, onDelete, onJumpToPage, onFindInPdf }: {
   metrics: ReviewMetric[];
   onUpdate: (id: string, payload: { value?: number; unit?: string; year?: number; confidence?: string }) => void;
   onDelete: (id: string) => void;
+  onJumpToPage?: (page: number) => void;
+  onFindInPdf?: (m: ReviewMetric) => void;
 }) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState<{ value: string; unit: string; year: string; confidence: string }>({ value: "", unit: "", year: "", confidence: "" });
+  const [showOnlyLow, setShowOnlyLow] = useState(false);
+
+  const mConfPct = (m: ReviewMetric) => m.confidence_pct ?? (m.confidence === "exact" ? 95 : m.confidence === "calculated" ? 82 : 68);
+  const lowCount = metrics.filter(m => mConfPct(m) < 60).length;
+  const displayed = showOnlyLow ? metrics.filter(m => mConfPct(m) < 60) : metrics;
 
   const startEdit = (m: ReviewMetric) => {
     setEditingId(m.id);
@@ -588,30 +719,51 @@ function MetricsTable({ metrics, onUpdate, onDelete }: {
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-gray-200">
+    <div className="space-y-2">
+      {lowCount > 0 && (
+        <div className="flex justify-end">
+          <button
+            onClick={() => setShowOnlyLow(v => !v)}
+            className={`text-xs rounded-full px-2.5 py-0.5 border font-medium transition-colors ${showOnlyLow ? "bg-red-50 text-red-700 border-red-200" : "bg-gray-50 text-gray-500 border-gray-200 hover:border-red-200 hover:text-red-600"}`}
+          >
+            {showOnlyLow ? `Alle anzeigen (${metrics.length})` : `Nur unsichere anzeigen (${lowCount})`}
+          </button>
+        </div>
+      )}
+      <div className="overflow-x-auto rounded-xl border border-gray-200">
       <table className="w-full text-xs">
         <thead className="bg-gray-50 border-b border-gray-200">
           <tr>
             <th className="text-left px-3 py-2 text-gray-500 font-medium">KPI</th>
             <th className="text-right px-3 py-2 text-gray-500 font-medium">Wert</th>
+            <th className="w-6" />
             <th className="text-right px-3 py-2 text-gray-500 font-medium">Einheit</th>
             <th className="text-right px-3 py-2 text-gray-500 font-medium">Jahr</th>
             <th className="text-right px-3 py-2 text-gray-500 font-medium">Periode</th>
             <th className="text-center px-3 py-2 text-gray-500 font-medium">Konfidenz</th>
+            <th className="text-center px-3 py-2 text-gray-500 font-medium">Seite</th>
+            <th className="text-left px-3 py-2 text-gray-500 font-medium">Scope</th>
             <th className="w-12" />
           </tr>
         </thead>
         <tbody>
-          {metrics.map((m, i) => {
+          {displayed.map((m, i) => {
             const editing = editingId === m.id;
             return (
               <tr key={m.id} className={`group ${i % 2 === 0 ? "bg-white" : "bg-gray-50/50"}`}>
-                <td className="px-3 py-2 text-gray-600">{m.metric_type}</td>
+                <td className="px-3 py-2 text-gray-600 font-medium">{m.metric_type}</td>
                 <td className="px-3 py-2 text-right">
                   {editing ? (
                     <input autoFocus className="text-right bg-blue-50 border border-blue-300 rounded px-1 py-0.5 w-24 outline-none" value={editDraft.value} onChange={e => setEditDraft(d => ({ ...d, value: e.target.value }))} />
                   ) : (
                     <span className="font-mono font-semibold text-gray-800 cursor-pointer hover:bg-blue-50 rounded px-1" onClick={() => startEdit(m)}>{m.value.toLocaleString("de-DE")}</span>
+                  )}
+                </td>
+                <td className="px-1 py-2 text-center">
+                  {!editing && onFindInPdf && (
+                    <button onClick={() => onFindInPdf(m)} title="Im PDF markieren" className="p-0.5 rounded text-purple-400 hover:text-purple-700 hover:bg-purple-50">
+                      <Search size={11} />
+                    </button>
                   )}
                 </td>
                 <td className="px-3 py-2 text-right">
@@ -632,15 +784,38 @@ function MetricsTable({ metrics, onUpdate, onDelete }: {
                 <td className="px-3 py-2 text-center">
                   {editing ? (
                     <select className="text-xs bg-blue-50 border border-blue-300 rounded px-1 py-0.5" value={editDraft.confidence} onChange={e => setEditDraft(d => ({ ...d, confidence: e.target.value }))}>
-                      <option value="exact">exact</option>
-                      <option value="estimated">estimated</option>
-                      <option value="calculated">calculated</option>
+                      <option value="exact">Exakt</option>
+                      <option value="estimated">Geschätzt</option>
+                      <option value="calculated">Berechnet</option>
                     </select>
+                  ) : (() => {
+                    const pct = m.confidence_pct ?? (m.confidence === "exact" ? 95 : m.confidence === "calculated" ? 82 : 68);
+                    const color = pct >= 90 ? "bg-green-50 text-green-700 border-green-200"
+                      : pct >= 75 ? "bg-blue-50 text-blue-700 border-blue-200"
+                      : pct >= 60 ? "bg-yellow-50 text-yellow-700 border-yellow-200"
+                      : "bg-red-50 text-red-600 border-red-200";
+                    return (
+                      <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold ${color}`}>
+                        {pct}%
+                      </span>
+                    );
+                  })()}
+                </td>
+                <td className="px-3 py-2 text-center">
+                  {m.page_number ? (
+                    <button
+                      onClick={() => onJumpToPage?.(m.page_number!)}
+                      className="text-purple-600 hover:text-purple-800 hover:underline font-medium bg-purple-50 rounded px-1.5 py-0.5"
+                      title={`Zur Seite ${m.page_number} im PDF springen`}
+                    >
+                      S.{m.page_number}
+                    </button>
                   ) : (
-                    <span className={`rounded px-1.5 py-0.5 ${m.confidence === "exact" ? "bg-green-50 text-green-700" : m.confidence === "estimated" ? "bg-yellow-50 text-yellow-700" : "bg-gray-100 text-gray-500"}`}>
-                      {m.confidence}
-                    </span>
+                    <span className="text-gray-300">—</span>
                   )}
+                </td>
+                <td className="px-3 py-2 text-gray-400 text-left max-w-[100px] truncate" title={m.scope ?? undefined}>
+                  {m.scope ? <span className="bg-gray-100 rounded px-1 py-0.5">{m.scope}</span> : <span className="text-gray-200">—</span>}
                 </td>
                 <td className="px-1">
                   <div className="flex gap-0.5 opacity-0 group-hover:opacity-100">
@@ -662,6 +837,7 @@ function MetricsTable({ metrics, onUpdate, onDelete }: {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
@@ -705,6 +881,7 @@ export default function DocumentReviewPage() {
   const [searchStatus, setSearchStatus] = useState<"idle" | "searching" | "found" | "not-found">("idle");
   const [searchFoundPage, setSearchFoundPage] = useState<number | null>(null);
   const searchIdRef = useRef(0);
+  const [highlightedChunkId, setHighlightedChunkId] = useState<string | undefined>(undefined);
   const [markdownMode, setMarkdownMode] = useState(false);
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(true);
@@ -713,6 +890,27 @@ export default function DocumentReviewPage() {
   const [sandboxResult, setSandboxResult] = useState<SandboxResult | null>(null);
   const [sandboxLoading, setSandboxLoading] = useState(false);
   const [expandedChunk, setExpandedChunk] = useState<string | null>(null);
+  const layoutRef = useRef<Record<string, LayoutElement[]> | null>(null);
+  const [showLayout, setShowLayout] = useState(false);
+  const [showModelSettings, setShowModelSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<"models" | "pipeline">("models");
+  const [pendingModels, setPendingModels] = useState<Partial<LlmModelSettings>>({});
+  const [pendingPipeline, setPendingPipeline] = useState<Partial<PipelineSettings>>({});
+  const [showRunModal, setShowRunModal] = useState(false);
+  const [runConfig, setRunConfig] = useState<Partial<PipelineSettings>>({});
+  const [stepModalStep, setStepModalStep] = useState<StepKey | null>(null);
+  const [stepModalModel, setStepModalModel] = useState<string>("");
+  const [stepModalChunkSize, setStepModalChunkSize] = useState<number>(800);
+  const [stepModalChunkOverlap, setStepModalChunkOverlap] = useState<number>(80);
+  const [stepModalParseEngine, setStepModalParseEngine] = useState<string>("docling");
+  const [stepModalOcr, setStepModalOcr] = useState(false);
+  const [stepModalExtractTables, setStepModalExtractTables] = useState<boolean>(true);
+  const [stepModalDescribePictures, setStepModalDescribePictures] = useState<boolean>(false);
+  const [stepModalSimilarity, setStepModalSimilarity] = useState<number>(0.25);
+  const [stepModalTopK, setStepModalTopK] = useState<number>(8);
+  const [stepModalRetrievalMode, setStepModalRetrievalMode] = useState<string>("dense");
+  const [stepModalChunkStrategy, setStepModalChunkStrategy] = useState<string>("sliding_window");
+  const [stepModalExtraContext, setStepModalExtraContext] = useState<string>("");
 
   const { data, isLoading, error } = useQuery<ReviewData>({
     queryKey: ["doc-review", fileId],
@@ -722,10 +920,50 @@ export default function DocumentReviewPage() {
   // Keep ref always in sync — avoids stale closure in findKpiInPdf
   useEffect(() => { chunksRef.current = data?.chunks ?? []; }, [data?.chunks]);
 
+  // P3-B: initialise highlight terms from persisted classification_evidence on load
+  useEffect(() => {
+    if (data?.classification_evidence && data.classification_evidence.length > 0 && highlightTerms.length === 0) {
+      setHighlightTerms(data.classification_evidence);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.classification_evidence]);
+
   const invalidate = useCallback(
     () => qc.invalidateQueries({ queryKey: ["doc-review", fileId] }),
     [qc, fileId],
   );
+
+  const chunkBands = useMemo<ChunkBand[]>(() => {
+    if (!data?.chunks) return [];
+    const active = data.chunks.filter(c => !c.excluded_from_index && c.page_number != null);
+    const byPage = new Map<number, typeof active>();
+    for (const c of active) {
+      const pg = c.page_number!;
+      if (!byPage.has(pg)) byPage.set(pg, []);
+      byPage.get(pg)!.push(c);
+    }
+    const bands: ChunkBand[] = [];
+    let colorIdx = 0;
+    for (const [page, chunks] of byPage.entries()) {
+      const totalLen = chunks.reduce((s, c) => s + c.content.length, 0);
+      let offset = 0;
+      for (const c of chunks) {
+        const weight = totalLen > 0 ? c.content.length / totalLen : 1 / chunks.length;
+        bands.push({ chunkId: c.id, page, color: CHUNK_COLORS[colorIdx % CHUNK_COLORS.length], index: colorIdx, weight, offset });
+        offset += weight;
+        colorIdx++;
+      }
+    }
+    return bands;
+  }, [data?.chunks]);
+
+  const onChunkBandClick = useCallback((chunkId: string) => {
+    setHighlightedChunkId(chunkId);
+    setActiveStep("chunking");
+    setTimeout(() => {
+      document.getElementById(`chunk-${chunkId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }, []);
 
   const classifyMut = useMutation({
     mutationFn: (p: { doc_type?: string; company_name?: string; report_year?: number }) => updateClassification(fileId, p),
@@ -733,13 +971,62 @@ export default function DocumentReviewPage() {
   });
 
   const reclassifyMut = useMutation({
-    mutationFn: () => reclassifyFile(fileId),
-    onSuccess: invalidate,
+    mutationFn: ({ model }: { model?: string } = {}) => reclassifyFile(fileId, model),
+    onSuccess: (result) => {
+      invalidate();
+      // P3-B: highlight evidence passages in PDF immediately after reclassification
+      const passages: string[] = (result as { evidence_passages?: string[] }).evidence_passages ?? [];
+      if (passages.length > 0) setHighlightTerms(passages);
+    },
   });
 
   const reanalyzeMut = useMutation({
-    mutationFn: () => reanalyzeFile(fileId),
+    mutationFn: ({ model, extraContext }: { model?: string; extraContext?: string } = {}) => reanalyzeFile(fileId, model, extraContext),
     onSuccess: invalidate,
+  });
+
+  const processMut = useMutation({
+    mutationFn: () => processFile(fileId),
+    onSuccess: invalidate,
+  });
+
+  const reparseMut = useMutation({
+    mutationFn: ({ parseEngine, ocrEnabled, extractTables, describePictures }: { parseEngine?: string; ocrEnabled?: boolean; extractTables?: boolean; describePictures?: boolean } = {}) =>
+      reparseFile(fileId, parseEngine, ocrEnabled, extractTables, describePictures),
+    onSuccess: invalidate,
+  });
+
+  const rechunkMut = useMutation({
+    mutationFn: ({ chunkSize, chunkOverlap, chunkStrategy }: { chunkSize?: number; chunkOverlap?: number; chunkStrategy?: string }) =>
+      rechunkFile(fileId, chunkSize, chunkOverlap, chunkStrategy),
+    onSuccess: invalidate,
+  });
+
+  const reextractMut = useMutation({
+    mutationFn: ({ model }: { model?: string } = {}) => reextractMetrics(fileId, model),
+    onSuccess: invalidate,
+  });
+
+  const { data: llmSettings } = useQuery<LlmModelSettings>({
+    queryKey: ["llm-model-settings"],
+    queryFn: getLlmModelSettings,
+    staleTime: 60_000,
+  });
+
+  const saveModelsMut = useMutation({
+    mutationFn: (s: Partial<LlmModelSettings>) => updateLlmModelSettings(s),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["llm-model-settings"] }); setShowModelSettings(false); },
+  });
+
+  const { data: pipelineSettings } = useQuery<PipelineSettings>({
+    queryKey: ["pipeline-settings"],
+    queryFn: getPipelineSettings,
+    staleTime: 60_000,
+  });
+
+  const savePipelineMut = useMutation({
+    mutationFn: (s: Partial<PipelineSettings>) => updatePipelineSettings(s),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["pipeline-settings"] }); setShowModelSettings(false); },
   });
 
   const excludeChunkMut = useMutation({
@@ -802,6 +1089,31 @@ export default function DocumentReviewPage() {
     mutationFn: (payload: { metric_type: string; value: number; unit: string; year: number; period?: string; confidence?: string }) => addMetric(fileId, payload),
     onSuccess: invalidate,
   });
+
+  // SSE: live status while document is being processed
+  const [liveStatus, setLiveStatus] = useState<string | null>(null);
+  const [liveChunks, setLiveChunks] = useState<number | null>(null);
+  useEffect(() => {
+    const isProcessing = data && !["done", "completed", "failed", "error"].includes(data.status);
+    if (!isProcessing) { setLiveStatus(null); return; }
+    const token = typeof window !== "undefined" ? localStorage.getItem("eios_access_token") : null;
+    // EventSource doesn't support custom headers — pass token as query param
+    const url = `${BACKEND}/api/v1/documents/files/${fileId}/status-stream?token=${token ?? ""}`;
+    const es = new EventSource(url);
+    es.onmessage = (e) => {
+      try {
+        const payload = JSON.parse(e.data);
+        if (payload.status) setLiveStatus(payload.status);
+        if (payload.chunks_count != null) setLiveChunks(payload.chunks_count);
+        if (["done", "completed", "failed", "error"].includes(payload.status)) {
+          es.close();
+          invalidate();
+        }
+      } catch {}
+    };
+    es.onerror = () => es.close();
+    return () => es.close();
+  }, [data?.status, fileId, BACKEND, invalidate]);
 
   // Load PDF as authenticated blob
   useEffect(() => {
@@ -906,6 +1218,35 @@ export default function DocumentReviewPage() {
     setSearchStatus("searching");
   }, []);
 
+  // Metric → PDF: jump to page + highlight value in text layer
+  const findMetricInPdf = useCallback((m: ReviewMetric) => {
+    // Build highlight keywords: numeric value (formatted + raw) + unit + type keywords
+    const valStr = m.value.toLocaleString("de-DE");
+    const valRaw = String(m.value);
+    const kws = `${valStr} ${valRaw} ${m.unit} ${m.metric_type}`
+      .toLowerCase()
+      .replace(/[^a-z0-9äöüß,.\s]/g, " ")
+      .split(/\s+/)
+      .filter(w => w.length >= 2)
+      .slice(0, 8);
+
+    if (m.page_number) {
+      setTargetPage(undefined);
+      setTimeout(() => setTargetPage(m.page_number!), 0);
+      setSearchStatus("found");
+      setSearchFoundPage(m.page_number);
+      setHighlightTerms(kws);
+      setActiveStep("metrics");
+      return;
+    }
+    // Fallback: fuzzy PDF search with value + unit as query
+    setHighlightTerms(kws);
+    searchIdRef.current += 1;
+    setSearchQuery({ text: `${valStr} ${m.unit} ${m.metric_type}`, id: searchIdRef.current });
+    setSearchStatus("searching");
+    setActiveStep("metrics");
+  }, []);
+
   if (isLoading) return (
     <div className="flex items-center justify-center h-screen bg-gray-50">
       <div className="flex flex-col items-center gap-3 text-gray-400">
@@ -924,7 +1265,13 @@ export default function DocumentReviewPage() {
     </div>
   );
 
-  const qualityScore = computeQualityScore(data);
+  const qualityBreakdown = computeQualityBreakdown(data);
+  const qualityScore = qualityBreakdown.total;
+  const metricConfPct = (m: ReviewMetric) => m.confidence_pct ?? (m.confidence === "exact" ? 95 : m.confidence === "calculated" ? 82 : 68);
+  const avgConfidencePct = data.metrics.length > 0
+    ? Math.round(data.metrics.reduce((s, m) => s + metricConfPct(m), 0) / data.metrics.length)
+    : null;
+  const lowConfidenceMetrics = data.metrics.filter(m => metricConfPct(m) < 60);
 
   const stepDone = (key: StepKey) => {
     if (!["completed", "done", "ok"].includes(data.status)) return false;
@@ -935,7 +1282,50 @@ export default function DocumentReviewPage() {
     if (key === "embedding") return data.chunks.length > 0;
     if (key === "indexing") return (data.chunks_count ?? 0) > 0;
     if (key === "metrics") return data.metrics.length > 0 || data.signals.length > 0;
+    if (key === "audit") return data.audit_log.length > 0;
+    if (key === "sandbox") return false;
     return false;
+  };
+
+  const openStepModal = (step: StepKey) => {
+    setStepModalStep(step);
+    if (step === "parsing") {
+      setStepModalParseEngine(pipelineSettings?.parse_engine ?? "docling");
+      setStepModalOcr(pipelineSettings?.ocr_enabled ?? false);
+      setStepModalExtractTables((pipelineSettings?.extract_tables ?? "markdown") !== "plain");
+    } else if (step === "indexing") {
+      setStepModalSimilarity(pipelineSettings?.similarity_threshold ?? 0.25);
+      setStepModalTopK(pipelineSettings?.top_k ?? 8);
+      setStepModalRetrievalMode(pipelineSettings?.retrieval_mode ?? "dense");
+    } else if (step === "chunking" || step === "embedding") {
+      setStepModalChunkSize(pipelineSettings?.chunk_size ?? 800);
+      setStepModalChunkOverlap(pipelineSettings?.chunk_overlap ?? 80);
+      setStepModalChunkStrategy(pipelineSettings?.chunk_strategy ?? "sliding_window");
+    } else if (step === "classifying") {
+      setStepModalModel(llmSettings?.classification ?? "groq:llama-3.3-70b-versatile");
+    } else if (step === "analyzing") {
+      setStepModalModel(llmSettings?.analysis ?? "groq:llama-3.3-70b-versatile");
+      setStepModalExtraContext("");
+    } else if (step === "metrics") {
+      setStepModalModel(llmSettings?.extraction ?? "anthropic:claude-haiku-4-5-20251001");
+    }
+  };
+
+  const runStepModal = () => {
+    if (!stepModalStep) return;
+    if (stepModalStep === "parsing")
+      reparseMut.mutate({ parseEngine: stepModalParseEngine, ocrEnabled: stepModalOcr, extractTables: stepModalExtractTables, describePictures: stepModalDescribePictures });
+    else if (stepModalStep === "classifying")
+      reclassifyMut.mutate({ model: stepModalModel || undefined });
+    else if (stepModalStep === "analyzing")
+      reanalyzeMut.mutate({ model: stepModalModel || undefined, extraContext: stepModalExtraContext || undefined });
+    else if (stepModalStep === "chunking" || stepModalStep === "embedding")
+      rechunkMut.mutate({ chunkSize: stepModalChunkSize, chunkOverlap: stepModalChunkOverlap, chunkStrategy: stepModalChunkStrategy });
+    else if (stepModalStep === "indexing")
+      savePipelineMut.mutate({ similarity_threshold: stepModalSimilarity, top_k: stepModalTopK, retrieval_mode: stepModalRetrievalMode as "dense" | "hybrid" });
+    else if (stepModalStep === "metrics")
+      reextractMut.mutate({ model: stepModalModel || undefined });
+    setStepModalStep(null);
   };
 
   const renderStepContent = () => {
@@ -968,12 +1358,71 @@ export default function DocumentReviewPage() {
                 ))}
               </div>
             )}
-            {coveragePct != null && coveragePct < 80 && (
-              <div className="flex items-start gap-2 text-xs text-orange-700 bg-orange-50 rounded-lg px-3 py-2 border border-orange-200">
-                <AlertTriangle size={12} className="shrink-0 mt-0.5" />
-                <span>Nur {coveragePct}% der Seiten haben Chunks mit Seitenreferenz — Navigation via KPI-Seitenangaben kann unvollständig sein. Dokument neu indexieren.</span>
-              </div>
-            )}
+            {(() => {
+              const warnings: React.ReactNode[] = [];
+              // Coverage warning
+              if (coveragePct != null && coveragePct < 80) {
+                warnings.push(
+                  <div key="coverage" className="flex items-start gap-2 text-xs text-orange-700 bg-orange-50 rounded-lg px-3 py-2 border border-orange-200">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span>Nur {coveragePct}% der Seiten haben Chunks mit Seitenreferenz — Navigation via KPI-Seitenangaben kann unvollständig sein. Dokument neu indexieren.</span>
+                  </div>
+                );
+              }
+              // P1-D: identify specific pages missing from chunk page numbers
+              if (totalPages > 0 && data.chunks.length > 0) {
+                const missingPages: number[] = [];
+                for (let p = 1; p <= totalPages; p++) {
+                  if (!coveredPages.has(p)) missingPages.push(p);
+                }
+                if (missingPages.length > 0 && missingPages.length <= totalPages / 2) {
+                  const display = missingPages.length > 8
+                    ? `${missingPages.slice(0, 8).join(", ")} … (+${missingPages.length - 8})`
+                    : missingPages.join(", ");
+                  warnings.push(
+                    <div key="missing-pages" className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+                      <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                      <span>Seite{missingPages.length > 1 ? "n" : ""} {display} möglicherweise unvollständig extrahiert — keine Chunks mit dieser Seitenzuordnung vorhanden.</span>
+                    </div>
+                  );
+                }
+              }
+              // P1-D: very low chars/page density warning
+              if (totalPages > 0 && chars > 0 && chars / totalPages < 100) {
+                warnings.push(
+                  <div key="low-density" className="flex items-start gap-2 text-xs text-red-700 bg-red-50 rounded-lg px-3 py-2 border border-red-200">
+                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                    <span>Nur ⌀ {Math.round(chars / totalPages)} Zeichen/Seite — Dokument möglicherweise unvollständig geparst. Alternative Parse-Engine (pdfplumber) versuchen.</span>
+                  </div>
+                );
+              }
+              return warnings.length > 0 ? <div className="space-y-2">{warnings}</div> : null;
+            })()}
+            {/* Layout overlay toggle */}
+            <div className="flex items-center gap-2">
+              <button
+                onClick={async () => {
+                  if (!showLayout && !layoutRef.current) {
+                    const result = await getParseLayout(fileId);
+                    layoutRef.current = result.layout && Object.keys(result.layout).length > 0 ? result.layout : {};
+                  }
+                  setShowLayout(v => !v);
+                }}
+                className={`text-xs border rounded-lg px-3 py-1 transition-colors ${showLayout ? "bg-blue-50 border-blue-300 text-blue-700" : "border-gray-200 hover:bg-gray-50 text-gray-600"}`}
+              >
+                {showLayout ? "Overlay ausblenden" : "Layout-Overlay anzeigen"}
+              </button>
+              {showLayout && layoutRef.current && (
+                <div className="flex items-center gap-2 text-xs text-gray-500">
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm border border-green-500 bg-green-100 inline-block" /> Text</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm border border-blue-500 bg-blue-100 inline-block" /> Tabelle</span>
+                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm border border-orange-500 bg-orange-100 inline-block" /> Bild</span>
+                </div>
+              )}
+              {showLayout && layoutRef.current && Object.keys(layoutRef.current).length === 0 && (
+                <span className="text-xs text-gray-400">Kein Layout gespeichert — Dokument neu parsen um Overlays zu erhalten</span>
+              )}
+            </div>
             {data.parsed_text ? (
               <>
                 <div className="flex items-center justify-between">
@@ -1022,7 +1471,7 @@ export default function DocumentReviewPage() {
       case "classifying": {
         const storedConf = data.classification_confidence;
         const storedAlts = data.classification_alternatives ?? [];
-        const reclassResult = reclassifyMut.data as { changed?: boolean; old_doc_type?: string; new_doc_type?: string; confidence?: number; alternatives?: { doc_type: string; confidence: number }[] } | undefined;
+        const reclassResult = reclassifyMut.data as { changed?: boolean; old_doc_type?: string; new_doc_type?: string; confidence?: number; alternatives?: { doc_type: string; confidence: number }[]; evidence_passages?: string[] } | undefined;
         const showConf = reclassResult?.confidence ?? storedConf;
         const showAlts = reclassResult?.alternatives ?? storedAlts;
         return (
@@ -1075,7 +1524,7 @@ export default function DocumentReviewPage() {
               </div>
             )}
             <button
-              onClick={() => reclassifyMut.mutate()}
+              onClick={() => reclassifyMut.mutate({})}
               disabled={reclassifyMut.isPending}
               className="flex items-center gap-2 text-sm border border-blue-200 text-blue-600 rounded-lg px-4 py-2 hover:bg-blue-50 disabled:opacity-50"
             >
@@ -1089,6 +1538,51 @@ export default function DocumentReviewPage() {
                   : "Keine Änderung — Klassifizierung bestätigt"}
               </div>
             )}
+            {/* P3-B: Evidence passages — live result OR persisted from DB */}
+            {(() => {
+              const evidencePassages = reclassResult?.evidence_passages ?? data.classification_evidence ?? [];
+              const isLive = Boolean(reclassResult?.evidence_passages?.length);
+              if (!evidencePassages.length) return null;
+              return (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-xs font-semibold text-yellow-800 uppercase tracking-wide">Klassifizierungsbegründung</p>
+                    {!isLive && <p className="text-[10px] text-yellow-600 mt-0.5">Gespeichert von letzter Klassifizierung</p>}
+                  </div>
+                  <button
+                    onClick={() => setHighlightTerms(evidencePassages)}
+                    className="text-xs text-yellow-700 border border-yellow-300 rounded-lg px-2 py-1 hover:bg-yellow-100 flex items-center gap-1"
+                  >
+                    <Search size={10} /> Im PDF markieren
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {evidencePassages.map((passage: string, i: number) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2 cursor-pointer group"
+                      onClick={() => setHighlightTerms([passage])}
+                      title="Nur diesen Begriff im PDF markieren"
+                    >
+                      <span className="text-yellow-500 mt-0.5 shrink-0">▶</span>
+                      <span className="text-xs text-yellow-900 bg-yellow-100 rounded px-2 py-1 group-hover:bg-yellow-200 transition-colors font-medium">
+                        {passage}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                {highlightTerms.length > 0 && highlightTerms.some((t: string) => evidencePassages.includes(t)) && (
+                  <button
+                    onClick={() => setHighlightTerms([])}
+                    className="mt-3 text-xs text-yellow-600 hover:text-yellow-800 flex items-center gap-1"
+                  >
+                    <X size={10} /> Markierung entfernen
+                  </button>
+                )}
+              </div>
+              );
+            })()}
           </div>
         );
       }
@@ -1097,16 +1591,38 @@ export default function DocumentReviewPage() {
       case "analyzing":
         return (
           <div className="space-y-4 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
-            {/* Analyse wiederholen — always accessible */}
-            <div className="flex justify-end">
+            {/* Analyse wiederholen + Quality Score */}
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-gray-500">Qualitäts-Score</span>
+                <QualityBadge score={qualityScore} />
+              </div>
               <button
-                onClick={() => reanalyzeMut.mutate()}
+                onClick={() => reanalyzeMut.mutate({})}
                 disabled={reanalyzeMut.isPending}
                 className="flex items-center gap-1.5 text-xs border border-blue-200 text-blue-600 rounded-lg px-3 py-1.5 hover:bg-blue-50 disabled:opacity-50"
               >
                 <RefreshCw size={12} className={reanalyzeMut.isPending ? "animate-spin" : ""} />
                 {reanalyzeMut.isPending ? "Analyse läuft…" : "Analyse wiederholen"}
               </button>
+            </div>
+            {/* Quality breakdown */}
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { label: "Parse-Vollständigkeit", pts: qualityBreakdown.parseCompleteness, max: 25, tip: "Zeichen/Seite > 500" },
+                { label: "Klassifizierungs-Konfidenz", pts: qualityBreakdown.classificationConfidence, max: 25, tip: `Konfidenz ${Math.round((data.classification_confidence ?? 0) * 100)}%` },
+                { label: "Chunk-Verteilung", pts: qualityBreakdown.chunkDistribution, max: 25, tip: "Anteil 200–1000 Wörter" },
+                { label: "KPI-Ausbeute", pts: qualityBreakdown.kpiYield, max: 25, tip: `${data.metrics.length} Metriken` },
+              ].map(({ label, pts, max, tip }) => (
+                <div key={label} className={`rounded-lg border p-3 ${pts >= max * 0.8 ? "border-green-200 bg-green-50" : pts >= max * 0.5 ? "border-yellow-200 bg-yellow-50" : "border-red-200 bg-red-50"}`}>
+                  <div className="flex items-baseline gap-1">
+                    <span className={`text-base font-bold ${pts >= max * 0.8 ? "text-green-700" : pts >= max * 0.5 ? "text-yellow-700" : "text-red-700"}`}>{pts}</span>
+                    <span className="text-xs text-gray-400">/{max}</span>
+                  </div>
+                  <div className="text-xs font-medium text-gray-600 mt-0.5">{label}</div>
+                  <div className="text-[10px] text-gray-400">{tip}</div>
+                </div>
+              ))}
             </div>
             {data.summary && (
               <div>
@@ -1177,7 +1693,7 @@ export default function DocumentReviewPage() {
                 <p className="text-sm mb-1">Keine Analyse-Ergebnisse</p>
                 <p className="text-xs text-gray-400 mb-4">Die KPI-Extraktion ist fehlgeschlagen oder wurde übersprungen.</p>
                 <button
-                  onClick={() => reanalyzeMut.mutate()}
+                  onClick={() => reanalyzeMut.mutate({})}
                   disabled={reanalyzeMut.isPending}
                   className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm rounded-lg transition-colors"
                 >
@@ -1216,6 +1732,7 @@ export default function DocumentReviewPage() {
                     chunk={chunk}
                     index={i}
                     color={CHUNK_COLORS[i % CHUNK_COLORS.length]}
+                    highlighted={highlightedChunkId === chunk.id}
                     isLast={i === data.chunks.length - 1}
                     onDelete={() => deleteChunkMut.mutate(chunk.id)}
                     onEdit={content => editChunkMut.mutate({ chunkId: chunk.id, content })}
@@ -1266,15 +1783,32 @@ export default function DocumentReviewPage() {
         );
 
       // ── Indexierung ───────────────────────────────────────────────────────────
-      case "indexing":
+      case "indexing": {
+        const totalChunks = data.chunks_count ?? data.chunks.length;
+        const excludedChunks = data.chunks.filter(c => c.excluded_from_index).length;
+        const activeChunks = totalChunks - excludedChunks;
         return (
           <div className="space-y-4">
+            {/* Index Status Cards */}
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-green-200 bg-green-50 p-3 text-center">
+                <p className="text-2xl font-bold text-green-700">{activeChunks}</p>
+                <p className="text-xs text-green-600 mt-0.5">Aktiv indexiert</p>
+              </div>
+              <div className="rounded-xl border border-orange-200 bg-orange-50 p-3 text-center">
+                <p className="text-2xl font-bold text-orange-600">{excludedChunks}</p>
+                <p className="text-xs text-orange-500 mt-0.5">Ausgeschlossen</p>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 text-center">
+                <p className="text-2xl font-bold text-gray-600">{totalChunks}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Gesamt</p>
+              </div>
+            </div>
             <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-3">
               {[
                 ["Tabelle", "rag_documents"],
                 ["Vektor-Index", "pgvector (HNSW)"],
                 ["Volltext-Index", "GIN / tsvector"],
-                ["Indexierte Chunks", String(data.chunks_count ?? data.chunks.length)],
                 ["Dokument-ID", fileId.slice(0, 8) + "…"],
               ].map(([k, v]) => (
                 <div key={k} className="flex justify-between text-sm">
@@ -1289,6 +1823,7 @@ export default function DocumentReviewPage() {
             </div>
           </div>
         );
+      }
 
       // ── Metriken ─────────────────────────────────────────────────────────────
       case "metrics": {
@@ -1299,6 +1834,15 @@ export default function DocumentReviewPage() {
               <span>Finanzkennzahlen: <strong className="text-gray-800">{data.metrics.filter(m => ["revenue","ebitda","net_income","employees","capex"].some(k => m.metric_type.includes(k))).length}</strong></span>
               <span>Signale: <strong className="text-gray-800">{data.signals.length}</strong></span>
             </div>
+            {lowConfidenceMetrics.length > 0 && (
+              <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-xs">
+                <AlertTriangle size={14} className="text-red-500 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-red-700">{lowConfidenceMetrics.length} Metrik{lowConfidenceMetrics.length !== 1 ? "en" : ""} mit niedriger Konfidenz (&lt; 60%)</p>
+                  <p className="text-red-600 mt-0.5">{lowConfidenceMetrics.map(m => m.metric_type).join(" · ")}</p>
+                </div>
+              </div>
+            )}
             {data.metrics.length > 0 && (
               <div>
                 <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Kennzahlen ({data.metrics.length})</h4>
@@ -1306,6 +1850,8 @@ export default function DocumentReviewPage() {
                   metrics={data.metrics}
                   onUpdate={(id, payload) => updateMetricMut.mutate({ id, payload })}
                   onDelete={(id) => deleteMetricMut.mutate(id)}
+                  onJumpToPage={(page) => { setTargetPage(undefined); setTimeout(() => setTargetPage(page), 0); }}
+                  onFindInPdf={findMetricInPdf}
                 />
               </div>
             )}
@@ -1418,8 +1964,95 @@ export default function DocumentReviewPage() {
                     )}
                   </div>
                 </div>
+                {/* P2-C: Cross-corpus similar chunks */}
+                {sandboxResult.corpus_similar && sandboxResult.corpus_similar.length > 0 && (
+                  <div className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-amber-200">
+                      <p className="text-xs font-semibold text-amber-800 uppercase tracking-wide">
+                        Ähnliche Inhalte im Corpus ({sandboxResult.corpus_similar.length})
+                      </p>
+                      <p className="text-xs text-amber-600 mt-0.5">Ähnliche Chunks aus anderen Dokumenten (≥ 75% Similarity)</p>
+                    </div>
+                    <div className="divide-y divide-amber-100">
+                      {sandboxResult.corpus_similar.map((c: CorpusSimilarChunk) => (
+                        <div key={c.chunk_id} className="px-4 py-3">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="text-xs font-semibold text-amber-800 bg-amber-100 rounded-full px-2 py-0.5">
+                              {Math.round(c.similarity * 100)}%
+                            </span>
+                            <a
+                              href={`/documents/review/${c.doc_id}`}
+                              className="text-xs text-blue-600 hover:underline truncate max-w-[200px]"
+                              target="_blank" rel="noopener noreferrer"
+                            >
+                              {c.company_name ?? c.title ?? c.doc_type}
+                              {c.report_year ? ` ${c.report_year}` : ""}
+                            </a>
+                            {c.page_number && <span className="text-xs text-gray-400">S.{c.page_number}</span>}
+                          </div>
+                          <p className="text-xs text-gray-600 line-clamp-2">{c.content}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+          </div>
+        );
+      }
+
+      case "audit": {
+        const ACTION_META: Record<string, { label: string; color: string }> = {
+          reparse:              { label: "Reparse",           color: "bg-violet-100 text-violet-700" },
+          rechunk:              { label: "Rechunk",           color: "bg-blue-100 text-blue-700" },
+          reclassify:           { label: "Reklassifizierung", color: "bg-indigo-100 text-indigo-700" },
+          reanalyze:            { label: "Reanalyse",         color: "bg-cyan-100 text-cyan-700" },
+          reextract_metrics:    { label: "Metriken extrahiert", color: "bg-teal-100 text-teal-700" },
+          update_classification:{ label: "Klassifizierung",  color: "bg-yellow-100 text-yellow-700" },
+          update_kpis:          { label: "KPIs aktualisiert", color: "bg-orange-100 text-orange-700" },
+          approve:              { label: "Genehmigt",         color: "bg-green-100 text-green-700" },
+          unapprove:            { label: "Genehmigung zurück",color: "bg-red-100 text-red-700" },
+          delete_chunk:         { label: "Chunk gelöscht",    color: "bg-red-100 text-red-700" },
+          update_chunk:         { label: "Chunk bearbeitet",  color: "bg-amber-100 text-amber-700" },
+          split_chunk:          { label: "Chunk geteilt",     color: "bg-sky-100 text-sky-700" },
+          merge_chunks:         { label: "Chunks zusammengeführt", color: "bg-sky-100 text-sky-700" },
+          toggle_exclude:       { label: "Chunk ein/ausgeschlossen", color: "bg-gray-100 text-gray-700" },
+          toggle_copilot_visibility: { label: "Copilot-Sichtbarkeit", color: "bg-purple-100 text-purple-700" },
+        };
+
+        if (data.audit_log.length === 0) {
+          return (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+              <History size={28} className="mb-2 opacity-40" />
+              <p className="text-sm">Noch keine Änderungen protokolliert</p>
+            </div>
+          );
+        }
+
+        return (
+          <div className="space-y-2">
+            <p className="text-xs text-gray-400">{data.audit_log.length} Einträge — neueste zuerst</p>
+            {data.audit_log.map(e => {
+              const meta = ACTION_META[e.action] ?? { label: e.action, color: "bg-gray-100 text-gray-600" };
+              const date = new Date(e.created_at);
+              const dateStr = date.toLocaleString("de-DE", { day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+              return (
+                <div key={e.id} className="rounded-xl border border-gray-100 bg-white p-3 space-y-1.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${meta.color}`}>{meta.label}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{dateStr}</span>
+                  </div>
+                  {e.field && (
+                    <p className="text-xs text-gray-500">
+                      <span className="font-medium text-gray-700">{e.field}</span>
+                      {e.old_value && <> · <span className="line-through text-gray-400">{e.old_value}</span></>}
+                      {e.new_value && <> → <span className="text-gray-700">{e.new_value}</span></>}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         );
       }
@@ -1436,14 +2069,47 @@ export default function DocumentReviewPage() {
         <div className="flex-1 min-w-0">
           <h1 className="text-sm font-semibold text-gray-900 truncate">{data.title ?? data.doc_type}</h1>
           <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(data.status)}`}>{data.status}</span>
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColor(liveStatus ?? data.status)}`}>
+              {liveStatus ?? data.status}
+              {liveStatus && !["done","completed","failed","error"].includes(liveStatus) && (
+                <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              )}
+            </span>
+            {liveStatus && !["done","completed","failed","error"].includes(liveStatus) && liveChunks !== null && liveChunks > 0 && (
+              <span className="text-xs text-blue-600 font-medium">{liveChunks} Chunks indexiert</span>
+            )}
             <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${reviewBadge(data.review_status)}`}>{data.review_status}</span>
             <QualityBadge score={qualityScore} />
+            {avgConfidencePct !== null && <ConfidenceBadge pct={avgConfidencePct} />}
             {data.company_name && <span className="text-xs text-gray-400">{data.company_name}</span>}
             {data.report_year && <span className="text-xs text-gray-400">· {data.report_year}</span>}
             {data.pages && <span className="text-xs text-gray-400">· {data.pages} Seiten</span>}
           </div>
         </div>
+        <Link
+          href={`/documents/compare?a=${fileId}`}
+          title="Dieses Dokument mit einem anderen vergleichen"
+          className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          <GitCompareArrows size={15} />
+          Vergleichen
+        </Link>
+        <button
+          onClick={() => { setShowModelSettings(true); setPendingModels(llmSettings ?? {}); }}
+          title="KI-Modell Einstellungen"
+          className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+        >
+          <Settings size={15} />
+          KI-Modelle
+        </button>
+        <button
+          onClick={() => { setRunConfig({ ...(pipelineSettings ?? PIPELINE_DEFAULTS) }); setShowRunModal(true); }}
+          disabled={processMut.isPending || (liveStatus != null && !["done","completed","failed","error"].includes(liveStatus))}
+          className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-40"
+        >
+          {processMut.isPending ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+          Neu verarbeiten
+        </button>
         <button
           onClick={() => copilotVisibilityMut.mutate()}
           disabled={copilotVisibilityMut.isPending}
@@ -1508,6 +2174,10 @@ export default function DocumentReviewPage() {
                 targetPage={targetPage}
                 searchQuery={searchQuery}
                 highlightTerms={highlightTerms}
+                layoutElements={showLayout && layoutRef.current ? layoutRef.current : undefined}
+                chunkBands={chunkBands}
+                activeChunkId={highlightedChunkId}
+                onChunkBandClick={onChunkBandClick}
                 onPageChange={(page, total) => { void page; void total; }}
                 onSearchResult={(page) => {
                   setSearchStatus(page !== null ? "found" : "not-found");
@@ -1542,36 +2212,591 @@ export default function DocumentReviewPage() {
               })}
             </div>
 
-            {/* Step description */}
-            <div className="px-4 py-1.5 bg-white border-b border-gray-100 shrink-0">
+            {/* Step description + per-step reprocess button */}
+            <div className="px-4 py-1.5 bg-white border-b border-gray-100 shrink-0 flex items-center justify-between gap-2">
               <p className="text-xs text-gray-400">{PIPELINE_STEPS.find(s => s.key === activeStep)?.desc}</p>
+              {activeStep !== "sandbox" && activeStep !== "audit" && (() => {
+                const mut =
+                  activeStep === "parsing" ? reparseMut
+                  : activeStep === "classifying" ? reclassifyMut
+                  : activeStep === "analyzing" ? reanalyzeMut
+                  : activeStep === "metrics" ? reextractMut
+                  : rechunkMut;
+                return (
+                  <button
+                    onClick={() => openStepModal(activeStep)}
+                    disabled={mut.isPending}
+                    className="flex items-center gap-1 text-xs text-gray-500 hover:text-blue-600 hover:bg-blue-50 px-2 py-0.5 rounded-md border border-gray-200 transition-colors disabled:opacity-50"
+                  >
+                    <RefreshCw size={11} className={mut.isPending ? "animate-spin" : ""} />
+                    {mut.isPending ? "Läuft…" : "Neu"}
+                  </button>
+                );
+              })()}
             </div>
 
             {/* Step content */}
             <div className="flex-1 overflow-y-auto p-4">{renderStepContent()}</div>
 
-            {/* Audit log */}
+            {/* Audit log hint */}
             {data.audit_log.length > 0 && (
-              <div className="shrink-0 border-t border-gray-200 bg-white px-4 py-2">
-                <details>
-                  <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600 flex items-center gap-1">
-                    <Clock size={11} /> {data.audit_log.length} Änderungen protokolliert
-                  </summary>
-                  <div className="mt-2 space-y-1 max-h-28 overflow-y-auto">
-                    {data.audit_log.map(e => (
-                      <div key={e.id} className="flex items-start gap-2 text-xs text-gray-500">
-                        <span className="font-mono bg-gray-100 rounded px-1 shrink-0">{e.action}</span>
-                        {e.field && <span className="text-gray-400">{e.field}</span>}
-                        <span className="text-gray-300 ml-auto shrink-0">{new Date(e.created_at).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })}</span>
-                      </div>
-                    ))}
-                  </div>
-                </details>
+              <div className="shrink-0 border-t border-gray-100 bg-gray-50 px-4 py-2">
+                <button
+                  onClick={() => setActiveStep("audit")}
+                  className="text-xs text-gray-400 hover:text-gray-600 flex items-center gap-1 transition-colors"
+                >
+                  <History size={11} /> {data.audit_log.length} Änderungen protokolliert — Audit Log öffnen
+                </button>
               </div>
             )}
           </div>
         </Panel>
       </PanelGroup>
+
+      {/* Step Config Modal */}
+      {stepModalStep && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setStepModalStep(null)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <RefreshCw size={15} className="text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {PIPELINE_STEPS.find(s => s.key === stepModalStep)?.label} neu starten
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5">Einstellungen für diesen Lauf</p>
+                </div>
+              </div>
+              <button onClick={() => setStepModalStep(null)} className="p-1.5 rounded-lg hover:bg-gray-100">
+                <X size={15} className="text-gray-400" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-5 py-4 space-y-4">
+              {/* Parsing settings */}
+              {stepModalStep === "parsing" && (<>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Parse-Engine</label>
+                  <select
+                    value={stepModalParseEngine}
+                    onChange={e => setStepModalParseEngine(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    {PARSE_ENGINE_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label} — {o.note}</option>
+                    ))}
+                  </select>
+                </div>
+                <label
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${stepModalOcr ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-100 bg-gray-50"}`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div>
+                    <p className="text-xs font-medium text-gray-700">OCR aktivieren</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Für gescannte PDFs empfohlen</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={stepModalOcr}
+                    onChange={e => { e.stopPropagation(); setStepModalOcr(e.target.checked); }}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                </label>
+                <label
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${stepModalExtractTables ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-100 bg-gray-50"}`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div>
+                    <p className="text-xs font-medium text-gray-700">Tabellen-Extraktion</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Tabellenstruktur als Markdown erhalten</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={stepModalExtractTables}
+                    onChange={e => { e.stopPropagation(); setStepModalExtractTables(e.target.checked); }}
+                    className="w-4 h-4 accent-blue-600 cursor-pointer"
+                  />
+                </label>
+                <label
+                  className={`flex items-center justify-between px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${stepModalDescribePictures ? "border-purple-500 bg-purple-50" : "border-gray-200 hover:border-gray-100 bg-gray-50"}`}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <div>
+                    <p className="text-xs font-medium text-gray-700">Diagramme beschreiben</p>
+                    <p className="text-xs text-gray-400 mt-0.5">SmolVLM-256M beschreibt Charts & Grafiken als Text</p>
+                    {stepModalDescribePictures && (
+                      <p className="text-xs text-purple-600 mt-0.5">Erstes Mal: ~500 MB Download · danach gecacht</p>
+                    )}
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={stepModalDescribePictures}
+                    onChange={e => { e.stopPropagation(); setStepModalDescribePictures(e.target.checked); }}
+                    className="w-4 h-4 accent-purple-600 cursor-pointer"
+                  />
+                </label>
+              </>)}
+
+              {/* LLM model settings */}
+              {(stepModalStep === "classifying" || stepModalStep === "analyzing" || stepModalStep === "metrics") && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">KI-Modell</label>
+                  <div className="space-y-2">
+                    {MODEL_OPTIONS.map(opt => (
+                      <label key={opt.value} className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${stepModalModel === opt.value ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`}>
+                        <input type="radio" name="step-model" value={opt.value} checked={stepModalModel === opt.value} onChange={() => setStepModalModel(opt.value)} className="sr-only" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                          <p className="text-xs text-gray-400">{opt.note}</p>
+                        </div>
+                        {opt.free ? (
+                          <span className="text-xs font-medium text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">Kostenlos</span>
+                        ) : (
+                          <span className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">Kostenpflichtig</span>
+                        )}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Extra context hint for analysis */}
+              {stepModalStep === "analyzing" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">
+                    Kontext-Hinweis ans LLM <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="z.B. Fokus auf Scope-3-Emissionen und Lieferketten-Risiken…"
+                    value={stepModalExtraContext}
+                    onChange={e => setStepModalExtraContext(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"
+                  />
+                  <p className="text-xs text-gray-400">Wird dem Modell als Reviewer-Hinweis vorangestellt.</p>
+                </div>
+              )}
+
+              {/* Chunking settings */}
+              {stepModalStep === "chunking" && (<>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Chunk-Strategie</label>
+                  <select
+                    value={stepModalChunkStrategy}
+                    onChange={e => setStepModalChunkStrategy(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    {CHUNK_STRATEGY_OPTIONS.map(o => (
+                      <option key={o.value} value={o.value}>{o.label} — {o.note}</option>
+                    ))}
+                  </select>
+                  {stepModalChunkStrategy !== "sliding_window" && (
+                    <p className="text-xs text-amber-600">Ignoriert Chunk-Größe/Überlappung — nutzt Sektionsgrenzen aus dem Dokument.</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Chunk-Größe (Wörter)</label>
+                  <select
+                    value={stepModalChunkSize}
+                    onChange={e => setStepModalChunkSize(Number(e.target.value))}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    {CHUNK_SIZE_OPTIONS.map(v => (
+                      <option key={v} value={v}>{v} Wörter{v === 800 ? " (Standard)" : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Überlappung (Wörter)</label>
+                  <select
+                    value={stepModalChunkOverlap}
+                    onChange={e => setStepModalChunkOverlap(Number(e.target.value))}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  >
+                    {CHUNK_OVERLAP_OPTIONS.map(v => (
+                      <option key={v} value={v}>{v} Wörter{v === 80 ? " (Standard)" : ""}</option>
+                    ))}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-400 pt-1 border-t border-gray-100">Bestehende Chunks werden gelöscht und neu erstellt.</p>
+              </>)}
+
+              {/* Embedding settings */}
+              {stepModalStep === "embedding" && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Embedding-Modell</label>
+                  <select
+                    defaultValue="multilingual-e5-large"
+                    disabled
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-400 cursor-not-allowed"
+                  >
+                    <option value="multilingual-e5-large">multilingual-e5-large 1024d (Standard)</option>
+                    <option value="text-embedding-3-small">OpenAI text-embedding-3-small</option>
+                    <option value="nomic-embed-text">Nomic Embed Text</option>
+                  </select>
+                  <p className="text-xs text-gray-300">Weitere Modelle in Vorbereitung</p>
+                </div>
+              )}
+
+              {/* Indexing settings */}
+              {stepModalStep === "indexing" && (<>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">Retrieval-Modus</label>
+                  <select
+                    value={stepModalRetrievalMode}
+                    onChange={e => setStepModalRetrievalMode(e.target.value)}
+                    className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white"
+                  >
+                    <option value="dense">Dense (Standard)</option>
+                    <option value="hybrid">Hybrid (Dense + BM25)</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">
+                    Similarity Threshold
+                    <span className="ml-2 font-normal text-blue-600">{stepModalSimilarity}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={0.10} max={0.40} step={0.05}
+                    value={stepModalSimilarity}
+                    onChange={e => setStepModalSimilarity(Number(e.target.value))}
+                    className="w-full accent-blue-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span>0.10 — breiter</span>
+                    <span>0.40 — präziser</span>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">
+                    Top-K (Chunks pro Abfrage)
+                    <span className="ml-2 font-normal text-blue-600">{stepModalTopK}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min={3} max={20} step={1}
+                    value={stepModalTopK}
+                    onChange={e => setStepModalTopK(Number(e.target.value))}
+                    className="w-full accent-blue-600"
+                  />
+                  <div className="flex justify-between text-xs text-gray-300">
+                    <span>3 — weniger, schneller</span>
+                    <span>20 — mehr, umfassender</span>
+                  </div>
+                </div>
+              </>)}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-gray-100 bg-gray-50">
+              <button
+                onClick={() => setStepModalStep(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Abbrechen
+              </button>
+              <button
+                onClick={runStepModal}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <RefreshCw size={13} />
+                Starten
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Einstellungen Modal */}
+      {showModelSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowModelSettings(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-blue-50 flex items-center justify-center shrink-0">
+                  <Settings size={17} className="text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">Pipeline Einstellungen</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Defaults für die gesamte Organisation</p>
+                </div>
+              </div>
+              <button onClick={() => setShowModelSettings(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-gray-100 shrink-0 px-6">
+              {(["models", "pipeline"] as const).map(tab => (
+                <button key={tab} onClick={() => setSettingsTab(tab)}
+                  className={`py-3 px-1 mr-6 text-sm font-medium border-b-2 transition-colors ${settingsTab === tab ? "border-blue-600 text-blue-600" : "border-transparent text-gray-400 hover:text-gray-600"}`}>
+                  {tab === "models" ? "KI-Modelle" : "Pipeline-Qualität"}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="overflow-y-auto flex-1">
+              {settingsTab === "models" && (
+                <div className="px-6 pb-2">
+                  {Object.entries(PIPELINE_JOB_LABELS).map(([job, meta], i, arr) => {
+                    const current = (pendingModels as Record<string, string>)[job] ?? (llmSettings as Record<string, string> | undefined)?.[job] ?? "";
+                    const isFree = current.startsWith("groq:");
+                    const prevSection = i > 0 ? arr[i - 1][1].section : null;
+                    const showSectionHeader = meta.section !== prevSection;
+                    return (
+                      <div key={job}>
+                        {showSectionHeader && (
+                          <div className={`flex items-center gap-3 ${i > 0 ? "mt-5 pt-5 border-t border-gray-100" : "pt-5"} mb-3`}>
+                            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{meta.section}</span>
+                            <div className="flex-1 h-px bg-gray-100" />
+                          </div>
+                        )}
+                        <div className="py-3 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-800">{meta.label}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">{meta.desc}</p>
+                            </div>
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${isFree ? "bg-green-50 text-green-700" : "bg-orange-50 text-orange-600"}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${isFree ? "bg-green-400" : "bg-orange-400"}`} />
+                              {isFree ? "Kostenlos" : "Kostenpflichtig"}
+                            </span>
+                          </div>
+                          <select value={current} onChange={e => setPendingModels(p => ({ ...p, [job]: e.target.value }))}
+                            className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all">
+                            {MODEL_OPTIONS.map(m => <option key={m.value} value={m.value}>{m.label} — {m.note}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {settingsTab === "pipeline" && (
+                <div className="px-6 pb-2 space-y-1">
+                  {/* Parsing */}
+                  <div className="pt-5 pb-1">
+                    <div className="flex items-center gap-3 mb-4">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Parsing</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 mb-1">Parse-Engine</p>
+                        <p className="text-xs text-gray-400 mb-2">Bestimmt wie der PDF-Text extrahiert wird</p>
+                        <select value={(pendingPipeline.parse_engine ?? pipelineSettings?.parse_engine) || "docling"}
+                          onChange={e => setPendingPipeline(p => ({ ...p, parse_engine: e.target.value as any }))}
+                          className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                          {PARSE_ENGINE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.note}</option>)}
+                        </select>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">OCR aktivieren</p>
+                          <p className="text-xs text-gray-400">Für gescannte oder bildbasierte PDFs</p>
+                        </div>
+                        <button onClick={() => setPendingPipeline(p => ({ ...p, ocr_enabled: !(p.ocr_enabled ?? pipelineSettings?.ocr_enabled) }))}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${(pendingPipeline.ocr_enabled ?? pipelineSettings?.ocr_enabled) ? "bg-blue-600" : "bg-gray-200"}`}>
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${(pendingPipeline.ocr_enabled ?? pipelineSettings?.ocr_enabled) ? "translate-x-6" : "translate-x-1"}`} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Chunking */}
+                  <div className="pt-4 pb-1 border-t border-gray-100">
+                    <div className="flex items-center gap-3 mb-4 pt-2">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Chunking</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 mb-1">Strategie</p>
+                        <select value={(pendingPipeline.chunk_strategy ?? pipelineSettings?.chunk_strategy) || "sliding_window"}
+                          onChange={e => setPendingPipeline(p => ({ ...p, chunk_strategy: e.target.value as any }))}
+                          className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                          {CHUNK_STRATEGY_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.note}</option>)}
+                        </select>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">Chunk-Größe <span className="text-gray-400 font-normal">(Wörter)</span></p>
+                          <select value={(pendingPipeline.chunk_size ?? pipelineSettings?.chunk_size) || 800}
+                            onChange={e => setPendingPipeline(p => ({ ...p, chunk_size: Number(e.target.value) }))}
+                            className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            {CHUNK_SIZE_OPTIONS.map(v => <option key={v} value={v}>{v} {v === 800 ? "(Standard)" : ""}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">Overlap <span className="text-gray-400 font-normal">(Wörter)</span></p>
+                          <select value={(pendingPipeline.chunk_overlap ?? pipelineSettings?.chunk_overlap) || 80}
+                            onChange={e => setPendingPipeline(p => ({ ...p, chunk_overlap: Number(e.target.value) }))}
+                            className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            {CHUNK_OVERLAP_OPTIONS.map(v => <option key={v} value={v}>{v} {v === 80 ? "(Standard)" : ""}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Indexierung */}
+                  <div className="pt-4 pb-4 border-t border-gray-100">
+                    <div className="flex items-center gap-3 mb-4 pt-2">
+                      <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Indexierung</span>
+                      <div className="flex-1 h-px bg-gray-100" />
+                    </div>
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800 mb-1">Retrieval-Modus</p>
+                        <p className="text-xs text-gray-400 mb-2">Hybrid kombiniert Vektorsuche + Keyword-Suche (BM25)</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {(["dense", "hybrid"] as const).map(mode => (
+                            <button key={mode} onClick={() => setPendingPipeline(p => ({ ...p, retrieval_mode: mode }))}
+                              className={`py-2.5 rounded-lg border text-sm font-medium transition-all ${(pendingPipeline.retrieval_mode ?? pipelineSettings?.retrieval_mode) === mode ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
+                              {mode === "dense" ? "Dense (Standard)" : "Hybrid"}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">Similarity-Schwelle</p>
+                          <select value={(pendingPipeline.similarity_threshold ?? pipelineSettings?.similarity_threshold) || 0.25}
+                            onChange={e => setPendingPipeline(p => ({ ...p, similarity_threshold: Number(e.target.value) }))}
+                            className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            {SIMILARITY_OPTIONS.map(v => <option key={v} value={v}>{v} {v === 0.25 ? "(Standard)" : ""}</option>)}
+                          </select>
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800 mb-1">Top-K Chunks</p>
+                          <select value={(pendingPipeline.top_k ?? pipelineSettings?.top_k) || 8}
+                            onChange={e => setPendingPipeline(p => ({ ...p, top_k: Number(e.target.value) }))}
+                            className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                            {TOP_K_OPTIONS.map(v => <option key={v} value={v}>{v} {v === 8 ? "(Standard)" : ""}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100 shrink-0">
+              <p className="text-xs text-gray-400">Gilt ab der nächsten Verarbeitung.</p>
+              <div className="flex gap-2">
+                <button onClick={() => setShowModelSettings(false)}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-white transition-colors font-medium">
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => settingsTab === "models" ? saveModelsMut.mutate(pendingModels) : savePipelineMut.mutate(pendingPipeline)}
+                  disabled={saveModelsMut.isPending || savePipelineMut.isPending}
+                  className="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 flex items-center gap-2">
+                  {(saveModelsMut.isPending || savePipelineMut.isPending) && <Loader2 size={14} className="animate-spin" />}
+                  Speichern
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Run konfigurieren Modal */}
+      {showRunModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowRunModal(false)} />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-xl bg-green-50 flex items-center justify-center shrink-0">
+                  <RefreshCw size={17} className="text-green-600" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-gray-900">Run konfigurieren</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Einstellungen nur für diesen Lauf</p>
+                </div>
+              </div>
+              <button onClick={() => setShowRunModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><X size={16} /></button>
+            </div>
+
+            <div className="px-6 py-5 space-y-4">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Parsing</p>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">Parse-Engine</p>
+                    <select value={(runConfig.parse_engine) || "docling"} onChange={e => setRunConfig(p => ({ ...p, parse_engine: e.target.value as any }))}
+                      className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                      {PARSE_ENGINE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} — {o.note}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700">OCR aktivieren</p>
+                    <button onClick={() => setRunConfig(p => ({ ...p, ocr_enabled: !p.ocr_enabled }))}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${runConfig.ocr_enabled ? "bg-blue-600" : "bg-gray-200"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${runConfig.ocr_enabled ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-gray-100">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Chunking</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">Chunk-Größe</p>
+                    <select value={runConfig.chunk_size || 800} onChange={e => setRunConfig(p => ({ ...p, chunk_size: Number(e.target.value) }))}
+                      className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                      {CHUNK_SIZE_OPTIONS.map(v => <option key={v} value={v}>{v} Wörter</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-1">Overlap</p>
+                    <select value={runConfig.chunk_overlap || 80} onChange={e => setRunConfig(p => ({ ...p, chunk_overlap: Number(e.target.value) }))}
+                      className="w-full text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all">
+                      {CHUNK_OVERLAP_OPTIONS.map(v => <option key={v} value={v}>{v} Wörter</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between px-6 py-4 bg-gray-50 border-t border-gray-100">
+              <button onClick={() => setRunConfig({ ...(pipelineSettings ?? PIPELINE_DEFAULTS) })}
+                className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                Defaults wiederherstellen
+              </button>
+              <div className="flex gap-2">
+                <button onClick={() => setShowRunModal(false)}
+                  className="px-4 py-2 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-white transition-colors font-medium">
+                  Abbrechen
+                </button>
+                <button
+                  onClick={() => { setShowRunModal(false); processMut.mutate(); }}
+                  disabled={processMut.isPending}
+                  className="px-4 py-2 text-sm rounded-lg bg-green-600 text-white hover:bg-green-700 transition-colors font-medium flex items-center gap-2">
+                  {processMut.isPending ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} />}
+                  Verarbeitung starten
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

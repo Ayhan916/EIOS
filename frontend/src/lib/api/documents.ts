@@ -197,13 +197,55 @@ export async function reclassifyAllFiles(): Promise<ReclassifyAllResult> {
   return r.data;
 }
 
-export async function reclassifyFile(id: string): Promise<ReclassifyResult> {
-  const r = await apiClient.post(`/documents/files/${id}/reclassify`, null, { timeout: 60_000 });
+export async function reclassifyFile(id: string, model?: string): Promise<ReclassifyResult> {
+  const params: Record<string, string> = {};
+  if (model) params.model = model;
+  const r = await apiClient.post(`/documents/files/${id}/reclassify`, null, { params, timeout: 60_000 });
   return r.data;
 }
 
-export async function reanalyzeFile(id: string): Promise<{ doc_file_id: string; has_summary: boolean; kpi_count: number }> {
-  const r = await apiClient.post(`/documents/files/${id}/reanalyze`, null, { timeout: 120_000 });
+export async function reanalyzeFile(id: string, model?: string, extraContext?: string): Promise<{ doc_file_id: string; has_summary: boolean; kpi_count: number }> {
+  const params: Record<string, string> = {};
+  if (model) params.model = model;
+  const body = extraContext ? { extra_context: extraContext } : {};
+  const r = await apiClient.post(`/documents/files/${id}/reanalyze`, body, { params, timeout: 120_000 });
+  return r.data;
+}
+
+export async function processFile(id: string): Promise<{ queued: number; doc_file_id: string }> {
+  const r = await apiClient.post(`/documents/files/${id}/process`, null, { timeout: 30_000 });
+  return r.data;
+}
+
+export async function reparseFile(
+  id: string,
+  parseEngine?: string,
+  ocrEnabled?: boolean,
+  extractTables?: boolean,
+  describePictures?: boolean,
+): Promise<{ doc_file_id: string; pages: number; chars: number }> {
+  const params: Record<string, string | boolean> = {};
+  if (parseEngine) params.parse_engine = parseEngine;
+  if (ocrEnabled !== undefined) params.ocr_enabled = ocrEnabled;
+  if (extractTables !== undefined) params.extract_tables = extractTables;
+  if (describePictures !== undefined) params.describe_pictures = describePictures;
+  const r = await apiClient.post(`/documents/files/${id}/reparse`, null, { params, timeout: 300_000 });
+  return r.data;
+}
+
+export async function rechunkFile(id: string, chunkSize?: number, chunkOverlap?: number, chunkStrategy?: string): Promise<{ doc_file_id: string; chunks_added: number }> {
+  const params: Record<string, number | string> = {};
+  if (chunkSize) params.chunk_size = chunkSize;
+  if (chunkOverlap) params.chunk_overlap = chunkOverlap;
+  if (chunkStrategy) params.chunk_strategy = chunkStrategy;
+  const r = await apiClient.post(`/documents/files/${id}/rechunk`, null, { params, timeout: 180_000 });
+  return r.data;
+}
+
+export async function reextractMetrics(id: string, model?: string): Promise<{ doc_file_id: string; metrics: number; signals: number }> {
+  const params: Record<string, string> = {};
+  if (model) params.model = model;
+  const r = await apiClient.post(`/documents/files/${id}/reextract-metrics`, null, { params, timeout: 180_000 });
   return r.data;
 }
 
@@ -256,6 +298,9 @@ export interface ReviewMetric {
   year: number;
   period: string;
   confidence: string;
+  confidence_pct: number | null;
+  page_number: number | null;
+  scope: string | null;
 }
 
 export interface ReviewSignal {
@@ -301,6 +346,7 @@ export interface ReviewData {
   copilot_hidden: boolean;
   classification_confidence: number | null;
   classification_alternatives: { doc_type: string; confidence: number }[] | null;
+  classification_evidence: string[] | null;
   created_at: string;
   updated_at: string;
   chunks: ReviewChunk[];
@@ -351,14 +397,44 @@ export interface SandboxChunk {
   similarity: number;
 }
 
+export interface CorpusSimilarChunk {
+  chunk_id: string;
+  content: string;
+  page_number: number | null;
+  similarity: number;
+  doc_id: string;
+  company_name: string | null;
+  title: string | null;
+  report_year: number | null;
+  doc_type: string;
+}
+
 export interface SandboxResult {
   query: string;
   answer: string | null;
   chunks: SandboxChunk[];
+  corpus_similar: CorpusSimilarChunk[];
 }
 
 export async function runCopilotSandbox(fileId: string, query: string): Promise<SandboxResult> {
   const r = await apiClient.post(`/documents/files/${fileId}/sandbox`, { query }, { timeout: 60_000 });
+  return r.data;
+}
+
+export interface LayoutElement {
+  type: "text" | "table" | "figure" | "unknown";
+  l: number; t: number; r: number; b: number;
+  page_h: number | null;
+}
+
+export interface ParseLayout {
+  file_id: string;
+  pages: number | null;
+  layout: Record<string, LayoutElement[]>;
+}
+
+export async function getParseLayout(fileId: string): Promise<ParseLayout> {
+  const r = await apiClient.get(`/documents/files/${fileId}/parse-layout`);
   return r.data;
 }
 
@@ -393,6 +469,25 @@ export function getFilePdfUrl(fileId: string): string {
   return `${BACKEND}/api/v1/documents/files/${fileId}/serve`;
 }
 
+export interface SupplierAuditEntry {
+  id: string;
+  doc_file_id: string;
+  doc_title: string;
+  doc_type: string;
+  report_year: number | null;
+  user_id: string;
+  action: string;
+  field: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  created_at: string;
+}
+
+export async function getSupplierAuditLog(supplierId: string, limit = 200): Promise<SupplierAuditEntry[]> {
+  const r = await apiClient.get(`/documents/suppliers/${supplierId}/audit-log`, { params: { limit } });
+  return r.data;
+}
+
 export async function splitChunk(
   chunkId: string,
   splitAt: number,
@@ -407,6 +502,29 @@ export async function mergeChunks(
 ): Promise<{ merged: boolean; surviving_chunk_id: string; deleted_chunk_id: string }> {
   const r = await apiClient.post(`/documents/chunks/${chunkId}/merge`, { other_chunk_id: otherChunkId });
   return r.data;
+}
+
+// ── Chunk Comments (P2-D) ─────────────────────────────────────────────────────
+
+export interface ChunkComment {
+  id: string;
+  user_id: string | null;
+  comment: string;
+  created_at: string;
+}
+
+export async function listChunkComments(chunkId: string): Promise<ChunkComment[]> {
+  const r = await apiClient.get(`/documents/chunks/${chunkId}/comments`);
+  return r.data;
+}
+
+export async function createChunkComment(chunkId: string, comment: string): Promise<{ id: string; chunk_id: string; comment: string }> {
+  const r = await apiClient.post(`/documents/chunks/${chunkId}/comments`, { comment });
+  return r.data;
+}
+
+export async function deleteChunkComment(chunkId: string, commentId: string): Promise<void> {
+  await apiClient.delete(`/documents/chunks/${chunkId}/comments/${commentId}`);
 }
 
 export async function uploadDocument(

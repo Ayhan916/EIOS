@@ -10,8 +10,14 @@ const nextConfig: NextConfig = {
     ];
   },
   webpack: (config) => {
-    // PDF.js requires canvas to be aliased to false in Next.js
     config.resolve.alias.canvas = false;
+    // pdfjs-dist v5 declares var __webpack_exports__ inside pdf.mjs which hoists
+    // in strict-mode eval and makes webpack's preamble receive undefined.
+    // The loader renames those 5 lines and replaces import.meta.url.
+    config.module.rules.unshift({
+      test: /node_modules\/pdfjs-dist\/build\/pdf\.mjs$/,
+      use: [{ loader: require.resolve("./pdfjs-patch-loader.cjs") }],
+    });
     return config;
   },
 };

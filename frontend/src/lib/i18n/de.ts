@@ -1403,6 +1403,7 @@ const de = {
   "surveillance.tabSignals": "Signale & Episoden",
   "surveillance.tabIntelligence": "Lieferanten-Intelligence",
   "surveillance.tabExternal": "Externe Daten",
+  "surveillance.tabCross": "Cross-Source",
   "surveillance.signalSingular": "Signal",
   "surveillance.signalPlural": "Signale",
   "surveillance.supplierReassess": "Lieferant & Neubewertung →",

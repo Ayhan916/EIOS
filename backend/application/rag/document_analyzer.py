@@ -51,11 +51,12 @@ def _llm_call(system: str, prompt: str) -> dict:
     raise NotImplementedError  # replaced by async version below
 
 
-async def _call_llm(system: str, prompt: str) -> str:
+async def _call_llm(system: str, prompt: str, llm=None) -> str:
     import asyncio
-    from infrastructure.llm.deps import get_llm_provider
     from application.ports.llm import Message
-    llm = get_llm_provider()
+    if llm is None:
+        from infrastructure.llm.deps import get_llm_provider
+        llm = get_llm_provider()
 
     for attempt in range(4):
         try:
@@ -117,7 +118,7 @@ _FINANCIAL_SYSTEM = (
 
 async def _analyze_financial(
     chunks: list[str], company_name: str | None, report_year: int | None,
-    language: str, total_pages: int,
+    language: str, total_pages: int, llm=None,
 ) -> dict:
     context, _ = _build_context(chunks, total_pages)
     company_str = f"Unternehmen: {company_name}" if company_name else ""
@@ -162,7 +163,7 @@ Antworte NUR mit validem JSON:
 Nur ausfüllen was im Dokument steht. null für Unbekanntes."""
 
     try:
-        raw = await _call_llm(_FINANCIAL_SYSTEM, prompt)
+        raw = await _call_llm(_FINANCIAL_SYSTEM, prompt, llm=llm)
         result = json.loads(raw)
         result["doc_class"] = "financial"
         result["signal_dimension"] = "financial"
@@ -185,7 +186,7 @@ _ESG_SYSTEM = (
 
 async def _analyze_esg(
     chunks: list[str], company_name: str | None, report_year: int | None,
-    language: str, total_pages: int,
+    language: str, total_pages: int, llm=None,
 ) -> dict:
     context, _ = _build_context(chunks, total_pages)
     company_str = f"Unternehmen: {company_name}" if company_name else ""
@@ -236,7 +237,7 @@ Antworte NUR mit validem JSON:
 Nur ausfüllen was im Dokument steht. null für Unbekanntes."""
 
     try:
-        raw = await _call_llm(_ESG_SYSTEM, prompt)
+        raw = await _call_llm(_ESG_SYSTEM, prompt, llm=llm)
         result = json.loads(raw)
         result["doc_class"] = "esg"
         result["signal_dimension"] = "esg"
@@ -259,7 +260,7 @@ _REGULATORY_SYSTEM = (
 
 async def _analyze_regulatory(
     chunks: list[str], company_name: str | None, report_year: int | None,
-    language: str, total_pages: int,
+    language: str, total_pages: int, llm=None,
 ) -> dict:
     context, _ = _build_context(chunks, total_pages)
 
@@ -292,7 +293,7 @@ Antworte NUR mit validem JSON:
 }}"""
 
     try:
-        raw = await _call_llm(_REGULATORY_SYSTEM, prompt)
+        raw = await _call_llm(_REGULATORY_SYSTEM, prompt, llm=llm)
         result = json.loads(raw)
         result["doc_class"] = "regulatory"
         result["signal_dimension"] = "regulatory"
@@ -317,7 +318,7 @@ _STATEMENT_SYSTEM = (
 
 async def _analyze_statement(
     chunks: list[str], company_name: str | None, report_year: int | None,
-    language: str, total_pages: int,
+    language: str, total_pages: int, llm=None,
 ) -> dict:
     context, _ = _build_context(chunks, total_pages)
     company_str = f"Unternehmen: {company_name}" if company_name else ""
@@ -355,7 +356,7 @@ Antworte NUR mit validem JSON:
 }}"""
 
     try:
-        raw = await _call_llm(_STATEMENT_SYSTEM, prompt)
+        raw = await _call_llm(_STATEMENT_SYSTEM, prompt, llm=llm)
         result = json.loads(raw)
         result["doc_class"] = "statement"
         result["signal_dimension"] = "governance"
@@ -379,7 +380,7 @@ _SIGNAL_SYSTEM = (
 
 async def _analyze_signal(
     chunks: list[str], company_name: str | None, report_year: int | None,
-    language: str, total_pages: int,
+    language: str, total_pages: int, llm=None,
 ) -> dict:
     context, _ = _build_context(chunks, total_pages)
     company_str = f"Betroffenes Unternehmen: {company_name}" if company_name else ""
@@ -413,7 +414,7 @@ Antworte NUR mit validem JSON:
 }}"""
 
     try:
-        raw = await _call_llm(_SIGNAL_SYSTEM, prompt)
+        raw = await _call_llm(_SIGNAL_SYSTEM, prompt, llm=llm)
         result = json.loads(raw)
         result["doc_class"] = "signal"
         if "signal_dimension" not in result:
@@ -434,6 +435,8 @@ async def analyze_document(
     language: str = "de",
     total_pages: int = 1,
     sections: list[str] | None = None,
+    llm_provider=None,
+    extra_context: str | None = None,
 ) -> dict:
     """Route to the correct extractor based on doc_class."""
     doc_class = get_doc_class(doc_type)
@@ -447,16 +450,22 @@ async def analyze_document(
         chunks=len(chunks),
     )
 
+    # Prepend reviewer hint as first chunk so all extractors see it
+    effective_chunks = chunks
+    if extra_context:
+        hint = f"[REVIEWER HINT]: {extra_context.strip()}"
+        effective_chunks = [hint] + list(chunks)
+
     if doc_class == "financial":
-        result = await _analyze_financial(chunks, company_name, report_year, language, total_pages)
+        result = await _analyze_financial(effective_chunks, company_name, report_year, language, total_pages, llm=llm_provider)
     elif doc_class == "esg":
-        result = await _analyze_esg(chunks, company_name, report_year, language, total_pages)
+        result = await _analyze_esg(effective_chunks, company_name, report_year, language, total_pages, llm=llm_provider)
     elif doc_class == "regulatory":
-        result = await _analyze_regulatory(chunks, company_name, report_year, language, total_pages)
+        result = await _analyze_regulatory(effective_chunks, company_name, report_year, language, total_pages, llm=llm_provider)
     elif doc_class == "statement":
-        result = await _analyze_statement(chunks, company_name, report_year, language, total_pages)
+        result = await _analyze_statement(effective_chunks, company_name, report_year, language, total_pages, llm=llm_provider)
     else:
-        result = await _analyze_signal(chunks, company_name, report_year, language, total_pages)
+        result = await _analyze_signal(effective_chunks, company_name, report_year, language, total_pages, llm=llm_provider)
 
     logger.info(
         "doc_analyzer.done",

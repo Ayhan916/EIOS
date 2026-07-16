@@ -15,7 +15,7 @@ from shared.config import settings
 
 engine = create_async_engine(
     settings.database_url,
-    echo=settings.is_development,
+    echo=False,
     pool_pre_ping=True,
     pool_size=settings.db_pool_size,
     max_overflow=settings.db_pool_max_overflow,

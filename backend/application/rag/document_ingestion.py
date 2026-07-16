@@ -145,6 +145,7 @@ async def _process_content(
         file_url=url,
         file_hash=doc.file_hash,
         pages=doc.pages,
+        parse_layout=doc.parse_layout if doc.parse_layout else None,
         status="analyzing",
         created_at=datetime.now(UTC),
         updated_at=datetime.now(UTC),
@@ -444,6 +445,37 @@ async def process_document_background(
 
         await _set_status("analyzing")
 
+        from infrastructure.llm.deps import get_org_job_llm_provider, get_org_pipeline_settings
+        async with AsyncSessionFactory() as _s:
+            async with _s.begin():
+                _analysis_llm = await get_org_job_llm_provider(org_id, "analysis", _s)
+                _pipe_settings = await get_org_pipeline_settings(org_id, _s)
+
+        # Re-chunk from stored parsed_text using org chunk settings if available
+        _org_chunk_size = _pipe_settings.get("chunk_size", 800)
+        _org_chunk_overlap = _pipe_settings.get("chunk_overlap", 80)
+        if chunks and (_org_chunk_size != 800 or _org_chunk_overlap != 80):
+            _words = " ".join(chunks).split()
+            _rechunked: list[str] = []
+            _start = 0
+            while _start < len(_words):
+                _end = min(_start + _org_chunk_size, len(_words))
+                _chunk = " ".join(_words[_start:_end])
+                if len(_chunk.strip()) > 50:
+                    _rechunked.append(_chunk.strip())
+                if _end >= len(_words):
+                    break
+                _start = _end - _org_chunk_overlap
+            if _rechunked:
+                chunks = _rechunked
+            logger.info(
+                "doc_ingest.bg_rechunked",
+                doc_file_id=doc_file_id,
+                chunk_size=_org_chunk_size,
+                chunk_overlap=_org_chunk_overlap,
+                chunks=len(chunks),
+            )
+
         analysis = await analyze_document(
             chunks=chunks,
             doc_type=doc_type,
@@ -452,6 +484,7 @@ async def process_document_background(
             language=language,
             total_pages=total_pages,
             sections=sections,
+            llm_provider=_analysis_llm,
         )
 
         async with AsyncSessionFactory() as session:
@@ -498,6 +531,7 @@ async def process_document_background(
         # ── Step 6: Extract structured metrics + signals ──────────────────────
         async with AsyncSessionFactory() as session:
             async with session.begin():
+                _extraction_llm = await get_org_job_llm_provider(org_id, "extraction", session)
                 intel = await extract_and_store_intelligence(
                     organization_id=org_id,
                     doc_file_id=doc_file_id,
@@ -507,9 +541,28 @@ async def process_document_background(
                     report_year=report_year,
                     chunks=chunks,
                     session=session,
+                    llm_provider=_extraction_llm,
                 )
 
         logger.info("doc_ingest.bg_done", doc_file_id=doc_file_id, chunks_added=chunks_added, **intel)
+
+        # ── Step 6b: Year-over-Year comparison ────────────────────────────────
+        if intel.get("metrics", 0) > 0 and company_name and report_year:
+            try:
+                from application.intelligence.yoy_comparator import generate_yoy_comparison
+                async with AsyncSessionFactory() as session:
+                    async with session.begin():
+                        yoy = await generate_yoy_comparison(
+                            organization_id=org_id,
+                            company_name=company_name,
+                            supplier_id=supplier_id,
+                            report_year=report_year,
+                            source_doc_id=doc_file_id,
+                            session=session,
+                        )
+                logger.info("doc_ingest.yoy_done", doc_file_id=doc_file_id, **yoy)
+            except Exception as exc:
+                logger.warning("doc_ingest.yoy_error", doc_file_id=doc_file_id, error=str(exc))
 
         # ── Step 7: Notify webhook subscribers if supplier is known ───────────
         if supplier_id and (intel.get("metrics", 0) > 0 or intel.get("signals", 0) > 0):
@@ -539,6 +592,7 @@ async def reclassify_document(
     doc_file_id: str,
     org_id: str,
     session: AsyncSession,
+    model: str | None = None,
 ) -> dict:
     """Re-classify an existing document using stored chunk text. Updates document_files + rag_documents."""
     import asyncio
@@ -569,7 +623,9 @@ async def reclassify_document(
     text_excerpt = " ".join(chunk_rows)
     filename = (doc_file.file_url or "").replace("upload://", "") or doc_file.title or "unknown.pdf"
 
-    groq_result = await classify_with_groq(text_excerpt, filename)
+    from infrastructure.llm.deps import get_org_job_llm_provider, build_provider_for_model
+    llm_provider = build_provider_for_model(model) if model else await get_org_job_llm_provider(org_id, "classification", session)
+    groq_result = await classify_with_groq(text_excerpt, filename, llm=llm_provider)
     if not groq_result:
         return {"error": "classifier_failed", "doc_file_id": doc_file_id}
 
@@ -596,6 +652,8 @@ async def reclassify_document(
         doc_file.classification_confidence = float(groq_result["confidence"])
     if "alternatives" in groq_result:
         doc_file.classification_alternatives = groq_result["alternatives"]
+    if "evidence_passages" in groq_result:
+        doc_file.classification_evidence = groq_result["evidence_passages"]
     doc_file.updated_at = datetime.now(UTC)
 
     # Update all rag_documents for this file
@@ -637,6 +695,7 @@ async def reclassify_document(
         "changed": old_doc_type != new_doc_type,
         "confidence": groq_result.get("confidence"),
         "alternatives": groq_result.get("alternatives", []),
+        "evidence_passages": groq_result.get("evidence_passages", []),
     }
 
 
@@ -677,6 +736,8 @@ async def reanalyze_document(
     doc_file_id: str,
     org_id: str,
     session: AsyncSession,
+    model: str | None = None,
+    extra_context: str | None = None,
 ) -> dict:
     """Re-run LLM analysis (KPI/risk/summary extraction) for an existing document using stored chunks."""
     from infrastructure.persistence.models.rag_documents import RagDocumentModel
@@ -700,6 +761,8 @@ async def reanalyze_document(
     if not chunk_rows:
         return {"error": "no_chunks"}
 
+    from infrastructure.llm.deps import get_org_job_llm_provider, build_provider_for_model
+    llm_provider = build_provider_for_model(model) if model else await get_org_job_llm_provider(org_id, "analysis", session)
     doc_type = doc_file.doc_type or "sustainability_report"
     analysis = await analyze_document(
         chunks=list(chunk_rows),
@@ -708,6 +771,8 @@ async def reanalyze_document(
         report_year=doc_file.report_year,
         language=doc_file.language or "de",
         total_pages=doc_file.pages or 1,
+        llm_provider=llm_provider,
+        extra_context=extra_context,
     )
 
     doc_file.summary = analysis.get("summary")
@@ -725,6 +790,204 @@ async def reanalyze_document(
         "has_summary": bool(doc_file.summary),
         "kpi_count": len([v for v in (doc_file.extracted_kpis or {}).values() if v is not None]),
     }
+
+
+async def reparse_document(
+    doc_file_id: str,
+    org_id: str,
+    session: AsyncSession,
+    parse_engine: str = "docling",
+    ocr_enabled: bool = True,
+    extract_tables: bool = True,
+    describe_pictures: bool = False,
+) -> dict:
+    """Re-parse the stored PDF with configurable engine and options."""
+    import asyncio
+    from application.rag.document_parser import parse_pdf, parse_html
+
+    doc_file = (await session.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == doc_file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc_file:
+        return {"error": "not_found"}
+
+    file_url = doc_file.file_url or ""
+    file_path = file_url.replace("upload://", "") if file_url.startswith("upload://") else file_url
+    if not file_path or not __import__("os").path.isfile(file_path):
+        return {"error": "no_file"}
+
+    doc_file.status = "parsing"
+    doc_file.updated_at = datetime.now(UTC)
+    await session.flush()
+
+    try:
+        loop = asyncio.get_event_loop()
+        with open(file_path, "rb") as fh:
+            raw = fh.read()
+        is_html = file_path.endswith(".html")
+        if is_html:
+            parse_fn = lambda b: parse_html(b)
+        else:
+            import functools
+            parse_fn = functools.partial(
+                parse_pdf,
+                parse_engine=parse_engine,
+                ocr_enabled=ocr_enabled,
+                extract_tables=extract_tables,
+                describe_pictures=describe_pictures,
+            )
+        parse_result = await loop.run_in_executor(None, parse_fn, raw)
+
+        doc = parse_result.document if parse_result.ok else None
+        doc_file.parsed_text = "\n\n".join(doc.chunks if doc else [])
+        doc_file.pages = doc.pages if doc else doc_file.pages
+        if doc and getattr(doc, "parse_layout", None):
+            doc_file.parse_layout = doc.parse_layout
+        doc_file.status = "done"
+        doc_file.updated_at = datetime.now(UTC)
+        await session.flush()
+
+        return {"doc_file_id": doc_file_id, "pages": doc_file.pages, "chars": len(doc_file.parsed_text or "")}
+    except Exception as exc:
+        doc_file.status = "failed"
+        doc_file.error_msg = str(exc)[:500]
+        await session.flush()
+        return {"error": str(exc)}
+
+
+async def rechunk_document(
+    doc_file_id: str,
+    org_id: str,
+    session: AsyncSession,
+    chunk_size: int = 800,
+    chunk_overlap: int = 80,
+    chunk_strategy: str = "sliding_window",
+) -> dict:
+    """Delete existing chunks and re-chunk + re-embed + re-index from stored parsed_text.
+
+    chunk_strategy:
+      sliding_window — word-based overlapping windows (default)
+      semantic / by_section — section-aware chunking using Markdown headings
+    """
+    from infrastructure.persistence.models.rag_documents import RagDocumentModel
+    from application.rag.document_parser import _chunk_text, _chunk_markdown
+    from sqlalchemy import delete as sql_delete
+
+    doc_file = (await session.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == doc_file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc_file:
+        return {"error": "not_found"}
+    if not doc_file.parsed_text:
+        return {"error": "no_parsed_text"}
+
+    doc_file.status = "indexing"
+    doc_file.updated_at = datetime.now(UTC)
+    await session.flush()
+
+    # Delete existing chunks
+    await session.execute(
+        sql_delete(RagDocumentModel).where(RagDocumentModel.document_file_id == doc_file_id)
+    )
+    await session.flush()
+
+    # Re-chunk according to strategy
+    if chunk_strategy in ("semantic", "by_section"):
+        # Section-aware: split on Markdown headings, merge/split by _CHUNK_SIZE
+        chunks = _chunk_markdown(doc_file.parsed_text)
+        # If the stored text has no headings, fall back to sliding window
+        if not chunks:
+            chunks = _chunk_text(doc_file.parsed_text)
+    else:
+        # Sliding window with configurable size/overlap
+        words = doc_file.parsed_text.split()
+        chunks = []
+        start = 0
+        while start < len(words):
+            end = min(start + chunk_size, len(words))
+            chunk = " ".join(words[start:end])
+            if len(chunk.strip()) > 50:
+                chunks.append(chunk.strip())
+            if end >= len(words):
+                break
+            start = end - chunk_overlap
+
+    from application.rag.document_indexer import index_document_chunks
+
+    doc_class = get_doc_class(doc_file.doc_type or "sustainability_report")
+    chunks_added = await index_document_chunks(
+        organization_id=org_id,
+        document_file_id=doc_file_id,
+        supplier_id=doc_file.supplier_id,
+        doc_type=doc_file.doc_type or "sustainability_report",
+        company_name=doc_file.company_name,
+        report_year=doc_file.report_year,
+        language=doc_file.language or "de",
+        chunks=chunks,
+        session=session,
+        doc_class=doc_class,
+        signal_dimension=get_signal_dimension(doc_class),
+    )
+
+    doc_file.chunks_count = chunks_added
+    doc_file.status = "done"
+    doc_file.updated_at = datetime.now(UTC)
+    await session.flush()
+
+    return {"doc_file_id": doc_file_id, "chunks_added": chunks_added}
+
+
+async def reextract_metrics(
+    doc_file_id: str,
+    org_id: str,
+    session: AsyncSession,
+    model: str | None = None,
+) -> dict:
+    """Re-run metric extractor (ESG + financial) for an existing document."""
+    from infrastructure.persistence.models.rag_documents import RagDocumentModel
+    from application.rag.metric_extractor import extract_and_store_intelligence
+
+    doc_file = (await session.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == doc_file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc_file:
+        return {"error": "not_found"}
+
+    chunk_rows = (await session.execute(
+        select(RagDocumentModel.content)
+        .where(RagDocumentModel.document_file_id == doc_file_id)
+        .order_by(RagDocumentModel.created_at.asc())
+        .limit(60)
+    )).scalars().all()
+
+    if not chunk_rows:
+        return {"error": "no_chunks"}
+
+    from infrastructure.llm.deps import get_org_job_llm_provider, build_provider_for_model
+    llm_provider = build_provider_for_model(model) if model else await get_org_job_llm_provider(org_id, "extraction", session)
+    doc_class = get_doc_class(doc_file.doc_type or "sustainability_report")
+    result = await extract_and_store_intelligence(
+        organization_id=org_id,
+        doc_file_id=doc_file_id,
+        doc_class=doc_class,
+        company_name=doc_file.company_name or "",
+        supplier_id=doc_file.supplier_id,
+        report_year=doc_file.report_year,
+        chunks=list(chunk_rows),
+        session=session,
+        llm_provider=llm_provider,
+    )
+
+    return {"doc_file_id": doc_file_id, **result}
 
 
 async def ingest_all_active_sources(

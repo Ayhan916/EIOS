@@ -37,6 +37,18 @@ class CompanyMetricModel(Base):
     )
     confidence: Mapped[str] = mapped_column(sa.String(16), nullable=False, default="exact")
     # exact | estimated | calculated
+    confidence_pct: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    # 0–100 numeric confidence from LLM
+
+    page_number: Mapped[int | None] = mapped_column(sa.Integer, nullable=True)
+    scope: Mapped[str | None] = mapped_column(sa.String(64), nullable=True)
+    # scope: "consolidated", "segment:Automotive", "segment:Financial Services", etc.
+
+    is_verified: Mapped[bool] = mapped_column(sa.Boolean, nullable=False, default=False)
+    reference_value: Mapped[float | None] = mapped_column(sa.Numeric(20, 4), nullable=True)
+    reference_source: Mapped[str | None] = mapped_column(sa.String(128), nullable=True)
+    reference_url: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
+    verification_note: Mapped[str | None] = mapped_column(sa.String(512), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(
         sa.DateTime(timezone=True), nullable=False, default=sa.func.now()

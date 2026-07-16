@@ -17,6 +17,7 @@ import {
   Eye,
   Globe,
   Layers,
+  Lightbulb,
   Loader2,
   Plus,
   Radio,
@@ -35,6 +36,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import apiClient from "@/lib/api/client";
+import {
+  crossAnalyze,
+  listCrossAlerts,
+  listDocQuality,
+  listExternalSignalsForSupplier,
+  listMetrics,
+  listSignals,
+  updateCrossAlertStatus,
+  formatValue,
+  NACE_LABELS,
+  RELATION_LABELS,
+  IMPACT_TYPE_LABELS,
+  DIMENSION_LABELS,
+  SEVERITY_ORDER,
+  type CrossAlert,
+  type CrossAnalyzeRequest,
+  type CompanyMetric,
+  type CompanySignal,
+  type DocQuality,
+} from "@/lib/api/intelligence";
 import { useAuth } from "@/lib/auth/context";
 import { useLanguage } from "@/lib/i18n/context";
 import { formatDateTime } from "@/lib/utils";
@@ -300,6 +321,7 @@ function SurvSignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, 
   const qc = useQueryClient();
   const [riskCreated, setRiskCreated] = useState(false);
   const [localStatus, setLocalStatus] = useState<string>(signal.signal_status);
+  const [expanded, setExpanded] = useState(false);
 
   const createRisk = useMutation({
     mutationFn: async () =>
@@ -335,17 +357,38 @@ function SurvSignalRow({ signal, nameMap }: { signal: any; nameMap: Map<string, 
   const isDone = localStatus === "ACKNOWLEDGED" || localStatus === "DISMISSED";
   const supplierName = signal.supplier_id ? (nameMap.get(signal.supplier_id) ?? signal.supplier_id.slice(0, 10) + "…") : null;
 
+  const expl = signal.explainability_json ?? {};
+
   return (
     <div className="py-3 border-b last:border-0 space-y-1.5">
       <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{signal.title}</p>
+        <button
+          className="flex-1 min-w-0 text-left"
+          onClick={() => setExpanded(v => !v)}
+        >
+          <p className={`text-sm font-medium ${expanded ? "" : "truncate"}`}>{signal.title}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {signal.signal_type}{supplierName ? ` · ${supplierName}` : ""}{" · "}{formatDateTime(signal.detected_at)}
+            <span className="ml-1 text-blue-500">{expanded ? "▲" : "▼"}</span>
           </p>
-        </div>
+        </button>
         <SurvSevBadge severity={signal.severity} />
       </div>
+
+      {expanded && (
+        <div className="mt-2 rounded-lg border border-border bg-muted/40 p-3 space-y-2 text-xs">
+          {signal.description && (
+            <p className="text-foreground leading-relaxed whitespace-pre-wrap">{signal.description}</p>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-1 text-muted-foreground pt-1 border-t border-border">
+            {expl.dimension && <span><span className="font-medium">Dimension:</span> {expl.dimension}</span>}
+            {expl.direction && <span><span className="font-medium">Richtung:</span> {expl.direction}</span>}
+            {expl.year && <span><span className="font-medium">Jahr:</span> {expl.year}</span>}
+            {signal.confidence != null && <span><span className="font-medium">Konfidenz:</span> {Math.round(signal.confidence * 100)}%</span>}
+            {expl.company_name && <span><span className="font-medium">Unternehmen:</span> {expl.company_name}</span>}
+          </div>
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-1.5">
         {isDone ? (
           <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-medium">
@@ -1081,15 +1124,18 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
   const [sevFilter, setSevFilter] = useState("");
   const [processResult, setProcessResult] = useState<{ events_created: number; message: string } | null>(null);
 
-  const { data: suppliers = [] } = useQuery<ExecSupplier[]>({
-    queryKey: ["exec-suppliers-names"],
-    queryFn: async () => (await apiClient.get("/executive/suppliers")).data,
-    staleTime: 5 * 60_000,
+  const { data: suppliersData } = useQuery<{ items: ExecSupplier[] }>({
+    queryKey: ["twin-suppliers-search", search],
+    queryFn: async () => {
+      const params: Record<string, string> = { page_size: "20", status: "Active" };
+      if (search.trim()) params.search = search.trim();
+      return (await apiClient.get("/suppliers/", { params })).data;
+    },
+    enabled: search.trim().length >= 1,
+    staleTime: 30_000,
   });
 
-  const filtered = suppliers.filter((s) =>
-    !search || s.name.toLowerCase().includes(search.toLowerCase()) || s.id.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = suppliersData?.items ?? [];
 
   const { data: twin, isLoading: twinLoading } = useQuery<DigitalTwin>({
     queryKey: ["twin-state", selectedId],
@@ -1115,6 +1161,19 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
       setProcessResult(data);
       qc.invalidateQueries({ queryKey: ["twin-state", selectedId] });
       qc.invalidateQueries({ queryKey: ["twin-timeline", selectedId] });
+    },
+  });
+
+  const [activateResult, setActivateResult] = useState<{ twin_events_created: number; surveillance_signals_created: number; message: string } | null>(null);
+  const activateIntelligence = useMutation({
+    mutationFn: async () => (await apiClient.post(`/intelligence/activate/${selectedId}`)).data,
+    onSuccess: (data) => {
+      setActivateResult(data);
+      qc.invalidateQueries({ queryKey: ["twin-state", selectedId] });
+      qc.invalidateQueries({ queryKey: ["twin-timeline", selectedId] });
+      qc.invalidateQueries({ queryKey: ["twin-signals", selectedId] });
+      qc.invalidateQueries({ queryKey: ["surv-signals-active"] });
+      qc.invalidateQueries({ queryKey: ["surv-dashboard"] });
     },
   });
 
@@ -1183,14 +1242,27 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm font-semibold">{t("twin.overview")}</CardTitle>
-                  <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
-                    onClick={() => processSignals.mutate()} disabled={processSignals.isPending}>
-                    {processSignals.isPending ? <Spinner className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
-                    {t("twin.processSignals")}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="default" className="gap-1.5 h-7 text-xs bg-blue-600 hover:bg-blue-700 text-white"
+                      onClick={() => activateIntelligence.mutate()} disabled={activateIntelligence.isPending}>
+                      {activateIntelligence.isPending ? <Spinner className="h-3 w-3" /> : <span>⚡</span>}
+                      Aktivieren
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1.5 h-7 text-xs"
+                      onClick={() => processSignals.mutate()} disabled={processSignals.isPending}>
+                      {processSignals.isPending ? <Spinner className="h-3 w-3" /> : <RefreshCw className="h-3 w-3" />}
+                      {t("twin.processSignals")}
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
+                {activateResult && (
+                  <div className="mb-3 rounded-md bg-blue-50 border border-blue-200 px-3 py-2 text-xs text-blue-700">
+                    ⚡ {activateResult.message}
+                    <span className="ml-2 text-blue-500">({activateResult.twin_events_created} Twin-Events · {activateResult.surveillance_signals_created} Surveillance-Signale)</span>
+                  </div>
+                )}
                 {processResult && (
                   <div className="mb-3 rounded-md bg-green-50 border border-green-200 px-3 py-2 text-xs text-green-700">
                     {processResult.message}
@@ -1198,13 +1270,16 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
                 )}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
-                    { label: t("twin.openRecs"), value: twin.open_recommendations },
+                    { label: t("twin.openRecs"), value: twin.open_recommendations, anchor: "recommendations" },
                     { label: t("twin.openActions"), value: twin.open_actions },
                     { label: t("twin.totalEvents"), value: twin.event_count },
                     { label: t("twin.criticalEvents"), value: twin.critical_event_count, red: twin.critical_event_count > 0 },
                   ].map((c) => (
-                    <div key={c.label} className="rounded-md bg-slate-50 p-3 text-center">
-                      <p className={`text-xl font-bold ${c.red ? "text-red-600" : "text-slate-900"}`}>{c.value}</p>
+                    <div key={c.label}
+                      className={`rounded-md bg-slate-50 p-3 text-center ${c.anchor ? "cursor-pointer hover:bg-blue-50 transition-colors" : ""}`}
+                      onClick={c.anchor ? () => document.getElementById(c.anchor!)?.scrollIntoView({ behavior: "smooth" }) : undefined}
+                    >
+                      <p className={`text-xl font-bold ${c.red ? "text-red-600" : c.anchor ? "text-blue-600" : "text-slate-900"}`}>{c.value}</p>
                       <p className="text-xs text-slate-400 mt-0.5">{c.label}</p>
                     </div>
                   ))}
@@ -1222,6 +1297,10 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
               {twin.dimensions.map((dim) => <TwinDimCard key={dim.name} dim={dim} />)}
             </div>
           </div>
+
+          {twin.open_recommendations > 0 && (
+            <TwinRecommendationsSection supplierId={selectedId} total={twin.open_recommendations} />
+          )}
 
           <div>
             <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -1298,8 +1377,486 @@ function TwinDetailSection({ nameMap, orgId }: { nameMap: Map<string, string>; o
               </div>
             )}
           </div>
+
         </>
       ) : null}
+
+      {/* ── 360° Data Sections — unabhängig vom Twin-Load ── */}
+      {selectedId && (
+        <div className="space-y-6 mt-2">
+          <TwinDocumentsSection supplierId={selectedId} />
+          <TwinMetricsSection supplierId={selectedId} />
+          <TwinSignalsSection supplierId={selectedId} />
+          <TwinCrossSourceSection supplierId={selectedId} supplierName={nameMap.get(selectedId) ?? selectedId} />
+          <TwinExternalSection supplierId={selectedId} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Empfehlungen ──────────────────────────────────────────────────────────────
+
+const DIM_LABELS: Record<string, string> = {
+  financial_health: "Financial",
+  esg_health: "ESG",
+  compliance_health: "Compliance",
+  operational_health: "Operational",
+  geopolitical_health: "Geopolitical",
+  cyber_health: "Cyber",
+  human_rights_health: "Human Rights",
+  environmental_health: "Environmental",
+};
+
+function TwinRecommendationsSection({ supplierId, total }: { supplierId: string; total: number }) {
+  const [dimFilter, setDimFilter] = useState("all");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 25;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["twin-recs", supplierId],
+    queryFn: async () => {
+      const res = await apiClient.get(
+        `/suppliers/${supplierId}/twin/timeline?severity=HIGH&limit=250`
+      );
+      return (res.data?.events ?? []) as any[];
+    },
+    enabled: !!supplierId,
+    staleTime: 120_000,
+  });
+
+  const dims = useMemo(() => {
+    if (!data) return [];
+    const s = new Set(data.map((e: any) => e.twin_dimension_affected).filter(Boolean));
+    return Array.from(s) as string[];
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    if (!data) return [];
+    return dimFilter === "all" ? data : data.filter((e: any) => e.twin_dimension_affected === dimFilter);
+  }, [data, dimFilter]);
+
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+
+  return (
+    <div id="recommendations">
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+          <Lightbulb className="h-4 w-4 text-amber-500" />
+          {total} Empfehlungen
+        </h3>
+        <div className="flex flex-wrap gap-1.5">
+          {["all", ...dims].map((d) => (
+            <button key={d} onClick={() => { setDimFilter(d); setPage(0); }}
+              className={`rounded-full px-2.5 py-0.5 text-xs font-medium border transition-colors ${dimFilter === d ? "bg-slate-800 text-white border-slate-800" : "bg-white text-slate-500 border-slate-200 hover:border-slate-400"}`}>
+              {d === "all" ? "Alle" : DIM_LABELS[d] ?? d}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex h-16 items-center justify-center"><Spinner /></div>
+      ) : (
+        <>
+          <div className="space-y-2">
+            {paged.map((ev: any) => (
+              <div key={ev.id} className="rounded-lg border border-amber-100 bg-amber-50/40 p-3 space-y-2">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-medium text-slate-800 leading-snug">{ev.title}</p>
+                  {ev.twin_dimension_affected && (
+                    <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                      {DIM_LABELS[ev.twin_dimension_affected] ?? ev.twin_dimension_affected}
+                    </span>
+                  )}
+                </div>
+
+                {ev.recommended_action && (
+                  <div className="rounded-md bg-blue-50 border border-blue-100 px-3 py-2">
+                    <p className="text-[10px] font-semibold text-blue-500 uppercase tracking-wide mb-0.5">Empfohlene Maßnahme</p>
+                    <p className="text-xs text-slate-800">{ev.recommended_action}</p>
+                  </div>
+                )}
+
+                {ev.regulatory_impact && (
+                  <p className="text-[11px] text-slate-500">
+                    <span className="font-semibold">Regulatorisch:</span> {ev.regulatory_impact}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-3 text-[10px] text-slate-400">
+                  {ev.occurred_at && <span>{new Date(ev.occurred_at).toLocaleDateString()}</span>}
+                  {ev.health_delta != null && (
+                    <span className={ev.health_delta < 0 ? "text-red-500" : "text-green-600"}>
+                      {ev.health_delta > 0 ? "+" : ""}{ev.health_delta.toFixed(1)} Score
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                className="rounded px-2 py-1 text-xs border disabled:opacity-40 hover:bg-slate-50">← Zurück</button>
+              <span className="text-xs text-slate-500">{page + 1} / {totalPages}</span>
+              <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                className="rounded px-2 py-1 text-xs border disabled:opacity-40 hover:bg-slate-50">Weiter →</button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ── Twin 360° Sub-Sections ────────────────────────────────────────────────────
+
+const QUALITY_COLOR = (score: number) =>
+  score >= 80 ? "text-green-700 bg-green-50 border-green-200"
+  : score >= 50 ? "text-yellow-700 bg-yellow-50 border-yellow-200"
+  : "text-red-700 bg-red-50 border-red-200";
+
+function TwinDocumentsSection({ supplierId }: { supplierId: string }) {
+  const { data = [], isLoading } = useQuery<DocQuality[]>({
+    queryKey: ["twin-doc-quality", supplierId],
+    queryFn: () => listDocQuality({ supplier_id: supplierId }),
+    enabled: !!supplierId,
+    staleTime: 120_000,
+  });
+
+  if (isLoading) return <div className="flex h-12 items-center gap-2 text-sm text-muted-foreground"><Spinner className="h-4 w-4" /> Dokumente laden…</div>;
+  if (!data.length) return null;
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <Database className="h-4 w-4 text-slate-400" /> Dokumente & Datenqualität
+      </h3>
+      <div className="grid gap-2 sm:grid-cols-2">
+        {data.map(doc => (
+          <div key={doc.doc_id} className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-3 ${QUALITY_COLOR(doc.quality_score)}`}>
+            <div className="min-w-0">
+              <p className="font-medium text-sm truncate">{doc.title}</p>
+              <p className="text-xs opacity-70 mt-0.5">{doc.doc_type.replace(/_/g," ")} · {doc.report_year ?? "—"} · {doc.metrics_count} Metriken</p>
+            </div>
+            <div className="shrink-0 text-right">
+              <p className="text-xl font-bold tabular-nums">{doc.quality_score.toFixed(0)}</p>
+              <p className="text-xs opacity-60">{doc.found_core}/{doc.total_core} Kern-KPIs</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+const METRIC_TYPE_LABELS: Record<string, string> = {
+  revenue: "Umsatz", ebitda: "EBITDA", ebitda_margin: "EBITDA-Marge",
+  net_income: "Nettogewinn", employees: "Mitarbeiter", capex: "CapEx",
+  co2_scope1: "CO₂ Scope 1", co2_scope2: "CO₂ Scope 2", co2_scope3: "CO₂ Scope 3",
+  water_m3: "Wasserverbrauch", energy_gwh: "Energieverbrauch",
+  renewable_energy_pct: "Erneuerbare Energie", women_leadership_pct: "Frauen in Führung",
+  supplier_audited_pct: "Lieferanten auditiert", free_cashflow: "Free Cashflow",
+  debt_ratio: "Verschuldungsgrad", roce: "ROCE",
+};
+
+function TwinMetricsSection({ supplierId }: { supplierId: string }) {
+  const { data = [], isLoading } = useQuery<CompanyMetric[]>({
+    queryKey: ["twin-metrics", supplierId],
+    queryFn: () => listMetrics({ supplier_id: supplierId }),
+    enabled: !!supplierId,
+    staleTime: 120_000,
+  });
+
+  if (isLoading) return <div className="flex h-12 items-center gap-2 text-sm text-muted-foreground"><Spinner className="h-4 w-4" /> Metriken laden…</div>;
+  if (!data.length) return null;
+
+  // Neueste pro metric_type
+  const latestByType = new Map<string, CompanyMetric>();
+  for (const m of data) {
+    const existing = latestByType.get(m.metric_type);
+    if (!existing || m.year > existing.year) latestByType.set(m.metric_type, m);
+  }
+  const metrics = [...latestByType.values()].sort((a,b) => a.metric_type.localeCompare(b.metric_type));
+
+  const CONF_ICON: Record<string, string> = { exact: "✓", estimated: "~", calculated: "?" };
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <BarChart3 className="h-4 w-4 text-slate-400" /> Extrahierte Metriken
+        <span className="ml-auto text-xs font-normal text-muted-foreground">{metrics.length} Kennzahlen</span>
+      </h3>
+      <div className="rounded-xl border border-border overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-slate-50 text-xs text-slate-500">
+            <tr>
+              <th className="text-left px-4 py-2 font-medium">Kennzahl</th>
+              <th className="text-right px-4 py-2 font-medium">Wert</th>
+              <th className="text-center px-4 py-2 font-medium">Jahr</th>
+              <th className="text-center px-4 py-2 font-medium">Seite</th>
+              <th className="text-left px-4 py-2 font-medium">Quelle</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {metrics.map(m => (
+              <tr key={m.id} className="hover:bg-slate-50/50">
+                <td className="px-4 py-2.5 font-medium">{METRIC_TYPE_LABELS[m.metric_type] ?? m.metric_type}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums font-semibold">
+                  {formatValue(m.value, m.unit)}
+                  <span className="ml-1 text-xs text-slate-400 font-normal">{CONF_ICON[m.confidence] ?? "?"}</span>
+                </td>
+                <td className="px-4 py-2.5 text-center text-slate-500">{m.year}</td>
+                <td className="px-4 py-2.5 text-center">
+                  {(m as any).page_number ? (
+                    <span className="inline-flex items-center rounded-md bg-violet-50 border border-violet-200 px-2 py-0.5 text-xs font-semibold text-violet-700">
+                      S.{(m as any).page_number}
+                    </span>
+                  ) : <span className="text-slate-300">—</span>}
+                </td>
+                <td className="px-4 py-2.5 text-xs text-slate-400 truncate max-w-[140px]">
+                  {(m as any).scope ? <span className="text-slate-500">{(m as any).scope}</span> : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+const SIG_DIR_ICON: Record<string, string> = { up: "↑", down: "↓", flat: "→", negative: "↓", positive: "↑" };
+const SIG_DIR_COLOR: Record<string, string> = {
+  up: "text-green-600", down: "text-red-600", flat: "text-slate-400",
+  negative: "text-red-600", positive: "text-green-600",
+};
+
+function TwinSignalsSection({ supplierId }: { supplierId: string }) {
+  const { data = [], isLoading } = useQuery<CompanySignal[]>({
+    queryKey: ["twin-signals", supplierId],
+    queryFn: () => listSignals({ supplier_id: supplierId }),
+    enabled: !!supplierId,
+    staleTime: 120_000,
+  });
+
+  if (isLoading) return <div className="flex h-12 items-center gap-2 text-sm text-muted-foreground"><Spinner className="h-4 w-4" /> Signale laden…</div>;
+  if (!data.length) return null;
+
+  const sorted = [...data].sort((a,b) => (SEVERITY_ORDER[a.severity] ?? 9) - (SEVERITY_ORDER[b.severity] ?? 9));
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <AlertTriangle className="h-4 w-4 text-orange-400" /> Signale aus Dokumenten
+        <span className="ml-auto text-xs font-normal text-muted-foreground">{data.length} Signale</span>
+      </h3>
+      <div className="space-y-2">
+        {sorted.slice(0, 8).map(sig => (
+          <div key={sig.id} className="rounded-xl border border-border bg-background px-4 py-3">
+            <div className="flex items-start gap-3">
+              <span className={`text-base font-bold ${SIG_DIR_COLOR[sig.direction] ?? "text-slate-400"}`}>
+                {SIG_DIR_ICON[sig.direction] ?? "→"}
+              </span>
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className={`text-xs font-semibold rounded px-1.5 py-0.5 ${
+                    sig.severity === "critical" ? "bg-red-100 text-red-700" :
+                    sig.severity === "high" ? "bg-orange-100 text-orange-700" :
+                    sig.severity === "medium" ? "bg-yellow-100 text-yellow-700" : "bg-slate-100 text-slate-600"
+                  }`}>{sig.severity}</span>
+                  <span className="text-xs text-muted-foreground">{DIMENSION_LABELS[sig.dimension] ?? sig.dimension}</span>
+                  <span className="text-xs text-muted-foreground">· {sig.signal_type.replace(/_/g," ")}</span>
+                  {sig.year && <span className="ml-auto text-xs text-muted-foreground">{sig.year}</span>}
+                </div>
+                <p className="text-sm text-slate-700 line-clamp-2">{sig.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+        {sorted.length > 8 && <p className="text-xs text-center text-muted-foreground pt-1">+{sorted.length - 8} weitere Signale</p>}
+      </div>
+    </div>
+  );
+}
+
+function TwinCrossSourceSection({ supplierId, supplierName }: { supplierId: string; supplierName: string }) {
+  const qc = useQueryClient();
+  const [analyzing, setAnalyzing] = useState(false);
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; message: string } | null>(null);
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["twin-cross-alerts", supplierId],
+    queryFn: () => listCrossAlerts({ supplier_id: supplierId, limit: 20 }),
+    enabled: !!supplierId,
+    staleTime: 60_000,
+  });
+
+  const analyzeMut = useMutation({
+    mutationFn: (req: CrossAnalyzeRequest) => crossAnalyze(req),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["twin-cross-alerts", supplierId] }); qc.invalidateQueries({ queryKey: ["cross-alerts"] }); setAnalyzing(false); },
+  });
+
+  const bulkMut = useMutation({
+    mutationFn: () => apiClient.post(`/intelligence/cross-analyze-bulk?supplier_id=${supplierId}`).then(r => r.data),
+    onSuccess: (result) => {
+      setBulkResult(result);
+      qc.invalidateQueries({ queryKey: ["twin-cross-alerts", supplierId] });
+      qc.invalidateQueries({ queryKey: ["cross-alerts"] });
+    },
+  });
+
+  const alerts = data?.alerts ?? [];
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <Globe className="h-4 w-4 text-blue-400" /> Cross-Source Exposition
+        <span className="ml-auto text-xs font-normal text-muted-foreground">{alerts.length} Alerts</span>
+        <button onClick={() => bulkMut.mutate()} disabled={bulkMut.isPending}
+          className="text-xs px-2.5 py-1 rounded-lg border border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors disabled:opacity-50 flex items-center gap-1">
+          {bulkMut.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Zap className="h-3 w-3" />}
+          Alle analysieren
+        </button>
+        <button onClick={() => setAnalyzing(v => !v)}
+          className="text-xs px-2.5 py-1 rounded-lg border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors">
+          + Einzeln
+        </button>
+      </h3>
+
+      {bulkResult && (
+        <div className="mb-3 rounded-md bg-purple-50 border border-purple-200 px-3 py-2 text-xs text-purple-700">
+          ⚡ {bulkResult.message}
+        </div>
+      )}
+
+      {analyzing && (
+        <CrossAnalyzeInlineForm
+          defaultCompany={supplierName}
+          onSubmit={(req) => analyzeMut.mutate(req)}
+          onCancel={() => setAnalyzing(false)}
+          pending={analyzeMut.isPending}
+        />
+      )}
+
+      {isLoading ? <div className="flex h-10 items-center gap-2 text-sm text-muted-foreground"><Spinner className="h-4 w-4" /></div>
+      : alerts.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-2">Keine Cross-Source Alerts für diesen Lieferanten.</p>
+      ) : (
+        <div className="space-y-2">
+          {alerts.map(alert => (
+            <div key={alert.id} className={`rounded-xl border px-4 py-3 ${
+              alert.severity === "critical" ? "border-red-200 bg-red-50/40" :
+              alert.severity === "high" ? "border-orange-200 bg-orange-50/40" : "border-border bg-background"
+            }`}>
+              <div className="flex items-start gap-2">
+                <span className={`mt-0.5 text-xs font-bold rounded px-1.5 py-0.5 uppercase ${
+                  alert.severity === "critical" ? "bg-red-100 text-red-700" :
+                  alert.severity === "high" ? "bg-orange-100 text-orange-700" :
+                  alert.severity === "medium" ? "bg-yellow-100 text-yellow-700" : "bg-blue-100 text-blue-700"
+                }`}>{alert.severity}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium">{alert.trigger_company} · <span className="font-normal text-muted-foreground">{alert.trigger_signal_type.replace(/_/g," ")}</span></p>
+                  <p className="text-xs text-slate-600 mt-0.5 line-clamp-2">{alert.reasoning}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{IMPACT_TYPE_LABELS[alert.impact_type] ?? alert.impact_type}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CrossAnalyzeInlineForm({ defaultCompany, onSubmit, onCancel, pending }: {
+  defaultCompany: string;
+  onSubmit: (req: CrossAnalyzeRequest) => void;
+  onCancel: () => void;
+  pending: boolean;
+}) {
+  const [form, setForm] = useState<Partial<CrossAnalyzeRequest>>({ trigger_company: defaultCompany });
+
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50/30 p-4 mb-3 space-y-3">
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <Label className="text-xs">Unternehmen</Label>
+          <Input value={form.trigger_company ?? ""} onChange={e => setForm(f => ({...f, trigger_company: e.target.value}))} className="mt-1 text-sm h-8" />
+        </div>
+        <div>
+          <Label className="text-xs">Signal-Typ</Label>
+          <select value={form.trigger_signal_type ?? ""} onChange={e => setForm(f => ({...f, trigger_signal_type: e.target.value}))}
+            className="mt-1 w-full text-sm rounded-lg border border-border bg-background px-2 py-1.5 h-8">
+            <option value="">Auswählen…</option>
+            {[["plant_closure","Werksschließung"],["layoffs","Stellenabbau"],["restructuring","Restrukturierung"],
+              ["insolvency_risk","Insolvenzrisiko"],["rating_downgrade","Rating-Abstufung"],
+              ["supply_chain_disruption","Lieferkettenunterbrechung"],["esg_controversy","ESG-Kontroverse"],
+              ["esg_target_missed","ESG-Ziel verfehlt"],["legal_action","Rechtliche Klage"]
+            ].map(([v,l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+        </div>
+      </div>
+      <div>
+        <Label className="text-xs">Beschreibung</Label>
+        <textarea value={form.trigger_description ?? ""} onChange={e => setForm(f => ({...f, trigger_description: e.target.value}))}
+          rows={2} className="mt-1 w-full text-sm rounded-lg border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary" />
+      </div>
+      <div className="flex gap-2">
+        <button onClick={() => { if (form.trigger_company && form.trigger_signal_type && form.trigger_description) onSubmit(form as CrossAnalyzeRequest); }}
+          disabled={pending || !form.trigger_company || !form.trigger_signal_type || !form.trigger_description}
+          className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
+          {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Cpu className="h-3 w-3" />} Analysieren
+        </button>
+        <button onClick={onCancel} className="text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-accent">Abbrechen</button>
+      </div>
+    </div>
+  );
+}
+
+function TwinExternalSection({ supplierId }: { supplierId: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ["twin-external-signals", supplierId],
+    queryFn: () => listExternalSignalsForSupplier(supplierId),
+    enabled: !!supplierId,
+    staleTime: 120_000,
+  });
+
+  const signals = (data?.signals ?? []).slice(0, 6);
+  if (isLoading) return <div className="flex h-12 items-center gap-2 text-sm text-muted-foreground"><Spinner className="h-4 w-4" /> Externe Daten laden…</div>;
+  if (!signals.length) return null;
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+        <Layers className="h-4 w-4 text-cyan-400" /> Externe Signale
+        <span className="text-xs font-normal text-muted-foreground">(World Bank, GNews, Sanktionen)</span>
+      </h3>
+      <div className="space-y-2">
+        {signals.map((sig: any) => (
+          <div key={sig.id} className="rounded-xl border border-border bg-background px-4 py-3">
+            <div className="flex items-start gap-2">
+              <span className={`shrink-0 mt-0.5 h-2 w-2 rounded-full ${
+                sig.severity?.toLowerCase() === "critical" ? "bg-red-500" :
+                sig.severity?.toLowerCase() === "high" ? "bg-orange-400" :
+                sig.severity?.toLowerCase() === "medium" ? "bg-yellow-400" : "bg-blue-400"
+              }`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-xs font-medium text-slate-500 uppercase tracking-wide">{sig.source_name ?? sig.signal_type}</span>
+                  {sig.country_code && <span className="text-xs text-muted-foreground">{sig.country_code}</span>}
+                  <span className="ml-auto text-xs text-muted-foreground">{sig.observed_at ? new Date(sig.observed_at).toLocaleDateString("de-DE") : "—"}</span>
+                </div>
+                <p className="text-sm text-slate-700 line-clamp-2">{sig.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+        {(data?.total ?? 0) > 6 && <p className="text-xs text-center text-muted-foreground">+{(data?.total ?? 0) - 6} weitere externe Signale</p>}
+      </div>
     </div>
   );
 }
@@ -1680,6 +2237,357 @@ function ExternalDataTab({ orgId }: { orgId: string }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TAB 4 — CROSS-SOURCE INTELLIGENCE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: "bg-red-100 text-red-800 border-red-200",
+  high:     "bg-orange-100 text-orange-800 border-orange-200",
+  medium:   "bg-yellow-100 text-yellow-800 border-yellow-200",
+  low:      "bg-blue-100 text-blue-800 border-blue-200",
+};
+
+const STATUS_COLORS: Record<string, string> = {
+  open:         "bg-red-50 text-red-700",
+  acknowledged: "bg-yellow-50 text-yellow-700",
+  resolved:     "bg-green-50 text-green-700",
+};
+
+const STATUS_LABELS: Record<string, string> = {
+  open: "Offen", acknowledged: "Zur Kenntnis genommen", resolved: "Erledigt",
+};
+
+function CrossAlertCard({ alert, onStatusChange }: { alert: CrossAlert; onStatusChange: () => void }) {
+  const [expanded, setExpanded] = useState(false);
+  const qc = useQueryClient();
+
+  const statusMut = useMutation({
+    mutationFn: (status: "open" | "acknowledged" | "resolved") =>
+      updateCrossAlertStatus(alert.id, status),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["cross-alerts"] }); onStatusChange(); },
+  });
+
+  const naceLabel = NACE_LABELS[alert.trigger_nace ?? ""] ?? alert.trigger_nace ?? "–";
+  const impactLabel = IMPACT_TYPE_LABELS[alert.impact_type] ?? alert.impact_type;
+
+  return (
+    <div className={`rounded-xl border ${alert.severity === "critical" ? "border-red-200 bg-red-50/30" : "border-border bg-background"} p-4 space-y-3`}>
+      {/* Header row */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-semibold ${SEVERITY_COLORS[alert.severity]}`}>
+              {alert.severity.toUpperCase()}
+            </span>
+            <span className="text-xs rounded bg-slate-100 px-2 py-0.5 text-slate-600 font-mono">{naceLabel}</span>
+            <span className="text-xs text-muted-foreground">{impactLabel}</span>
+          </div>
+          <p className="mt-1.5 font-semibold text-sm">
+            {alert.trigger_company}
+            <span className="font-normal text-muted-foreground ml-2">· {alert.trigger_signal_type}</span>
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{alert.trigger_description}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className={`text-xs rounded px-2 py-0.5 font-medium ${STATUS_COLORS[alert.status]}`}>
+            {STATUS_LABELS[alert.status]}
+          </span>
+          <button onClick={() => setExpanded(v => !v)} className="text-muted-foreground hover:text-foreground p-1">
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Reasoning */}
+      <div className="text-sm text-slate-700 bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-100">
+        <p className="text-xs font-semibold text-slate-500 mb-1">Analyse</p>
+        <p>{alert.reasoning}</p>
+      </div>
+
+      {/* Expanded details */}
+      {expanded && (
+        <div className="space-y-3">
+          {/* Affected suppliers */}
+          {alert.affected_suppliers.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-2">Betroffene Lieferanten ({alert.affected_suppliers.length})</p>
+              <div className="grid gap-1.5">
+                {alert.affected_suppliers.map(s => (
+                  <div key={s.id} className="flex items-center gap-2 text-sm">
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${
+                      s.relation === "sector_stress" ? "bg-red-500" :
+                      s.relation === "upstream_pressure" ? "bg-orange-400" : "bg-yellow-400"
+                    }`} />
+                    <span className="font-medium">{s.name}</span>
+                    <span className="text-xs text-muted-foreground font-mono">{NACE_LABELS[s.nace_code] ?? s.nace_code}</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{RELATION_LABELS[s.relation]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Recommended actions */}
+          {alert.recommended_actions.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Empfohlene Maßnahmen</p>
+              <ul className="space-y-1">
+                {alert.recommended_actions.map((a, i) => (
+                  <li key={i} className="flex items-start gap-2 text-sm">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500 mt-0.5 shrink-0" />
+                    {a}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Status actions */}
+          <div className="flex gap-2 pt-1 border-t border-border">
+            {alert.status === "open" && (
+              <button
+                onClick={() => statusMut.mutate("acknowledged")}
+                disabled={statusMut.isPending}
+                className="text-xs px-3 py-1.5 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 disabled:opacity-50 transition-colors"
+              >
+                Zur Kenntnis nehmen
+              </button>
+            )}
+            {alert.status !== "resolved" && (
+              <button
+                onClick={() => statusMut.mutate("resolved")}
+                disabled={statusMut.isPending}
+                className="text-xs px-3 py-1.5 rounded-lg border border-green-300 bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50 transition-colors"
+              >
+                Als erledigt markieren
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">{formatDateTime(alert.created_at)}</p>
+    </div>
+  );
+}
+
+function CrossSourceTab({ nameMap }: { nameMap: Map<string, string> }) {
+  const qc = useQueryClient();
+  const [filterStatus, setFilterStatus] = useState<string>("open");
+  const [filterSeverity, setFilterSeverity] = useState<string>("");
+  const [form, setForm] = useState<Partial<CrossAnalyzeRequest>>({});
+  const [showForm, setShowForm] = useState(false);
+  const [bulkSupplierId, setBulkSupplierId] = useState<string>("");
+  const [bulkResult, setBulkResult] = useState<{ created: number; skipped: number; message: string } | null>(null);
+
+  const bulkMut = useMutation({
+    mutationFn: (supplierId: string) =>
+      apiClient.post(`/intelligence/cross-analyze-bulk?supplier_id=${supplierId}`).then(r => r.data),
+    onSuccess: (result) => {
+      setBulkResult(result);
+      qc.invalidateQueries({ queryKey: ["cross-alerts"] });
+    },
+  });
+
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["cross-alerts", filterStatus, filterSeverity],
+    queryFn: () => listCrossAlerts({
+      status: filterStatus || undefined,
+      severity: filterSeverity || undefined,
+      limit: 50,
+    }),
+  });
+
+  const analyzeMut = useMutation({
+    mutationFn: (req: CrossAnalyzeRequest) => crossAnalyze(req),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["cross-alerts"] });
+      setShowForm(false);
+      setForm({});
+    },
+  });
+
+  const alerts = data?.alerts ?? [];
+
+  const bySeverity: Record<string, number> = {};
+  alerts.forEach(a => { bySeverity[a.severity] = (bySeverity[a.severity] ?? 0) + 1; });
+
+  return (
+    <div className="space-y-5">
+      {/* Stats row */}
+      <div className="grid grid-cols-4 gap-3">
+        {(["critical","high","medium","low"] as const).map(sev => (
+          <div key={sev} className={`rounded-xl border p-3 text-center ${SEVERITY_COLORS[sev]}`}>
+            <p className="text-2xl font-bold">{bySeverity[sev] ?? 0}</p>
+            <p className="text-xs mt-0.5 capitalize">{sev}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <select
+          value={filterStatus}
+          onChange={e => setFilterStatus(e.target.value)}
+          className="text-sm rounded-lg border border-border bg-background px-3 py-1.5"
+        >
+          <option value="">Alle Status</option>
+          <option value="open">Offen</option>
+          <option value="acknowledged">Zur Kenntnis</option>
+          <option value="resolved">Erledigt</option>
+        </select>
+        <select
+          value={filterSeverity}
+          onChange={e => setFilterSeverity(e.target.value)}
+          className="text-sm rounded-lg border border-border bg-background px-3 py-1.5"
+        >
+          <option value="">Alle Schweregrade</option>
+          <option value="critical">Critical</option>
+          <option value="high">High</option>
+          <option value="medium">Medium</option>
+          <option value="low">Low</option>
+        </select>
+        <button
+          onClick={() => refetch()}
+          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-border hover:bg-accent transition-colors"
+        >
+          <RefreshCw className="h-3.5 w-3.5" /> Aktualisieren
+        </button>
+        <button
+          onClick={() => setShowForm(v => !v)}
+          className="ml-auto flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+        >
+          <Plus className="h-3.5 w-3.5" /> Analyse starten
+        </button>
+      </div>
+
+      {/* Bulk analyze row */}
+      <div className="flex items-center gap-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
+        <Zap className="h-4 w-4 text-purple-500 shrink-0" />
+        <span className="text-sm font-medium text-purple-700">Alle Risiko-Signale analysieren:</span>
+        <select
+          value={bulkSupplierId}
+          onChange={e => { setBulkSupplierId(e.target.value); setBulkResult(null); }}
+          className="text-sm rounded-lg border border-purple-200 bg-white px-3 py-1.5 flex-1 min-w-0"
+        >
+          <option value="">— Lieferant wählen —</option>
+          {Array.from(nameMap.entries()).map(([id, name]) => (
+            <option key={id} value={id}>{name}</option>
+          ))}
+        </select>
+        <button
+          onClick={() => bulkSupplierId && bulkMut.mutate(bulkSupplierId)}
+          disabled={!bulkSupplierId || bulkMut.isPending}
+          className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors disabled:opacity-50"
+        >
+          {bulkMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+          Starten
+        </button>
+        {bulkResult && (
+          <span className="text-xs text-purple-700">⚡ {bulkResult.message}</span>
+        )}
+      </div>
+
+      {/* Manual analysis form */}
+      {showForm && (
+        <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+          <p className="text-sm font-semibold">Neue Cross-Source-Analyse</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="text-xs">Unternehmen *</Label>
+              <Input
+                value={form.trigger_company ?? ""}
+                onChange={e => setForm(f => ({ ...f, trigger_company: e.target.value }))}
+                placeholder="z.B. Volkswagen AG"
+                className="mt-1 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Signal-Typ *</Label>
+              <select
+                value={form.trigger_signal_type ?? ""}
+                onChange={e => setForm(f => ({ ...f, trigger_signal_type: e.target.value }))}
+                className="mt-1 w-full text-sm rounded-lg border border-border bg-background px-3 py-2"
+              >
+                <option value="">Auswählen…</option>
+                <option value="plant_closure">Werksschließung</option>
+                <option value="layoffs">Stellenabbau</option>
+                <option value="restructuring">Restrukturierung</option>
+                <option value="insolvency_risk">Insolvenzrisiko</option>
+                <option value="rating_downgrade">Rating-Abstufung</option>
+                <option value="supply_chain_disruption">Lieferkettenunterbrechung</option>
+                <option value="esg_controversy">ESG-Kontroverse</option>
+                <option value="esg_target_missed">ESG-Ziel verfehlt</option>
+                <option value="legal_action">Rechtliche Klage</option>
+                <option value="contradiction">Datenwiderspruch</option>
+              </select>
+            </div>
+            <div>
+              <Label className="text-xs">NACE-Code (optional)</Label>
+              <Input
+                value={form.trigger_nace ?? ""}
+                onChange={e => setForm(f => ({ ...f, trigger_nace: e.target.value }))}
+                placeholder="z.B. C29"
+                className="mt-1 text-sm"
+              />
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs">Beschreibung *</Label>
+            <textarea
+              value={form.trigger_description ?? ""}
+              onChange={e => setForm(f => ({ ...f, trigger_description: e.target.value }))}
+              placeholder="Was ist passiert? Gib eine kurze Beschreibung des Events…"
+              rows={3}
+              className="mt-1 w-full text-sm rounded-lg border border-border bg-background px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+          </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                if (!form.trigger_company || !form.trigger_signal_type || !form.trigger_description) return;
+                analyzeMut.mutate(form as CrossAnalyzeRequest);
+              }}
+              disabled={analyzeMut.isPending || !form.trigger_company || !form.trigger_signal_type || !form.trigger_description}
+              className="flex items-center gap-1.5 text-sm px-4 py-2 rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+            >
+              {analyzeMut.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Cpu className="h-3.5 w-3.5" />}
+              Analysieren
+            </button>
+            <button
+              onClick={() => { setShowForm(false); setForm({}); }}
+              className="text-sm px-3 py-2 rounded-lg border border-border hover:bg-accent transition-colors"
+            >
+              Abbrechen
+            </button>
+          </div>
+          {analyzeMut.error && (
+            <p className="text-xs text-red-600">Fehler: {String(analyzeMut.error)}</p>
+          )}
+        </div>
+      )}
+
+      {/* Alert list */}
+      {isLoading ? (
+        <div className="flex justify-center py-12"><Spinner /></div>
+      ) : alerts.length === 0 ? (
+        <div className="text-center py-16 text-muted-foreground">
+          <Globe className="h-10 w-10 mx-auto mb-3 opacity-30" />
+          <p className="font-medium">Keine Cross-Source-Alerts</p>
+          <p className="text-sm mt-1">Starte eine Analyse oder ändere die Filter.</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {alerts.map(alert => (
+            <CrossAlertCard key={alert.id} alert={alert} onStatusChange={() => refetch()} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN HUB
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1687,6 +2595,7 @@ const tab_defs = [
   { key: "signals",      labelKey: "surveillance.tabSignals" as const },
   { key: "intelligence", labelKey: "surveillance.tabIntelligence" as const },
   { key: "external",     labelKey: "surveillance.tabExternal" as const },
+  { key: "cross",        labelKey: "surveillance.tabCross" as const },
 ] as const;
 type TabKey = (typeof tab_defs)[number]["key"];
 
@@ -1731,6 +2640,7 @@ export default function IntelligenceHubPage() {
       {activeTab === "signals"      && <SurveillanceTab nameMap={nameMap} />}
       {activeTab === "intelligence" && <IntelligenceTab nameMap={nameMap} orgId={orgId} />}
       {activeTab === "external"     && <ExternalDataTab orgId={orgId} />}
+      {activeTab === "cross"        && <CrossSourceTab nameMap={nameMap} />}
     </div>
   );
 }

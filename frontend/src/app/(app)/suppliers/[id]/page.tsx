@@ -30,6 +30,7 @@ import {
   Target,
   Users,
   Shield,
+  History,
 } from "lucide-react";
 import {
   getSupplier,
@@ -78,6 +79,7 @@ import {
   type ExternalESGRating,
 } from "@/lib/api/supplier-extensions";
 import apiClient from "@/lib/api/client";
+import { getSupplierAuditLog, type SupplierAuditEntry } from "@/lib/api/documents";
 import { sectorRiskApi, type SectorBaseline, type SimulationResult as SectorSimResult } from "@/lib/api/sector-risk";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1851,9 +1853,91 @@ function ESGRatingsTab({ supplierId }: { supplierId: string }) {
   );
 }
 
+// ── Supplier Audit Log Tab ────────────────────────────────────────────────────
+
+const ACTION_META: Record<string, { label: string; color: string }> = {
+  reparse:               { label: "Reparse",                color: "bg-violet-100 text-violet-700" },
+  rechunk:               { label: "Rechunk",                color: "bg-blue-100 text-blue-700" },
+  reclassify:            { label: "Reklassifizierung",      color: "bg-indigo-100 text-indigo-700" },
+  reanalyze:             { label: "Reanalyse",              color: "bg-cyan-100 text-cyan-700" },
+  reextract_metrics:     { label: "Metriken extrahiert",    color: "bg-teal-100 text-teal-700" },
+  update_classification: { label: "Klassifizierung",        color: "bg-yellow-100 text-yellow-700" },
+  update_kpis:           { label: "KPIs aktualisiert",      color: "bg-orange-100 text-orange-700" },
+  approve:               { label: "Genehmigt",              color: "bg-green-100 text-green-700" },
+  unapprove:             { label: "Genehmigung zurück",     color: "bg-red-100 text-red-700" },
+  delete_chunk:          { label: "Chunk gelöscht",         color: "bg-red-100 text-red-700" },
+  update_chunk:          { label: "Chunk bearbeitet",       color: "bg-amber-100 text-amber-700" },
+  split_chunk:           { label: "Chunk geteilt",          color: "bg-sky-100 text-sky-700" },
+  merge_chunks:          { label: "Chunks zusammengeführt", color: "bg-sky-100 text-sky-700" },
+  toggle_exclude:        { label: "Chunk ein/ausgeschlossen", color: "bg-gray-100 text-gray-700" },
+  toggle_copilot_visibility: { label: "Copilot-Sichtbarkeit", color: "bg-purple-100 text-purple-700" },
+};
+
+function SupplierAuditLogTab({ supplierId }: { supplierId: string }) {
+  const { data, isLoading } = useQuery<SupplierAuditEntry[]>({
+    queryKey: ["supplier-audit-log", supplierId],
+    queryFn: () => getSupplierAuditLog(supplierId),
+    enabled: !!supplierId,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-12"><Spinner size="lg" /></div>;
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 text-muted-foreground gap-3">
+        <History className="h-10 w-10 opacity-30" />
+        <p className="text-sm">Noch keine Änderungen protokolliert</p>
+        <p className="text-xs opacity-60">Änderungen an Dokumenten dieses Lieferanten erscheinen hier</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">{data.length} Einträge — neueste zuerst</p>
+      </div>
+      <div className="space-y-2">
+        {data.map(e => {
+          const meta = ACTION_META[e.action] ?? { label: e.action, color: "bg-gray-100 text-gray-600" };
+          const dateStr = new Date(e.created_at).toLocaleString("de-DE", {
+            day: "2-digit", month: "2-digit", year: "2-digit",
+            hour: "2-digit", minute: "2-digit",
+          });
+          return (
+            <div key={e.id} className="rounded-xl border border-border bg-card p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${meta.color}`}>{meta.label}</span>
+                  <Link
+                    href={`/documents/review/${e.doc_file_id}`}
+                    className="text-xs text-muted-foreground hover:text-foreground hover:underline flex items-center gap-1 transition-colors"
+                  >
+                    <FileText className="h-3 w-3" />
+                    {e.doc_title}{e.report_year ? ` (${e.report_year})` : ""}
+                    <ExternalLink className="h-2.5 w-2.5 opacity-60" />
+                  </Link>
+                </div>
+                <span className="text-xs text-muted-foreground shrink-0">{dateStr}</span>
+              </div>
+              {e.field && (
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-medium text-foreground">{e.field}</span>
+                  {e.old_value && <> · <span className="line-through opacity-50">{e.old_value}</span></>}
+                  {e.new_value && <> → <span className="text-foreground">{e.new_value}</span></>}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
-const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Sector Risk", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics", "ESG Ratings"] as const;
+const TABS = ["Overview", "Assessments", "Findings", "Risk Profile", "Sector Risk", "Intelligence", "Twin", "Network", "Portal", "Locations", "Contacts", "Certifications", "Ownership", "ESG Metrics", "ESG Ratings", "Audit Log"] as const;
 type Tab = typeof TABS[number];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -1877,6 +1961,7 @@ export default function SupplierDetailPage() {
     Ownership: t("suppliers.tab.ownership"),
     "ESG Metrics": t("suppliers.tab.esgMetrics"),
     "ESG Ratings": t("suppliers.tab.esgRatings"),
+    "Audit Log": "Audit Log",
   };
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -3679,6 +3764,11 @@ export default function SupplierDetailPage() {
       {/* ── ESG Ratings Tab (KAN-90) ─────────────────────────────────── */}
       {tab === "ESG Ratings" && (
         <ESGRatingsTab supplierId={id} />
+      )}
+
+      {/* ── Audit Log Tab ────────────────────────────────────────────── */}
+      {tab === "Audit Log" && (
+        <SupplierAuditLogTab supplierId={id} />
       )}
 
       {/* Edit Modal */}

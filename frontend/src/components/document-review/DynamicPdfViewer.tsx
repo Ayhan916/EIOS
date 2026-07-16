@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import type { PdfHighlight } from "./PdfViewer";
+import type { PdfHighlight, LayoutElement, ChunkBand } from "./PdfViewer";
 
 // Prevent pdfjs-dist from running on the server (DOMMatrix is not defined in Node.js)
 const PdfViewer = dynamic(() => import("./PdfViewer"), {
@@ -16,5 +16,5 @@ const PdfViewer = dynamic(() => import("./PdfViewer"), {
   ),
 });
 
-export type { PdfHighlight };
+export type { PdfHighlight, LayoutElement, ChunkBand };
 export default PdfViewer;
