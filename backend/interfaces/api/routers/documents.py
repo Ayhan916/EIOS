@@ -1649,3 +1649,184 @@ async def delete_chunk_comment(
     )
     await db.commit()
     return {"deleted": comment_id}
+
+
+# ── Export ────────────────────────────────────────────────────────────────────
+
+@router.get("/files/{file_id}/export")
+async def export_file_data(
+    file_id: str,
+    format: str = "xlsx",
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    """Export document metrics + metadata as JSON, CSV or Excel."""
+    import csv
+    import io
+    import json as _json
+
+    org_id = user.organization_id
+
+    doc = (await db.execute(
+        select(DocumentFileModel).where(
+            DocumentFileModel.id == file_id,
+            DocumentFileModel.organization_id == org_id,
+        )
+    )).scalar_one_or_none()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    metrics = (await db.execute(
+        select(CompanyMetricModel).where(
+            CompanyMetricModel.source_doc_id == file_id,
+            CompanyMetricModel.organization_id == org_id,
+        ).order_by(CompanyMetricModel.metric_type)
+    )).scalars().all()
+
+    signals = (await db.execute(
+        select(CompanySignalModel).where(
+            CompanySignalModel.source_doc_id == file_id,
+            CompanySignalModel.organization_id == org_id,
+        )
+    )).scalars().all()
+
+    safe_name = (doc.company_name or doc.doc_type or "export").replace(" ", "_")[:40]
+    year_part = f"_{doc.report_year}" if doc.report_year else ""
+
+    # ── JSON ─────────────────────────────────────────────────────────────────
+    if format == "json":
+        payload = {
+            "document": {
+                "id": doc.id,
+                "doc_type": doc.doc_type,
+                "company_name": doc.company_name,
+                "report_year": doc.report_year,
+                "title": doc.title,
+                "language": doc.language,
+                "pages": doc.pages,
+                "status": doc.status,
+                "review_status": doc.review_status,
+                "classification_confidence": doc.classification_confidence,
+                "exported_at": datetime.now(UTC).isoformat(),
+            },
+            "metrics": [
+                {
+                    "metric_type": m.metric_type,
+                    "value": float(m.value),
+                    "unit": m.unit,
+                    "year": m.year,
+                    "period": m.period,
+                    "confidence": m.confidence,
+                    "confidence_pct": m.confidence_pct,
+                    "scope": m.scope,
+                    "page_number": m.page_number,
+                }
+                for m in metrics
+            ],
+            "signals": [
+                {
+                    "signal_type": s.signal_type,
+                    "dimension": s.dimension,
+                    "direction": s.direction,
+                    "severity": s.severity,
+                    "description": s.description,
+                    "year": s.year,
+                }
+                for s in signals
+            ],
+        }
+        content = _json.dumps(payload, ensure_ascii=False, indent=2)
+        filename = f"{safe_name}{year_part}_export.json"
+        return StreamingResponse(
+            iter([content]),
+            media_type="application/json",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # ── CSV ──────────────────────────────────────────────────────────────────
+    if format == "csv":
+        buf = io.StringIO()
+        writer = csv.writer(buf)
+        writer.writerow(["metric_type", "value", "unit", "year", "period", "confidence", "confidence_pct", "scope", "page_number"])
+        for m in metrics:
+            writer.writerow([m.metric_type, float(m.value), m.unit, m.year, m.period, m.confidence, m.confidence_pct, m.scope, m.page_number])
+        filename = f"{safe_name}{year_part}_metriken.csv"
+        return StreamingResponse(
+            iter([buf.getvalue()]),
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        )
+
+    # ── Excel (default) ───────────────────────────────────────────────────────
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Font, PatternFill
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+
+    # Sheet 1: Dokument-Übersicht
+    ws_doc = wb.active
+    ws_doc.title = "Dokument"
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(fill_type="solid", fgColor="1E3A5F")
+    doc_rows = [
+        ("Feld", "Wert"),
+        ("Dokument-Typ", doc.doc_type or ""),
+        ("Unternehmen", doc.company_name or ""),
+        ("Berichtsjahr", str(doc.report_year) if doc.report_year else ""),
+        ("Titel", doc.title or ""),
+        ("Sprache", doc.language or ""),
+        ("Seiten", str(doc.pages) if doc.pages else ""),
+        ("Status", doc.status or ""),
+        ("Review-Status", doc.review_status or ""),
+        ("Klassifizierungs-Konfidenz", f"{round((doc.classification_confidence or 0) * 100)}%" if doc.classification_confidence else ""),
+        ("Anzahl Metriken", str(len(metrics))),
+        ("Anzahl Signale", str(len(signals))),
+        ("Exportiert am", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")),
+    ]
+    for i, (k, v) in enumerate(doc_rows, start=1):
+        ws_doc.cell(row=i, column=1, value=k)
+        ws_doc.cell(row=i, column=2, value=v)
+        if i == 1:
+            for col in [1, 2]:
+                cell = ws_doc.cell(row=i, column=col)
+                cell.font = header_font
+                cell.fill = header_fill
+    ws_doc.column_dimensions["A"].width = 30
+    ws_doc.column_dimensions["B"].width = 40
+
+    # Sheet 2: Metriken
+    ws_m = wb.create_sheet("Metriken")
+    metric_headers = ["KPI", "Wert", "Einheit", "Jahr", "Periode", "Konfidenz", "Konfidenz %", "Scope", "Seite"]
+    for col, h in enumerate(metric_headers, start=1):
+        cell = ws_m.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+    for row, m in enumerate(metrics, start=2):
+        conf_pct = m.confidence_pct if m.confidence_pct is not None else (95 if m.confidence == "exact" else 82 if m.confidence == "calculated" else 68)
+        ws_m.append([m.metric_type, float(m.value), m.unit, m.year, m.period, m.confidence, conf_pct, m.scope, m.page_number])
+    for col, width in zip(range(1, 10), [30, 14, 12, 8, 12, 14, 12, 14, 8]):
+        ws_m.column_dimensions[get_column_letter(col)].width = width
+
+    # Sheet 3: Signale
+    ws_s = wb.create_sheet("Signale")
+    signal_headers = ["Typ", "Dimension", "Richtung", "Schweregrad", "Beschreibung", "Jahr"]
+    for col, h in enumerate(signal_headers, start=1):
+        cell = ws_s.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+    for s in signals:
+        ws_s.append([s.signal_type, s.dimension, s.direction, s.severity, s.description, s.year])
+    for col, width in zip(range(1, 7), [20, 18, 14, 14, 60, 8]):
+        ws_s.column_dimensions[get_column_letter(col)].width = width
+    ws_s.column_dimensions["E"].alignment = Alignment(wrap_text=True)
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    filename = f"{safe_name}{year_part}_export.xlsx"
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )

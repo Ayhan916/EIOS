@@ -34,6 +34,7 @@ import {
   MessageSquare,
   Send,
   GitCompareArrows,
+  Download,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -860,6 +861,66 @@ function SignalsTable({ signals }: { signals: ReviewSignal[] }) {
           <p className="text-xs text-gray-700">{s.description}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── ExportButton ──────────────────────────────────────────────────────────────
+
+function ExportButton({ fileId }: { fileId: string }) {
+  const [open, setOpen] = useState(false);
+  const BACKEND = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+  const doExport = async (format: "xlsx" | "csv" | "json") => {
+    setOpen(false);
+    const token = typeof window !== "undefined" ? localStorage.getItem("access_token") : null;
+    const url = `${BACKEND}/documents/files/${fileId}/export?format=${format}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token ?? ""}` } });
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const disposition = res.headers.get("Content-Disposition") ?? "";
+    const match = disposition.match(/filename="([^"]+)"/);
+    const filename = match?.[1] ?? `export.${format}`;
+    const objUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objUrl;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(objUrl);
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 text-sm rounded-lg px-3 py-2 border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+        title="Daten exportieren"
+      >
+        <Download size={15} />
+        Export
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[140px]">
+            {([
+              { fmt: "xlsx", label: "Excel (.xlsx)" },
+              { fmt: "csv",  label: "CSV (.csv)" },
+              { fmt: "json", label: "JSON (.json)" },
+            ] as const).map(({ fmt, label }) => (
+              <button
+                key={fmt}
+                onClick={() => doExport(fmt)}
+                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -2094,6 +2155,7 @@ export default function DocumentReviewPage() {
           <GitCompareArrows size={15} />
           Vergleichen
         </Link>
+        <ExportButton fileId={fileId} />
         <button
           onClick={() => { setShowModelSettings(true); setPendingModels(llmSettings ?? {}); }}
           title="KI-Modell Einstellungen"
