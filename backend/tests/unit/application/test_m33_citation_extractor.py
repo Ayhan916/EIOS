@@ -94,13 +94,11 @@ class TestFormatCitationsForPrompt:
     def test_empty_map_returns_empty(self):
         assert format_citations_for_prompt({}) == ""
 
-    def test_includes_citation_types(self):
+    def test_non_empty_map_returns_empty(self):
+        # Citations are extracted implicitly from context — no inline tags injected
         cmap = {"s1": "Supplier", "f1": "Finding"}
-        result = format_citations_for_prompt(cmap)
-        assert "[Supplier:s1]" in result
-        assert "[Finding:f1]" in result
+        assert format_citations_for_prompt(cmap) == ""
 
-    def test_caps_at_50_entries(self):
+    def test_large_map_returns_empty(self):
         cmap = {f"s{i}": "Supplier" for i in range(100)}
-        result = format_citations_for_prompt(cmap)
-        assert result.count("[Supplier:") <= 50
+        assert format_citations_for_prompt(cmap) == ""
