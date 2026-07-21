@@ -387,6 +387,8 @@ function RiskMatrix10x10({ risks }: { risks: OrgRisk[] }) {
   const scored = risks.filter(
     (r) => r.severity_score != null && r.probability_score != null
   );
+  const [hovered, setHovered] = useState<{ row: number; col: number } | null>(null);
+
   if (scored.length === 0) return null;
 
   // Build cell → risks map
@@ -396,8 +398,6 @@ function RiskMatrix10x10({ risks }: { risks: OrgRisk[] }) {
     if (!cells[key]) cells[key] = [];
     cells[key].push(r);
   }
-
-  const [hovered, setHovered] = useState<{ row: number; col: number } | null>(null);
 
   return (
     <Card>

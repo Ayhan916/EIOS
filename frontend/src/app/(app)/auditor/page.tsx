@@ -1031,6 +1031,15 @@ export default function AuditorWorkspacePage() {
   const [csvFrom, setCsvFrom] = useState("");
   const [csvTo, setCsvTo] = useState("");
 
+  const { data: summary, isLoading: summaryLoading } = useQuery<SecuritySummary>({
+    queryKey: ["security-summary"],
+    queryFn: async () => {
+      const res = await apiClient.get("/security/audit-summary");
+      return res.data;
+    },
+    staleTime: 60_000,
+  });
+
   // #141 Role-based gating
   if (user && !AUDITOR_ROLES.has(user.role)) {
     return (
@@ -1043,15 +1052,6 @@ export default function AuditorWorkspacePage() {
       </div>
     );
   }
-
-  const { data: summary, isLoading: summaryLoading } = useQuery<SecuritySummary>({
-    queryKey: ["security-summary"],
-    queryFn: async () => {
-      const res = await apiClient.get("/security/audit-summary");
-      return res.data;
-    },
-    staleTime: 60_000,
-  });
 
   return (
     <div className="space-y-6">
